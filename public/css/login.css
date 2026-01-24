@@ -1,0 +1,185 @@
+:root{
+  --green: #16a34a;      /* MISMO VERDE DEL SIDEBAR */
+  --green-soft: #e9f7ef;
+}
+
+*{
+  box-sizing: border-box;
+  font-family: Inter, system-ui, Arial;
+}
+
+body{
+  margin:0;
+  background:#fff;
+}
+
+.login-layout{
+  display:flex;
+  min-height:100vh;
+}
+
+/* IZQUIERDA */
+.login-left{
+  flex:1;
+  background: var(--green-soft);
+  padding:60px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+
+.login-left h1{
+  font-size:36px;
+  margin-bottom:40px;
+}
+
+.login-left h1 span{
+  color:var(--green);
+}
+
+/* mock visual */
+.mock-image{
+  position:relative;
+  width:320px;
+  height:260px;
+}
+
+.circle{
+  position:absolute;
+  width:220px;
+  height:220px;
+  background:var(--green);
+  border-radius:50%;
+  opacity:.15;
+  left:40px;
+  top:20px;
+}
+
+.card.fake{
+  position:absolute;
+  background:#fff;
+  width:260px;
+  height:120px;
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.1);
+  top:60px;
+  left:0;
+}
+
+.card.fake.small{
+  width:180px;
+  height:80px;
+  top:160px;
+  left:80px;
+}
+
+/* DERECHA */
+.login-right{
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.login-box{
+  width:100%;
+  max-width:420px;
+}
+
+.login-box h2{
+  font-size:26px;
+  margin-bottom:6px;
+}
+
+.subtitle{
+  color:#666;
+  margin-bottom:24px;
+}
+
+label{
+  font-size:14px;
+  display:block;
+  margin-bottom:6px;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  margin-bottom:18px;
+}
+
+.password{
+  position:relative;
+}
+
+.login-options{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:14px;
+  margin-bottom:20px;
+}
+
+.remember{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.login-options a{
+  color:var(--green);
+  text-decoration:none;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  background:var(--green);
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+button:hover{
+  opacity:.9;
+}
+.remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0 22px;
+}
+
+.remember-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #111;
+  cursor: pointer;
+}
+
+.remember-label input {
+  margin: 0;
+  width: 14px;
+  height: 14px;
+}
+
+.forgot-link {
+  font-size: 14px;
+  color: var(--green);
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+.login-subtitle.small{
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: 0.85;
+}
