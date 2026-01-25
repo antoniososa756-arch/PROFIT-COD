@@ -31,9 +31,9 @@ app.use("/api/users", userRoutes);
 app.use("/api/metrics", metricsRoutes);
 
 // FRONT
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(express.static(path.resolve(__dirname, "../public")));
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/panel.html"));
+  res.sendFile(path.resolve(__dirname, "../public/index.html"));
 });
 
 // 404 SIEMPRE AL FINAL
