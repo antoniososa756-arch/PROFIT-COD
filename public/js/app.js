@@ -1,3 +1,5 @@
+const API_BASE = "https://profit-cod.onrender.com";
+
 console.log("🟢 app.js cargado");
 // public/js/app.js
 (() => {
@@ -21,11 +23,11 @@ if (location.pathname.includes("login")) {
     return;
   }
 
-  fetch("/api/auth/me", {
-    headers: {
-      Authorization: "Bearer " + token,
-    },
-  })
+  fetch(`${API_BASE}/api/auth/me`, {
+  headers: {
+    Authorization: "Bearer " + token,
+  },
+})
     .then((res) => {
       if (!res.ok) throw new Error("No autorizado");
       return res.json();
@@ -627,7 +629,7 @@ if (id === "crear-cliente") {
     const password = document.getElementById("clientPassword").value.trim();
 
     try {
-      const res = await fetch("/api/auth/create-user", {
+      const res = await fetch("${API_BASE}/api/auth/create-user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -686,7 +688,7 @@ if (id === "gestion-clientes") {
 
     const table = document.getElementById("usersTable");
 
-    fetch("/api/users", {
+    fetch(`${API_BASE}/api/users`, {
       headers: {
         "Authorization": "Bearer " + localStorage.getItem("token")
       }
@@ -1141,6 +1143,25 @@ function openUserSection(type) {
 }
 
 // =========================
+// SHOPIFY CONNECTOR (UI ONLY)
+// =========================
+
+function conectarShopify() {
+  const modal = document.getElementById("connectModal");
+
+  if (!modal) {
+    alert("No se pudo abrir el asistente de conexión Shopify");
+    return;
+  }
+
+  modal.style.display = "flex";
+}
+
+// 🔑 EXPONER A HTML
+window.conectarShopify = conectarShopify;
+
+
+// =========================
 // LOGOUT
 // =========================
 
@@ -1210,8 +1231,9 @@ async function confirmReset(userId) {
     return;
   }
 
-  const res = await fetch(`/api/admin/reset-password/${userId}`, {
-
+  const res = await fetch(
+    `${API_BASE}/api/admin/reset-password/${userId}`,
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1238,7 +1260,9 @@ window.confirmReset = confirmReset;
 
 async function viewClient(userId) {
   try {
-    const res = await fetch(`/api/admin/impersonate/${userId}`, {
+    const res = await fetch(
+      `${API_BASE}/api/admin/impersonate/${userId}`,
+      {
         method: "POST",
         headers: {
           Authorization: "Bearer " + localStorage.getItem("token"),
@@ -1267,7 +1291,56 @@ async function viewClient(userId) {
   } catch {
     alert("Error de conexión");
   }
-
-window.viewClient = viewClient;
-
 }
+
+// =========================
+// SHOPIFY MODALS FLOW (PASOS 1 → 3)
+// =========================
+
+function openShopifyStep1() {
+  const m0 = document.getElementById("connectModal");
+  const m1 = document.getElementById("shopifyStep1");
+
+  if (m0) m0.style.display = "none";
+  if (m1) m1.style.display = "flex";
+}
+
+function closeShopifyStep1() {
+  const m1 = document.getElementById("shopifyStep1");
+  if (m1) m1.style.display = "none";
+}
+
+function goToShopifyStep2() {
+  const m1 = document.getElementById("shopifyStep1");
+  const m2 = document.getElementById("shopifyStep2");
+
+  if (m1) m1.style.display = "none";
+  if (m2) m2.style.display = "flex";
+}
+
+function goToShopifyStep3() {
+  const m2 = document.getElementById("shopifyStep2");
+  const m3 = document.getElementById("shopifyStep3");
+
+  if (m2) m2.style.display = "none";
+  if (m3) m3.style.display = "flex";
+}
+
+// 👉 EXPONER A HTML
+window.openShopifyStep1 = openShopifyStep1;
+window.closeShopifyStep1 = closeShopifyStep1;
+window.goToShopifyStep2 = goToShopifyStep2;
+window.goToShopifyStep3 = goToShopifyStep3;
+
+function goToShopifyStep4() {
+  const m3 = document.getElementById("shopifyStep3");
+  if (m3) m3.style.display = "none";
+
+  alert("Paso 4: conectar tienda con PROFITCOD (siguiente)");
+}
+
+window.goToShopifyStep4 = goToShopifyStep4;
+
+
+// 👇 ESTA LÍNEA VA FUERA DE LA FUNCIÓN
+window.viewClient = viewClient;
