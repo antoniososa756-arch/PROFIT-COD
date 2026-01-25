@@ -1054,4 +1054,62 @@ body.role-client.dark {
   --green: #1e293b;
   --active: #1e293b;
 }
+/* =========================
+   STORES GRID
+   ========================= */
 
+.stores-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.store-card {
+  width: 260px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+}
+
+.store-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.store-menu {
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.store-name {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.store-status {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.badge.active {
+  background: #dcfce7;
+  color: #166534;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.store-sync {
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 12px;
+}
+
+.store-actions {
+  display: flex;
+  gap: 8px;
+}

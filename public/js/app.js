@@ -761,31 +761,49 @@ if (id === "gestion-clientes") {
   return;
 
   }
-
 // =========================
 // SECCIÓN TIENDAS
 // =========================
 if (id === "tiendas") {
   if (t) t.textContent = "Tiendas";
-  if (s) s.textContent = "Conecta tus tiendas Shopify";
+  if (s) s.textContent = "Gestiona tus tiendas conectadas";
   if (c) c.textContent = "Tiendas";
 
   if (box) {
     box.innerHTML = `
-      <div style="margin-bottom:14px;">
-        <input
-          type="text"
-          id="shop-domain"
-          placeholder="tutienda.myshopify.com"
-          style="padding:8px;width:260px;margin-right:8px;"
-        />
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <button class="btn-primary" onclick="conectarShopify()">
-          ➕ Conectar tienda Shopify
+          + Conectar tienda Shopify
         </button>
       </div>
 
-      <div class="muted">
-        Introduce el dominio de tu tienda Shopify y autoriza el acceso.
+      <div class="stores-grid">
+
+        <!-- TARJETA TIENDA -->
+        <div class="store-card">
+          <div class="store-header">
+            <img src="https://cdn.shopify.com/static/shopify-favicon.png" height="20">
+            <div class="store-menu">⋮</div>
+          </div>
+
+          <div class="store-name">CABA IN SPAIN</div>
+
+          <div class="store-status">
+            Estado:
+            <span class="badge active">Activa</span>
+          </div>
+
+          <div class="store-sync">
+            Última sincronización:<br>
+            <strong>17/03/2025 13:44 hs</strong>
+          </div>
+
+          <div class="store-actions">
+            <button class="btn-secondary">Deshabilitar</button>
+            <button class="btn-primary">Importar pedidos</button>
+          </div>
+        </div>
+
       </div>
     `;
   }
