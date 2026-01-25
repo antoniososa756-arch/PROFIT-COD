@@ -1319,6 +1319,14 @@ function goToShopifyStep3() {
   if (m3) m3.style.display = "flex";
 }
 
+function closeShopifyStep3() {
+  const m3 = document.getElementById("shopifyStep3");
+  if (m3) m3.style.display = "none";
+}
+
+window.closeShopifyStep3 = closeShopifyStep3;
+
+
 // 👉 EXPONER A HTML
 window.openShopifyStep1 = openShopifyStep1;
 window.closeShopifyStep1 = closeShopifyStep1;
@@ -1327,12 +1335,20 @@ window.goToShopifyStep3 = goToShopifyStep3;
 
 function goToShopifyStep4() {
   const m3 = document.getElementById("shopifyStep3");
-  if (m3) m3.style.display = "none";
+  const m4 = document.getElementById("shopifyStep4");
 
-  alert("Paso 4: conectar tienda con PROFITCOD (siguiente)");
+  if (m3) m3.style.display = "none";
+  if (m4) m4.style.display = "flex";
 }
 
 window.goToShopifyStep4 = goToShopifyStep4;
+
+function closeShopifyStep4() {
+  const m4 = document.getElementById("shopifyStep4");
+  if (m4) m4.style.display = "none";
+}
+
+window.closeShopifyStep4 = closeShopifyStep4;
 
 async function fetchStores() {
   const grid = document.getElementById("storesGrid");
@@ -1395,6 +1411,54 @@ async function fetchStores() {
     `;
   }
 }
+
+// =========================
+// SHOPIFY PASO 4 (REAL)
+// =========================
+async function submitShopifyConnection() {
+  const shop = document.getElementById("pf-shop-domain")?.value.trim();
+  const accessToken = document.getElementById("pf-api-secret")?.value.trim();
+
+  if (!shop || !accessToken) {
+    alert("Completa dominio y access token");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/shopify/connect-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + localStorage.getItem("token"),
+      },
+      body: JSON.stringify({
+        shop,
+        accessToken,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Error conectando la tienda");
+      return;
+    }
+
+    alert(`✅ Tienda conectada: ${data.shop.name}`);
+
+    // cerrar modal paso 4
+    closeShopifyStep4?.();
+
+    // refrescar sección tiendas
+    setSection("tiendas");
+
+  } catch (err) {
+    alert("Error de conexión con el servidor");
+  }
+}
+
+// 👉 EXPONER A HTML
+window.submitShopifyConnection = submitShopifyConnection;
 
 
 // 👇 ESTA LÍNEA VA FUERA DE LA FUNCIÓN
