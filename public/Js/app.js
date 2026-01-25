@@ -21,7 +21,7 @@ if (location.pathname.includes("login")) {
     return;
   }
 
-  fetch("http://localhost:3001/api/auth/me", {
+  fetch("/api/auth/me", {
     headers: {
       Authorization: "Bearer " + token,
     },
@@ -627,7 +627,7 @@ if (id === "crear-cliente") {
     const password = document.getElementById("clientPassword").value.trim();
 
     try {
-      const res = await fetch("http://localhost:3001/api/auth/create-user", {
+      const res = await fetch("/api/auth/create-user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -686,7 +686,7 @@ if (id === "gestion-clientes") {
 
     const table = document.getElementById("usersTable");
 
-    fetch("http://localhost:3001/api/users", {
+    fetch("/api/users", {
       headers: {
         "Authorization": "Bearer " + localStorage.getItem("token")
       }
@@ -1210,9 +1210,8 @@ async function confirmReset(userId) {
     return;
   }
 
-  const res = await fetch(
-    `http://localhost:3001/api/admin/reset-password/${userId}`,
-    {
+  const res = await fetch(`/api/admin/reset-password/${userId}`, {
+
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1239,9 +1238,7 @@ window.confirmReset = confirmReset;
 
 async function viewClient(userId) {
   try {
-    const res = await fetch(
-      `http://localhost:3001/api/admin/impersonate/${userId}`,
-      {
+    const res = await fetch(`/api/admin/impersonate/${userId}`, {
         method: "POST",
         headers: {
           Authorization: "Bearer " + localStorage.getItem("token"),
