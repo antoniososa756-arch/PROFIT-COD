@@ -1054,62 +1054,129 @@ body.role-client.dark {
   --green: #1e293b;
   --active: #1e293b;
 }
+
 /* =========================
-   STORES GRID
+   TIENDAS (SHOPIFY)
    ========================= */
 
-.stores-grid {
+.stores-header {
   display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.stores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
 }
 
 .store-card {
-  width: 260px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.store-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.12);
 }
 
 .store-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.shopify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef2ff;
+  color: #111827;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.shopify-badge::before {
+  content: "🟢";
+  font-size: 10px;
 }
 
 .store-menu {
   cursor: pointer;
   font-size: 18px;
+  color: #6b7280;
 }
 
 .store-name {
-  font-weight: 600;
-  margin-bottom: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #111827;
 }
 
-.store-status {
+.store-meta {
   font-size: 13px;
-  margin-bottom: 6px;
+  color: #374151;
+  margin-bottom: 14px;
 }
 
-.badge.active {
-  background: #dcfce7;
-  color: #166534;
-  padding: 3px 8px;
+.store-meta .sync {
+  margin-top: 4px;
+  color: #6b7280;
+}
+
+.status {
+  display: inline-block;
+  padding: 2px 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
 }
 
-.store-sync {
-  font-size: 12px;
-  color: #555;
-  margin-bottom: 12px;
+.status.active {
+  background: #dcfce7;
+  color: #166534;
 }
 
 .store-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
+
+.store-actions button {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #111827;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.btn-primary {
+  background: #16a34a;
+  border: none;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: #15803d;
+}
+

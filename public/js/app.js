@@ -771,42 +771,17 @@ if (id === "tiendas") {
 
   if (box) {
     box.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="display:flex; justify-content:flex-end; margin-bottom:20px;">
         <button class="btn-primary" onclick="conectarShopify()">
           + Conectar tienda Shopify
         </button>
       </div>
 
-      <div class="stores-grid">
-
-        <!-- TARJETA TIENDA -->
-        <div class="store-card">
-          <div class="store-header">
-            <img src="https://cdn.shopify.com/static/shopify-favicon.png" height="20">
-            <div class="store-menu">⋮</div>
-          </div>
-
-          <div class="store-name">CABA IN SPAIN</div>
-
-          <div class="store-status">
-            Estado:
-            <span class="badge active">Activa</span>
-          </div>
-
-          <div class="store-sync">
-            Última sincronización:<br>
-            <strong>17/03/2025 13:44 hs</strong>
-          </div>
-
-          <div class="store-actions">
-            <button class="btn-secondary">Deshabilitar</button>
-            <button class="btn-primary">Importar pedidos</button>
-          </div>
-        </div>
-
-      </div>
+      <div id="storesGrid" class="stores-grid"></div>
     `;
   }
+
+  fetchStores();
 
   closeAllDrops();
   closeSearchDrop();
@@ -1358,6 +1333,68 @@ function goToShopifyStep4() {
 }
 
 window.goToShopifyStep4 = goToShopifyStep4;
+
+async function fetchStores() {
+  const grid = document.getElementById("storesGrid");
+  if (!grid) return;
+
+  grid.innerHTML = "Cargando tiendas…";
+
+  try {
+    const res = await fetch(`${API_BASE}/api/shopify/stores`, {
+      headers: {
+        Authorization: "Bearer " + localStorage.getItem("token"),
+      },
+    });
+
+    const stores = await res.json();
+
+    if (!Array.isArray(stores) || stores.length === 0) {
+      grid.innerHTML = `
+        <div class="muted">
+          Aún no tienes tiendas conectadas.
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = stores.map(store => `
+      <div class="store-card">
+        <div class="store-header">
+          <div class="shopify-badge">Shopify</div>
+          <div class="store-menu">⋮</div>
+        </div>
+
+        <div class="store-name">${store.domain}</div>
+
+        <div class="store-meta">
+          <div>
+            Estado:
+            <span class="status active">Activa</span>
+          </div>
+          <div class="sync">
+            Última sincronización:<br>
+            ${store.last_sync
+              ? new Date(store.last_sync).toLocaleString()
+              : "Nunca"}
+          </div>
+        </div>
+
+        <div class="store-actions">
+          <button class="btn-secondary">Deshabilitar</button>
+          <button class="btn-primary">Importar pedidos</button>
+        </div>
+      </div>
+    `).join("");
+
+  } catch (e) {
+    grid.innerHTML = `
+      <div style="color:#dc2626">
+        Error cargando tiendas
+      </div>
+    `;
+  }
+}
 
 
 // 👇 ESTA LÍNEA VA FUERA DE LA FUNCIÓN
