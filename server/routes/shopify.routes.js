@@ -178,6 +178,37 @@ router.get("/stores", auth, async (req, res) => {
 });
 
 /* =====================================================
+   DESHABILITAR TIENDA (ROMPER CONEXIÓN)
+   POST /api/shopify/disable/:id
+   ===================================================== */
+router.post("/disable/:id", auth, async (req, res) => {
+  const shopId = req.params.id;
+  const userId = req.user.id;
+
+  try {
+    const result = await req.db.run(
+      `
+      UPDATE shops
+      SET status = 'disabled',
+          access_token = NULL
+      WHERE id = ? AND user_id = ?
+      `,
+      [shopId, userId]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Tienda no encontrada" });
+    }
+
+    res.json({ ok: true });
+
+  } catch (err) {
+    console.error("Disable shop error:", err);
+    res.status(500).json({ error: "Error deshabilitando tienda" });
+  }
+});
+
+/* =====================================================
    PEDIDOS (FUTURO)
    ===================================================== */
 router.get("/orders", async (req, res) => {
