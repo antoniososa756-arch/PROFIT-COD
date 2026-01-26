@@ -28,7 +28,7 @@ app.use(express.json());
 
 // API
 app.use("/api/auth", authRoutes);
-app.use("/api/shopify", auth, shopifyRoutes);
+app.use("/api/shopify", shopifyRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/metrics", metricsRoutes);
