@@ -7,6 +7,7 @@ const path = require("path");
 const cors = require("cors");
 
 // DB
+const db = require("./db");
 require("./db");
 
 // Routes
@@ -25,6 +26,12 @@ const PORT = Number(process.env.PORT || 3001);
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+// 👇 INYECCIÓN GLOBAL DE DB (ESTO FALTABA)
+app.use((req, res, next) => {
+  req.db = db;
+  next();
+});
 
 // API
 app.use("/api/auth", authRoutes);
