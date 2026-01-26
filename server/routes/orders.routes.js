@@ -3,10 +3,6 @@ const auth = require("../middlewares/auth");
 
 const router = express.Router();
 
-/*
-  LISTAR PEDIDOS DEL USUARIO
-  GET /api/orders
-*/
 router.get("/", auth, async (req, res) => {
   try {
     const userId = req.user.id;
