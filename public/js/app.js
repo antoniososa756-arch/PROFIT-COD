@@ -1,3 +1,5 @@
+const API_BASE = "https://profit-cod.onrender.com";
+
 console.log("🟢 app.js cargado");
 // public/js/app.js
 (() => {
