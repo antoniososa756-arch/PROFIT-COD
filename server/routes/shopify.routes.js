@@ -193,7 +193,7 @@ router.post("/disable/:id", auth, async (req, res) => {
     const result = await req.db.run(
       `
       UPDATE shops
-      SET status = 'disabled',
+      SET status = 'disabled'
       WHERE id = ? AND user_id = ?
       `,
       [shopId, userId]
