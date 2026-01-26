@@ -1450,7 +1450,9 @@ async function fetchStores() {
         <div class="store-meta">
           <div>
             Estado:
-            <span class="status active">Activa</span>
+            <span class="status ${store.status === 'active' ? 'active' : 'inactive'}">
+  ${store.status === 'active' ? 'Activa' : 'Inactiva'}
+</span>
           </div>
           <div class="sync">
             Última sincronización:<br>
@@ -1461,19 +1463,25 @@ async function fetchStores() {
         </div>
 
        <div class="store-actions">
-  <button
-    class="btn-secondary"
-    onclick="disableStore(${store.id})"
-  >
-    Deshabilitar
-  </button>
-
-  <button
-    class="btn-primary"
-    onclick="importOrders(${store.id})"
-  >
-    Importar pedidos
-  </button>
+  ${
+    store.status === "active"
+      ? `
+        <button
+          class="btn-secondary"
+          onclick="disableStore(${store.id})"
+        >
+          Deshabilitar
+        </button>
+      `
+      : `
+        <button
+          class="btn-primary"
+          onclick="openReactivateModal('${store.domain}')"
+        >
+          Habilitar
+        </button>
+      `
+  }
 </div>
     `).join("");
 
@@ -1538,35 +1546,88 @@ window.submitShopifyConnection = submitShopifyConnection;
 // 👇 ESTA LÍNEA VA FUERA DE LA FUNCIÓN
 window.viewClient = viewClient;
 
-async function importOrders(storeId) {
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/shopify/import/${storeId}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + localStorage.getItem("token"),
-        },
-      }
-    );
+async function disableStore(storeId) {
+  if (!confirm("¿Seguro que quieres deshabilitar esta tienda?")) return;
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Error importando pedidos");
-      return;
+  const res = await fetch(
+    `${API_BASE}/api/shopify/disable/${storeId}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + localStorage.getItem("token"),
+      },
     }
+  );
 
-    alert(`Pedidos importados: ${data.imported}`);
-    setSection("tiendas");
+  const data = await res.json();
 
-  } catch {
-    alert("Error de conexión");
+  if (!res.ok) {
+    alert(data.error || "Error deshabilitando tienda");
+    return;
   }
+
+  setSection("tiendas");
 }
 
-// 👇 EXPONER A HTML (OBLIGATORIO)
-window.importOrders = importOrders;
+window.disableStore = disableStore;
+
+function openReactivateModal(domain) {
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+
+  modal.innerHTML = `
+    <div class="modal">
+      <h3>Reactivar tienda</h3>
+      <p class="muted">Vuelve a conectar la tienda</p>
+
+      <input id="reactivate-domain" value="${domain}" readonly />
+      <input id="reactivate-token" placeholder="Access Token Shopify" />
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="reactivateStore()">
+          Reactivar
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
+async function reactivateStore() {
+  const shop = document.getElementById("reactivate-domain").value;
+  const accessToken = document.getElementById("reactivate-token").value.trim();
+
+  if (!accessToken) {
+    alert("Introduce el access token");
+    return;
+  }
+
+  const res = await fetch(`${API_BASE}/api/shopify/connect-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + localStorage.getItem("token"),
+    },
+    body: JSON.stringify({ shop, accessToken }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Error reactivando tienda");
+    return;
+  }
+
+  closeModal();
+  setSection("tiendas");
+}
+
+window.openReactivateModal = openReactivateModal;
+window.reactivateStore = reactivateStore;
+
+
 
 
 

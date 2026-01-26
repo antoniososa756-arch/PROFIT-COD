@@ -124,12 +124,17 @@ router.post("/connect-token", auth, async (req, res) => {
     const data = await response.json();
 
     await req.db.run(
-      `
-      INSERT INTO shops (user_id, shop_domain, access_token, status, last_sync)
-      VALUES (?, ?, ?, 'active', datetime('now'))
-      `,
-      [userId, shop, accessToken]
-    );
+  `
+  INSERT INTO shops (user_id, shop_domain, access_token, status, last_sync)
+  VALUES (?, ?, ?, 'active', datetime('now'))
+  ON CONFLICT(user_id, shop_domain)
+  DO UPDATE SET
+    access_token = excluded.access_token,
+    status = 'active',
+    last_sync = datetime('now')
+  `,
+  [userId, shop, accessToken]
+);
 
     res.json({
       ok: true,
