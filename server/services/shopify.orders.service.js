@@ -1,4 +1,5 @@
-const fetch = require("node-fetch");
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
 /**
  * Importa pedidos nuevos de Shopify y los guarda en DB
