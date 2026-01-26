@@ -123,7 +123,7 @@ router.post("/connect-token", async (req, res) => {
   try {
     // 🔍 VALIDACIÓN REAL CONTRA SHOPIFY
     const response = await fetch(
-      `https://${shop}/admin/api/2024-01/shop.json`,
+      `https://${shop}/admin/api/2026-01/shop.json`,
       {
         headers: {
           "X-Shopify-Access-Token": accessToken,
