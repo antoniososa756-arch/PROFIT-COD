@@ -1,3 +1,4 @@
+const auth = require("../middlewares/auth");
 const express = require("express");
 const crypto = require("crypto");
 const fetch = require("node-fetch");
@@ -101,7 +102,7 @@ router.get("/callback", async (req, res) => {
    CONEXIÓN REAL CON TOKEN (PASO 4)
    POST /api/shopify/connect-token
    ===================================================== */
-router.post("/connect-token", async (req, res) => {
+router.post("/connect-token", auth, async (req, res) => {
   let { shop, accessToken } = req.body;
   const userId = req.user?.id;
 
@@ -168,7 +169,7 @@ router.post("/connect-token", async (req, res) => {
    LISTAR TIENDAS CONECTADAS
    GET /api/shopify/stores
    ===================================================== */
-router.get("/stores", async (req, res) => {
+router.get("/stores", auth, async (req, res) => {
   const userId = req.user?.id;
 
   if (!userId) {
