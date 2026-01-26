@@ -11,8 +11,8 @@ const db = require("./db");
 
 // Routes
 const authRoutes = require("./routes/auth.routes");
+const shopifyRoutes = require("./routes/shopify.routes");
 // ⛔️ AÚN DESACTIVADAS
-// const shopifyRoutes = require("./routes/shopify.routes");
 // const adminRoutes = require("./routes/admin.routes");
 // const userRoutes = require("./routes/users");
 // const metricsRoutes = require("./routes/metrics.routes");
@@ -36,8 +36,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// API (SOLO AUTH ACTIVO)
+// API (AUTH + SHOPIFY)
 app.use("/api/auth", authRoutes);
+app.use("/api/shopify", shopifyRoutes);
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));
