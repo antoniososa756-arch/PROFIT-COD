@@ -18,10 +18,7 @@ router.get("/connect", (req, res) => {
     return res.status(400).send("Falta parámetro shop");
   }
 
-  // 🔧 LIMPIAR DOMINIO
-  shop = shop
-    .replace(/^https?:\/\//, "")
-    .replace(/\/$/, "");
+  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
   const redirectUri = process.env.SHOPIFY_REDIRECT_URI;
 
@@ -44,12 +41,8 @@ router.get("/callback", async (req, res) => {
     return res.status(400).send("Parámetros inválidos");
   }
 
-  // 🔧 LIMPIAR DOMINIO
-  shop = shop
-    .replace(/^https?:\/\//, "")
-    .replace(/\/$/, "");
+  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
-  // 🔐 Validar HMAC
   const query = { ...req.query };
   delete query.hmac;
   delete query.signature;
@@ -89,11 +82,10 @@ router.get("/callback", async (req, res) => {
     }
 
     console.log("✅ Shopify OAuth OK:", shop);
-
     res.redirect("/?shopify=connected");
 
   } catch (err) {
-    console.error("Shopify callback error:", err);
+    console.error("❌ Shopify callback error:", err);
     res.status(500).send("Error en callback Shopify");
   }
 });
@@ -114,23 +106,20 @@ router.post("/connect-token", auth, async (req, res) => {
     return res.status(401).json({ error: "No autorizado" });
   }
 
-  // 🔧 LIMPIEZA CRÍTICA
-  shop = shop
-    .replace(/^https?:\/\//, "")
-    .replace(/\/$/, "");
-
+  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
   accessToken = accessToken.trim();
 
   try {
-    // 🔍 VALIDACIÓN REAL CONTRA SHOPIFY
     const response = await fetch(
-      `https://${shop}/admin/api/2026-01/shop.json`,
+      `https://${shop}/admin/api/2024-10/shop.json`,
       {
         headers: {
           "X-Shopify-Access-Token": accessToken,
         },
       }
     );
+
+    console.log("🔍 Shopify response status:", response.status);
 
     if (!response.ok) {
       const text = await response.text();
@@ -140,7 +129,6 @@ router.post("/connect-token", auth, async (req, res) => {
 
     const data = await response.json();
 
-    // 💾 GUARDAR TIENDA
     await req.db.run(
       `
       INSERT INTO shops (user_id, shop_domain, access_token, status, last_sync)
@@ -160,14 +148,16 @@ router.post("/connect-token", auth, async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Shopify connect-token error:", err);
-    res.status(500).json({ error: "Error conectando con Shopify" });
+    console.error("❌ Shopify connect-token error FULL:", err);
+    res.status(500).json({
+      error: "Error conectando con Shopify",
+      detail: err.message || String(err),
+    });
   }
 });
 
 /* =====================================================
    LISTAR TIENDAS CONECTADAS
-   GET /api/shopify/stores
    ===================================================== */
 router.get("/stores", auth, async (req, res) => {
   const userId = req.user?.id;
@@ -191,7 +181,7 @@ router.get("/stores", auth, async (req, res) => {
     [userId],
     (err, rows) => {
       if (err) {
-        console.error("DB shops error:", err);
+        console.error("❌ DB shops error:", err);
         return res.status(500).json({ error: "Error base de datos" });
       }
 
