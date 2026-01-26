@@ -1574,7 +1574,7 @@ window.disableStore = disableStore;
 function openReactivateModal(domain) {
   const modal = document.createElement("div");
   modal.className = "modal-bg";
-
+window.__reactivateShopDomain = domain;
 modal.innerHTML = `
   <div class="modal" style="max-width:420px;">
     
@@ -1619,10 +1619,29 @@ modal.innerHTML = `
       Token privado de Shopify
     </label>
     <input
-      id="reactivate-token"
-      placeholder="Pega aquí el token generado en Shopify"
-      style="margin-top:6px;"
-    />
+      <div style="
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:6px;
+  padding:10px 12px;
+  border:1.5px solid #22c55e;
+  border-radius:10px;
+  background:#f0fdf4;
+">
+  <span style="font-size:16px;">🔑</span>
+  <input
+    id="reactivate-token"
+    placeholder="Pega aquí el token generado en Shopify"
+    style="
+      border:none;
+      outline:none;
+      background:transparent;
+      flex:1;
+      font-size:14px;
+    "
+  />
+</div>
 
     <div class="muted" style="font-size:12px;margin-top:6px;">
       🔒 Este token se usa únicamente para autorizar la conexión.
@@ -1644,7 +1663,7 @@ modal.innerHTML = `
 }
 
 async function reactivateStore() {
-  const shop = document.getElementById("reactivate-domain").value;
+  const shop = window.__reactivateShopDomain;
   const accessToken = document.getElementById("reactivate-token").value.trim();
 
   if (!accessToken) {
