@@ -194,7 +194,6 @@ router.post("/disable/:id", auth, async (req, res) => {
       `
       UPDATE shops
       SET status = 'disabled',
-          access_token = NULL
       WHERE id = ? AND user_id = ?
       `,
       [shopId, userId]
