@@ -10,14 +10,15 @@ const cors = require("cors");
 const db = require("./db");
 
 // Routes
-const authRoutes = require("./routes/auth.routes");
-const shopifyRoutes = require("./routes/shopify.routes");
-const shopifyWebhooks = require("./routes/shopify.webhooks");
-const adminRoutes = require("./routes/admin.routes");
-const userRoutes = require("./routes/users");
-const metricsRoutes = require("./routes/metrics.routes");
-// ❌ ORDERS ROUTE DESACTIVADO TEMPORALMENTE
+// ⛔️ TODAS DESACTIVADAS PARA AISLAR ERROR
+// const authRoutes = require("./routes/auth.routes");
+// const shopifyRoutes = require("./routes/shopify.routes");
+// const adminRoutes = require("./routes/admin.routes");
+// const userRoutes = require("./routes/users");
+// const metricsRoutes = require("./routes/metrics.routes");
 // const ordersRoutes = require("./routes/orders.routes");
+
+const shopifyWebhooks = require("./routes/shopify.webhooks");
 
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
@@ -35,16 +36,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// API
-app.use("/api/auth", authRoutes);
-app.use("/api/shopify", shopifyRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/metrics", metricsRoutes);
-// ❌ DESACTIVADO PARA EVITAR CRASH
+// ❌ TODAS LAS RUTAS API DESACTIVADAS
+// app.use("/api/auth", authRoutes);
+// app.use("/api/shopify", shopifyRoutes);
+// app.use("/api/admin", adminRoutes);
+// app.use("/api/users", userRoutes);
+// app.use("/api/metrics", metricsRoutes);
 // app.use("/api/orders", ordersRoutes);
 
-// FRONT
+// FRONT (solo estático)
 app.use(express.static(path.resolve(__dirname, "../public")));
 app.get("/", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../public/index.html"));
