@@ -16,6 +16,8 @@ const shopifyWebhooks = require("./routes/shopify.webhooks");
 const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/users");
 const metricsRoutes = require("./routes/metrics.routes");
+const ordersRoutes = require("./routes/orders.routes");
+
 
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
@@ -39,6 +41,7 @@ app.use("/api/shopify", shopifyRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/metrics", metricsRoutes);
+app.use("/api/orders", ordersRoutes);
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));
