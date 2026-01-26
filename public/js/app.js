@@ -1663,15 +1663,6 @@ modal.innerHTML = `
 }
 
 async function reactivateStore() {
-  const shop = window.__reactivateShopDomain;
-  const accessToken = document.getElementById("reactivate-token").value.trim();
-
-  if (!accessToken) {
-    alert("Introduce el access token");
-    return;
-  }
-
-async function reactivateStore() {
   const input = document.getElementById("reactivate-token");
   const accessToken = input ? input.value.trim() : "";
   const shop = window.__reactivateShopDomain;
