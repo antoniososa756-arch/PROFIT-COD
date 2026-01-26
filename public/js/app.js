@@ -1671,6 +1671,22 @@ async function reactivateStore() {
     return;
   }
 
+async function reactivateStore() {
+  const input = document.getElementById("reactivate-token");
+  const accessToken = input ? input.value.trim() : "";
+  const shop = window.__reactivateShopDomain;
+
+  if (!accessToken || accessToken.length < 10) {
+    input.classList.add("input-error");
+    input.focus();
+
+    setTimeout(() => {
+      input.classList.remove("input-error");
+    }, 1200);
+
+    return;
+  }
+
   const res = await fetch(`${API_BASE}/api/shopify/connect-token`, {
     method: "POST",
     headers: {
