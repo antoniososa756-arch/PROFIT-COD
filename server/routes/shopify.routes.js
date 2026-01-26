@@ -105,6 +105,7 @@ router.post("/connect-token", auth, async (req, res) => {
   accessToken = accessToken.trim();
 
   try {
+    // 1️⃣ Validar token
     const response = await fetch(
       `https://${shop}/admin/api/2024-10/shop.json`,
       {
@@ -122,19 +123,49 @@ router.post("/connect-token", auth, async (req, res) => {
 
     const data = await response.json();
 
+    // 2️⃣ Guardar tienda
     await req.db.run(
-  `
-  INSERT INTO shops (user_id, shop_domain, access_token, status, last_sync)
-  VALUES (?, ?, ?, 'active', datetime('now'))
-  ON CONFLICT(user_id, shop_domain)
-  DO UPDATE SET
-    access_token = excluded.access_token,
-    status = 'active',
-    last_sync = datetime('now')
-  `,
-  [userId, shop, accessToken]
-);
+      `
+      INSERT INTO shops (user_id, shop_domain, access_token, status, last_sync)
+      VALUES (?, ?, ?, 'active', datetime('now'))
+      ON CONFLICT(user_id, shop_domain)
+      DO UPDATE SET
+        access_token = excluded.access_token,
+        status = 'active',
+        last_sync = datetime('now')
+      `,
+      [userId, shop, accessToken]
+    );
 
+    // 3️⃣ REGISTRAR WEBHOOKS (AQUÍ ES DONDE VA)
+    const webhookUrl =
+      "https://profit-cod.onrender.com/api/shopify/webhooks/orders";
+
+    const topics = [
+      "orders/create",
+      "orders/updated",
+      "fulfillments/create",
+      "fulfillments/update",
+    ];
+
+    for (const topic of topics) {
+      await fetch(`https://${shop}/admin/api/2024-10/webhooks.json`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": accessToken,
+        },
+        body: JSON.stringify({
+          webhook: {
+            topic,
+            address: webhookUrl,
+            format: "json",
+          },
+        }),
+      });
+    }
+
+    // 4️⃣ Respuesta final
     res.json({
       ok: true,
       shop: {
@@ -210,22 +241,5 @@ router.post("/disable/:id", auth, async (req, res) => {
     res.status(500).json({ error: "Error deshabilitando tienda" });
   }
 });
-
-/* =====================================================
-   PEDIDOS (FUTURO)
-   ===================================================== */
-router.get("/orders", async (req, res) => {
-  try {
-    const orders = await getOrders();
-    res.json(orders);
-  } catch (err) {
-    res.status(500).json({
-      error: "Error Shopify",
-      detail: err.message,
-    });
-  }
-});
-
-module.exports = router;
 
 
