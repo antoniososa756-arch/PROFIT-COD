@@ -1180,3 +1180,65 @@ body.role-client.dark {
   background: #15803d;
 }
 
+.orders-header {
+  width: 100%;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.search-input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  min-width: 220px;
+}
+
+.tabs {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab {
+  padding: 8px 0;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.tab.active {
+  color: var(--green);
+  border-bottom: 2px solid var(--green);
+}
+
+.orders-table {
+  width: 100%;
+}
+
+.orders-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 1.4fr 1.6fr 1.4fr 1.6fr 1fr;
+  padding: 12px 0;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.orders-row.head {
+  font-weight: 600;
+  color: #374151;
+}
+
+.status.green {
+  background: #dcfce7;
+  color: #166534;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  width: fit-content;
+}
