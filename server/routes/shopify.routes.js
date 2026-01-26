@@ -11,11 +11,16 @@ const router = express.Router();
    GET /api/shopify/connect?shop=xxx.myshopify.com
    ===================================================== */
 router.get("/connect", (req, res) => {
-  const { shop } = req.query;
+  let { shop } = req.query;
 
   if (!shop) {
     return res.status(400).send("Falta parámetro shop");
   }
+
+  // 🔧 LIMPIAR DOMINIO
+  shop = shop
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
 
   const redirectUri = process.env.SHOPIFY_REDIRECT_URI;
 
@@ -32,11 +37,16 @@ router.get("/connect", (req, res) => {
    OAUTH → CALLBACK SHOPIFY
    ===================================================== */
 router.get("/callback", async (req, res) => {
-  const { shop, hmac, code } = req.query;
+  let { shop, hmac, code } = req.query;
 
   if (!shop || !hmac || !code) {
     return res.status(400).send("Parámetros inválidos");
   }
+
+  // 🔧 LIMPIAR DOMINIO
+  shop = shop
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
 
   // 🔐 Validar HMAC
   const query = { ...req.query };
@@ -58,7 +68,6 @@ router.get("/callback", async (req, res) => {
   }
 
   try {
-    // 🔁 Intercambiar code por access token
     const tokenRes = await fetch(
       `https://${shop}/admin/oauth/access_token`,
       {
@@ -78,7 +87,6 @@ router.get("/callback", async (req, res) => {
       return res.status(400).json(tokenData);
     }
 
-    // ⚠️ SOLO REDIRIGIMOS – el guardado real se hace en /connect-token
     console.log("✅ Shopify OAuth OK:", shop);
 
     res.redirect("/?shopify=connected");
@@ -94,7 +102,7 @@ router.get("/callback", async (req, res) => {
    POST /api/shopify/connect-token
    ===================================================== */
 router.post("/connect-token", async (req, res) => {
-  const { shop, accessToken } = req.body;
+  let { shop, accessToken } = req.body;
   const userId = req.user?.id;
 
   if (!shop || !accessToken) {
@@ -105,25 +113,33 @@ router.post("/connect-token", async (req, res) => {
     return res.status(401).json({ error: "No autorizado" });
   }
 
+  // 🔧 LIMPIEZA CRÍTICA
+  shop = shop
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
+
+  accessToken = accessToken.trim();
+
   try {
-    // 🔍 Validar token contra Shopify real
+    // 🔍 VALIDACIÓN REAL CONTRA SHOPIFY
     const response = await fetch(
       `https://${shop}/admin/api/2024-01/shop.json`,
       {
         headers: {
           "X-Shopify-Access-Token": accessToken,
-          "Content-Type": "application/json",
         },
       }
     );
 
     if (!response.ok) {
-      return res.status(401).json({ error: "Token Shopify inválido" });
+      const text = await response.text();
+      console.error("❌ Shopify auth error:", text);
+      return res.status(401).json({ error: "No autorizado por Shopify" });
     }
 
     const data = await response.json();
 
-    // 💾 Guardar tienda
+    // 💾 GUARDAR TIENDA
     await req.db.run(
       `
       INSERT INTO shops (user_id, shop_domain, access_token, status, last_sync)
@@ -148,9 +164,10 @@ router.post("/connect-token", async (req, res) => {
   }
 });
 
-// =========================
-// LISTAR TIENDAS CONECTADAS
-// =========================
+/* =====================================================
+   LISTAR TIENDAS CONECTADAS
+   GET /api/shopify/stores
+   ===================================================== */
 router.get("/stores", async (req, res) => {
   const userId = req.user?.id;
 
@@ -158,33 +175,28 @@ router.get("/stores", async (req, res) => {
     return res.status(401).json({ error: "No autorizado" });
   }
 
-  try {
-    req.db.all(
-      `
-      SELECT
-        id,
-        shop_domain AS domain,
-        status,
-        last_sync,
-        created_at
-      FROM shops
-      WHERE user_id = ?
-      ORDER BY created_at DESC
-      `,
-      [userId],
-      (err, rows) => {
-        if (err) {
-          console.error("DB shops error:", err);
-          return res.status(500).json({ error: "Error base de datos" });
-        }
-
-        res.json(rows || []);
+  req.db.all(
+    `
+    SELECT
+      id,
+      shop_domain AS domain,
+      status,
+      last_sync,
+      created_at
+    FROM shops
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    `,
+    [userId],
+    (err, rows) => {
+      if (err) {
+        console.error("DB shops error:", err);
+        return res.status(500).json({ error: "Error base de datos" });
       }
-    );
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Error cargando tiendas" });
-  }
+
+      res.json(rows || []);
+    }
+  );
 });
 
 /* =====================================================
