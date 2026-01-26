@@ -235,13 +235,17 @@ router.post("/import/:storeId", auth, async (req, res) => {
     const shop = await req.db.get(
       `
       SELECT * FROM shops
+
       WHERE id = ? AND user_id = ? AND status = 'active'
       `,
       [storeId, userId]
     );
 
-    if (!shop) {
-      return res.status(404).json({ error: "Tienda no encontrada" });
+    // ⛔ VALIDACIÓN CRÍTICA (ESTO FALTABA)
+    if (!shop || !shop.shop_domain || !shop.access_token) {
+      return res.status(400).json({
+        error: "Tienda inválida o mal conectada. Vuelve a conectar la tienda."
+      });
     }
 
     const imported = await importOrdersFromShopify(req.db, shop);
