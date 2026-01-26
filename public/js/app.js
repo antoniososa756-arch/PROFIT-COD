@@ -1575,22 +1575,70 @@ function openReactivateModal(domain) {
   const modal = document.createElement("div");
   modal.className = "modal-bg";
 
-  modal.innerHTML = `
-    <div class="modal">
-      <h3>Reactivar tienda</h3>
-      <p class="muted">Vuelve a conectar la tienda</p>
-
-      <input id="reactivate-domain" value="${domain}" readonly />
-      <input id="reactivate-token" placeholder="Access Token Shopify" />
-
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="reactivateStore()">
-          Reactivar
-        </button>
+modal.innerHTML = `
+  <div class="modal" style="max-width:420px;">
+    
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="
+        width:36px;
+        height:36px;
+        border-radius:8px;
+        background:#e8f5e9;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:700;
+        color:#16a34a;
+      ">
+        S
+      </div>
+      <div>
+        <h3 style="margin:0;">Reconectar tienda</h3>
+        <div class="muted" style="font-size:13px;">
+          Conexión segura con Shopify
+        </div>
       </div>
     </div>
-  `;
+
+    <div style="
+      border:1px solid #e5e7eb;
+      border-radius:10px;
+      padding:12px;
+      margin-bottom:14px;
+      background:#f9fafb;
+    ">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">
+        Tienda Shopify
+      </div>
+      <div style="font-weight:600;">
+        ${domain}
+      </div>
+    </div>
+
+    <label style="font-size:13px;font-weight:500;">
+      Token privado de Shopify
+    </label>
+    <input
+      id="reactivate-token"
+      placeholder="Pega aquí el token generado en Shopify"
+      style="margin-top:6px;"
+    />
+
+    <div class="muted" style="font-size:12px;margin-top:6px;">
+      🔒 Este token se usa únicamente para autorizar la conexión.
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+      <button class="btn btn-secondary" onclick="closeModal()">
+        Cancelar
+      </button>
+      <button class="btn btn-primary" onclick="reactivateStore()">
+        Reconectar tienda
+      </button>
+    </div>
+
+  </div>
+`;
 
   document.body.appendChild(modal);
 }
