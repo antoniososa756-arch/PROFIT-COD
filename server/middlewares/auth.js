@@ -1,18 +1,34 @@
 const jwt = require("jsonwebtoken");
 
-function auth(req, res, next) {
-  const header = req.headers.authorization || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+module.exports = (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-  if (!token) return res.status(401).json({ error: "No autorizado" });
+  console.log("🧩 AUTH HEADER:", authHeader);
+
+  if (!authHeader) {
+    console.log("❌ NO AUTH HEADER");
+    return res.status(401).json({ error: "NO_AUTH_HEADER" });
+  }
+
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  console.log("🧩 TOKEN:", token);
+
+  if (!token) {
+    console.log("❌ TOKEN VACÍO");
+    return res.status(401).json({ error: "TOKEN_VACIO" });
+  }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload; // { id, email }
-    next();
-  } catch {
-    return res.status(401).json({ error: "Token inválido" });
-  }
-}
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("✅ TOKEN DECODIFICADO:", decoded);
 
-module.exports = auth;
+    req.user = decoded;
+    next();
+  } catch (err) {
+    console.log("❌ JWT ERROR:", err.message);
+    return res.status(401).json({ error: "JWT_INVALIDO" });
+  }
+};
