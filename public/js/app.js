@@ -1417,7 +1417,7 @@ async function fetchStores() {
 // =========================
 async function submitShopifyConnection() {
   const shop = document.getElementById("pf-shop-domain")?.value.trim();
-  const accessToken = document.getElementById("pf-api-secret")?.value.trim();
+  const accessToken = document.getElementById("pf-access-token")?.value.trim();
 
   if (!shop || !accessToken) {
     alert("Completa dominio y access token");
