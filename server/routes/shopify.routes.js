@@ -242,4 +242,4 @@ router.post("/disable/:id", auth, async (req, res) => {
   }
 });
 
-
+module.exports = router;
