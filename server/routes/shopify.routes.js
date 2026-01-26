@@ -3,7 +3,6 @@ const express = require("express");
 const crypto = require("crypto");
 // ❌ NO node-fetch (Node 18 ya tiene fetch nativo)
 
-const { importOrdersFromShopify } = require("../services/shopify.orders.service");
 
 const router = express.Router();
 
@@ -228,42 +227,3 @@ router.get("/orders", async (req, res) => {
   }
 });
 
-/* =====================================================
-   IMPORTAR PEDIDOS MANUAL
-   POST /api/shopify/import/:storeId
-   ===================================================== */
-router.post("/import/:storeId", auth, async (req, res) => {
-  const userId = req.user.id;
-  const storeId = req.params.storeId;
-
-  try {
-    const shop = await req.db.get(
-      `
-      SELECT * FROM shops
-
-      WHERE id = ? AND user_id = ? AND status = 'active'
-      `,
-      [storeId, userId]
-    );
-
-    // ⛔ VALIDACIÓN CRÍTICA (ESTO FALTABA)
-    if (!shop || !shop.shop_domain || !shop.access_token) {
-      return res.status(400).json({
-        error: "Tienda inválida o mal conectada. Vuelve a conectar la tienda."
-      });
-    }
-
-    const imported = await importOrdersFromShopify(req.db, shop);
-
-    res.json({
-      ok: true,
-      imported,
-    });
-
-  } catch (err) {
-    console.error("Import orders error:", err);
-    res.status(500).json({ error: "Error importando pedidos" });
-  }
-});
-
-module.exports = router;
