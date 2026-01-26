@@ -1,7 +1,7 @@
 const auth = require("../middlewares/auth");
 const express = require("express");
 const crypto = require("crypto");
-const fetch = require("node-fetch");
+// ❌ NO node-fetch (Node 18 ya tiene fetch nativo)
 
 const { getOrders } = require("../services/shopify.service");
 
@@ -85,7 +85,7 @@ router.get("/callback", async (req, res) => {
     res.redirect("/?shopify=connected");
 
   } catch (err) {
-    console.error("❌ Shopify callback error:", err);
+    console.error("Shopify callback error:", err);
     res.status(500).send("Error en callback Shopify");
   }
 });
@@ -96,14 +96,10 @@ router.get("/callback", async (req, res) => {
    ===================================================== */
 router.post("/connect-token", auth, async (req, res) => {
   let { shop, accessToken } = req.body;
-  const userId = req.user?.id;
+  const userId = req.user.id;
 
   if (!shop || !accessToken) {
     return res.status(400).json({ error: "Datos incompletos" });
-  }
-
-  if (!userId) {
-    return res.status(401).json({ error: "No autorizado" });
   }
 
   shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -118,8 +114,6 @@ router.post("/connect-token", auth, async (req, res) => {
         },
       }
     );
-
-    console.log("🔍 Shopify response status:", response.status);
 
     if (!response.ok) {
       const text = await response.text();
@@ -148,11 +142,8 @@ router.post("/connect-token", auth, async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ Shopify connect-token error FULL:", err);
-    res.status(500).json({
-      error: "Error conectando con Shopify",
-      detail: err.message || String(err),
-    });
+    console.error("Shopify connect-token error:", err);
+    res.status(500).json({ error: "Error conectando con Shopify" });
   }
 });
 
@@ -160,11 +151,7 @@ router.post("/connect-token", auth, async (req, res) => {
    LISTAR TIENDAS CONECTADAS
    ===================================================== */
 router.get("/stores", auth, async (req, res) => {
-  const userId = req.user?.id;
-
-  if (!userId) {
-    return res.status(401).json({ error: "No autorizado" });
-  }
+  const userId = req.user.id;
 
   req.db.all(
     `
@@ -181,7 +168,7 @@ router.get("/stores", auth, async (req, res) => {
     [userId],
     (err, rows) => {
       if (err) {
-        console.error("❌ DB shops error:", err);
+        console.error("DB shops error:", err);
         return res.status(500).json({ error: "Error base de datos" });
       }
 
