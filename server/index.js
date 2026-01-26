@@ -1,5 +1,5 @@
 require("dotenv").config({
-  path: require("path").join(__dirname, ".env")
+  path: require("path").join(__dirname, ".env"),
 });
 
 const express = require("express");
@@ -8,26 +8,26 @@ const cors = require("cors");
 
 // DB
 const db = require("./db");
-require("./db");
 
 // Routes
 const authRoutes = require("./routes/auth.routes");
 const shopifyRoutes = require("./routes/shopify.routes");
+const shopifyWebhooks = require("./routes/shopify.webhooks");
 const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/users");
 const metricsRoutes = require("./routes/metrics.routes");
 
-// Middleware auth
-const auth = require("./middlewares/auth");
-
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
 
-// Middlewares
+// ⚠️ IMPORTANTE: webhooks usan RAW body
+app.use("/api/shopify/webhooks", shopifyWebhooks);
+
+// Middlewares normales (DESPUÉS)
 app.use(cors());
 app.use(express.json());
 
-// 👇 INYECCIÓN GLOBAL DE DB (ESTO FALTABA)
+// Inyección global de DB
 app.use((req, res, next) => {
   req.db = db;
   next();
@@ -46,12 +46,12 @@ app.get("/", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../public/index.html"));
 });
 
-// 404 SIEMPRE AL FINAL
+// 404
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
 });
 
-// LISTEN (AQUÍ ARRANCA EL SERVER)
+// START
 app.listen(PORT, () => {
   console.log(`OK http://localhost:${PORT}`);
 });

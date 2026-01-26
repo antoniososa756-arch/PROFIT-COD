@@ -42,4 +42,23 @@ db.serialize(() => {
   `);
 });
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shop_id INTEGER,
+    order_id TEXT UNIQUE,
+    order_number TEXT,
+    created_at TEXT,
+    customer_name TEXT,
+    total_price REAL,
+    currency TEXT,
+    fulfillment_status TEXT,
+    tracking_number TEXT,
+    carrier TEXT,
+    raw_json TEXT,
+    updated_at TEXT
+  )
+`);
+
+
 module.exports = db;
