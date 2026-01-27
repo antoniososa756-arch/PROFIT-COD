@@ -94,12 +94,14 @@ router.get("/callback", async (req, res) => {
    POST /api/shopify/connect-token
    ===================================================== */
 router.post("/connect-token", auth, async (req, res) => {
-  let { shop, accessToken } = req.body;
+  let { shop, accessToken, webhookSecret } = req.body;
   const userId = req.user.id;
 
-  if (!shop || !accessToken) {
-    return res.status(400).json({ error: "Datos incompletos" });
-  }
+  if (!shop || !accessToken || !webhookSecret) {
+  return res.status(400).json({
+    error: "Debes proporcionar dominio, access token y webhook secret",
+  });
+}
 
   shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
   accessToken = accessToken.trim();

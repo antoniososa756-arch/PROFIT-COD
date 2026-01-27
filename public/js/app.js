@@ -1427,10 +1427,10 @@ async function submitShopifyConnection() {
   const webhookSecret =
     document.getElementById("pf-webhook-secret")?.value.trim() || null;
 
-  if (!shop || !accessToken) {
-    alert("Completa dominio y access token");
-    return;
-  }
+  if (!shop || !accessToken || !webhookSecret) {
+  alert("Debes completar dominio, access token y webhook secret");
+  return;
+}
 
   try {
     const res = await fetch(`${API_BASE}/api/shopify/connect-token`, {
