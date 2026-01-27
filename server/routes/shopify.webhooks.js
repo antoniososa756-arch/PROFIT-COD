@@ -11,6 +11,9 @@ router.post(
   express.raw({ type: "application/json" }),
   (req, res) => {
     try {
+      // 🔔 LOG CLAVE PARA SABER SI SHOPIFY LLAMA
+      console.log("📦 WEBHOOK LLAMADO");
+
       const hmac = req.headers["x-shopify-hmac-sha256"];
       const body = req.body;
 
