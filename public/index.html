@@ -376,12 +376,11 @@
     box-shadow:0 20px 60px rgba(0,0,0,0.25);
   ">
 
-    <h3 style="margin-top:0;">Paso 4 · Conectar tienda con PROFITCOD</h3>
+    <h3 style="margin-top:0;">Conectar tienda Shopify con PROFITCOD</h3>
 
     <p style="font-size:14px;color:#444;margin-bottom:16px;">
-      Introduce el dominio de tu tienda y el <strong>Access Token</strong> generado
-      al instalar la app en Shopify.
-    </p>
+  Introduce los datos de tu tienda para sincronizar pedidos automáticamente con PROFITCOD.
+</p>
 
     <div style="display:flex;flex-direction:column;gap:12px;">
 
@@ -403,6 +402,21 @@
   style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;"
 />
       </div>
+<div>
+  <label style="font-size:13px;font-weight:600;">Webhook Secret</label>
+  <input
+    id="pf-webhook-secret"
+    placeholder="Pégalo aquí"
+    type="text"
+    style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;"
+  />
+  <div style="font-size:12px;color:#6b7280;margin-top:6px;line-height:1.4;">
+    En Shopify ve a <b>Configuración → Notificaciones → Webhooks</b>.<br>
+    Al final verás el mensaje:<br>
+    <i>“Tus webhooks se firmarán con …”</i><br>
+    Copia ese valor y pégalo aquí.
+  </div>
+</div>
 
     </div>
 
