@@ -94,6 +94,8 @@ router.get("/callback", async (req, res) => {
    POST /api/shopify/connect-token
    ===================================================== */
 router.post("/connect-token", auth, async (req, res) => {
+  console.log("🚀 CONNECT-TOKEN LLAMADO", req.body);
+
   let { shop, accessToken, appSecret } = req.body;
   const userId = req.user.id;
 
