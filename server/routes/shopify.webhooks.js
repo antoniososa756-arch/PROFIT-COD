@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const router = express.Router();
 
 /**
- * ⚠️ Shopify requiere RAW BODY para webhooks
+ * Shopify webhooks → RAW BODY obligatorio
  */
 router.post(
   "/orders-create",
@@ -23,7 +23,16 @@ router.post(
         .update(body)
         .digest("base64");
 
-      if (generatedHmac !== hmac) {
+      // comparación segura
+      const valid =
+        Buffer.from(generatedHmac, "utf8").length ===
+          Buffer.from(hmac, "utf8").length &&
+        crypto.timingSafeEqual(
+          Buffer.from(generatedHmac, "utf8"),
+          Buffer.from(hmac, "utf8")
+        );
+
+      if (!valid) {
         return res.status(401).send("HMAC inválido");
       }
 
@@ -31,7 +40,7 @@ router.post(
 
       console.log("✅ Webhook pedido recibido:", data.id);
 
-      // 👉 aquí luego guardaremos el pedido en DB
+      // 👉 aquí luego guardamos el pedido en DB
 
       res.status(200).send("OK");
     } catch (err) {
