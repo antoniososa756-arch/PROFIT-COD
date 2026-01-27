@@ -4,71 +4,46 @@ const crypto = require("crypto");
 const router = express.Router();
 
 /**
- * ⚠️ IMPORTANTE
- * - Shopify envía RAW body
- * - NO usar express.json() aquí
+ * Shopify Webhook – orders/create
+ * RAW BODY obligatorio
  */
 router.post(
   "/orders",
   express.raw({ type: "application/json" }),
-  async (req, res) => {
+  (req, res) => {
     try {
       console.log("📦 WEBHOOK LLAMADO");
 
-      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-      const shopDomain = req.get("X-Shopify-Shop-Domain");
+      const hmac = req.headers["x-shopify-hmac-sha256"];
       const body = req.body;
 
-      if (!hmacHeader || !shopDomain || !body) {
+      if (!hmac || !body) {
+        console.error("❌ Falta HMAC o body");
         return res.status(400).send("Webhook inválido");
       }
 
-      // 1️⃣ Buscar app_secret de la tienda
-      const shop = await req.db.get(
-        `
-        SELECT app_secret
-        FROM shops
-        WHERE shop_domain = ? AND status = 'active'
-        `,
-        [shopDomain]
-      );
-
-      if (!shop || !shop.app_secret) {
-        console.error("❌ App secret no encontrado para", shopDomain);
-        return res.status(401).send("Tienda no autorizada");
-      }
-
-      // 2️⃣ Calcular HMAC con el APP SECRET del cliente
       const generatedHmac = crypto
-        .createHmac("sha256", shop.app_secret)
+        .createHmac("sha256", process.env.SHOPIFY_API_SECRET)
         .update(body)
         .digest("base64");
 
       const valid =
-        Buffer.byteLength(generatedHmac) ===
-          Buffer.byteLength(hmacHeader) &&
+        Buffer.byteLength(generatedHmac) === Buffer.byteLength(hmac) &&
         crypto.timingSafeEqual(
           Buffer.from(generatedHmac),
-          Buffer.from(hmacHeader)
+          Buffer.from(hmac)
         );
 
       if (!valid) {
-        console.error("❌ HMAC inválido para", shopDomain);
+        console.error("❌ HMAC inválido");
         return res.status(401).send("HMAC inválido");
       }
 
-      // 3️⃣ Payload válido
-      const payload = JSON.parse(body.toString());
+      const payload = JSON.parse(body.toString("utf8"));
 
-      console.log(
-        "✅ Pedido recibido:",
-        payload.id,
-        "Tienda:",
-        shopDomain
-      );
+      console.log("✅ Pedido recibido:", payload.id);
 
-      // 👉 AQUÍ IRÁ:
-      // await saveOrder(payload, shopDomain)
+      // 👉 aquí luego guardaremos el pedido
 
       res.status(200).send("OK");
     } catch (err) {
