@@ -4,46 +4,71 @@ const crypto = require("crypto");
 const router = express.Router();
 
 /**
- * Shopify webhooks → RAW BODY obligatorio
+ * ⚠️ IMPORTANTE
+ * - Shopify envía RAW body
+ * - NO usar express.json() aquí
  */
 router.post(
-  "/orders-create",
+  "/orders",
   express.raw({ type: "application/json" }),
-  (req, res) => {
+  async (req, res) => {
     try {
-      // 🔔 LOG CLAVE PARA SABER SI SHOPIFY LLAMA
       console.log("📦 WEBHOOK LLAMADO");
 
-      const hmac = req.headers["x-shopify-hmac-sha256"];
+      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
+      const shopDomain = req.get("X-Shopify-Shop-Domain");
       const body = req.body;
 
-      if (!hmac || !body) {
+      if (!hmacHeader || !shopDomain || !body) {
         return res.status(400).send("Webhook inválido");
       }
 
+      // 1️⃣ Buscar app_secret de la tienda
+      const shop = await req.db.get(
+        `
+        SELECT app_secret
+        FROM shops
+        WHERE shop_domain = ? AND status = 'active'
+        `,
+        [shopDomain]
+      );
+
+      if (!shop || !shop.app_secret) {
+        console.error("❌ App secret no encontrado para", shopDomain);
+        return res.status(401).send("Tienda no autorizada");
+      }
+
+      // 2️⃣ Calcular HMAC con el APP SECRET del cliente
       const generatedHmac = crypto
-        .createHmac("sha256", process.env.SHOPIFY_API_SECRET)
+        .createHmac("sha256", shop.app_secret)
         .update(body)
         .digest("base64");
 
-      // comparación segura
       const valid =
-        Buffer.from(generatedHmac, "utf8").length ===
-          Buffer.from(hmac, "utf8").length &&
+        Buffer.byteLength(generatedHmac) ===
+          Buffer.byteLength(hmacHeader) &&
         crypto.timingSafeEqual(
-          Buffer.from(generatedHmac, "utf8"),
-          Buffer.from(hmac, "utf8")
+          Buffer.from(generatedHmac),
+          Buffer.from(hmacHeader)
         );
 
       if (!valid) {
+        console.error("❌ HMAC inválido para", shopDomain);
         return res.status(401).send("HMAC inválido");
       }
 
-      const data = JSON.parse(body.toString());
+      // 3️⃣ Payload válido
+      const payload = JSON.parse(body.toString());
 
-      console.log("✅ Webhook pedido recibido:", data.id);
+      console.log(
+        "✅ Pedido recibido:",
+        payload.id,
+        "Tienda:",
+        shopDomain
+      );
 
-      // 👉 aquí luego guardamos el pedido en DB
+      // 👉 AQUÍ IRÁ:
+      // await saveOrder(payload, shopDomain)
 
       res.status(200).send("OK");
     } catch (err) {

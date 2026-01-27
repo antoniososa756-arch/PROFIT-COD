@@ -94,14 +94,17 @@ router.get("/callback", async (req, res) => {
    POST /api/shopify/connect-token
    ===================================================== */
 router.post("/connect-token", auth, async (req, res) => {
-  let { shop, accessToken, webhookSecret } = req.body;
+  let { shop, accessToken, appSecret } = req.body;
   const userId = req.user.id;
 
-  if (!shop || !accessToken || !webhookSecret) {
+  if (!shop || !accessToken || !appSecret) {
   return res.status(400).json({
-    error: "Debes proporcionar dominio, access token y webhook secret",
+    error: "Debes proporcionar dominio, access token y app secret",
   });
 }
+
+appSecret = appSecret.trim();
+
 
   shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
   accessToken = accessToken.trim();
@@ -128,15 +131,23 @@ router.post("/connect-token", auth, async (req, res) => {
     // 2️⃣ Guardar tienda
     await req.db.run(
       `
-      INSERT INTO shops (user_id, shop_domain, access_token, status, last_sync)
-      VALUES (?, ?, ?, 'active', datetime('now'))
+      INSERT INTO shops (
+  user_id,
+  shop_domain,
+  access_token,
+  app_secret,
+  status,
+  last_sync
+)
+VALUES (?, ?, ?, ?, 'active', datetime('now'))
       ON CONFLICT(user_id, shop_domain)
       DO UPDATE SET
-        access_token = excluded.access_token,
-        status = 'active',
-        last_sync = datetime('now')
+  access_token = excluded.access_token,
+  app_secret = excluded.app_secret,
+  status = 'active',
+  last_sync = datetime('now')
       `,
-      [userId, shop, accessToken]
+      [userId, shop, accessToken, appSecret]
     );
 
     // 3️⃣ REGISTRAR WEBHOOKS (AQUÍ ES DONDE VA)

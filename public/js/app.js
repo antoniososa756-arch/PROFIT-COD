@@ -1419,18 +1419,17 @@ async function fetchStores() {
 }
 
 // =========================
-// SHOPIFY PASO 4 (REAL)
+// SHOPIFY CONEXIÓN (TOKEN + APP SECRET)
 // =========================
 async function submitShopifyConnection() {
   const shop = document.getElementById("pf-shop-domain")?.value.trim();
   const accessToken = document.getElementById("pf-access-token")?.value.trim();
-  const webhookSecret =
-    document.getElementById("pf-webhook-secret")?.value.trim() || null;
+  const appSecret = document.getElementById("pf-app-secret")?.value.trim();
 
-  if (!shop || !accessToken || !webhookSecret) {
-  alert("Debes completar dominio, access token y webhook secret");
-  return;
-}
+  if (!shop || !accessToken || !appSecret) {
+    alert("Debes completar dominio, access token y app secret");
+    return;
+  }
 
   try {
     const res = await fetch(`${API_BASE}/api/shopify/connect-token`, {
@@ -1440,10 +1439,10 @@ async function submitShopifyConnection() {
         Authorization: "Bearer " + localStorage.getItem("token"),
       },
       body: JSON.stringify({
-  shop,
-  accessToken,
-  webhookSecret,
-}),
+        shop,
+        accessToken,
+        appSecret,
+      }),
     });
 
     const data = await res.json();
@@ -1453,12 +1452,9 @@ async function submitShopifyConnection() {
       return;
     }
 
-    alert(`✅ Tienda conectada: ${data.shop.name}`);
+    alert("✅ Tienda conectada correctamente");
 
-    // cerrar modal paso 4
     closeShopifyStep4?.();
-
-    // refrescar sección tiendas
     setSection("tiendas");
 
   } catch (err) {
