@@ -772,7 +772,7 @@ if (id === "tiendas") {
   if (box) {
     box.innerHTML = `
       <div style="display:flex; justify-content:flex-end; margin-bottom:20px;">
-        <button class="btn-primary" onclick="conectarShopify()">
+        <button class="btn-primary" onclick="openShopifyConnect()">
           + Conectar tienda Shopify
         </button>
       </div>
@@ -1200,25 +1200,6 @@ function openUserSection(type) {
 }
 
 // =========================
-// SHOPIFY CONNECTOR (UI ONLY)
-// =========================
-
-function conectarShopify() {
-  const modal = document.getElementById("connectModal");
-
-  if (!modal) {
-    alert("No se pudo abrir el asistente de conexión Shopify");
-    return;
-  }
-
-  modal.style.display = "flex";
-}
-
-// 🔑 EXPONER A HTML
-window.conectarShopify = conectarShopify;
-
-
-// =========================
 // LOGOUT
 // =========================
 
@@ -1349,63 +1330,6 @@ async function viewClient(userId) {
     alert("Error de conexión");
   }
 }
-
-// =========================
-// SHOPIFY MODALS FLOW (PASOS 1 → 3)
-// =========================
-
-function openShopifyStep1() {
-  const m0 = document.getElementById("connectModal");
-  const m1 = document.getElementById("shopifyStep1");
-
-  if (m0) m0.style.display = "none";
-  if (m1) m1.style.display = "flex";
-}
-
-function closeShopifyStep1() {
-  const m1 = document.getElementById("shopifyStep1");
-  if (m1) m1.style.display = "none";
-}
-
-function goToShopifyStep2() {
-  const m1 = document.getElementById("shopifyStep1");
-  const m2 = document.getElementById("shopifyStep2");
-
-  if (m1) m1.style.display = "none";
-  if (m2) m2.style.display = "flex";
-}
-
-function goToShopifyStep3() {
-  const m2 = document.getElementById("shopifyStep2");
-  const m3 = document.getElementById("shopifyStep3");
-
-  if (m2) m2.style.display = "none";
-  if (m3) m3.style.display = "flex";
-}
-
-function closeShopifyStep3() {
-  const m3 = document.getElementById("shopifyStep3");
-  if (m3) m3.style.display = "none";
-}
-
-window.closeShopifyStep3 = closeShopifyStep3;
-
-
-// 👉 EXPONER A HTML
-window.openShopifyStep1 = openShopifyStep1;
-window.closeShopifyStep1 = closeShopifyStep1;
-window.goToShopifyStep2 = goToShopifyStep2;
-window.goToShopifyStep3 = goToShopifyStep3;
-
-function goToShopifyStep4() {
-  const m3 = document.getElementById("shopifyStep3");
-  const m4 = document.getElementById("shopifyStep4");
-
-  if (m3) m3.style.display = "none";
-  if (m4) m4.style.display = "flex";
-}
-
-window.goToShopifyStep4 = goToShopifyStep4;
 
 function closeShopifyStep4() {
   const m4 = document.getElementById("shopifyStep4");
@@ -1538,6 +1462,14 @@ async function submitShopifyConnection() {
     alert("Error de conexión con el servidor");
   }
 }
+
+function openShopifyConnect() {
+  const modal = document.getElementById("shopifyStep4");
+  if (modal) modal.style.display = "flex";
+}
+
+window.openShopifyConnect = openShopifyConnect;
+
 
 // 👉 EXPONER A HTML
 window.submitShopifyConnection = submitShopifyConnection;
