@@ -27,6 +27,7 @@ db.serialize(() => {
     )
   `);
 
+  // TABLA SHOPS (SIN app_secret)
   db.run(`
     CREATE TABLE IF NOT EXISTS shops (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,6 +41,16 @@ db.serialize(() => {
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
   `);
+
+  // MIGRACIÓN SEGURA: añadir app_secret
+  db.run(
+    `ALTER TABLE shops ADD COLUMN app_secret TEXT`,
+    err => {
+      if (err && !err.message.includes("duplicate column")) {
+        console.error("DB alter error:", err.message);
+      }
+    }
+  );
 });
 
 db.run(`
@@ -59,6 +70,5 @@ db.run(`
     updated_at TEXT
   )
 `);
-
 
 module.exports = db;
