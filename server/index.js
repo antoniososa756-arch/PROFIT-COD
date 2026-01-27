@@ -24,9 +24,6 @@ const PORT = Number(process.env.PORT || 3001);
 // ⚠️ IMPORTANTE: webhooks usan RAW body (SIEMPRE ANTES DE json)
 app.use("/api/shopify/webhooks", shopifyWebhooks);
 
-app.use("/api/test", require("./routes/test-hmac"));
-
-
 // Middlewares normales
 app.use(cors());
 app.use(express.json());
