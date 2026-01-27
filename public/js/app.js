@@ -1424,6 +1424,8 @@ async function fetchStores() {
 async function submitShopifyConnection() {
   const shop = document.getElementById("pf-shop-domain")?.value.trim();
   const accessToken = document.getElementById("pf-access-token")?.value.trim();
+  const webhookSecret =
+    document.getElementById("pf-webhook-secret")?.value.trim() || null;
 
   if (!shop || !accessToken) {
     alert("Completa dominio y access token");
@@ -1438,9 +1440,10 @@ async function submitShopifyConnection() {
         Authorization: "Bearer " + localStorage.getItem("token"),
       },
       body: JSON.stringify({
-        shop,
-        accessToken,
-      }),
+  shop,
+  accessToken,
+  webhookSecret,
+}),
     });
 
     const data = await res.json();
