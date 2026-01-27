@@ -3,49 +3,40 @@ const crypto = require("crypto");
 
 const router = express.Router();
 
+/**
+ * ⚠️ Shopify requiere RAW BODY para webhooks
+ */
 router.post(
-  "/orders",
+  "/orders-create",
   express.raw({ type: "application/json" }),
-  async (req, res) => {
+  (req, res) => {
     try {
-      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-      const shop = req.get("X-Shopify-Shop-Domain");
+      const hmac = req.headers["x-shopify-hmac-sha256"];
+      const body = req.body;
 
-      if (!shop) {
-        return res.status(400).send("Missing shop header");
+      if (!hmac || !body) {
+        return res.status(400).send("Webhook inválido");
       }
 
-      // 🔎 Buscar tienda en BD
-      const store = await req.db.get(
-        "SELECT webhook_secret FROM shops WHERE domain = ? AND status = 'active'",
-        [shop]
-      );
-
-      if (!store || !store.webhook_secret) {
-        return res.status(401).send("Webhook secret not found");
-      }
-
-      // 🔐 Validar HMAC con el secret DE ESA TIENDA
       const generatedHmac = crypto
-        .createHmac("sha256", store.webhook_secret)
-        .update(req.body)
+        .createHmac("sha256", process.env.SHOPIFY_API_SECRET)
+        .update(body)
         .digest("base64");
 
-      if (generatedHmac !== hmacHeader) {
-        console.error("❌ HMAC inválido para", shop);
-        return res.status(401).send("Invalid HMAC");
+      if (generatedHmac !== hmac) {
+        return res.status(401).send("HMAC inválido");
       }
 
-      const payload = JSON.parse(req.body.toString());
+      const data = JSON.parse(body.toString());
 
-      console.log("✅ Pedido recibido:", payload.id);
+      console.log("✅ Webhook pedido recibido:", data.id);
 
-      // 👉 AQUÍ VA EL GUARDADO DEL PEDIDO (PASO 2)
+      // 👉 aquí luego guardaremos el pedido en DB
+
       res.status(200).send("OK");
-
     } catch (err) {
-      console.error("Webhook error:", err);
-      res.status(500).send("Webhook error");
+      console.error("❌ Webhook error:", err);
+      res.status(500).send("Error webhook");
     }
   }
 );
