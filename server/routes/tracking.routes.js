@@ -5,7 +5,7 @@ const router = express.Router();
 function mapMRWStatus(texto) {
   const t = (texto || "").toLowerCase();
   if (t.includes("entregado")) return "entregado";
-  if (t.includes("tránsito") || t.includes("transito") || t.includes("camino")) return "en_transito";
+  if (t.includes("tr\u00e1nsito") || t.includes("transito") || t.includes("camino")) return "en_transito";
   if (t.includes("devuelto") || t.includes("retorno")) return "devuelto";
   if (t.includes("destruido")) return "destruido";
   if (t.includes("ausente") || t.includes("no entregado")) return "no_entregado";
@@ -31,16 +31,30 @@ router.get("/:tracking", auth, async (req, res) => {
 
     const html = await response.text();
 
-    // Buscar estado en el HTML
-    const statusMatch = html.match(/Env[ií]o\s+\w+/i) ||
-                        html.match(/Estado[^<]*<\/td>\s*<td[^>]*>([^<]+)/i) ||
-                        html.match(/(entregado|en tr[aá]nsito|devuelto|destruido|no entregado)/i);
+    // Buscar directamente palabras clave de estado
+    const keywords = [
+      "Env\u00edo entregado",
+      "Entregado",
+      "En tr\u00e1nsito",
+      "En transito",
+      "Devuelto",
+      "Destruido",
+      "No entregado",
+      "Ausente",
+    ];
 
-    if (!statusMatch) {
-      return res.json({ ok: false, error: "Estado no encontrado", html: html.substring(0, 500) });
+    let rawStatus = null;
+    for (const kw of keywords) {
+      if (html.toLowerCase().includes(kw.toLowerCase())) {
+        rawStatus = kw;
+        break;
+      }
     }
 
-    const rawStatus = statusMatch[0].trim();
+    if (!rawStatus) {
+      return res.json({ ok: false, error: "Estado no encontrado", html: html.substring(0, 800) });
+    }
+
     res.json({ ok: true, raw: rawStatus, status: mapMRWStatus(rawStatus) });
 
   } catch (err) {
