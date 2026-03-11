@@ -12,16 +12,24 @@ router.post(
       console.log("📦 WEBHOOK LLAMADO");
 
       const hmac = req.headers["x-shopify-hmac-sha256"];
-      const shopDomain = req.headers["x-shopify-shop-domain"];
+      let shopDomain = req.headers["x-shopify-shop-domain"];
       const body = req.body;
 
       if (!hmac || !body || !shopDomain) {
         return res.status(400).send("Webhook inválido");
       }
 
+      // Normalizar dominio
+      shopDomain = shopDomain
+        .replace(/^https?:\/\//, "")
+        .replace(/\/$/, "")
+        .toLowerCase();
+
+      console.log("🏪 Tienda recibida:", shopDomain);
+
       // Buscar la tienda y su app_secret en DB
       db.get(
-        "SELECT id, app_secret FROM shops WHERE shop_domain = ? AND status = 'active'",
+        "SELECT id, app_secret FROM shops WHERE LOWER(shop_domain) = ? AND status = 'active'",
         [shopDomain],
         async (err, shop) => {
           if (err || !shop) {
