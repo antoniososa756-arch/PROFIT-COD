@@ -801,7 +801,7 @@ if (id === "pedidos") {
     box.innerHTML = `
       <div class="orders-header">
         <div class="filters">
-          <button class="btn-secondary">Filtros</button>
+          <button class="btn-secondary" onclick="toggleFilterPanel()">Filtros</button>
           <button class="btn-secondary" onclick="syncAndRefreshOrders()" title="Sincronizar ahora">
             🔄 Sincronizar
           </button>
@@ -1818,6 +1818,169 @@ async function syncAndRefreshOrders() {
 window.syncAndRefreshOrders = syncAndRefreshOrders;
 window.openReactivateModal = openReactivateModal;
 window.reactivateStore = reactivateStore;
+
+// =========================
+// PANEL DE FILTROS PEDIDOS
+// =========================
+let activeFilters = { status: "", shop: "", dateFrom: "", dateTo: "" };
+
+async function toggleFilterPanel() {
+  const existing = document.getElementById("filter-panel");
+  if (existing) { existing.remove(); return; }
+
+  // Obtener tiendas para el selector
+  let stores = [];
+  try {
+    const r = await fetch(`${API_BASE}/api/shopify/stores`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+    });
+    stores = await r.json();
+    if (!Array.isArray(stores)) stores = [];
+  } catch {}
+
+  const panel = document.createElement("div");
+  panel.id = "filter-panel";
+  panel.style.cssText = `
+    position:fixed; top:0; right:0; width:300px; height:100vh;
+    background:#fff; border-left:1px solid #e5e7eb;
+    box-shadow:-4px 0 20px rgba(0,0,0,0.1);
+    z-index:999; display:flex; flex-direction:column;
+    font-family:inherit;
+  `;
+
+  panel.innerHTML = `
+    <div style="padding:20px 20px 14px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:16px; font-weight:700;">Filtros</span>
+      <span onclick="toggleFilterPanel()" style="cursor:pointer; font-size:20px; color:#6b7280; line-height:1;">×</span>
+    </div>
+
+    <div style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:20px;">
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#374151; display:block; margin-bottom:8px;">Fecha</label>
+        <input type="date" id="filter-date-from" value="${activeFilters.dateFrom}"
+          style="width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; margin-bottom:6px;">
+        <input type="date" id="filter-date-to" value="${activeFilters.dateTo}"
+          style="width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px;">
+      </div>
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#374151; display:block; margin-bottom:8px;">Estado logístico</label>
+        <select id="filter-status"
+          style="width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#fff;">
+          <option value="">Todos</option>
+          <option value="pendiente" ${activeFilters.status==="pendiente"?"selected":""}>Pendiente</option>
+          <option value="en_preparacion" ${activeFilters.status==="en_preparacion"?"selected":""}>En preparación</option>
+          <option value="enviado" ${activeFilters.status==="enviado"?"selected":""}>Enviado</option>
+          <option value="devuelto" ${activeFilters.status==="devuelto"?"selected":""}>Devuelto</option>
+          <option value="cancelado" ${activeFilters.status==="cancelado"?"selected":""}>Cancelado</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#374151; display:block; margin-bottom:8px;">Tiendas</label>
+        <div style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden;">
+          <div
+            onclick="selectFilterShop('')"
+            id="shop-opt-all"
+            style="padding:10px 12px; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:8px;
+              background:${!activeFilters.shop ? '#f0fdf4' : '#fff'};
+              color:${!activeFilters.shop ? '#16a34a' : '#111827'};
+              font-weight:${!activeFilters.shop ? '600' : '400'};"
+          >
+            <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${!activeFilters.shop ? '#16a34a' : '#d1d5db'};
+              background:${!activeFilters.shop ? '#16a34a' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
+            Todas las tiendas
+          </div>
+          ${stores.map(s => `
+            <div
+              onclick="selectFilterShop('${s.domain}')"
+              id="shop-opt-${s.id}"
+              style="padding:10px 12px; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:8px;
+                border-top:1px solid #f3f4f6;
+                background:${activeFilters.shop===s.domain ? '#f0fdf4' : '#fff'};
+                color:${activeFilters.shop===s.domain ? '#16a34a' : '#111827'};
+                font-weight:${activeFilters.shop===s.domain ? '600' : '400'};"
+              onmouseover="this.style.background='#f9fafb'"
+              onmouseout="this.style.background='${activeFilters.shop===s.domain ? '#f0fdf4' : '#fff'}'"
+            >
+              <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${activeFilters.shop===s.domain ? '#16a34a' : '#d1d5db'};
+                background:${activeFilters.shop===s.domain ? '#16a34a' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
+              ${escapeHtml(s.shop_name || s.domain)}
+            </div>
+          `).join("")}
+        </div>
+      </div>
+
+    </div>
+
+    <div style="padding:16px 20px; border-top:1px solid #e5e7eb; display:flex; gap:10px;">
+      <button onclick="clearFilters()"
+        style="flex:1; padding:10px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; font-size:13px; cursor:pointer; font-weight:600;">
+        Limpiar
+      </button>
+      <button onclick="applyFilters()"
+        style="flex:1; padding:10px; border:none; border-radius:8px; background:#eab308; color:#fff; font-size:13px; cursor:pointer; font-weight:700;">
+        Aplicar
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(panel);
+
+  // Cerrar al hacer clic fuera
+  setTimeout(() => {
+    document.addEventListener("click", function closeFilter(e) {
+      const p = document.getElementById("filter-panel");
+      if (p && !p.contains(e.target) && !e.target.closest(".btn-secondary")) {
+        p.remove();
+        document.removeEventListener("click", closeFilter);
+      }
+    });
+  }, 100);
+}
+
+function selectFilterShop(domain) {
+  activeFilters.shop = domain;
+  // Re-render solo los items del selector sin cerrar el panel
+  toggleFilterPanel();
+  toggleFilterPanel();
+}
+
+function applyFilters() {
+  activeFilters.status = document.getElementById("filter-status")?.value || "";
+  activeFilters.dateFrom = document.getElementById("filter-date-from")?.value || "";
+  activeFilters.dateTo = document.getElementById("filter-date-to")?.value || "";
+
+  const filtered = allOrders.filter(o => {
+    if (activeFilters.status && o.fulfillment_status !== activeFilters.status) return false;
+    if (activeFilters.shop && o.shop_domain !== activeFilters.shop) return false;
+    if (activeFilters.dateFrom) {
+      const from = new Date(activeFilters.dateFrom);
+      if (new Date(o.created_at) < from) return false;
+    }
+    if (activeFilters.dateTo) {
+      const to = new Date(activeFilters.dateTo);
+      to.setHours(23, 59, 59);
+      if (new Date(o.created_at) > to) return false;
+    }
+    return true;
+  });
+
+  renderOrders(filtered);
+  toggleFilterPanel();
+}
+
+function clearFilters() {
+  activeFilters = { status: "", shop: "", dateFrom: "", dateTo: "" };
+  renderOrders(allOrders);
+  toggleFilterPanel();
+}
+
+window.toggleFilterPanel = toggleFilterPanel;
+window.selectFilterShop = selectFilterShop;
+window.applyFilters = applyFilters;
+window.clearFilters = clearFilters;
 
 
 
