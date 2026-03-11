@@ -1,3 +1,7 @@
+const express = require("express");
+const auth = require("../middlewares/auth");
+const router = express.Router();
+
 router.get("/", auth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -21,8 +25,11 @@ router.get("/", auth, async (req, res) => {
 
     console.log("✅ Pedidos encontrados:", rows.length);
     res.json(rows || []);
+
   } catch (err) {
     console.error("Orders fetch error:", err);
     res.status(500).json({ error: "Error obteniendo pedidos" });
   }
 });
+
+module.exports = router;
