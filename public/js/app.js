@@ -802,6 +802,9 @@ if (id === "pedidos") {
       <div class="orders-header">
         <div class="filters">
           <button class="btn-secondary">Filtros</button>
+          <button class="btn-secondary" onclick="syncAndRefreshOrders()" title="Sincronizar ahora">
+            🔄 Sincronizar
+          </button>
           <input
             type="text"
             id="orderSearch"
@@ -840,6 +843,13 @@ if (id === "pedidos") {
 
     // Cargar pedidos reales
     fetchOrders();
+    syncAndRefreshOrders();
+
+    // Auto-refresh cada 5 minutos
+    if (window.__ordersInterval) clearInterval(window.__ordersInterval);
+    window.__ordersInterval = setInterval(() => {
+      syncAndRefreshOrders();
+    }, 5 * 60 * 1000);
   }
 
   closeAllDrops();
@@ -1771,6 +1781,19 @@ async function reactivateStore() {
   }
 }
 
+async function syncAndRefreshOrders() {
+  try {
+    await fetch(`${API_BASE}/api/shopify/sync-orders`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+    });
+    fetchOrders();
+  } catch (e) {
+    console.warn("Sync falló silenciosamente");
+  }
+}
+
+window.syncAndRefreshOrders = syncAndRefreshOrders;
 window.openReactivateModal = openReactivateModal;
 window.reactivateStore = reactivateStore;
 
