@@ -1956,23 +1956,38 @@ function applyFilters() {
   activeFilters.dateFrom = document.getElementById("filter-date-from")?.value || "";
   activeFilters.dateTo = document.getElementById("filter-date-to")?.value || "";
 
+  console.log("Aplicando filtros:", activeFilters);
+  console.log("Total pedidos:", allOrders.length);
+
   const filtered = allOrders.filter(o => {
+    // Filtro estado
     if (activeFilters.status && o.fulfillment_status !== activeFilters.status) return false;
+
+    // Filtro tienda
     if (activeFilters.shop && o.shop_domain !== activeFilters.shop) return false;
+
+    // Filtro fecha desde
     if (activeFilters.dateFrom) {
-      const from = new Date(activeFilters.dateFrom);
-      if (new Date(o.created_at) < from) return false;
+      const from = new Date(activeFilters.dateFrom + "T00:00:00");
+      const orderDate = new Date(o.created_at);
+      if (orderDate < from) return false;
     }
+
+    // Filtro fecha hasta
     if (activeFilters.dateTo) {
-      const to = new Date(activeFilters.dateTo);
-      to.setHours(23, 59, 59);
-      if (new Date(o.created_at) > to) return false;
+      const to = new Date(activeFilters.dateTo + "T23:59:59");
+      const orderDate = new Date(o.created_at);
+      if (orderDate > to) return false;
     }
+
     return true;
   });
 
+  console.log("Pedidos filtrados:", filtered.length);
   renderOrders(filtered);
-  toggleFilterPanel();
+
+  const panel = document.getElementById("filter-panel");
+  if (panel) panel.remove();
 }
 
 function clearFilters() {
