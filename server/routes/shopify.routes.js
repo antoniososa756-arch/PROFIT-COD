@@ -255,4 +255,22 @@ router.post("/rename/:id", auth, (req, res) => {
   );
 });
 
+/* =====================================================
+   OBTENER APP_SECRET DE UNA TIENDA (para reconectar)
+   GET /api/shopify/secret/:id
+   ===================================================== */
+router.get("/secret/:id", auth, (req, res) => {
+  const shopId = req.params.id;
+  const userId = req.user.id;
+
+  req.db.get(
+    `SELECT app_secret FROM shops WHERE id = ? AND user_id = ?`,
+    [shopId, userId],
+    (err, row) => {
+      if (err || !row) return res.status(404).json({ error: "No encontrada" });
+      res.json({ app_secret: row.app_secret });
+    }
+  );
+});
+
 module.exports = router;

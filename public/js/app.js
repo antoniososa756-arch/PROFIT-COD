@@ -1400,7 +1400,7 @@ grid.innerHTML = stores.map(store => `
     <div class="store-actions">
       ${store.status === "active"
         ? `<button class="btn-secondary" onclick="disableStore(${store.id})">Deshabilitar</button>`
-        : `<button class="btn-primary" onclick="openReactivateModal('${store.domain}')">Habilitar</button>`
+        : `<button class="btn-primary" onclick="openReactivateModal('${store.domain}', ${store.id})">Habilitar</button>`
       }
     </div>
   </div>
@@ -1607,78 +1607,38 @@ window.editStoreName = editStoreName;
 
 window.disableStore = disableStore;
 
-function openReactivateModal(domain) {
+function openReactivateModal(domain, storeId) {
+  window.__reactivateShopDomain = domain;
+  window.__reactivateShopId = storeId;
+
   const modal = document.createElement("div");
   modal.className = "modal-bg";
 
-  // guardar dominio global
-  window.__reactivateShopDomain = domain;
-
   modal.innerHTML = `
     <div class="modal" style="max-width:420px;">
-
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <div style="
-          width:36px;
-          height:36px;
-          border-radius:8px;
-          background:#e8f5e9;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:700;
-          color:#16a34a;
-        ">
+        <div style="width:36px;height:36px;border-radius:8px;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-weight:700;color:#16a34a;">
           S
         </div>
         <div>
           <h3 style="margin:0;">Reconectar tienda</h3>
-          <div class="muted" style="font-size:13px;">
-            Conexión segura con Shopify
-          </div>
+          <div class="muted" style="font-size:13px;">Conexión segura con Shopify</div>
         </div>
       </div>
 
-      <div style="
-        border:1px solid #e5e7eb;
-        border-radius:10px;
-        padding:12px;
-        margin-bottom:16px;
-        background:#f9fafb;
-      ">
-        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">
-          Tienda Shopify
-        </div>
-        <div style="font-weight:600;">
-          ${domain}
-        </div>
+      <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:16px;background:#f9fafb;">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">Tienda Shopify</div>
+        <div style="font-weight:600;">${domain}</div>
       </div>
 
-      <label style="font-size:13px;font-weight:500;">
-        Token privado de Shopify
-      </label>
+      <label style="font-size:13px;font-weight:500;">Token privado de Shopify</label>
 
-      <div style="
-        display:flex;
-        align-items:center;
-        gap:8px;
-        margin-top:6px;
-        padding:10px 12px;
-        border:1.5px solid #22c55e;
-        border-radius:10px;
-        background:#f0fdf4;
-      ">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:10px 12px;border:1.5px solid #22c55e;border-radius:10px;background:#f0fdf4;">
         <span style="font-size:16px;">🔑</span>
         <input
           id="reactivate-token"
           placeholder="Pega aquí el token generado en Shopify"
-          style="
-            border:none;
-            outline:none;
-            background:transparent;
-            flex:1;
-            font-size:14px;
-          "
+          style="border:none;outline:none;background:transparent;flex:1;font-size:14px;"
         />
       </div>
 
@@ -1687,14 +1647,9 @@ function openReactivateModal(domain) {
       </div>
 
       <div style="display:flex;gap:10px;margin-top:20px;">
-        <button class="btn btn-secondary" onclick="closeModal()">
-          Cancelar
-        </button>
-        <button class="btn btn-primary" onclick="reactivateStore()" style="flex:1;">
-          Reconectar tienda
-        </button>
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="reactivateStore()" style="flex:1;">Reconectar tienda</button>
       </div>
-
     </div>
   `;
 
@@ -1705,43 +1660,48 @@ async function reactivateStore() {
   const input = document.getElementById("reactivate-token");
   const accessToken = input ? input.value.trim() : "";
   const shop = window.__reactivateShopDomain;
+  const storeId = window.__reactivateShopId;
 
   if (!accessToken || accessToken.length < 10) {
     input.classList.add("input-error");
     input.focus();
-
-    setTimeout(() => {
-      input.classList.remove("input-error");
-    }, 1200);
-
+    setTimeout(() => input.classList.remove("input-error"), 1200);
     return;
   }
 
-  const res = await fetch(`${API_BASE}/api/shopify/connect-token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + localStorage.getItem("token"),
-    },
-    body: JSON.stringify({ shop, accessToken }),
-  });
+  try {
+    const secretRes = await fetch(`${API_BASE}/api/shopify/secret/${storeId}`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+    });
+    const secretData = await secretRes.json();
+    const appSecret = secretData.app_secret || "";
 
-  const data = await res.json();
+    const res = await fetch(`${API_BASE}/api/shopify/connect-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + localStorage.getItem("token"),
+      },
+      body: JSON.stringify({ shop, accessToken, appSecret }),
+    });
 
-  if (!res.ok) {
-    alert(data.error || "Error reactivando tienda");
-    return;
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Error reactivando tienda");
+      return;
+    }
+
+    closeModal();
+    setSection("tiendas");
+
+  } catch (err) {
+    alert("Error de conexión");
   }
-
-  closeModal();
-  setSection("tiendas");
 }
 
 window.openReactivateModal = openReactivateModal;
 window.reactivateStore = reactivateStore;
-
-
-
 
 
 
