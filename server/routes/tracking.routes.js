@@ -15,58 +15,46 @@ function mapMRWStatus(texto) {
 router.get("/:tracking", auth, async (req, res) => {
   const { tracking } = req.params;
 
+  const soap = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <GetEnvio xmlns="http://www.mrw.es/">
+      <CodigoAbonado>04700FANOMI</CodigoAbonado>
+      <CodigoAbonado2></CodigoAbonado2>
+      <NumerosEnvio>${tracking}</NumerosEnvio>
+      <Username>04700FANOMI</Username>
+      <Password>Sosa756**</Password>
+    </GetEnvio>
+  </soap:Body>
+</soap:Envelope>`;
+
   try {
-    // PASO 1: obtener cookies de sesión
-    const sessionRes = await fetch("https://www.mrw.es/seguimiento/envio.asp", {
-      method: "GET",
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "es-ES,es;q=0.9",
-      },
-    });
-
-    const cookies = sessionRes.headers.get("set-cookie") || "";
-
-    // PASO 2: enviar el tracking con las cookies
-    const trackRes = await fetch("https://www.mrw.es/seguimiento/envio-actual.asp", {
+    const response = await fetch("https://www.mrw.es/webservices/MRWEnvio.asmx", {
       method: "POST",
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "es-ES,es;q=0.9",
-        "Referer": "https://www.mrw.es/seguimiento/envio.asp",
-        "Cookie": cookies,
+        "Content-Type": "text/xml; charset=utf-8",
+        "SOAPAction": "http://www.mrw.es/GetEnvio",
       },
-      body: `Buscar=${tracking}&from=buscar`,
+      body: soap,
     });
 
-    const html = await trackRes.text();
+    const xml = await response.text();
+    console.log("MRW SOAP response:", xml.substring(0, 500));
 
-    const keywords = [
-      "Envío entregado", "Entregado",
-      "En tránsito", "En transito",
-      "Devuelto", "Destruido",
-      "No entregado", "Ausente",
-    ];
+    // Extraer estado del XML
+    const estadoMatch = xml.match(/<Estado>([^<]+)<\/Estado>/i) ||
+                        xml.match(/<Situacion>([^<]+)<\/Situacion>/i) ||
+                        xml.match(/<Descripcion>([^<]+)<\/Descripcion>/i);
 
-    let rawStatus = null;
-    for (const kw of keywords) {
-      if (html.toLowerCase().includes(kw.toLowerCase())) {
-        rawStatus = kw;
-        break;
-      }
+    if (!estadoMatch) {
+      return res.json({ ok: false, error: "No se pudo leer estado", xml: xml.substring(0, 500) });
     }
 
-    if (!rawStatus) {
-      return res.json({ ok: false, error: "Estado no encontrado", html: html.substring(0, 800) });
-    }
-
+    const rawStatus = estadoMatch[1].trim();
     res.json({ ok: true, raw: rawStatus, status: mapMRWStatus(rawStatus) });
 
   } catch (err) {
-    console.error("MRW scraping error:", err);
+    console.error("MRW SOAP error:", err);
     res.status(500).json({ error: "Error consultando MRW" });
   }
 });
