@@ -2,7 +2,6 @@ const express = require("express");
 const auth = require("../middlewares/auth");
 const router = express.Router();
 
-// Mapa de estados MRW → PROFICOD
 function mapMRWStatus(texto) {
   const t = (texto || "").toLowerCase();
   if (t.includes("entregado")) return "entregado";
@@ -17,36 +16,31 @@ router.get("/:tracking", auth, async (req, res) => {
   const { tracking } = req.params;
 
   try {
-    const response = await fetch("https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Referer": "https://www.mrw.es/seguimiento/envio.asp",
-      },
-      body: `enviament=${tracking}`,
-    });
+    const response = await fetch(
+      `https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${tracking}`,
+      {
+        method: "GET",
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "es-ES,es;q=0.9",
+          "Referer": "https://www.mrw.es/seguimiento/envio.asp",
+        },
+      }
+    );
 
     const html = await response.text();
 
-    // Extraer estado del HTML
-    const match = html.match(/Estado envío[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>/i) ||
-                  html.match(/<td[^>]*class="[^"]*estado[^"]*"[^>]*>([\s\S]*?)<\/td>/i);
+    // Buscar estado en el HTML
+    const statusMatch = html.match(/Env[ií]o\s+\w+/i) ||
+                        html.match(/Estado[^<]*<\/td>\s*<td[^>]*>([^<]+)/i) ||
+                        html.match(/(entregado|en tr[aá]nsito|devuelto|destruido|no entregado)/i);
 
-// DEBUG TEMPORAL - borrar después
-    console.log("MRW HTML:", html.substring(0, 2000));
-
-    if (!match) {
-      // Intentar buscar texto del estado directamente
-      const statusMatch = html.match(/Env[ií]o\s+(entregado|en tr[aá]nsito|devuelto|destruido)/i);
-      if (statusMatch) {
-        const rawStatus = statusMatch[0].trim();
-        return res.json({ ok: true, raw: rawStatus, status: mapMRWStatus(rawStatus) });
-      }
-      return res.json({ ok: false, error: "No se pudo leer el estado", html: html.substring(0, 1000) });
+    if (!statusMatch) {
+      return res.json({ ok: false, error: "Estado no encontrado", html: html.substring(0, 500) });
     }
 
-    const rawStatus = match[1].replace(/<[^>]+>/g, "").trim();
+    const rawStatus = statusMatch[0].trim();
     res.json({ ok: true, raw: rawStatus, status: mapMRWStatus(rawStatus) });
 
   } catch (err) {
