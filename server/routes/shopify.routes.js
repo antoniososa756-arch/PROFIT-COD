@@ -292,4 +292,79 @@ router.delete("/delete/:id", auth, (req, res) => {
   );
 });
 
+/* =====================================================
+   SYNC PEDIDOS DESDE SHOPIFY
+   POST /api/shopify/sync-orders
+   ===================================================== */
+router.post("/sync-orders", auth, async (req, res) => {
+  const userId = req.user.id;
+
+  req.db.all(
+    `SELECT id, shop_domain, access_token FROM shops WHERE user_id = ? AND status = 'active'`,
+    [userId],
+    async (err, shops) => {
+      if (err || !shops.length) {
+        return res.json({ ok: true, synced: 0 });
+      }
+
+      let total = 0;
+
+      for (const shop of shops) {
+        try {
+          const r = await fetch(
+            `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250`,
+            { headers: { "X-Shopify-Access-Token": shop.access_token } }
+          );
+
+          if (!r.ok) continue;
+
+          const { orders } = await r.json();
+
+          for (const o of orders) {
+            const customerName =
+              o.customer
+                ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim()
+                : "Desconocido";
+
+            const fulfillmentStatus = o.fulfillment_status || "pendiente";
+
+            const trackingNumber =
+              o.fulfillments?.[0]?.tracking_number || null;
+
+            await new Promise((resolve) => {
+              req.db.run(
+                `INSERT INTO orders (
+                  shop_id, order_id, order_number, customer_name,
+                  fulfillment_status, tracking_number, total_price, currency, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(order_id) DO UPDATE SET
+                  fulfillment_status = excluded.fulfillment_status,
+                  tracking_number = excluded.tracking_number`,
+                [
+                  shop.id,
+                  String(o.id),
+                  o.order_number,
+                  customerName,
+                  fulfillmentStatus,
+                  trackingNumber,
+                  o.total_price,
+                  o.currency,
+                  o.created_at,
+                ],
+                resolve
+              );
+            });
+
+            total++;
+          }
+        } catch (e) {
+          console.error("Sync error for shop", shop.shop_domain, e);
+        }
+      }
+
+      res.json({ ok: true, synced: total });
+    }
+  );
+});
+
 module.exports = router;
