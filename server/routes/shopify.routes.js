@@ -292,6 +292,14 @@ router.delete("/delete/:id", auth, (req, res) => {
   );
 });
 
+function mapSyncStatus(o) {
+  if (o.cancelled_at) return "cancelado";
+  if (o.financial_status === "refunded") return "devuelto";
+  if (o.fulfillment_status === "fulfilled") return "enviado";
+  if (o.fulfillment_status === "partial") return "en_preparacion";
+  return "pendiente";
+}
+
 /* =====================================================
    SYNC PEDIDOS DESDE SHOPIFY
    POST /api/shopify/sync-orders
@@ -326,7 +334,7 @@ router.post("/sync-orders", auth, async (req, res) => {
                 ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim()
                 : "Desconocido";
 
-            const fulfillmentStatus = o.fulfillment_status || "pendiente";
+            const fulfillmentStatus = mapSyncStatus(o);
 
             const trackingNumber =
               o.fulfillments?.[0]?.tracking_number || null;

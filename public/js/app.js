@@ -1547,7 +1547,7 @@ function renderOrders(orders) {
       <div>${escapeHtml(o.order_number || "-")}</div>
       <div>${o.created_at ? new Date(o.created_at).toLocaleString() : "-"}</div>
       <div>${escapeHtml(o.tracking_number || "-")}</div>
-      <div><span class="status green">${escapeHtml(o.fulfillment_status || "pendiente")}</span></div>
+      <div><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div>${escapeHtml(o.customer_name || "-")}</div>
       <div>${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
     </div>
@@ -1562,6 +1562,28 @@ function filterOrders(value) {
     (o.customer_name || "").toLowerCase().includes(q)
   );
   renderOrders(filtered);
+}
+
+function statusClass(s) {
+  const map = {
+    pendiente: "yellow",
+    en_preparacion: "blue",
+    enviado: "green",
+    devuelto: "orange",
+    cancelado: "red",
+  };
+  return map[s] || "yellow";
+}
+
+function statusLabel(s) {
+  const map = {
+    pendiente: "Pendiente",
+    en_preparacion: "En preparación",
+    enviado: "Enviado",
+    devuelto: "Devuelto",
+    cancelado: "Cancelado",
+  };
+  return map[s] || "Pendiente";
 }
 
 window.fetchOrders = fetchOrders;
