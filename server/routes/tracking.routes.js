@@ -33,6 +33,9 @@ router.get("/:tracking", auth, async (req, res) => {
     const match = html.match(/Estado envío[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>/i) ||
                   html.match(/<td[^>]*class="[^"]*estado[^"]*"[^>]*>([\s\S]*?)<\/td>/i);
 
+// DEBUG TEMPORAL - borrar después
+    console.log("MRW HTML:", html.substring(0, 2000));
+
     if (!match) {
       // Intentar buscar texto del estado directamente
       const statusMatch = html.match(/Env[ií]o\s+(entregado|en tr[aá]nsito|devuelto|destruido)/i);
@@ -40,7 +43,7 @@ router.get("/:tracking", auth, async (req, res) => {
         const rawStatus = statusMatch[0].trim();
         return res.json({ ok: true, raw: rawStatus, status: mapMRWStatus(rawStatus) });
       }
-      return res.json({ ok: false, error: "No se pudo leer el estado" });
+      return res.json({ ok: false, error: "No se pudo leer el estado", html: html.substring(0, 1000) });
     }
 
     const rawStatus = match[1].replace(/<[^>]+>/g, "").trim();
