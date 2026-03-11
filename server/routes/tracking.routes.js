@@ -12,49 +12,110 @@ function mapMRWStatus(texto) {
   return "en_transito";
 }
 
+async function mrwLogin(user, password) {
+  const res = await fetch("https://clientes.mrw.es/api/handlers/Login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json, text/plain, */*",
+      "Referer": "https://clientes.mrw.es/",
+      "Origin": "https://clientes.mrw.es",
+    },
+    body: JSON.stringify({
+      sessionKey: "",
+      name: "login",
+      params: {
+        user,
+        password,
+        webbaseurl: "https://clientes.mrw.es/#"
+      }
+    }),
+  });
+
+  const cookies = res.headers.get("set-cookie") || "";
+  const text = await res.text();
+
+  let data;
+  try { data = JSON.parse(text); } catch { data = {}; }
+
+  return { sessionKey: data.sessionKey || data.SessionKey || "", userId: data.userId || data.UserId || "", cookies };
+}
+
 router.get("/:tracking", auth, async (req, res) => {
   const { tracking } = req.params;
 
-  const soap = `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <GetEnvio xmlns="http://www.mrw.es/">
-      <CodigoAbonado>04700FANOMI</CodigoAbonado>
-      <CodigoAbonado2></CodigoAbonado2>
-      <NumerosEnvio>${tracking}</NumerosEnvio>
-      <Username>04700FANOMI</Username>
-      <Password>Sosa756**</Password>
-    </GetEnvio>
-  </soap:Body>
-</soap:Envelope>`;
-
   try {
-    const response = await fetch("https://www.mrw.es/webservices/MRWEnvio.asmx", {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/xml; charset=utf-8",
-        "SOAPAction": "http://www.mrw.es/GetEnvio",
-      },
-      body: soap,
-    });
+    // 1. Login con credenciales del usuario
+    const mrwUser = req.user.mrw_user;
+    const mrwPass = req.user.mrw_password;
 
-    const xml = await response.text();
-    console.log("MRW SOAP response:", xml.substring(0, 500));
-
-    // Extraer estado del XML
-    const estadoMatch = xml.match(/<Estado>([^<]+)<\/Estado>/i) ||
-                        xml.match(/<Situacion>([^<]+)<\/Situacion>/i) ||
-                        xml.match(/<Descripcion>([^<]+)<\/Descripcion>/i);
-
-    if (!estadoMatch) {
-      return res.json({ ok: false, error: "No se pudo leer estado", xml: xml.substring(0, 500) });
+    if (!mrwUser || !mrwPass) {
+      return res.json({ ok: false, error: "Sin credenciales MRW configuradas" });
     }
 
-    const rawStatus = estadoMatch[1].trim();
-    res.json({ ok: true, raw: rawStatus, status: mapMRWStatus(rawStatus) });
+    const { sessionKey, userId, cookies } = await mrwLogin(mrwUser, mrwPass);
+
+    if (!sessionKey) {
+      return res.json({ ok: false, error: "Login MRW fallido" });
+    }
+
+    // 2. Consultar tracking
+    const today = new Date();
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(today.getMonth() - 6);
+
+    const fmt = d => `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+
+    const qry = JSON.stringify({
+      UserId: userId,
+      Abonados: [],
+      FechaDesde: fmt(sixMonthsAgo),
+      FechaHasta: fmt(today),
+      NumEnvioDesdeLongitud12: tracking,
+      NumEnvioHastaLongitud12: tracking,
+      Tipo: "Normal",
+      Estado: "",
+      TipoEstado: "",
+      EsInternacional: false,
+      OrderField: "FechaEnvio",
+      Order: "DESC"
+    });
+
+    const trackRes = await fetch("https://clientes.mrw.es/api/handlers/EnviosConsultasBase", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://clientes.mrw.es/",
+        "Origin": "https://clientes.mrw.es",
+        "Cookie": cookies,
+      },
+      body: JSON.stringify({
+        sessionKey,
+        name: "GetDataTablePubliEnvioByQryNacional",
+        params: { qry }
+      }),
+    });
+
+    const trackText = await trackRes.text();
+    let trackData;
+    try { trackData = JSON.parse(trackText); } catch { trackData = null; }
+
+    if (!trackData) {
+      return res.json({ ok: false, error: "Sin respuesta de MRW", raw: trackText.substring(0, 300) });
+    }
+
+    // Extraer estado
+    const rows = trackData.data || trackData.Data || trackData;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.json({ ok: false, error: "Envío no encontrado en MRW" });
+    }
+
+    const estado = rows[0].Estado || rows[0].estado || rows[0].Situacion || "";
+    res.json({ ok: true, raw: estado, status: mapMRWStatus(estado) });
 
   } catch (err) {
-    console.error("MRW SOAP error:", err);
+    console.error("MRW error:", err);
     res.status(500).json({ error: "Error consultando MRW" });
   }
 });

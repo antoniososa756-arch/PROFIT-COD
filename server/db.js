@@ -47,8 +47,20 @@ db.serialize(() => {
     }
   });
 
-  // MIGRACIÓN: shop_name (nombre personalizado, máx 10 chars)
+// MIGRACIÓN: shop_name (nombre personalizado, máx 10 chars)
   db.run(`ALTER TABLE shops ADD COLUMN shop_name TEXT`, err => {
+    if (err && !err.message.includes("duplicate column")) {
+      console.error("DB alter error:", err.message);
+    }
+  });
+
+  // MIGRACIÓN: credenciales MRW por usuario
+  db.run(`ALTER TABLE users ADD COLUMN mrw_user TEXT`, err => {
+    if (err && !err.message.includes("duplicate column")) {
+      console.error("DB alter error:", err.message);
+    }
+  });
+  db.run(`ALTER TABLE users ADD COLUMN mrw_password TEXT`, err => {
     if (err && !err.message.includes("duplicate column")) {
       console.error("DB alter error:", err.message);
     }
