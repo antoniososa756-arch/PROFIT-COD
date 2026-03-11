@@ -13,7 +13,7 @@ router.get("/", auth, (req, res) => {
      FROM orders o
      JOIN shops s ON s.id = o.shop_id
      WHERE s.user_id = ?
-     ORDER BY o.created_at DESC`
+     ORDER BY o.created_at DESC`,
     [userId],
     (err, rows) => {
       if (err) {
