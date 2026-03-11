@@ -343,7 +343,7 @@ router.post("/sync-orders", auth, async (req, res) => {
                 [
                   shop.id,
                   String(o.id),
-                  o.order_number,
+                  o.name || String(o.order_number),
                   customerName,
                   fulfillmentStatus,
                   trackingNumber,
