@@ -819,12 +819,12 @@ if (id === "pedidos") {
         </div>
 
         <div class="tabs">
-          <span class="tab active">Todos</span>
-          <span class="tab">Pendiente</span>
-          <span class="tab">En preparación</span>
-          <span class="tab">Enviado</span>
-          <span class="tab">Devuelto</span>
-          <span class="tab">Cancelado</span>
+          <span class="tab active" onclick="filterByTab(this, '')">Todos</span>
+          <span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
+          <span class="tab" onclick="filterByTab(this, 'en_preparacion')">En preparación</span>
+          <span class="tab" onclick="filterByTab(this, 'enviado')">Enviado</span>
+          <span class="tab" onclick="filterByTab(this, 'devuelto')">Devuelto</span>
+          <span class="tab" onclick="filterByTab(this, 'cancelado')">Cancelado</span>
         </div>
 
         <div class="orders-table">
@@ -1924,7 +1924,7 @@ async function toggleFilterPanel() {
         Limpiar
       </button>
       <button onclick="applyFilters()"
-        style="flex:1; padding:10px; border:none; border-radius:8px; background:#eab308; color:#fff; font-size:13px; cursor:pointer; font-weight:700;">
+        style="flex:1; padding:10px; border:none; border-radius:8px; background:#16a34a; color:#fff; font-size:13px; cursor:pointer; font-weight:700;">
         Aplicar
       </button>
     </div>
@@ -1980,6 +1980,20 @@ function clearFilters() {
   renderOrders(allOrders);
   toggleFilterPanel();
 }
+
+function filterByTab(el, status) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  if (!status) return renderOrders(allOrders);
+  const filtered = allOrders.filter(o => o.fulfillment_status === status);
+  renderOrders(filtered);
+}
+window.filterByTab = filterByTab;
+
+window.toggleFilterPanel = toggleFilterPanel;
+window.selectFilterShop = selectFilterShop;
+window.applyFilters = applyFilters;
+window.clearFilters = clearFilters;
 
 window.toggleFilterPanel = toggleFilterPanel;
 window.selectFilterShop = selectFilterShop;
