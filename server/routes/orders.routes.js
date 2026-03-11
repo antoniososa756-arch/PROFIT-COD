@@ -8,11 +8,12 @@ router.get("/", auth, (req, res) => {
 
   req.db.all(
     `SELECT o.id, o.order_number, o.created_at, o.tracking_number,
-      o.fulfillment_status, o.customer_name, o.total_price, o.currency
+      o.fulfillment_status, o.customer_name, o.total_price, o.currency,
+      s.domain as shop_domain
      FROM orders o
      JOIN shops s ON s.id = o.shop_id
      WHERE s.user_id = ?
-     ORDER BY o.created_at DESC`,
+     ORDER BY o.created_at DESC`
     [userId],
     (err, rows) => {
       if (err) {
