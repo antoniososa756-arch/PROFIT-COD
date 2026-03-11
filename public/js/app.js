@@ -1956,6 +1956,13 @@ function applyFilters() {
   activeFilters.dateFrom = document.getElementById("filter-date-from")?.value || "";
   activeFilters.dateTo = document.getElementById("filter-date-to")?.value || "";
 
+  // ✅ VALIDACIÓN: fecha desde no puede ser mayor que fecha hasta
+  if (activeFilters.dateFrom && activeFilters.dateTo) {
+    if (activeFilters.dateFrom > activeFilters.dateTo) {
+      alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin");
+      return;
+    }
+  }
   console.log("Aplicando filtros:", activeFilters);
   console.log("Total pedidos:", allOrders.length);
 
