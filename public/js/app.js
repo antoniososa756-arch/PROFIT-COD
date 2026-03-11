@@ -804,21 +804,20 @@ if (id === "pedidos") {
           <button class="btn-secondary">Filtros</button>
           <input
             type="text"
+            id="orderSearch"
             placeholder="Buscar un pedido"
             class="search-input"
+            oninput="filterOrders(this.value)"
           />
         </div>
 
         <div class="tabs">
           <span class="tab active">Todos</span>
-          <span class="tab">Por confirmar</span>
           <span class="tab">Pendiente</span>
-          <span class="tab">Pendiente de Stock</span>
           <span class="tab">En preparación</span>
           <span class="tab">Enviado</span>
           <span class="tab">Devuelto</span>
           <span class="tab">Cancelado</span>
-          <span class="tab">Errores</span>
         </div>
 
         <div class="orders-table">
@@ -832,18 +831,15 @@ if (id === "pedidos") {
             <div>Costo</div>
           </div>
 
-          <div class="orders-row">
-            <div><input type="checkbox"></div>
-            <div>49864</div>
-            <div>23/01/2026 14:11</div>
-            <div>MRW-93847293</div>
-            <div><span class="status green">En tránsito</span></div>
-            <div>Paqui</div>
-            <div>23.97 €</div>
+          <div id="ordersBody">
+            <div class="muted" style="padding:16px;">Cargando pedidos...</div>
           </div>
         </div>
       </div>
     `;
+
+    // Cargar pedidos reales
+    fetchOrders();
   }
 
   closeAllDrops();
@@ -1499,6 +1495,66 @@ async function disableStore(storeId) {
 
   setSection("tiendas");
 }
+
+// =========================
+// CARGAR PEDIDOS REALES
+// =========================
+let allOrders = [];
+
+async function fetchOrders() {
+  const body = document.getElementById("ordersBody");
+  if (!body) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      headers: {
+        Authorization: "Bearer " + localStorage.getItem("token"),
+      },
+    });
+
+    const orders = await res.json();
+    allOrders = Array.isArray(orders) ? orders : [];
+    renderOrders(allOrders);
+
+  } catch (e) {
+    if (body) body.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando pedidos</div>`;
+  }
+}
+
+function renderOrders(orders) {
+  const body = document.getElementById("ordersBody");
+  if (!body) return;
+
+  if (!orders.length) {
+    body.innerHTML = `<div class="muted" style="padding:16px;">No hay pedidos todavía</div>`;
+    return;
+  }
+
+  body.innerHTML = orders.map(o => `
+    <div class="orders-row">
+      <div><input type="checkbox"></div>
+      <div>${escapeHtml(o.order_number || "-")}</div>
+      <div>${o.created_at ? new Date(o.created_at).toLocaleString() : "-"}</div>
+      <div>${escapeHtml(o.tracking_number || "-")}</div>
+      <div><span class="status green">${escapeHtml(o.fulfillment_status || "pendiente")}</span></div>
+      <div>${escapeHtml(o.customer_name || "-")}</div>
+      <div>${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
+    </div>
+  `).join("");
+}
+
+function filterOrders(value) {
+  const q = (value || "").toLowerCase();
+  if (!q) return renderOrders(allOrders);
+  const filtered = allOrders.filter(o =>
+    (o.order_number || "").toLowerCase().includes(q) ||
+    (o.customer_name || "").toLowerCase().includes(q)
+  );
+  renderOrders(filtered);
+}
+
+window.fetchOrders = fetchOrders;
+window.filterOrders = filterOrders;
 
 window.disableStore = disableStore;
 
