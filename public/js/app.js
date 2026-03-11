@@ -801,10 +801,14 @@ if (id === "pedidos") {
     box.innerHTML = `
       <div class="orders-header">
         <div class="filters">
-          <button class="btn-secondary" onclick="toggleFilterPanel()">Filtros</button>
-          <button class="btn-secondary" onclick="syncAndRefreshOrders()" title="Sincronizar ahora">
-            🔄 Sincronizar
-          </button>
+  <button class="btn-filter" onclick="toggleFilterPanel()">
+    <svg viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M11 18h2" stroke-linecap="round"/></svg>
+    Filtros
+  </button>
+  <button class="btn-sync" onclick="syncAndRefreshOrders()">
+    <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Sincronizar
+  </button>
           <input
             type="text"
             id="orderSearch"
