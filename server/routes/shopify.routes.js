@@ -189,7 +189,7 @@ router.get("/stores", auth, async (req, res) => {
   const userId = req.user.id;
 
   req.db.all(
-    `SELECT id, shop_domain AS domain, status, last_sync, created_at
+    `SELECT id, shop_domain AS domain, shop_name, status, last_sync, created_at
      FROM shops
      WHERE user_id = ?
      ORDER BY created_at DESC`,
@@ -228,6 +228,31 @@ router.post("/disable/:id", auth, async (req, res) => {
     console.error("Disable shop error:", err);
     res.status(500).json({ error: "Error deshabilitando tienda" });
   }
+});
+
+/* =====================================================
+   ACTUALIZAR NOMBRE DE TIENDA
+   POST /api/shopify/rename/:id
+   ===================================================== */
+router.post("/rename/:id", auth, (req, res) => {
+  const shopId = req.params.id;
+  const userId = req.user.id;
+  let { name } = req.body;
+
+  if (!name || typeof name !== "string") {
+    return res.status(400).json({ error: "Nombre inválido" });
+  }
+
+  name = name.trim().slice(0, 10);
+
+  req.db.run(
+    `UPDATE shops SET shop_name = ? WHERE id = ? AND user_id = ?`,
+    [name, shopId, userId],
+    function(err) {
+      if (err) return res.status(500).json({ error: "Error actualizando nombre" });
+      res.json({ ok: true, name });
+    }
+  );
 });
 
 module.exports = router;

@@ -1,6 +1,5 @@
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
-
 const dbPath = path.join(__dirname, "data.sqlite");
 const db = new sqlite3.Database(dbPath);
 
@@ -27,7 +26,6 @@ db.serialize(() => {
     )
   `);
 
-  // TABLA SHOPS (SIN app_secret)
   db.run(`
     CREATE TABLE IF NOT EXISTS shops (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,15 +40,19 @@ db.serialize(() => {
     )
   `);
 
-  // MIGRACIÓN SEGURA: añadir app_secret
-  db.run(
-    `ALTER TABLE shops ADD COLUMN app_secret TEXT`,
-    err => {
-      if (err && !err.message.includes("duplicate column")) {
-        console.error("DB alter error:", err.message);
-      }
+  // MIGRACIÓN: app_secret
+  db.run(`ALTER TABLE shops ADD COLUMN app_secret TEXT`, err => {
+    if (err && !err.message.includes("duplicate column")) {
+      console.error("DB alter error:", err.message);
     }
-  );
+  });
+
+  // MIGRACIÓN: shop_name (nombre personalizado, máx 10 chars)
+  db.run(`ALTER TABLE shops ADD COLUMN shop_name TEXT`, err => {
+    if (err && !err.message.includes("duplicate column")) {
+      console.error("DB alter error:", err.message);
+    }
+  });
 });
 
 db.run(`

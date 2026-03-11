@@ -1358,52 +1358,53 @@ async function fetchStores() {
       return;
     }
 
-    grid.innerHTML = stores.map(store => `
-      <div class="store-card">
-        <div class="store-header">
-          <div class="shopify-badge">Shopify</div>
-          <div class="store-menu">⋮</div>
-        </div>
+grid.innerHTML = stores.map(store => `
+  <div class="store-card">
+    <div class="store-header">
+      <div class="shopify-badge">Shopify</div>
+      <div class="store-menu" onclick="openStoreMenu(event, ${store.id})">⋮</div>
+    </div>
 
-        <div class="store-name">${store.domain}</div>
+    <div class="store-name-row">
+      <div
+        class="store-name"
+        id="store-name-${store.id}"
+        onclick="editStoreName(${store.id})"
+        title="Clic para editar nombre"
+        style="cursor:pointer; display:flex; align-items:center; gap:6px;"
+      >
+        ${escapeHtml(store.shop_name || store.domain)}
+        <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0;">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </div>
+      <div class="store-domain muted" style="font-size:11px; margin-top:2px;">
+        ${escapeHtml(store.domain)}
+      </div>
+    </div>
 
-        <div class="store-meta">
-          <div>
-            Estado:
-            <span class="status ${store.status === 'active' ? 'active' : 'inactive'}">
-  ${store.status === 'active' ? 'Activa' : 'Inactiva'}
-</span>
-          </div>
-          <div class="sync">
-            Última sincronización:<br>
-            ${store.last_sync
-              ? new Date(store.last_sync).toLocaleString()
-              : "Nunca"}
-          </div>
-        </div>
+    <div class="store-meta">
+      <div>
+        Estado:
+        <span class="status ${store.status === 'active' ? 'active' : 'inactive'}">
+          ${store.status === 'active' ? 'Activa' : 'Inactiva'}
+        </span>
+      </div>
+      <div class="sync">
+        Última sincronización:<br>
+        ${store.last_sync ? new Date(store.last_sync).toLocaleString() : "Nunca"}
+      </div>
+    </div>
 
-       <div class="store-actions">
-  ${
-    store.status === "active"
-      ? `
-        <button
-          class="btn-secondary"
-          onclick="disableStore(${store.id})"
-        >
-          Deshabilitar
-        </button>
-      `
-      : `
-        <button
-          class="btn-primary"
-          onclick="openReactivateModal('${store.domain}')"
-        >
-          Habilitar
-        </button>
-      `
-  }
-</div>
-    `).join("");
+    <div class="store-actions">
+      ${store.status === "active"
+        ? `<button class="btn-secondary" onclick="disableStore(${store.id})">Deshabilitar</button>`
+        : `<button class="btn-primary" onclick="openReactivateModal('${store.domain}')">Habilitar</button>`
+      }
+    </div>
+  </div>
+`).join("");
 
   } catch (e) {
     grid.innerHTML = `
@@ -1555,6 +1556,54 @@ function filterOrders(value) {
 
 window.fetchOrders = fetchOrders;
 window.filterOrders = filterOrders;
+
+function editStoreName(storeId) {
+  const nameEl = document.getElementById(`store-name-${storeId}`);
+  if (!nameEl) return;
+
+  const current = nameEl.firstChild?.textContent?.trim() || "";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = current;
+  input.maxLength = 10;
+  input.style.cssText = `
+    font-size:16px; font-weight:700; border:none; border-bottom:2px solid var(--green);
+    outline:none; background:transparent; width:120px; color:var(--text);
+  `;
+
+  nameEl.innerHTML = "";
+  nameEl.appendChild(input);
+  input.focus();
+  input.select();
+
+  async function save() {
+    const newName = input.value.trim().slice(0, 10);
+    if (!newName) { fetchStores(); return; }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/shopify/rename/${storeId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + localStorage.getItem("token"),
+        },
+        body: JSON.stringify({ name: newName }),
+      });
+
+      if (res.ok) fetchStores();
+      else fetchStores();
+    } catch { fetchStores(); }
+  }
+
+  input.addEventListener("blur", save);
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+    if (e.key === "Escape") { fetchStores(); }
+  });
+}
+
+window.editStoreName = editStoreName;
 
 window.disableStore = disableStore;
 
