@@ -5,7 +5,7 @@ const router = express.Router();
 function mapMRWStatus(texto) {
   const t = (texto || "").toLowerCase();
   if (t.includes("entregado")) return "entregado";
-  if (t.includes("tr\u00e1nsito") || t.includes("transito") || t.includes("camino")) return "en_transito";
+  if (t.includes("tránsito") || t.includes("transito")) return "en_transito";
   if (t.includes("devuelto") || t.includes("retorno")) return "devuelto";
   if (t.includes("destruido")) return "destruido";
   if (t.includes("ausente") || t.includes("no entregado")) return "no_entregado";
@@ -16,31 +16,39 @@ router.get("/:tracking", auth, async (req, res) => {
   const { tracking } = req.params;
 
   try {
-    const response = await fetch(
-      `https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${tracking}`,
-      {
-        method: "GET",
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "es-ES,es;q=0.9",
-          "Referer": "https://www.mrw.es/seguimiento/envio.asp",
-        },
-      }
-    );
+    // PASO 1: obtener cookies de sesión
+    const sessionRes = await fetch("https://www.mrw.es/seguimiento/envio.asp", {
+      method: "GET",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "es-ES,es;q=0.9",
+      },
+    });
 
-    const html = await response.text();
+    const cookies = sessionRes.headers.get("set-cookie") || "";
 
-    // Buscar directamente palabras clave de estado
+    // PASO 2: enviar el tracking con las cookies
+    const trackRes = await fetch("https://www.mrw.es/seguimiento/envio-actual.asp", {
+      method: "POST",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "es-ES,es;q=0.9",
+        "Referer": "https://www.mrw.es/seguimiento/envio.asp",
+        "Cookie": cookies,
+      },
+      body: `Buscar=${tracking}&from=buscar`,
+    });
+
+    const html = await trackRes.text();
+
     const keywords = [
-      "Env\u00edo entregado",
-      "Entregado",
-      "En tr\u00e1nsito",
-      "En transito",
-      "Devuelto",
-      "Destruido",
-      "No entregado",
-      "Ausente",
+      "Envío entregado", "Entregado",
+      "En tránsito", "En transito",
+      "Devuelto", "Destruido",
+      "No entregado", "Ausente",
     ];
 
     let rawStatus = null;
