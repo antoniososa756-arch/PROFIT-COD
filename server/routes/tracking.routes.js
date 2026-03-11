@@ -29,6 +29,7 @@ async function mrwLogin(user, password) {
   });
   const cookies = res.headers.get("set-cookie") || "";
   const text = await res.text();
+  console.log("MRW LOGIN RESPONSE:", res.status, text.substring(0, 300));
   let data;
   try { data = JSON.parse(text); } catch { data = {}; }
   return {
