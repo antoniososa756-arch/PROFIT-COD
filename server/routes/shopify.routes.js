@@ -1,14 +1,11 @@
 const auth = require("../middlewares/auth");
 const express = require("express");
 const crypto = require("crypto");
-// ❌ NO node-fetch (Node 18 ya tiene fetch nativo)
-
 
 const router = express.Router();
 
 /* =====================================================
-   OAUTH → INICIAR CONEXIÓN (INSTALAR APP EN SHOPIFY)
-   GET /api/shopify/connect?shop=xxx.myshopify.com
+   OAUTH → INICIAR CONEXIÓN
    ===================================================== */
 router.get("/connect", (req, res) => {
   let { shop } = req.query;
@@ -90,7 +87,7 @@ router.get("/callback", async (req, res) => {
 });
 
 /* =====================================================
-   CONEXIÓN REAL CON TOKEN (PASO 4)
+   CONEXIÓN REAL CON TOKEN
    POST /api/shopify/connect-token
    ===================================================== */
 router.post("/connect-token", auth, async (req, res) => {
@@ -100,19 +97,17 @@ router.post("/connect-token", auth, async (req, res) => {
   const userId = req.user.id;
 
   if (!shop || !accessToken || !appSecret) {
-  return res.status(400).json({
-    error: "Debes proporcionar dominio, access token y app secret",
-  });
-}
+    return res.status(400).json({
+      error: "Debes proporcionar dominio, access token y app secret",
+    });
+  }
 
-appSecret = appSecret.trim();
-
-
-  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  appSecret = appSecret.trim();
+  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
   accessToken = accessToken.trim();
 
   try {
-    // 1️⃣ Validar token
+    // 1️⃣ Validar token y obtener info de la tienda
     const response = await fetch(
       `https://${shop}/admin/api/2024-10/shop.json`,
       {
@@ -130,32 +125,26 @@ appSecret = appSecret.trim();
 
     const data = await response.json();
 
-    // 2️⃣ Guardar tienda
+    // 2️⃣ Obtener dominio interno myshopify (el que usan los webhooks)
+    const myshopifyDomain = data.shop.myshopify_domain.toLowerCase();
+    console.log("🏪 Dominio interno Shopify:", myshopifyDomain);
+
+    // 3️⃣ Guardar tienda con dominio interno
     await req.db.run(
-      `
-      INSERT INTO shops (
-  user_id,
-  shop_domain,
-  access_token,
-  app_secret,
-  status,
-  last_sync
-)
-VALUES (?, ?, ?, ?, 'active', datetime('now'))
+      `INSERT INTO shops (
+        user_id, shop_domain, access_token, app_secret, status, last_sync
+      ) VALUES (?, ?, ?, ?, 'active', datetime('now'))
       ON CONFLICT(user_id, shop_domain)
       DO UPDATE SET
-  access_token = excluded.access_token,
-  app_secret = excluded.app_secret,
-  status = 'active',
-  last_sync = datetime('now')
-      `,
-      [userId, shop, accessToken, appSecret]
+        access_token = excluded.access_token,
+        app_secret = excluded.app_secret,
+        status = 'active',
+        last_sync = datetime('now')`,
+      [userId, myshopifyDomain, accessToken, appSecret]
     );
 
-    // 3️⃣ REGISTRAR WEBHOOKS (AQUÍ ES DONDE VA)
-    const webhookUrl =
-      "https://profit-cod.onrender.com/api/shopify/webhooks/orders";
-
+    // 4️⃣ Registrar webhooks
+    const webhookUrl = "https://profit-cod.onrender.com/api/shopify/webhooks/orders";
     const topics = [
       "orders/create",
       "orders/updated",
@@ -171,21 +160,17 @@ VALUES (?, ?, ?, ?, 'active', datetime('now'))
           "X-Shopify-Access-Token": accessToken,
         },
         body: JSON.stringify({
-          webhook: {
-            topic,
-            address: webhookUrl,
-            format: "json",
-          },
+          webhook: { topic, address: webhookUrl, format: "json" },
         }),
       });
     }
 
-    // 4️⃣ Respuesta final
+    // 5️⃣ Respuesta final
     res.json({
       ok: true,
       shop: {
         name: data.shop.name,
-        domain: shop,
+        domain: myshopifyDomain,
         status: "active",
         lastSync: new Date().toISOString(),
       },
@@ -204,31 +189,23 @@ router.get("/stores", auth, async (req, res) => {
   const userId = req.user.id;
 
   req.db.all(
-    `
-    SELECT
-      id,
-      shop_domain AS domain,
-      status,
-      last_sync,
-      created_at
-    FROM shops
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-    `,
+    `SELECT id, shop_domain AS domain, status, last_sync, created_at
+     FROM shops
+     WHERE user_id = ?
+     ORDER BY created_at DESC`,
     [userId],
     (err, rows) => {
       if (err) {
         console.error("DB shops error:", err);
         return res.status(500).json({ error: "Error base de datos" });
       }
-
       res.json(rows || []);
     }
   );
 });
 
 /* =====================================================
-   DESHABILITAR TIENDA (ROMPER CONEXIÓN)
+   DESHABILITAR TIENDA
    POST /api/shopify/disable/:id
    ===================================================== */
 router.post("/disable/:id", auth, async (req, res) => {
@@ -237,11 +214,7 @@ router.post("/disable/:id", auth, async (req, res) => {
 
   try {
     const result = await req.db.run(
-      `
-      UPDATE shops
-      SET status = 'disabled'
-      WHERE id = ? AND user_id = ?
-      `,
+      `UPDATE shops SET status = 'disabled' WHERE id = ? AND user_id = ?`,
       [shopId, userId]
     );
 
