@@ -273,4 +273,23 @@ router.get("/secret/:id", auth, (req, res) => {
   );
 });
 
+/* =====================================================
+   ELIMINAR TIENDA
+   DELETE /api/shopify/delete/:id
+   ===================================================== */
+router.delete("/delete/:id", auth, (req, res) => {
+  const shopId = req.params.id;
+  const userId = req.user.id;
+
+  req.db.run(
+    `DELETE FROM shops WHERE id = ? AND user_id = ?`,
+    [shopId, userId],
+    function(err) {
+      if (err) return res.status(500).json({ error: "Error eliminando tienda" });
+      if (this.changes === 0) return res.status(404).json({ error: "Tienda no encontrada" });
+      res.json({ ok: true });
+    }
+  );
+});
+
 module.exports = router;

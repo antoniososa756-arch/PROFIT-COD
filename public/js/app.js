@@ -1607,6 +1607,77 @@ window.editStoreName = editStoreName;
 
 window.disableStore = disableStore;
 
+function openStoreMenu(e, storeId) {
+  e.stopPropagation();
+
+  // Cerrar menú anterior si existe
+  const existing = document.getElementById("store-menu-popup");
+  if (existing) existing.remove();
+
+  const btn = e.currentTarget || e.target;
+  const rect = btn.getBoundingClientRect();
+
+  const popup = document.createElement("div");
+  popup.id = "store-menu-popup";
+  popup.style.cssText = `
+    position:fixed;
+    top:${rect.bottom + 4}px;
+    left:${rect.left - 120}px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    box-shadow:0 4px 16px rgba(0,0,0,0.12);
+    z-index:9999;
+    min-width:150px;
+    overflow:hidden;
+  `;
+
+  popup.innerHTML = `
+    <div
+      onclick="deleteStore(${storeId})"
+      style="padding:12px 16px;cursor:pointer;color:#dc2626;font-size:14px;display:flex;align-items:center;gap:8px;"
+      onmouseover="this.style.background='#fef2f2'"
+      onmouseout="this.style.background=''"
+    >
+      🗑️ Eliminar tienda
+    </div>
+  `;
+
+  document.body.appendChild(popup);
+
+  // Cerrar al hacer clic fuera
+  setTimeout(() => {
+    document.addEventListener("click", function closeMenu() {
+      popup.remove();
+      document.removeEventListener("click", closeMenu);
+    });
+  }, 0);
+}
+
+async function deleteStore(storeId) {
+  const popup = document.getElementById("store-menu-popup");
+  if (popup) popup.remove();
+
+  if (!confirm("¿Seguro que quieres eliminar esta tienda? Esta acción no se puede deshacer.")) return;
+
+  const res = await fetch(`${API_BASE}/api/shopify/delete/${storeId}`, {
+    method: "DELETE",
+    headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Error eliminando tienda");
+    return;
+  }
+
+  setSection("tiendas");
+}
+
+window.openStoreMenu = openStoreMenu;
+window.deleteStore = deleteStore;
+
 function openReactivateModal(domain, storeId) {
   window.__reactivateShopDomain = domain;
   window.__reactivateShopId = storeId;
