@@ -15,40 +15,40 @@ router.post(
       const shopDomain = req.headers["x-shopify-shop-domain"];
       const body = req.body;
 
-      if (!hmac || !body) {
-        console.error("❌ Falta HMAC o body");
+      if (!hmac || !body || !shopDomain) {
         return res.status(400).send("Webhook inválido");
       }
 
-      const generatedHmac = crypto
-        .createHmac("sha256", process.env.SHOPIFY_API_SECRET)
-        .update(body)
-        .digest("base64");
-
-      const valid =
-        Buffer.byteLength(generatedHmac) === Buffer.byteLength(hmac) &&
-        crypto.timingSafeEqual(
-          Buffer.from(generatedHmac),
-          Buffer.from(hmac)
-        );
-
-      if (!valid) {
-        console.error("❌ HMAC inválido");
-        return res.status(401).send("HMAC inválido");
-      }
-
-      const o = JSON.parse(body.toString("utf8"));
-      console.log("✅ Pedido recibido:", o.id, "de", shopDomain);
-
-      // Buscar la tienda en DB para obtener shop_id
+      // Buscar la tienda y su app_secret en DB
       db.get(
-        "SELECT id FROM shops WHERE shop_domain = ? AND status = 'active'",
+        "SELECT id, app_secret FROM shops WHERE shop_domain = ? AND status = 'active'",
         [shopDomain],
         async (err, shop) => {
           if (err || !shop) {
-            console.warn("⚠️ Tienda no encontrada para webhook:", shopDomain);
-            return res.status(200).send("OK"); // siempre 200 a Shopify
+            console.warn("⚠️ Tienda no encontrada:", shopDomain);
+            return res.status(200).send("OK");
           }
+
+          // Verificar HMAC con el app_secret de ESA tienda
+          const generatedHmac = crypto
+            .createHmac("sha256", shop.app_secret)
+            .update(body)
+            .digest("base64");
+
+          const valid =
+            Buffer.byteLength(generatedHmac) === Buffer.byteLength(hmac) &&
+            crypto.timingSafeEqual(
+              Buffer.from(generatedHmac),
+              Buffer.from(hmac)
+            );
+
+          if (!valid) {
+            console.error("❌ HMAC inválido para:", shopDomain);
+            return res.status(401).send("HMAC inválido");
+          }
+
+          const o = JSON.parse(body.toString("utf8"));
+          console.log("✅ Pedido recibido:", o.id, "de", shopDomain);
 
           try {
             await db.run(
