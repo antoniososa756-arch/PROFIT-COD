@@ -37,28 +37,37 @@ router.get("/", auth, (req, res) => {
     [userId],
     (err, items) => {
       if (err) return res.status(500).json({ error: "Error BD" });
-      if (!mes) return res.json(items);
+      if (!mes) return res.json(items.map(i => ({ ...i, valor: 0 })));
 
-      db.all(`SELECT * FROM gastos_fijos_valores WHERE user_id=? AND mes=?`, [userId, mes], (err2, valores) => {
-        if (err2) return res.status(500).json({ error: "Error BD valores" });
+      db.all(
+        `SELECT * FROM gastos_fijos_valores WHERE user_id=? AND mes=?`,
+        [userId, mes],
+        (err2, valores) => {
+          if (err2) return res.status(500).json({ error: "Error BD valores" });
 
-        db.all(`SELECT * FROM gastos_fijos_precios WHERE user_id=? AND mes=?`, [userId, mes], (err3, precios) => {
-          if (err3) return res.status(500).json({ error: "Error BD precios" });
+          db.all(
+            `SELECT * FROM gastos_fijos_precios WHERE user_id=? AND mes=?`,
+            [userId, mes],
+            (err3, precios) => {
+              if (err3) return res.status(500).json({ error: "Error BD precios" });
 
-          const mapVal = {};
-          valores.forEach(v => { mapVal[v.gasto_id] = v.valor; });
+              const mapVal = {};
+              valores.forEach(v => { mapVal[v.gasto_id] = v.valor; });
 
-          const mapPre = {};
-          precios.forEach(p => { mapPre[p.gasto_id] = p.precio_unit; });
+              const mapPre = {};
+              precios.forEach(p => { mapPre[p.gasto_id] = p.precio_unit; });
 
-          const result = items.map(i => ({
-            ...i,
-            valor:      mapVal[i.id] ?? 0,
-            precio_unit: mapPre[i.id] ?? i.precio_unit ?? 0
-          }));
-          res.json(result);
-        });
-      });
+              const result = items.map(i => ({
+                ...i,
+                valor: mapVal[i.id] !== undefined ? mapVal[i.id] : 0,
+                precio_unit: mapPre[i.id] !== undefined ? mapPre[i.id] : (i.precio_unit ?? 0)
+              }));
+
+              res.json(result);
+            }
+          );
+        }
+      );
     }
   );
 });
