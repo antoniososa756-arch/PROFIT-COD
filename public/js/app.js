@@ -2462,6 +2462,20 @@ async function loadGastosVarios() {
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gasto TikTok</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
             </tr>
+            <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Productos</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">0.00 €</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">MRW</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(mrw)} €</td>
+            </tr>
+            <tr style="background:#f9fafb;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Logística</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(logistica)} €</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gastos Fijos</td>
             <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Shopify</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;">
@@ -2472,14 +2486,6 @@ async function loadGastosVarios() {
                   onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
                   style="${inp}">
               </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">MRW</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(mrw)} €</td>
-            </tr>
-            <tr style="background:#f9fafb;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Logística</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(logistica)} €</td>
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gastos Fijos</td>
