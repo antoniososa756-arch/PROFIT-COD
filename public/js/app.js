@@ -2442,8 +2442,8 @@ async function loadGastosVarios() {
   const cols = stores.map(store => {
     const ads     = adsSpends[store.domain] || { meta: 0, tiktok: 0 };
     const shopify = gastosVarios[store.domain] || 0;
-    const mrw       = parseFloat(gastosFijos.find(g=>g.nombre==="MRW")?.valor||0);
-    const logistica = parseFloat(gastosFijos.find(g=>g.nombre==="LOGÍSTICA")?.valor||0);
+    const mrw       = 0;
+    const logistica = 0;
     const total   = ads.meta + ads.tiktok + shopify + fijoXTienda + mrw + logistica;
 
     return `
@@ -2480,15 +2480,38 @@ async function loadGastosVarios() {
                 <div style="font-size:10px;color:#9ca3af;">${fmt(totalOtrosFijos)}€ ÷ ${numTiendas} tiendas</div>
               </td>
             </tr>
-            <tr style="background:#f9fafb;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Shopify</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;">
+            <tr style="background:#eff6ff;">
+              <td style="padding:10px 14px;border:1px solid #bfdbfe;font-weight:700;color:#2563eb;">Shopify</td>
+              <td style="padding:10px 14px;border:1px solid #bfdbfe;">
                 <input type="number" min="0" step="0.01"
                   value="${fmt(shopify)}"
                   data-shop="${store.domain}" data-mes="${mes}"
                   onchange="saveGastoVarioShopify(this)"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
-                  style="${inp}">
+                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;">
+              </td>
+            </tr>
+            ${(gastosExtras[store.domain]||[]).map((g,idx) => `
+            <tr style="background:#eff6ff;">
+              <td style="padding:7px 14px;border:1px solid #bfdbfe;">
+                <input type="text" value="${escapeHtml(g.nombre||'')}" placeholder="Concepto..."
+                  data-shop="${store.domain}" data-idx="${idx}" data-mes="${mes}"
+                  onchange="updateGastoExtraNombre(this)"
+                  style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:#2563eb;font-family:inherit;">
+              </td>
+              <td style="padding:7px 14px;border:1px solid #bfdbfe;">
+                <input type="number" min="0" step="0.01" value="${fmt(g.valor||0)}" placeholder="0.00"
+                  data-shop="${store.domain}" data-idx="${idx}" data-mes="${mes}"
+                  onchange="updateGastoExtraValor(this)"
+                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;">
+              </td>
+            </tr>`).join("")}
+            <tr style="background:#eff6ff;">
+              <td colspan="2" style="padding:6px 14px;border:1px solid #bfdbfe;">
+                <button onclick="addGastoExtra('${store.domain}')"
+                  style="background:none;border:none;cursor:pointer;color:#2563eb;font-size:12px;font-weight:600;padding:0;font-family:inherit;">
+                  + Añadir concepto
+                </button>
               </td>
             </tr>
             <tr style="background:#f0fdf4;">
@@ -3065,15 +3088,42 @@ function filterByTab(el, status) {
 }
 window.filterByTab = filterByTab;
 
-window.toggleFilterPanel = toggleFilterPanel;
-window.selectFilterShop = selectFilterShop;
-window.applyFilters = applyFilters;
-window.clearFilters = clearFilters;
+
 
 window.toggleFilterPanel = toggleFilterPanel;
 window.selectFilterShop = selectFilterShop;
 window.applyFilters = applyFilters;
 window.clearFilters = clearFilters;
+
+// =========================
+// GASTOS EXTRAS POR TIENDA
+// =========================
+let gastosExtras = {};
+
+function addGastoExtra(shop) {
+  if (!gastosExtras[shop]) gastosExtras[shop] = [];
+  gastosExtras[shop].push({ nombre: "", valor: 0 });
+  loadGastosVarios();
+}
+
+function updateGastoExtraNombre(input) {
+  const shop = input.dataset.shop;
+  const idx  = parseInt(input.dataset.idx);
+  if (!gastosExtras[shop]) return;
+  gastosExtras[shop][idx].nombre = input.value;
+}
+
+function updateGastoExtraValor(input) {
+  const shop = input.dataset.shop;
+  const idx  = parseInt(input.dataset.idx);
+  if (!gastosExtras[shop]) return;
+  gastosExtras[shop][idx].valor = parseFloat(input.value)||0;
+  loadGastosVarios();
+}
+
+window.addGastoExtra          = addGastoExtra;
+window.updateGastoExtraNombre = updateGastoExtraNombre;
+window.updateGastoExtraValor  = updateGastoExtraValor;
 
 
 
