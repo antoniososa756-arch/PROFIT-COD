@@ -1720,9 +1720,11 @@ async function loadMetricas() {
     const destruidos = list.filter(o => o.fulfillment_status === "destruido").length;
     const rojos      = devueltos + destruidos;
 
-    const pctEntregado = total > 0 ? Math.round((entregados / total) * 100) : 0;
-    const pctRojo      = total > 0 ? Math.round((rojos      / total) * 100) : 0;
-    const pctPendiente = total > 0 ? Math.round((transito / total) * 100) : 0;
+    const enviados = list.filter(o => ["enviado","entregado","devuelto","destruido"].includes(o.fulfillment_status)).length;
+    const base     = enviados > 0 ? enviados : 1;
+    const pctEntregado = Math.round((entregados / base) * 100);
+    const pctRojo      = Math.round((rojos      / base) * 100);
+    const pctPendiente = Math.round((transito   / base) * 100);
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set("stat-total",      total);
