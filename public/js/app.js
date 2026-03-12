@@ -2080,7 +2080,7 @@ async function loadGastosFijosData() {
     headers: { Authorization: "Bearer " + localStorage.getItem("token") }
   }).then(r => r.json()).catch(() => []);
 
-  if (!Array.isArray(rowsBase) || rowsBase.length === 0) {
+  if (items.length === 0) {
     const defaults = [
       { nombre: "MRW",       precio_unit: 0, fijo: 1, orden: 0 },
       { nombre: "LOGÍSTICA", precio_unit: 0, fijo: 1, orden: 1 },
@@ -2098,12 +2098,12 @@ async function loadGastosFijosData() {
           body: JSON.stringify(defaults[i])
         });
         const saved = await r.json();
-        if (!saved.id) throw new Error("No se recibió id del servidor");
+        if (!saved || !saved.id) continue;
         defaults[i].id = saved.id;
         defaults[i].valor = 0;
       } catch {}
     }
-    items = defaults;
+    items = defaults.filter(d => d.id);
   }
 
   let impuestos = [];
