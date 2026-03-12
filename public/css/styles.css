@@ -1396,3 +1396,54 @@ body.dark input[type="date"]::-webkit-calendar-picker-indicator {
   margin: 0 auto;
   padding: 20px;
 }
+
+/* =========================
+   SUBMENU FACTURAS
+   ========================= */
+.submenu {
+  display: none;
+  flex-direction: column;
+  padding-left: 18px;
+  margin-top: -4px;
+  margin-bottom: 4px;
+}
+
+.menu-subitem {
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--menuText, #374151);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background .15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-subitem::before {
+  content: "·";
+  font-size: 18px;
+  color: #9ca3af;
+  line-height: 1;
+}
+
+.menu-subitem:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+.menu-subitem.active {
+  background: var(--green, #16a34a);
+  color: #fff;
+}
+
+.menu-subitem.active::before {
+  color: #fff;
+}
+
+body.dark .menu-subitem {
+  color: #ffffff;
+}
+
+body.dark .menu-subitem:hover {
+  background: rgba(255,255,255,0.08);
+}

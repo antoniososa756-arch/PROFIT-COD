@@ -434,6 +434,13 @@ function loadApp(section) {
       ${menuItem("productos", labels)}
       ${menuItem("pedidos", labels)}
       ${menuItem("facturas", labels)}
+      <div class="submenu" id="submenu-facturas" style="display:none;">
+        <div class="menu-subitem" data-id="reembolsos">Reembolsos</div>
+        <div class="menu-subitem" data-id="gastos-ads">Gastos Ads</div>
+        <div class="menu-subitem" data-id="gastos-fijos">Gastos Fijos</div>
+        <div class="menu-subitem" data-id="gastos-varios">Gastos Varios</div>
+        <div class="menu-subitem" data-id="nomina">Nómina</div>
+      </div>
       ${menuItem("informes", labels)}
       ${menuItem("ayuda", labels)}
 
@@ -558,6 +565,20 @@ function loadApp(section) {
     updateNotifBadge(notiList.length);
 
     document.querySelectorAll(".menu-item").forEach((el) => {
+      el.onclick = () => {
+        if (el.dataset.id === "facturas") {
+          const sub = document.getElementById("submenu-facturas");
+          if (sub) {
+            const isOpen = sub.style.display === "block";
+            sub.style.display = isOpen ? "none" : "block";
+          }
+          return;
+        }
+        setSection(el.dataset.id);
+      };
+    });
+
+    document.querySelectorAll(".menu-subitem").forEach((el) => {
       el.onclick = () => setSection(el.dataset.id);
     });
 
