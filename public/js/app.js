@@ -621,13 +621,19 @@ const now = new Date();
 
       <div class="stats-grid" id="statsGrid">
 
-        <div class="stat-card">
-          <div class="stat-icon blue">
-            <svg viewBox="0 0 24 24"><path d="M3 7l9 5 9-5M3 7v10l9 5 9-5V7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:6px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24"><path d="M3 7l9 5 9-5M3 7v10l9 5 9-5V7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-num" id="stat-total">0</span>
+              <span class="stat-label">Total Pedidos</span>
+            </div>
           </div>
-          <div class="stat-info">
-            <span class="stat-num" id="stat-total">0</span>
-            <span class="stat-label">Total Pedidos</span>
+          <div style="border-top:1px solid #e5e7eb;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:12px;color:#6b7280;">Enviados <span style="font-size:10px;color:#9ca3af;">(excl. pendientes y cancelados)</span></span>
+            <span style="font-size:14px;font-weight:700;color:#16a34a;" id="stat-enviados">0</span>
           </div>
         </div>
 
@@ -1720,6 +1726,8 @@ async function loadMetricas() {
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set("stat-total",      total);
+    const enviados = list.filter(o => ["enviado","entregado","devuelto","destruido"].includes(o.fulfillment_status)).length;
+    set("stat-enviados", enviados);
     set("stat-pendientes", pendientes);
     set("stat-transito",   transito);
     set("stat-entregados", entregados);
