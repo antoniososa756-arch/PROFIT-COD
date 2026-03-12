@@ -14,7 +14,11 @@ db.run(`
   )
 `, () => {});
 
-db.run(`ALTER TABLE gastos_fijos ADD COLUMN precio_unit REAL DEFAULT NULL`, () => {});
+db.run(`ALTER TABLE gastos_fijos ADD COLUMN precio_unit REAL DEFAULT NULL`, (err) => {
+  if (err && !err.message.includes("duplicate column")) {
+    console.error("Error ALTER TABLE:", err.message);
+  }
+});
 
 db.run(`
   CREATE TABLE IF NOT EXISTS gastos_fijos_valores (
