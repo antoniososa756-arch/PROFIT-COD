@@ -14,7 +14,6 @@ function mapMRWStatus(texto) {
   return "en_transito";
 }
 
-// Guardar credenciales MRW (ya no necesarias pero las dejamos por si acaso)
 router.post("/credentials", auth, async (req, res) => {
   res.json({ ok: true });
 });
@@ -31,19 +30,18 @@ router.get("/:tracking", auth, async (req, res) => {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "es-ES,es;q=0.9",
         "Referer": "https://www.mrw.es/",
+        "Cookie": "cookieconsent_status=dismiss; klaro=eyJhbmFseXRpY3MiOnRydWUsIm1hcmtldGluZyI6dHJ1ZX0=",
       }
     });
 
     const html = await response.text();
-
-    // Extraer estado del td
     console.log("MRW HTML SNIPPET:", html.substring(html.indexOf("Estado"), html.indexOf("Estado") + 200));
+
     const match = html.match(/data-title="Estado env[^"]*"[^>]*>([^<]+)</);
     if (!match) {
       return res.json({ ok: false, error: "No se encontró el estado en MRW" });
     }
 
-    // Limpiar caracteres especiales
     const raw = match[1]
       .replace(/EnvÃ­o/g, "Envío")
       .replace(/trÃ¡nsito/g, "tránsito")
