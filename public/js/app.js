@@ -2075,7 +2075,12 @@ async function loadGastosFijosData() {
     items = Array.isArray(data) ? data : [];
   } catch {}
 
-  if (items.length === 0) {
+  // Si no hay filas base creadas aún, crearlas UNA SOLA VEZ
+  const rowsBase = await fetch(`${API_BASE}/api/gastos-fijos`, {
+    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+  }).then(r => r.json()).catch(() => []);
+
+  if (!Array.isArray(rowsBase) || rowsBase.length === 0) {
     const defaults = [
       { nombre: "MRW",       precio_unit: 0, fijo: 1, orden: 0 },
       { nombre: "LOGÍSTICA", precio_unit: 0, fijo: 1, orden: 1 },
@@ -2085,7 +2090,7 @@ async function loadGastosFijosData() {
       { nombre: "", precio_unit: null, fijo: 0, orden: 5 },
       { nombre: "", precio_unit: null, fijo: 0, orden: 6 },
     ];
-    for (let i=0; i<defaults.length; i++) {
+    for (let i = 0; i < defaults.length; i++) {
       try {
         const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
           method: "POST",
