@@ -2011,7 +2011,7 @@ async function loadGastosFijos() {
   if (!wrap) return;
 
   // Selector de mes/año si no existe, crearlo
-  if (true) {
+  if (!document.getElementById("gf-month-sel")) {
     const now = new Date();
     const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
     wrap.innerHTML = `
