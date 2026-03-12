@@ -1128,6 +1128,41 @@ if (id === "gastos-fijos") {
   return;
 }
 
+// =========================
+// SECCIÓN GASTOS VARIOS
+// =========================
+if (id === "gastos-varios") {
+  if (t) t.textContent = "Gastos Varios";
+  if (s) s.textContent = "Resumen de gastos por tienda";
+  if (c) c.textContent = "Gastos Varios";
+  box.className = "card";
+  if (box) {
+    box.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+        <select id="gv-month-sel"
+          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+            .map((m,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${m}</option>`).join("")}
+        </select>
+        <select id="gv-year-sel"
+          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
+        </select>
+        <button onclick="loadGastosVarios()"
+          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          Ver
+        </button>
+      </div>
+      <div id="gv-mes-label" style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;"></div>
+      <div id="gv-content"></div>
+    `;
+  }
+  loadGastosVarios();
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
 // ⬅️ AQUÍ SE CIERRA setSection CORRECTAMENTE
 }
 
@@ -2352,6 +2387,152 @@ async function saveAdsSpend(input) {
 
 window.loadAdsTable  = loadAdsTable;
 window.saveAdsSpend  = saveAdsSpend;
+
+// =========================
+// GASTOS VARIOS
+// =========================
+async function loadGastosVarios() {
+  const content = document.getElementById("gv-content");
+  const label   = document.getElementById("gv-mes-label");
+  if (!content) return;
+
+  const month = document.getElementById("gv-month-sel")?.value || (new Date().getMonth()+1);
+  const year  = document.getElementById("gv-year-sel")?.value  || new Date().getFullYear();
+  const mes   = `${year}-${String(month).padStart(2,"0")}`;
+
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  if (label) label.textContent = `📅 Trabajando en: ${monthNames[parseInt(month)-1].toUpperCase()} ${year}`;
+
+  content.innerHTML = `<div style="padding:16px;color:#6b7280;">Cargando...</div>`;
+
+  // 1. Tiendas activas
+  let stores = [];
+  try {
+    const r = await fetch(`${API_BASE}/api/shopify/stores`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const all = await r.json();
+    stores = Array.isArray(all) ? all.filter(s => s.active || s.status === "active" || s.is_active) : [];
+    if (stores.length === 0) stores = Array.isArray(all) ? all : [];
+  } catch {}
+
+  const numTiendas = stores.length || 1;
+
+  // 2. Gastos Ads del mes (Meta y TikTok por tienda)
+  let adsSpends = {};
+  try {
+    for (const store of stores) {
+      const r = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, {
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      });
+      const rows = await r.json();
+      let meta = 0, tiktok = 0;
+      if (Array.isArray(rows)) rows.forEach(r => { meta += r.meta||0; tiktok += r.tiktok||0; });
+      adsSpends[store.domain] = { meta, tiktok };
+    }
+  } catch {}
+
+  // 3. Gastos fijos del mes → dividir entre tiendas activas
+  let gastosFijos = [];
+  try {
+    const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    gastosFijos = await r.json();
+    if (!Array.isArray(gastosFijos)) gastosFijos = [];
+  } catch {}
+
+  const totalFijo = gastosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const fijoXTienda = totalFijo / numTiendas;
+
+  // 4. Gastos varios guardados (Shopify)
+  let gastosVarios = {};
+  try {
+    const r = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const rows = await r.json();
+    if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; });
+  } catch {}
+
+  const fmt = n => (parseFloat(n)||0).toFixed(2);
+  const inp = `padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;text-align:right;`;
+
+  // Construir tabla por tienda
+  const cols = stores.map(store => {
+    const ads     = adsSpends[store.domain]  || { meta: 0, tiktok: 0 };
+    const shopify = gastosVarios[store.domain] || 0;
+    const total   = ads.meta + ads.tiktok + shopify + fijoXTienda;
+
+    return `
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:220px;flex:1;">
+        <div style="background:#16a34a;padding:12px 16px;">
+          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
+          <div style="font-size:11px;color:#bbf7d0;margin-top:2px;">${store.domain}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tbody>
+            <tr style="background:#f9fafb;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gasto Meta</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.meta)} €</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gasto TikTok</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
+            </tr>
+            <tr style="background:#f9fafb;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Shopify</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;">
+                <input type="number" min="0" step="0.01"
+                  value="${fmt(shopify)}"
+                  data-shop="${store.domain}" data-mes="${mes}"
+                  onchange="saveGastoVarioShopify(this)"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
+                  style="${inp}">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gastos Fijos</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(fijoXTienda)} €
+                <div style="font-size:10px;color:#9ca3af;">${fmt(totalFijo)}€ ÷ ${numTiendas} tiendas</div>
+              </td>
+            </tr>
+            <tr style="background:#f0fdf4;">
+              <td style="padding:11px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
+              <td style="padding:11px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(total)} €</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
+
+  content.innerHTML = `
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
+      ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+    </div>
+  `;
+}
+
+async function saveGastoVarioShopify(input) {
+  const shop    = input.dataset.shop;
+  const mes     = input.dataset.mes;
+  const shopify = parseFloat(input.value)||0;
+  try {
+    await fetch(`${API_BASE}/api/gastos-varios/shopify`, {
+      method: "PUT",
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      body: JSON.stringify({ shop_domain: shop, mes, shopify })
+    });
+    input.blur();
+    input.style.borderColor = "#16a34a";
+    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
+  } catch(e) { console.error(e); }
+}
+
+window.loadGastosVarios      = loadGastosVarios;
+window.saveGastoVarioShopify = saveGastoVarioShopify;
+
 
 // =========================
 // CARGAR PEDIDOS REALES
