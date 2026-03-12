@@ -2098,6 +2098,7 @@ async function loadGastosFijosData() {
           body: JSON.stringify(defaults[i])
         });
         const saved = await r.json();
+        if (!saved.id) throw new Error("No se recibió id del servidor");
         defaults[i].id = saved.id;
         defaults[i].valor = 0;
       } catch {}
