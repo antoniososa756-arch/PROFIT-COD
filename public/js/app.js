@@ -1728,8 +1728,7 @@ async function loadMetricas() {
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set("stat-total",      total);
-    const enviados = list.filter(o => ["enviado","entregado","devuelto","destruido"].includes(o.fulfillment_status)).length;
-    set("stat-enviados", enviados);
+    set("stat-enviados",   enviados);
     set("stat-pendientes", pendientes);
     set("stat-transito",   transito);
     set("stat-entregados", entregados);
