@@ -10,12 +10,17 @@ db.run(`
     nombre TEXT NOT NULL,
     valor REAL DEFAULT 0,
     estimado REAL DEFAULT NULL,
+    precio_envio REAL DEFAULT NULL,
+    precio_prep REAL DEFAULT NULL,
     fijo INTEGER DEFAULT 0,
     orden INTEGER DEFAULT 0
   )
 `);
 
-// GET — obtener todos los gastos fijos del usuario
+// Migración por si la tabla ya existe sin las columnas nuevas
+db.run(`ALTER TABLE gastos_fijos ADD COLUMN precio_envio REAL DEFAULT NULL`).catch?.(()=>{});
+db.run(`ALTER TABLE gastos_fijos ADD COLUMN precio_prep REAL DEFAULT NULL`).catch?.(()=>{});
+
 router.get("/", auth, (req, res) => {
   db.all(
     `SELECT * FROM gastos_fijos WHERE user_id=? ORDER BY orden ASC, id ASC`,
@@ -27,13 +32,16 @@ router.get("/", auth, (req, res) => {
   );
 });
 
-// POST — crear nuevo gasto fijo
 router.post("/", auth, (req, res) => {
-  const { nombre, valor, estimado, fijo, orden } = req.body;
+  const { nombre, valor, estimado, precio_envio, precio_prep, fijo, orden } = req.body;
   db.run(
-    `INSERT INTO gastos_fijos (user_id, nombre, valor, estimado, fijo, orden)
-     VALUES (?,?,?,?,?,?)`,
-    [req.user.id, nombre||"", parseFloat(valor)||0, estimado!=null?parseFloat(estimado):null, fijo?1:0, orden||0],
+    `INSERT INTO gastos_fijos (user_id, nombre, valor, estimado, precio_envio, precio_prep, fijo, orden)
+     VALUES (?,?,?,?,?,?,?,?)`,
+    [req.user.id, nombre||"", parseFloat(valor)||0,
+     estimado!=null?parseFloat(estimado):null,
+     precio_envio!=null?parseFloat(precio_envio):null,
+     precio_prep!=null?parseFloat(precio_prep):null,
+     fijo?1:0, orden||0],
     function(err) {
       if (err) return res.status(500).json({ error: "Error guardando" });
       res.json({ id: this.lastID });
@@ -41,13 +49,16 @@ router.post("/", auth, (req, res) => {
   );
 });
 
-// PUT — actualizar gasto fijo
 router.put("/:id", auth, (req, res) => {
-  const { nombre, valor, estimado } = req.body;
+  const { nombre, valor, estimado, precio_envio, precio_prep } = req.body;
   db.run(
-    `UPDATE gastos_fijos SET nombre=?, valor=?, estimado=?
+    `UPDATE gastos_fijos SET nombre=?, valor=?, estimado=?, precio_envio=?, precio_prep=?
      WHERE id=? AND user_id=?`,
-    [nombre, parseFloat(valor)||0, estimado!=null?parseFloat(estimado):null, req.params.id, req.user.id],
+    [nombre, parseFloat(valor)||0,
+     estimado!=null?parseFloat(estimado):null,
+     precio_envio!=null?parseFloat(precio_envio):null,
+     precio_prep!=null?parseFloat(precio_prep):null,
+     req.params.id, req.user.id],
     (err) => {
       if (err) return res.status(500).json({ error: "Error actualizando" });
       res.json({ ok: true });
@@ -55,7 +66,6 @@ router.put("/:id", auth, (req, res) => {
   );
 });
 
-// DELETE — eliminar gasto fijo
 router.delete("/:id", auth, (req, res) => {
   db.run(
     `DELETE FROM gastos_fijos WHERE id=? AND user_id=?`,

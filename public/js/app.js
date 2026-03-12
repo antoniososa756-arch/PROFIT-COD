@@ -1975,6 +1975,25 @@ async function loadGastosFijos() {
   const wrap = document.getElementById("gastos-fijos-wrap");
   if (!wrap) return;
 
+  // Obtener total de pedidos del mes actual para calcular estimados
+  let totalPedidos = 0;
+  try {
+    const r = await fetch(`${API_BASE}/api/orders`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const all = await r.json();
+    const now = new Date();
+    if (Array.isArray(all)) {
+      totalPedidos = all.filter(o => {
+        if (!o.created_at) return false;
+        if (o.fulfillment_status === "cancelado") return false;
+        const d = new Date(o.created_at);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
+    }
+  } catch {}
+
+  // Cargar gastos fijos
   let items = [];
   try {
     const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
@@ -1983,23 +2002,22 @@ async function loadGastosFijos() {
     items = await r.json();
   } catch {}
 
-  // Si no hay datos, inicializar con filas por defecto
   if (!Array.isArray(items) || items.length === 0) {
     const defaults = [
-      { nombre: "MRW",        valor: 0, estimado: 0, fijo: 1 },
-      { nombre: "LOGÍSTICA",  valor: 0, estimado: 0, fijo: 1 },
-      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
-      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
-      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
-      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
-      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
+      { nombre: "MRW",       valor: 0, estimado: null, precio_envio: 0, precio_prep: 0, fijo: 1, orden: 0 },
+      { nombre: "LOGÍSTICA", valor: 0, estimado: null, precio_envio: 0, precio_prep: 0, fijo: 1, orden: 1 },
+      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 2 },
+      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 3 },
+      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 4 },
+      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 5 },
+      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 6 },
     ];
     for (let i = 0; i < defaults.length; i++) {
       try {
         const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-          body: JSON.stringify({ ...defaults[i], orden: i })
+          body: JSON.stringify(defaults[i])
         });
         const saved = await r.json();
         defaults[i].id = saved.id;
@@ -2008,63 +2026,182 @@ async function loadGastosFijos() {
     items = defaults;
   }
 
-  const fmt = n => (parseFloat(n)||0).toFixed(2);
+  // Cargar impuestos
+  let impuestos = [];
+  try {
+    const r = await fetch(`${API_BASE}/api/impuestos`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    impuestos = await r.json();
+  } catch {}
+
+  if (!Array.isArray(impuestos) || impuestos.length === 0) {
+    const defImp = [
+      { nombre: "IVA", porcentaje: 21, fijo: 1, orden: 0 },
+      { nombre: "", porcentaje: 0, fijo: 0, orden: 1 },
+      { nombre: "", porcentaje: 0, fijo: 0, orden: 2 },
+      { nombre: "", porcentaje: 0, fijo: 0, orden: 3 },
+      { nombre: "", porcentaje: 0, fijo: 0, orden: 4 },
+      { nombre: "", porcentaje: 0, fijo: 0, orden: 5 },
+    ];
+    for (let i = 0; i < defImp.length; i++) {
+      try {
+        const r = await fetch(`${API_BASE}/api/impuestos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+          body: JSON.stringify(defImp[i])
+        });
+        const saved = await r.json();
+        defImp[i].id = saved.id;
+      } catch {}
+    }
+    impuestos = defImp;
+  }
+
+  const fmt  = n => (parseFloat(n)||0).toFixed(2);
+  const inp  = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
 
   const totalValor    = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
-  const totalEstimado = items.filter(i=>i.estimado!=null).reduce((s,i) => s+(parseFloat(i.estimado)||0), 0);
+  const totalImpPct   = impuestos.reduce((s,i) => s+(parseFloat(i.porcentaje)||0), 0);
 
-  const inputStyle = `width:100%;padding:7px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
-
-  wrap.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+  // Tabla gastos fijos
+  const tablaGF = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
         <tr style="background:#1a1a2e;">
-          <th style="padding:13px 16px;border:1px solid #374151;color:#fff;font-weight:700;text-align:left;">GASTO FIJO</th>
-          <th style="padding:13px 16px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">VALOR</th>
-          <th style="padding:13px 16px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">ESTIMADO</th>
+          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:left;">GASTO FIJO</th>
+          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">VALOR</th>
+          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">P. ENVÍO</th>
+          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">P. PREP</th>
+          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">ESTIMADO</th>
+          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:center;">✕</th>
         </tr>
         <tr style="background:#16a34a;">
-          <td style="padding:13px 16px;border:1px solid #15803d;color:#fff;font-weight:700;">TOTAL</td>
-          <td style="padding:13px 16px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;" id="gf-total-valor">${fmt(totalValor)} €</td>
-          <td style="padding:13px 16px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;" id="gf-total-estimado">${fmt(totalEstimado)} €</td>
+          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;">TOTAL</td>
+          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;">${fmt(totalValor)} €</td>
+          <td style="padding:11px 14px;border:1px solid #15803d;" colspan="2"></td>
+          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;" id="gf-total-estimado">— €</td>
+          <td style="padding:11px 14px;border:1px solid #15803d;"></td>
         </tr>
       </thead>
-      <tbody id="gf-tbody">
-        ${items.map(item => `
+      <tbody>
+        ${items.map(item => {
+          const estimadoEnvio = item.precio_envio != null ? totalPedidos * parseFloat(item.precio_envio||0) : null;
+          const estimadoPrep  = item.precio_prep  != null ? totalPedidos * parseFloat(item.precio_prep||0)  : null;
+          const estimado = (estimadoEnvio != null && estimadoPrep != null)
+            ? estimadoEnvio + estimadoPrep
+            : estimadoEnvio != null ? estimadoEnvio
+            : estimadoPrep  != null ? estimadoPrep : null;
+          const esFijo = item.fijo === 1 || item.fijo === true;
+          return `
           <tr data-id="${item.id}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:8px 12px;border:1px solid #e5e7eb;">
-              ${item.fijo
-                ? `<span style="font-weight:600;color:#374151;">${item.nombre}</span>`
-                : `<input type="text" value="${escapeHtml(item.nombre||'')}" placeholder="Descripción..." 
-                    data-id="${item.id}" data-field="nombre"
-                    onchange="updateGastoFijo(this)"
-                    style="${inputStyle}">`
+            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+              ${esFijo
+                ? `<span style="font-weight:600;">${item.nombre}</span>`
+                : `<input type="text" value="${escapeHtml(item.nombre||'')}" placeholder="Descripción..."
+                    data-id="${item.id}" data-field="nombre" onchange="updateGastoFijo(this)"
+                    style="${inp}">`
               }
             </td>
-            <td style="padding:8px 12px;border:1px solid #e5e7eb;">
-              <input type="number" min="0" step="0.01" value="${fmt(item.valor)}" 
-                data-id="${item.id}" data-field="valor"
-                onchange="updateGastoFijo(this)"
-                style="${inputStyle}text-align:right;">
+            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+              <input type="number" min="0" step="0.01" value="${fmt(item.valor)}"
+                data-id="${item.id}" data-field="valor" onchange="updateGastoFijo(this)"
+                style="${inp}text-align:right;">
             </td>
-            <td style="padding:8px 12px;border:1px solid #e5e7eb;">
-              ${item.fijo || item.estimado != null
-                ? `<input type="number" min="0" step="0.01" value="${fmt(item.estimado)}" 
-                    data-id="${item.id}" data-field="estimado"
-                    onchange="updateGastoFijo(this)"
-                    style="${inputStyle}text-align:right;">`
-                : `<span style="color:#d1d5db;text-align:center;display:block;">—</span>`
+            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+              ${esFijo
+                ? `<input type="number" min="0" step="0.01" value="${fmt(item.precio_envio)}"
+                    data-id="${item.id}" data-field="precio_envio" onchange="updateGastoFijo(this)"
+                    style="${inp}text-align:right;">`
+                : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
               }
             </td>
-          </tr>
-        `).join("")}
+            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+              ${esFijo
+                ? `<input type="number" min="0" step="0.01" value="${fmt(item.precio_prep)}"
+                    data-id="${item.id}" data-field="precio_prep" onchange="updateGastoFijo(this)"
+                    style="${inp}text-align:right;">`
+                : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
+              }
+            </td>
+            <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">
+              ${estimado != null ? fmt(estimado) + " €" : "—"}
+            </td>
+            <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:center;">
+              ${!esFijo
+                ? `<button onclick="deleteGastoFijo(${item.id})"
+                    style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;font-weight:700;padding:0 4px;">✕</button>`
+                : ""
+              }
+            </td>
+          </tr>`;
+        }).join("")}
       </tbody>
     </table>
-    <div style="margin-top:14px;">
+    <div style="margin-top:12px;">
       <button onclick="addGastoFijo()"
-        style="padding:9px 20px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
         + Añadir fila
       </button>
+    </div>
+  `;
+
+  // Tabla impuestos
+  const tablaIMP = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:#1a1a2e;">
+          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:left;">IMPUESTO</th>
+          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">%</th>
+          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:center;">✕</th>
+        </tr>
+        <tr style="background:#16a34a;">
+          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;">TOTAL</td>
+          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;">${fmt(totalImpPct)} %</td>
+          <td style="padding:11px 14px;border:1px solid #15803d;"></td>
+        </tr>
+      </thead>
+      <tbody>
+        ${impuestos.map(imp => {
+          const esFijo = imp.fijo === 1 || imp.fijo === true;
+          return `
+          <tr data-id="${imp.id}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+              ${esFijo
+                ? `<span style="font-weight:600;">${imp.nombre}</span>`
+                : `<input type="text" value="${escapeHtml(imp.nombre||'')}" placeholder="Impuesto..."
+                    data-id="${imp.id}" data-field="nombre" onchange="updateImpuesto(this)"
+                    style="${inp}">`
+              }
+            </td>
+            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+              <input type="number" min="0" step="0.01" value="${fmt(imp.porcentaje)}"
+                data-id="${imp.id}" data-field="porcentaje" onchange="updateImpuesto(this)"
+                style="${inp}text-align:right;">
+            </td>
+            <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:center;">
+              ${!esFijo
+                ? `<button onclick="deleteImpuesto(${imp.id})"
+                    style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;font-weight:700;padding:0 4px;">✕</button>`
+                : ""
+              }
+            </td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+    <div style="margin-top:12px;">
+      <button onclick="addImpuesto()"
+        style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        + Añadir fila
+      </button>
+    </div>
+  `;
+
+  wrap.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+      <div>${tablaGF}</div>
+      <div>${tablaIMP}</div>
     </div>
   `;
 }
@@ -2072,24 +2209,16 @@ async function loadGastosFijos() {
 async function updateGastoFijo(input) {
   const id    = input.dataset.id;
   const field = input.dataset.field;
-  const value = field === "nombre" ? input.value : parseFloat(input.value)||0;
-
-  // Leer valores actuales de la fila
   const row   = input.closest("tr");
-  const nombre   = row.querySelector("[data-field='nombre']")?.value || row.querySelector("span")?.textContent || "";
-  const valor    = parseFloat(row.querySelector("[data-field='valor']")?.value) || 0;
-  const estimadoEl = row.querySelector("[data-field='estimado']");
-  const estimado = estimadoEl ? parseFloat(estimadoEl.value)||0 : null;
-
+  const nombre     = row.querySelector("[data-field='nombre']")?.value || row.querySelector("span")?.textContent || "";
+  const valor      = parseFloat(row.querySelector("[data-field='valor']")?.value)||0;
+  const precioEnvio = parseFloat(row.querySelector("[data-field='precio_envio']")?.value)||0;
+  const precioPrep  = parseFloat(row.querySelector("[data-field='precio_prep']")?.value)||0;
   try {
     await fetch(`${API_BASE}/api/gastos-fijos/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-      body: JSON.stringify({
-        nombre:   field==="nombre" ? value : nombre,
-        valor:    field==="valor"  ? value : valor,
-        estimado: field==="estimado" ? value : estimado
-      })
+      body: JSON.stringify({ nombre, valor, precio_envio: precioEnvio, precio_prep: precioPrep, estimado: null })
     });
     loadGastosFijos();
   } catch(e) { console.error(e); }
@@ -2100,15 +2229,65 @@ async function addGastoFijo() {
     await fetch(`${API_BASE}/api/gastos-fijos`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-      body: JSON.stringify({ nombre: "", valor: 0, estimado: null, fijo: 0 })
+      body: JSON.stringify({ nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 999 })
     });
     loadGastosFijos();
   } catch(e) { console.error(e); }
 }
 
-window.loadGastosFijos  = loadGastosFijos;
-window.updateGastoFijo  = updateGastoFijo;
-window.addGastoFijo     = addGastoFijo;
+async function deleteGastoFijo(id) {
+  try {
+    await fetch(`${API_BASE}/api/gastos-fijos/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    loadGastosFijos();
+  } catch(e) { console.error(e); }
+}
+
+async function updateImpuesto(input) {
+  const id  = input.dataset.id;
+  const row = input.closest("tr");
+  const nombre     = row.querySelector("[data-field='nombre']")?.value || row.querySelector("span")?.textContent || "";
+  const porcentaje = parseFloat(row.querySelector("[data-field='porcentaje']")?.value)||0;
+  try {
+    await fetch(`${API_BASE}/api/impuestos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ nombre, porcentaje })
+    });
+    loadGastosFijos();
+  } catch(e) { console.error(e); }
+}
+
+async function addImpuesto() {
+  try {
+    await fetch(`${API_BASE}/api/impuestos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ nombre: "", porcentaje: 0, fijo: 0, orden: 999 })
+    });
+    loadGastosFijos();
+  } catch(e) { console.error(e); }
+}
+
+async function deleteImpuesto(id) {
+  try {
+    await fetch(`${API_BASE}/api/impuestos/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    loadGastosFijos();
+  } catch(e) { console.error(e); }
+}
+
+window.loadGastosFijos = loadGastosFijos;
+window.updateGastoFijo = updateGastoFijo;
+window.addGastoFijo    = addGastoFijo;
+window.deleteGastoFijo = deleteGastoFijo;
+window.updateImpuesto  = updateImpuesto;
+window.addImpuesto     = addImpuesto;
+window.deleteImpuesto  = deleteImpuesto;
 
 async function saveAdsSpend(input) {
   const date  = input.dataset.date;

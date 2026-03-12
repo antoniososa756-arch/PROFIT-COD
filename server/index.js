@@ -44,6 +44,7 @@ app.use("/api/orders", ordersRoutes);
 app.use("/api/tracking", require("./routes/tracking.routes"));
 app.use("/api/ads", require("./routes/ads.routes"));
 app.use("/api/gastos-fijos", require("./routes/gastos-fijos.routes"));
+app.use("/api/impuestos", require("./routes/impuestos.routes"));
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));
