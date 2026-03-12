@@ -2028,6 +2028,10 @@ async function loadGastosFijos() {
           style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
           Ver
         </button>
+        <button onclick="copiarMesAnteriorGF()"
+          style="padding:7px 16px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          📋 Copiar mes anterior
+        </button>
       </div>
       <div id="gf-content"></div>
     `;
@@ -2064,48 +2068,12 @@ async function loadGastosFijosData() {
   } catch {}
 
   // Gastos fijos del mes
-  let items = [];
+ let items = [];
   try {
     const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
     items = await r.json();
-
-    // Pre-cargar desde mes anterior si este mes no tiene datos propios
-    if (Array.isArray(items) && items.length > 0) {
-      const sinValores = items.every(i => (parseFloat(i.valor)||0) === 0);
-      if (sinValores) {
-        const prevDate = new Date(parseInt(year), parseInt(month)-2, 1);
-        const prevMes  = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,"0")}`;
-        const rPrev = await fetch(`${API_BASE}/api/gastos-fijos?mes=${prevMes}`, {
-          headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-        });
-        const prevItems = await rPrev.json();
-        if (Array.isArray(prevItems)) {
-          for (const prev of prevItems) {
-            if ((parseFloat(prev.valor)||0) > 0) {
-              await fetch(`${API_BASE}/api/gastos-fijos/${prev.id}/valor`, {
-                method: "PUT",
-                headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
-                body: JSON.stringify({ mes, valor: prev.valor })
-              });
-            }
-            if ((parseFloat(prev.precio_unit)||0) > 0) {
-              await fetch(`${API_BASE}/api/gastos-fijos/${prev.id}/precio`, {
-                method: "PUT",
-                headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
-                body: JSON.stringify({ mes, precio_unit: prev.precio_unit })
-              });
-            }
-          }
-          // Recargar con los datos copiados
-          const r2 = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
-            headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-          });
-          items = await r2.json();
-        }
-      }
-    }
   } catch {}
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -2532,6 +2500,42 @@ async function saveGastoVarioShopify(input) {
 
 window.loadGastosVarios      = loadGastosVarios;
 window.saveGastoVarioShopify = saveGastoVarioShopify;
+
+async function copiarMesAnteriorGF() {
+  const month = document.getElementById("gf-month-sel")?.value;
+  const year  = document.getElementById("gf-year-sel")?.value;
+  const mes   = `${year}-${String(month).padStart(2,"0")}`;
+
+  const prevDate = new Date(parseInt(year), parseInt(month)-2, 1);
+  const prevMes  = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,"0")}`;
+
+  try {
+    const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${prevMes}`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const prevItems = await r.json();
+    if (!Array.isArray(prevItems)) return;
+
+    for (const prev of prevItems) {
+      if ((parseFloat(prev.valor)||0) > 0) {
+        await fetch(`${API_BASE}/api/gastos-fijos/${prev.id}/valor`, {
+          method: "PUT",
+          headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+          body: JSON.stringify({ mes, valor: prev.valor })
+        });
+      }
+      if ((parseFloat(prev.precio_unit)||0) > 0) {
+        await fetch(`${API_BASE}/api/gastos-fijos/${prev.id}/precio`, {
+          method: "PUT",
+          headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+          body: JSON.stringify({ mes, precio_unit: prev.precio_unit })
+        });
+      }
+    }
+    loadGastosFijosData();
+  } catch(e) { console.error(e); }
+}
+window.copiarMesAnteriorGF = copiarMesAnteriorGF;
 
 
 // =========================
