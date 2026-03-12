@@ -637,7 +637,7 @@ const now = new Date();
           </div>
           <div class="stat-info">
             <span class="stat-num" id="stat-pendientes">0</span>
-            <span class="stat-label">Pendientes</span>
+            <span class="stat-label">Pend. preparación</span>
           </div>
         </div>
 
@@ -1716,7 +1716,7 @@ async function loadMetricas() {
 
     const pctEntregado = total > 0 ? Math.round((entregados / total) * 100) : 0;
     const pctRojo      = total > 0 ? Math.round((rojos      / total) * 100) : 0;
-    const pctPendiente = total > 0 ? Math.round((pendientes / total) * 100) : 0;
+    const pctPendiente = total > 0 ? Math.round((transito / total) * 100) : 0;
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set("stat-total",      total);
@@ -1728,7 +1728,7 @@ async function loadMetricas() {
     set("donut-pct",       pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}%`);
     set("legend-rojo",      `Dev+Dest ${pctRojo}%`);
-    set("legend-pendiente", `Pendiente ${pctPendiente}%`);
+    set("legend-pendiente", `En tránsito ${pctPendiente}%`);
 
     // Donut con 3 segmentos (offset acumulado)
     const circumference = 100;
