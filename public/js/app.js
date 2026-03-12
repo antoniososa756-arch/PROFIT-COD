@@ -599,29 +599,18 @@ const now = new Date();
 
   if (box) {
     box.innerHTML = `
-     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:16px;font-weight:600;">Estadísticas</h3>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <input
-            type="date"
-            id="metrics-date-from"
-            value="${fmt(firstDay)}"
+          <input type="date" id="metrics-date-from" value="${fmt(firstDay)}"
             onchange="loadMetricas()"
-            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;"
-          />
+            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
           <span style="color:#6b7280;font-size:13px;">—</span>
-          <input
-            type="date"
-            id="metrics-date-to"
-            value="${fmt(now)}"
+          <input type="date" id="metrics-date-to" value="${fmt(now)}"
             onchange="loadMetricas()"
-            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;"
-          />
-          <select
-            id="metrics-shop"
-            onchange="loadMetricas()"
-            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:#fff;"
-          >
+            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+          <select id="metrics-shop" onchange="loadMetricas()"
+            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
             <option value="">Todas las tiendas</option>
           </select>
         </div>
@@ -659,20 +648,40 @@ const now = new Date();
           </div>
         </div>
 
-        <div class="stat-card" style="flex-direction:column;align-items:flex-start;">
-          <div class="stat-label" style="font-weight:600;margin-bottom:10px;">Porcentaje de entrega</div>
-          <div style="position:relative;width:90px;height:90px;margin:0 auto;">
-            <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:90px;height:90px;">
-              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3"/>
-              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#3b82f6" stroke-width="3"
-                stroke-dasharray="0 100" id="donut-circle" stroke-linecap="round"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;" id="donut-pct">0%</div>
+        <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:8px;">
+          <div class="stat-label" style="font-weight:600;">Tasa de entrega</div>
+          <div style="display:flex;align-items:center;gap:16px;width:100%;">
+            <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
+              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:80px;height:80px;">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3.5"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#16a34a" stroke-width="3.5"
+                  stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#dc2626" stroke-width="3.5"
+                  stroke-dasharray="0 100" id="donut-rojo" stroke-linecap="butt"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.5"
+                  stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;" id="donut-pct">0%</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="width:10px;height:10px;border-radius:50%;background:#16a34a;display:inline-block;flex-shrink:0;"></span>
+                <span id="legend-entregado">Entregado 0%</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
+                <span id="legend-rojo">Dev+Dest 0%</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
+                <span id="legend-pendiente">Pendiente 0%</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon blue">
+          <div class="stat-icon" style="background:#16a34a;">
             <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div class="stat-info">
@@ -682,7 +691,7 @@ const now = new Date();
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon blue">
+          <div class="stat-icon" style="background:#dc2626;">
             <svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div class="stat-info">
@@ -692,12 +701,12 @@ const now = new Date();
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon blue">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6" stroke-linecap="round"/></svg>
+          <div class="stat-icon" style="background:#7c3aed;">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </div>
           <div class="stat-info">
-            <span class="stat-num" id="stat-cancelados">0</span>
-            <span class="stat-label">Cancelados</span>
+            <span class="stat-num" id="stat-destruidos">0</span>
+            <span class="stat-label">Destruidos</span>
           </div>
         </div>
 
@@ -1656,7 +1665,6 @@ async function disableStore(storeId) {
 // CARGAR MÉTRICAS REALES
 // =========================
 async function loadMetricas() {
-  // Fechas por defecto: del 1 al día de hoy del mes actual
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
   const fmt = d => d.toISOString().split("T")[0];
@@ -1672,7 +1680,6 @@ async function loadMetricas() {
     const orders = await res.json();
     let list = Array.isArray(orders) ? orders : [];
 
-    // Filtrar por fecha
     list = list.filter(o => {
       if (!o.created_at) return true;
       const d = o.created_at.split("T")[0];
@@ -1681,7 +1688,6 @@ async function loadMetricas() {
       return true;
     });
 
-    // Filtrar por tienda
     if (shop) list = list.filter(o => o.shop_domain === shop);
 
     const total      = list.length;
@@ -1689,8 +1695,12 @@ async function loadMetricas() {
     const transito   = list.filter(o => ["en_preparacion","enviado"].includes(o.fulfillment_status)).length;
     const entregados = list.filter(o => o.fulfillment_status === "entregado").length;
     const devueltos  = list.filter(o => o.fulfillment_status === "devuelto").length;
-    const cancelados = list.filter(o => o.fulfillment_status === "cancelado").length;
-    const pct        = total > 0 ? Math.round((entregados / total) * 100) : 0;
+    const destruidos = list.filter(o => o.fulfillment_status === "destruido").length;
+    const rojos      = devueltos + destruidos;
+
+    const pctEntregado = total > 0 ? Math.round((entregados / total) * 100) : 0;
+    const pctRojo      = total > 0 ? Math.round((rojos      / total) * 100) : 0;
+    const pctPendiente = total > 0 ? Math.round((pendientes / total) * 100) : 0;
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set("stat-total",      total);
@@ -1698,11 +1708,28 @@ async function loadMetricas() {
     set("stat-transito",   transito);
     set("stat-entregados", entregados);
     set("stat-devueltos",  devueltos);
-    set("stat-cancelados", cancelados);
-    set("donut-pct",       pct + "%");
+    set("stat-destruidos", destruidos);
+    set("donut-pct",       pctEntregado + "%");
+    set("legend-entregado", `Entregado ${pctEntregado}%`);
+    set("legend-rojo",      `Dev+Dest ${pctRojo}%`);
+    set("legend-pendiente", `Pendiente ${pctPendiente}%`);
 
-    const circle = document.getElementById("donut-circle");
-    if (circle) circle.setAttribute("stroke-dasharray", `${pct} ${100 - pct}`);
+    // Donut con 3 segmentos (offset acumulado)
+    const circumference = 100;
+    let offset = 0;
+
+    function setArc(id, pct, off) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.setAttribute("stroke-dasharray", `${pct} ${circumference - pct}`);
+      el.setAttribute("stroke-dashoffset", -off);
+    }
+
+    setArc("donut-entregado", pctEntregado, offset);
+    offset += pctEntregado;
+    setArc("donut-rojo",      pctRojo,      offset);
+    offset += pctRojo;
+    setArc("donut-pendiente", pctPendiente, offset);
 
   } catch(e) {
     console.error("Error cargando métricas:", e);
