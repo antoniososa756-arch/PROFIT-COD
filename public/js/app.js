@@ -1975,28 +1975,63 @@ async function loadGastosFijos() {
   const wrap = document.getElementById("gastos-fijos-wrap");
   if (!wrap) return;
 
-  // Obtener total de pedidos del mes actual para calcular estimados
+  // Selector de mes/año si no existe, crearlo
+  if (!document.getElementById("gf-mes-sel")) {
+    const now = new Date();
+    const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+        <select id="gf-month-sel"
+          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
+        </select>
+        <select id="gf-year-sel"
+          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
+        </select>
+        <button onclick="loadGastosFijosData()"
+          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          Ver
+        </button>
+      </div>
+      <div id="gf-content"></div>
+    `;
+  }
+
+  await loadGastosFijosData();
+}
+
+async function loadGastosFijosData() {
+  const content = document.getElementById("gf-content");
+  if (!content) return;
+
+  const month = document.getElementById("gf-month-sel")?.value || (new Date().getMonth()+1);
+  const year  = document.getElementById("gf-year-sel")?.value  || new Date().getFullYear();
+  const mes   = `${year}-${String(month).padStart(2,"0")}`;
+
+  content.innerHTML = `<div style="padding:16px;color:#6b7280;">Cargando...</div>`;
+
+  // Total pedidos del mes (excluyendo cancelados)
   let totalPedidos = 0;
   try {
     const r = await fetch(`${API_BASE}/api/orders`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
     const all = await r.json();
-    const now = new Date();
     if (Array.isArray(all)) {
       totalPedidos = all.filter(o => {
         if (!o.created_at) return false;
         if (o.fulfillment_status === "cancelado") return false;
         const d = new Date(o.created_at);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        return d.getMonth()+1 === parseInt(month) && d.getFullYear() === parseInt(year);
       }).length;
     }
   } catch {}
 
-  // Cargar gastos fijos
+  // Gastos fijos del mes
   let items = [];
   try {
-    const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
+    const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
     items = await r.json();
@@ -2004,29 +2039,30 @@ async function loadGastosFijos() {
 
   if (!Array.isArray(items) || items.length === 0) {
     const defaults = [
-      { nombre: "MRW",       valor: 0, estimado: null, precio_envio: 0, precio_prep: 0, fijo: 1, orden: 0 },
-      { nombre: "LOGÍSTICA", valor: 0, estimado: null, precio_envio: 0, precio_prep: 0, fijo: 1, orden: 1 },
-      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 2 },
-      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 3 },
-      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 4 },
-      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 5 },
-      { nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 6 },
+      { nombre: "MRW",       precio_unit: 0, fijo: 1, orden: 0 },
+      { nombre: "LOGÍSTICA", precio_unit: 0, fijo: 1, orden: 1 },
+      { nombre: "", precio_unit: null, fijo: 0, orden: 2 },
+      { nombre: "", precio_unit: null, fijo: 0, orden: 3 },
+      { nombre: "", precio_unit: null, fijo: 0, orden: 4 },
+      { nombre: "", precio_unit: null, fijo: 0, orden: 5 },
+      { nombre: "", precio_unit: null, fijo: 0, orden: 6 },
     ];
-    for (let i = 0; i < defaults.length; i++) {
+    for (let i=0; i<defaults.length; i++) {
       try {
         const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+          headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
           body: JSON.stringify(defaults[i])
         });
         const saved = await r.json();
         defaults[i].id = saved.id;
+        defaults[i].valor = 0;
       } catch {}
     }
     items = defaults;
   }
 
-  // Cargar impuestos
+  // Impuestos
   let impuestos = [];
   try {
     const r = await fetch(`${API_BASE}/api/impuestos`, {
@@ -2036,191 +2072,153 @@ async function loadGastosFijos() {
   } catch {}
 
   if (!Array.isArray(impuestos) || impuestos.length === 0) {
-    const defImp = [
-      { nombre: "IVA", porcentaje: 21, fijo: 1, orden: 0 },
-      { nombre: "", porcentaje: 0, fijo: 0, orden: 1 },
-      { nombre: "", porcentaje: 0, fijo: 0, orden: 2 },
-      { nombre: "", porcentaje: 0, fijo: 0, orden: 3 },
-      { nombre: "", porcentaje: 0, fijo: 0, orden: 4 },
-      { nombre: "", porcentaje: 0, fijo: 0, orden: 5 },
-    ];
-    for (let i = 0; i < defImp.length; i++) {
-      try {
-        const r = await fetch(`${API_BASE}/api/impuestos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-          body: JSON.stringify(defImp[i])
-        });
-        const saved = await r.json();
-        defImp[i].id = saved.id;
-      } catch {}
-    }
-    impuestos = defImp;
+    try {
+      const r = await fetch(`${API_BASE}/api/impuestos`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+        body: JSON.stringify({ nombre:"IVA", porcentaje:21, fijo:1, orden:0 })
+      });
+      const saved = await r.json();
+      impuestos = [{ id: saved.id, nombre:"IVA", porcentaje:21, fijo:1 }];
+    } catch {}
   }
 
-  const fmt  = n => (parseFloat(n)||0).toFixed(2);
-  const inp  = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
+  const fmt = n => (parseFloat(n)||0).toFixed(2);
+  const inp = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
 
-  const totalValor    = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
-  const totalImpPct   = impuestos.reduce((s,i) => s+(parseFloat(i.porcentaje)||0), 0);
+  const totalValor = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
 
   // Tabla gastos fijos
+  const thStyle = `padding:11px 14px;border:1px solid #d1fae5;font-weight:600;color:#fff;text-align:`;
   const tablaGF = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead>
-        <tr style="background:#1a1a2e;">
-          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:left;">GASTO FIJO</th>
-          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">VALOR</th>
-          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">P. ENVÍO</th>
-          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">P. PREP</th>
-          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">ESTIMADO</th>
-          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:center;">✕</th>
-        </tr>
-        <tr style="background:#16a34a;">
-          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;">TOTAL</td>
-          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;">${fmt(totalValor)} €</td>
-          <td style="padding:11px 14px;border:1px solid #15803d;" colspan="2"></td>
-          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;" id="gf-total-estimado">— €</td>
-          <td style="padding:11px 14px;border:1px solid #15803d;"></td>
-        </tr>
-      </thead>
-      <tbody>
-        ${items.map(item => {
-          const estimadoEnvio = item.precio_envio != null ? totalPedidos * parseFloat(item.precio_envio||0) : null;
-          const estimadoPrep  = item.precio_prep  != null ? totalPedidos * parseFloat(item.precio_prep||0)  : null;
-          const estimado = (estimadoEnvio != null && estimadoPrep != null)
-            ? estimadoEnvio + estimadoPrep
-            : estimadoEnvio != null ? estimadoEnvio
-            : estimadoPrep  != null ? estimadoPrep : null;
-          const esFijo = item.fijo === 1 || item.fijo === true;
-          return `
-          <tr data-id="${item.id}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
-              ${esFijo
-                ? `<span style="font-weight:600;">${item.nombre}</span>`
-                : `<input type="text" value="${escapeHtml(item.nombre||'')}" placeholder="Descripción..."
-                    data-id="${item.id}" data-field="nombre" onchange="updateGastoFijo(this)"
-                    style="${inp}">`
-              }
-            </td>
-            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
-              <input type="number" min="0" step="0.01" value="${fmt(item.valor)}"
-                data-id="${item.id}" data-field="valor" onchange="updateGastoFijo(this)"
-                style="${inp}text-align:right;">
-            </td>
-            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
-              ${esFijo
-                ? `<input type="number" min="0" step="0.01" value="${fmt(item.precio_envio)}"
-                    data-id="${item.id}" data-field="precio_envio" onchange="updateGastoFijo(this)"
-                    style="${inp}text-align:right;">`
-                : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
-              }
-            </td>
-            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
-              ${esFijo
-                ? `<input type="number" min="0" step="0.01" value="${fmt(item.precio_prep)}"
-                    data-id="${item.id}" data-field="precio_prep" onchange="updateGastoFijo(this)"
-                    style="${inp}text-align:right;">`
-                : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
-              }
-            </td>
-            <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">
-              ${estimado != null ? fmt(estimado) + " €" : "—"}
-            </td>
-            <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:center;">
-              ${!esFijo
-                ? `<button onclick="deleteGastoFijo(${item.id})"
-                    style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;font-weight:700;padding:0 4px;">✕</button>`
-                : ""
-              }
-            </td>
-          </tr>`;
-        }).join("")}
-      </tbody>
-    </table>
-    <div style="margin-top:12px;">
-      <button onclick="addGastoFijo()"
-        style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-        + Añadir fila
-      </button>
+    <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#16a34a;">
+            <th style="${thStyle}left;">GASTO FIJO</th>
+            <th style="${thStyle}right;">VALOR MES</th>
+            <th style="${thStyle}right;">P. UNIT</th>
+            <th style="${thStyle}right;">ESTIMADO</th>
+            <th style="${thStyle}center;width:36px;"></th>
+          </tr>
+          <tr style="background:#f0fdf4;">
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;text-align:right;">${fmt(totalValor)} €</td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;"></td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;text-align:right;" id="gf-total-est">— €</td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;"></td>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => {
+            const esFijo = item.fijo===1||item.fijo===true;
+            const estimado = item.precio_unit!=null ? totalPedidos*(parseFloat(item.precio_unit)||0) : null;
+            return `
+            <tr data-id="${item.id}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+              <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+                ${esFijo
+                  ? `<span style="font-weight:600;color:var(--text);">${item.nombre}</span>`
+                  : `<input type="text" value="${escapeHtml(item.nombre||'')}" placeholder="Descripción..."
+                      data-id="${item.id}" data-field="nombre" onchange="updateGastoFijo(this)"
+                      style="${inp}">`
+                }
+              </td>
+              <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+                <input type="number" min="0" step="0.01" value="${fmt(item.valor)}"
+                  data-id="${item.id}" data-field="valor" data-mes="${mes}" onchange="updateGastoFijoValor(this)"
+                  style="${inp}text-align:right;">
+              </td>
+              <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+                ${esFijo
+                  ? `<input type="number" min="0" step="0.01" value="${fmt(item.precio_unit)}"
+                      data-id="${item.id}" data-field="precio_unit" onchange="updateGastoFijo(this)"
+                      style="${inp}text-align:right;">`
+                  : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
+                }
+              </td>
+              <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">
+                ${estimado!=null ? fmt(estimado)+" €" : "—"}
+              </td>
+              <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:center;">
+                ${!esFijo
+                  ? `<button onclick="deleteGastoFijo(${item.id})"
+                      style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:15px;font-weight:700;padding:0;">✕</button>`
+                  : ""
+                }
+              </td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+      <div style="padding:12px 14px;">
+        <button onclick="addGastoFijo()"
+          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          + Añadir fila
+        </button>
+      </div>
     </div>
   `;
 
-  // Tabla impuestos
+  // Tabla impuestos — solo IVA, sin botón añadir
   const tablaIMP = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead>
-        <tr style="background:#1a1a2e;">
-          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:left;">IMPUESTO</th>
-          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">%</th>
-          <th style="padding:11px 14px;border:1px solid #374151;color:#fff;font-weight:700;text-align:center;">✕</th>
-        </tr>
-        <tr style="background:#16a34a;">
-          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;">TOTAL</td>
-          <td style="padding:11px 14px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;">${fmt(totalImpPct)} %</td>
-          <td style="padding:11px 14px;border:1px solid #15803d;"></td>
-        </tr>
-      </thead>
-      <tbody>
-        ${impuestos.map(imp => {
-          const esFijo = imp.fijo === 1 || imp.fijo === true;
-          return `
-          <tr data-id="${imp.id}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
-              ${esFijo
-                ? `<span style="font-weight:600;">${imp.nombre}</span>`
-                : `<input type="text" value="${escapeHtml(imp.nombre||'')}" placeholder="Impuesto..."
-                    data-id="${imp.id}" data-field="nombre" onchange="updateImpuesto(this)"
-                    style="${inp}">`
-              }
-            </td>
-            <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+    <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#16a34a;">
+            <th style="${thStyle}left;">IMPUESTO</th>
+            <th style="${thStyle}right;">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${impuestos.map(imp => `
+          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">IVA</td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;">
               <input type="number" min="0" step="0.01" value="${fmt(imp.porcentaje)}"
                 data-id="${imp.id}" data-field="porcentaje" onchange="updateImpuesto(this)"
                 style="${inp}text-align:right;">
             </td>
-            <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:center;">
-              ${!esFijo
-                ? `<button onclick="deleteImpuesto(${imp.id})"
-                    style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;font-weight:700;padding:0 4px;">✕</button>`
-                : ""
-              }
-            </td>
-          </tr>`;
-        }).join("")}
-      </tbody>
-    </table>
-    <div style="margin-top:12px;">
-      <button onclick="addImpuesto()"
-        style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-        + Añadir fila
-      </button>
+          </tr>`).join("")}
+        </tbody>
+      </table>
     </div>
   `;
 
-  wrap.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+  content.innerHTML = `
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
       <div>${tablaGF}</div>
       <div>${tablaIMP}</div>
     </div>
   `;
 }
 
+async function updateGastoFijoValor(input) {
+  const id    = input.dataset.id;
+  const mes   = input.dataset.mes;
+  const valor = parseFloat(input.value)||0;
+  try {
+    await fetch(`${API_BASE}/api/gastos-fijos/${id}/valor`, {
+      method: "PUT",
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      body: JSON.stringify({ mes, valor })
+    });
+    loadGastosFijosData();
+  } catch(e) { console.error(e); }
+}
+
 async function updateGastoFijo(input) {
   const id    = input.dataset.id;
   const field = input.dataset.field;
   const row   = input.closest("tr");
-  const nombre     = row.querySelector("[data-field='nombre']")?.value || row.querySelector("span")?.textContent || "";
-  const valor      = parseFloat(row.querySelector("[data-field='valor']")?.value)||0;
-  const precioEnvio = parseFloat(row.querySelector("[data-field='precio_envio']")?.value)||0;
-  const precioPrep  = parseFloat(row.querySelector("[data-field='precio_prep']")?.value)||0;
+  const nombre    = row.querySelector("[data-field='nombre']")?.value || row.querySelector("span")?.textContent || "";
+  const precioUnit = parseFloat(row.querySelector("[data-field='precio_unit']")?.value)||0;
   try {
     await fetch(`${API_BASE}/api/gastos-fijos/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-      body: JSON.stringify({ nombre, valor, precio_envio: precioEnvio, precio_prep: precioPrep, estimado: null })
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      body: JSON.stringify({ nombre, precio_unit: field==="precio_unit" ? parseFloat(input.value)||0 : precioUnit })
     });
-    loadGastosFijos();
+    loadGastosFijosData();
   } catch(e) { console.error(e); }
 }
 
@@ -2228,10 +2226,10 @@ async function addGastoFijo() {
   try {
     await fetch(`${API_BASE}/api/gastos-fijos`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-      body: JSON.stringify({ nombre: "", valor: 0, estimado: null, precio_envio: null, precio_prep: null, fijo: 0, orden: 999 })
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      body: JSON.stringify({ nombre:"", precio_unit:null, fijo:0, orden:999 })
     });
-    loadGastosFijos();
+    loadGastosFijosData();
   } catch(e) { console.error(e); }
 }
 
@@ -2239,55 +2237,31 @@ async function deleteGastoFijo(id) {
   try {
     await fetch(`${API_BASE}/api/gastos-fijos/${id}`, {
       method: "DELETE",
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization:"Bearer "+localStorage.getItem("token") }
     });
-    loadGastosFijos();
+    loadGastosFijosData();
   } catch(e) { console.error(e); }
 }
 
 async function updateImpuesto(input) {
-  const id  = input.dataset.id;
-  const row = input.closest("tr");
-  const nombre     = row.querySelector("[data-field='nombre']")?.value || row.querySelector("span")?.textContent || "";
-  const porcentaje = parseFloat(row.querySelector("[data-field='porcentaje']")?.value)||0;
+  const id = input.dataset.id;
+  const porcentaje = parseFloat(input.value)||0;
   try {
     await fetch(`${API_BASE}/api/impuestos/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-      body: JSON.stringify({ nombre, porcentaje })
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      body: JSON.stringify({ nombre:"IVA", porcentaje })
     });
-    loadGastosFijos();
   } catch(e) { console.error(e); }
 }
 
-async function addImpuesto() {
-  try {
-    await fetch(`${API_BASE}/api/impuestos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-      body: JSON.stringify({ nombre: "", porcentaje: 0, fijo: 0, orden: 999 })
-    });
-    loadGastosFijos();
-  } catch(e) { console.error(e); }
-}
-
-async function deleteImpuesto(id) {
-  try {
-    await fetch(`${API_BASE}/api/impuestos/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-    });
-    loadGastosFijos();
-  } catch(e) { console.error(e); }
-}
-
-window.loadGastosFijos = loadGastosFijos;
-window.updateGastoFijo = updateGastoFijo;
-window.addGastoFijo    = addGastoFijo;
-window.deleteGastoFijo = deleteGastoFijo;
-window.updateImpuesto  = updateImpuesto;
-window.addImpuesto     = addImpuesto;
-window.deleteImpuesto  = deleteImpuesto;
+window.loadGastosFijos      = loadGastosFijos;
+window.loadGastosFijosData  = loadGastosFijosData;
+window.updateGastoFijoValor = updateGastoFijoValor;
+window.updateGastoFijo      = updateGastoFijo;
+window.addGastoFijo         = addGastoFijo;
+window.deleteGastoFijo      = deleteGastoFijo;
+window.updateImpuesto       = updateImpuesto;
 
 async function saveAdsSpend(input) {
   const date  = input.dataset.date;
