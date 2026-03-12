@@ -1851,10 +1851,10 @@ async function loadAdsTable() {
 
   wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
 
-  // Días del mes
   const daysInMonth = new Date(year, month, 0).getDate();
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const monthName = monthNames[parseInt(month)-1];
 
-  // Pedidos del mes
   let orders = [];
   try {
     const r = await fetch(`${API_BASE}/api/orders`, {
@@ -1870,83 +1870,79 @@ async function loadAdsTable() {
     }) : [];
   } catch {}
 
-  // Gastos guardados
   let spends = {};
   try {
     const r = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(shop)}&month=${month}&year=${year}`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
     const rows = await r.json();
-    if (Array.isArray(rows)) rows.forEach(r => { spends[r.date] = r.spend; });
+    if (Array.isArray(rows)) rows.forEach(r => { spends[r.date] = { meta: r.meta||0, tiktok: r.tiktok||0 }; });
   } catch {}
 
-  // Construir filas
-  let totalFact = 0, totalGasto = 0, totalPedidos = 0;
+  let totalFact=0, totalMeta=0, totalTiktok=0, totalPedidos=0;
 
-  const rows = Array.from({length: daysInMonth}, (_, i) => {
-    const day   = i + 1;
+  const rows = Array.from({length: daysInMonth}, (_,i) => {
+    const day     = i+1;
     const dateStr = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const label   = `${day} de ${monthName} de ${year}`;
     const dayOrders = orders.filter(o => o.created_at && o.created_at.startsWith(dateStr));
-    const facturacion = dayOrders.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+    const facturacion = dayOrders.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
     const pedidos = dayOrders.length;
-    const gasto = spends[dateStr] || 0;
-    const cpa   = pedidos > 0 ? (gasto / pedidos) : null;
-    const roas  = gasto > 0   ? (facturacion / gasto) : null;
+    const meta    = spends[dateStr]?.meta   || 0;
+    const tiktok  = spends[dateStr]?.tiktok || 0;
+    const gasto   = meta + tiktok;
+    const cpa     = pedidos > 0 ? gasto/pedidos : null;
+    const roas    = gasto   > 0 ? facturacion/gasto : null;
 
     totalFact    += facturacion;
-    totalGasto   += gasto;
+    totalMeta    += meta;
+    totalTiktok  += tiktok;
     totalPedidos += pedidos;
 
-    return { day, dateStr, facturacion, pedidos, gasto, cpa, roas };
+    return { day, dateStr, label, facturacion, pedidos, meta, tiktok, gasto, cpa, roas };
   });
 
-  const totalCPA  = totalPedidos > 0 ? totalGasto / totalPedidos : null;
-  const totalROAS = totalGasto   > 0 ? totalFact  / totalGasto   : null;
+  const totalGasto = totalMeta + totalTiktok;
+  const totalCPA   = totalPedidos > 0 ? totalGasto/totalPedidos : null;
+  const totalROAS  = totalGasto   > 0 ? totalFact/totalGasto    : null;
 
-  const fmt  = n => n != null ? n.toFixed(2) + " €" : "-";
+  const fmt  = n => n != null ? n.toFixed(2)+" €" : "-";
   const fmt2 = n => n != null ? n.toFixed(2) : "-";
+  const td   = (content, extra="") => `<td style="padding:9px 12px;border:1px solid #e5e7eb;${extra}">${content}</td>`;
+  const th   = (content, extra="") => `<th style="padding:10px 12px;border:1px solid #e5e7eb;font-weight:600;color:#374151;${extra}">${content}</th>`;
 
   wrap.innerHTML = `
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
-        <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
-          <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Día</th>
-          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">Facturación</th>
-          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">Gasto Publicitario</th>
-          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">Cantidad Pedidos</th>
-          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">CPA</th>
-          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">ROAS</th>
+        <tr style="background:#f9fafb;">
+          ${th("Día","text-align:left;")}
+          ${th("Gasto Meta","text-align:right;")}
+          ${th("Gasto TikTok","text-align:right;")}
+          ${th("Facturación","text-align:right;")}
+          ${th("Cantidad Pedidos","text-align:right;")}
+          ${th("CPA","text-align:right;")}
+          ${th("ROAS","text-align:right;")}
         </tr>
         <tr style="background:#16a34a;">
-          <td style="padding:10px 12px;font-weight:700;color:#fff;">Balance</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${fmt(totalFact)}</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${fmt(totalGasto)}</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${totalPedidos}</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${fmt(totalCPA)}</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${fmt2(totalROAS)}</td>
+          <td style="padding:10px 12px;font-weight:700;color:#fff;border:1px solid #15803d;">Balance del mes</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalMeta)}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalTiktok)}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalFact)}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${totalPedidos}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalCPA)}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt2(totalROAS)}</td>
         </tr>
       </thead>
       <tbody>
         ${rows.map(r => `
-          <tr style="border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:9px 12px;color:#6b7280;">${r.day}</td>
-            <td style="padding:9px 12px;text-align:right;">${r.facturacion > 0 ? fmt(r.facturacion) : "-"}</td>
-            <td style="padding:9px 12px;text-align:right;">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value="${r.gasto || ""}"
-                placeholder="0.00"
-                data-date="${r.dateStr}"
-                data-shop="${shop}"
-                onchange="saveAdsSpend(this)"
-                style="width:90px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
-              />
-            </td>
-            <td style="padding:9px 12px;text-align:right;">${r.pedidos > 0 ? r.pedidos : "-"}</td>
-            <td style="padding:9px 12px;text-align:right;">${fmt(r.cpa)}</td>
-            <td style="padding:9px 12px;text-align:right;font-weight:${r.roas!=null && r.roas>=2 ? '700' : '400'};color:${r.roas!=null && r.roas>=2 ? '#16a34a' : r.roas!=null && r.roas<1 ? '#dc2626' : 'inherit'};">${fmt2(r.roas)}</td>
+          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            ${td(r.label, "color:#374151;white-space:nowrap;")}
+            ${td(`<input type="number" min="0" step="0.01" value="${r.meta||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="meta" onchange="saveAdsSpend(this)" style="width:80px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);">`, "text-align:right;")}
+            ${td(`<input type="number" min="0" step="0.01" value="${r.tiktok||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="tiktok" onchange="saveAdsSpend(this)" style="width:80px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);">`, "text-align:right;")}
+            ${td(r.facturacion > 0 ? fmt(r.facturacion) : "-", "text-align:right;")}
+            ${td(r.pedidos > 0 ? r.pedidos : "-", "text-align:right;")}
+            ${td(fmt(r.cpa), "text-align:right;")}
+            ${td(fmt2(r.roas), `text-align:right;font-weight:${r.roas!=null&&r.roas>=2?'700':'400'};color:${r.roas!=null&&r.roas>=2?'#16a34a':r.roas!=null&&r.roas<1?'#dc2626':'inherit'};`)}
           </tr>
         `).join("")}
       </tbody>
@@ -1957,6 +1953,7 @@ async function loadAdsTable() {
 async function saveAdsSpend(input) {
   const date  = input.dataset.date;
   const shop  = input.dataset.shop;
+  const type  = input.dataset.type;
   const spend = parseFloat(input.value) || 0;
 
   try {
@@ -1966,7 +1963,7 @@ async function saveAdsSpend(input) {
         "Content-Type": "application/json",
         Authorization: "Bearer " + localStorage.getItem("token")
       },
-      body: JSON.stringify({ shop, date, spend })
+      body: JSON.stringify({ shop, date, type, spend })
     });
     loadAdsTable();
   } catch(e) {
