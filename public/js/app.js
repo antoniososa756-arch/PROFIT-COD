@@ -2434,7 +2434,6 @@ async function loadGastosVarios() {
 
   // Construir tabla por tienda
   const cols = stores.map(store => {
-    const cols = stores.map(store => {
     const ads     = adsSpends[store.domain] || { meta: 0, tiktok: 0 };
     const shopify = gastosVarios[store.domain] || 0;
     const mrw       = parseFloat(gastosMRW.find(g=>g.nombre==="MRW")?.valor||0);
@@ -2470,11 +2469,11 @@ async function loadGastosVarios() {
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">MRW</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(gastosMRW.find(g=>g.nombre==="MRW")?.valor||0)} €</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(mrw)} €</td>
             </tr>
             <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Logística</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(gastosMRW.find(g=>g.nombre==="LOGÍSTICA")?.valor||0)} €</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(logistica)} €</td>
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gastos Fijos</td>
