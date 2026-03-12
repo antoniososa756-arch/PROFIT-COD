@@ -603,16 +603,19 @@ const now = new Date();
         <h3 style="margin:0;font-size:16px;font-weight:600;">Estadísticas</h3>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <input type="date" id="metrics-date-from" value="${fmt(firstDay)}"
-            onchange="loadMetricas()"
             style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
           <span style="color:#6b7280;font-size:13px;">—</span>
           <input type="date" id="metrics-date-to" value="${fmt(now)}"
-            onchange="loadMetricas()"
             style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-          <select id="metrics-shop" onchange="loadMetricas()"
+          <select id="metrics-shop"
             style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
             <option value="">Todas las tiendas</option>
           </select>
+          <button onclick="aplicarFiltroMetricas()"
+            style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s;"
+            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            Filtrar
+          </button>
         </div>
       </div>
 
@@ -713,6 +716,19 @@ const now = new Date();
       </div>
     `;
   }
+
+function aplicarFiltroMetricas() {
+  const from = document.getElementById("metrics-date-from")?.value;
+  const to   = document.getElementById("metrics-date-to")?.value;
+
+  if (from && to && from > to) {
+    alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin");
+    return;
+  }
+
+  loadMetricas();
+}
+window.aplicarFiltroMetricas = aplicarFiltroMetricas;
 
   loadMetricas();
 
