@@ -2442,8 +2442,8 @@ async function loadGastosVarios() {
   const cols = stores.map(store => {
     const ads     = adsSpends[store.domain] || { meta: 0, tiktok: 0 };
     const shopify = gastosVarios[store.domain] || 0;
-    const mrw       = parseFloat(gastosMRW.find(g=>g.nombre==="MRW")?.valor||0);
-    const logistica = parseFloat(gastosMRW.find(g=>g.nombre==="LOGÍSTICA")?.valor||0);
+    const mrw       = parseFloat(gastosFijos.find(g=>g.nombre==="MRW")?.valor||0);
+    const logistica = parseFloat(gastosFijos.find(g=>g.nombre==="LOGÍSTICA")?.valor||0);
     const total   = ads.meta + ads.tiktok + shopify + fijoXTienda + mrw + logistica;
 
     return `
@@ -2462,7 +2462,7 @@ async function loadGastosVarios() {
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gasto TikTok</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
             </tr>
-            <tr>
+            <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Productos</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">0.00 €</td>
             </tr>
@@ -2476,6 +2476,10 @@ async function loadGastosVarios() {
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gastos Fijos</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(fijoXTienda)} €
+                <div style="font-size:10px;color:#9ca3af;">${fmt(totalOtrosFijos)}€ ÷ ${numTiendas} tiendas</div>
+              </td>
+            </tr>
             <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Shopify</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;">
@@ -2485,12 +2489,6 @@ async function loadGastosVarios() {
                   onchange="saveGastoVarioShopify(this)"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
                   style="${inp}">
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gastos Fijos</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(fijoXTienda)} €
-                <div style="font-size:10px;color:#9ca3af;">${fmt(totalOtrosFijos)}€ ÷ ${numTiendas} tiendas</div>
               </td>
             </tr>
             <tr style="background:#f0fdf4;">
