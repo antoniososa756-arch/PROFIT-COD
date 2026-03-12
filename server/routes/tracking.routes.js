@@ -30,7 +30,7 @@ router.get("/:tracking", auth, async (req, res) => {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "es-ES,es;q=0.9",
         "Referer": "https://www.mrw.es/",
-        "Cookie": "cookieconsent_status=dismiss; klaro=eyJhbmFseXRpY3MiOnRydWUsIm1hcmtldGluZyI6dHJ1ZX0=",
+        "Cookie": "klaro=%7B%22necessary-cookies%22%3Atrue%2C%22preferences%22%3Afalse%2C%22google-analytics%22%3Afalse%2C%22google-ads%22%3Afalse%7D; ASPSESSIONIDCERRBRTR=DCIJDOOAMCFPLAJIINBCJDJD; ASPSESSIONIDQWRBDTAB=NPPLGJCAMGABLOOIMEBBFMOG; TS01dc4fc6=010de9c722f921bbe38c25ec48994dc1a2dac6e8e805802612724b968b2ab64ec44ffdb4eaed6a9efbbb5ad3507699302d4768c295",
       }
     });
 
