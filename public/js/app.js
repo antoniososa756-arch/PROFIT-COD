@@ -2411,8 +2411,13 @@ async function loadGastosVarios() {
     if (!Array.isArray(gastosFijos)) gastosFijos = [];
   } catch {}
 
-  const totalFijo = gastosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
-  const fijoXTienda = totalFijo / numTiendas;
+  // Separar MRW/Logística del resto de fijos
+  const gastosMRW      = gastosFijos.filter(g => ["MRW","LOGÍSTICA"].includes(g.nombre));
+  const gastosOtrosFijos = gastosFijos.filter(g => !["MRW","LOGÍSTICA"].includes(g.nombre));
+
+  const totalMRW       = gastosMRW.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const fijoXTienda    = totalOtrosFijos / numTiendas;
 
   // 4. Gastos varios guardados (Shopify)
   let gastosVarios = {};
@@ -2429,9 +2434,12 @@ async function loadGastosVarios() {
 
   // Construir tabla por tienda
   const cols = stores.map(store => {
-    const ads     = adsSpends[store.domain]  || { meta: 0, tiktok: 0 };
+    const cols = stores.map(store => {
+    const ads     = adsSpends[store.domain] || { meta: 0, tiktok: 0 };
     const shopify = gastosVarios[store.domain] || 0;
-    const total   = ads.meta + ads.tiktok + shopify + fijoXTienda;
+    const mrw       = parseFloat(gastosMRW.find(g=>g.nombre==="MRW")?.valor||0);
+    const logistica = parseFloat(gastosMRW.find(g=>g.nombre==="LOGÍSTICA")?.valor||0);
+    const total   = ads.meta + ads.tiktok + shopify + fijoXTienda + mrw + logistica;
 
     return `
       <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:220px;flex:1;">
@@ -2461,9 +2469,17 @@ async function loadGastosVarios() {
               </td>
             </tr>
             <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">MRW</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(gastosMRW.find(g=>g.nombre==="MRW")?.valor||0)} €</td>
+            </tr>
+            <tr style="background:#f9fafb;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Logística</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(gastosMRW.find(g=>g.nombre==="LOGÍSTICA")?.valor||0)} €</td>
+            </tr>
+            <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gastos Fijos</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(fijoXTienda)} €
-                <div style="font-size:10px;color:#9ca3af;">${fmt(totalFijo)}€ ÷ ${numTiendas} tiendas</div>
+                <div style="font-size:10px;color:#9ca3af;">${fmt(totalOtrosFijos)}€ ÷ ${numTiendas} tiendas</div>
               </td>
             </tr>
             <tr style="background:#f0fdf4;">
