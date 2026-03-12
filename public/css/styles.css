@@ -1392,9 +1392,12 @@ body.dark input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 #cardBox {
+  padding: 20px;
+}
+
+#cardBox.metricas-box {
   width: fit-content;
   margin: 0 auto;
-  padding: 20px;
 }
 
 /* =========================

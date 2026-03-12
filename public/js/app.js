@@ -619,6 +619,7 @@ const now = new Date();
   const fmt = d => d.toISOString().split("T")[0];
 
   if (box) {
+    box.className = "card metricas-box";
     box.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
@@ -788,6 +789,7 @@ if (id === "crear-cliente") {
   if (s) s.textContent = "Alta de nuevo cliente";
   if (c) c.textContent = "Crear cliente";
 
+  box.className = "card";
   if (box) box.innerHTML = `
     <form class="client-form" id="createClientForm">
       <div class="form-grid">
@@ -860,7 +862,7 @@ if (id === "gestion-clientes") {
   if (t) t.textContent = "Gestión de clientes";
   if (s) s.textContent = "Listado de usuarios";
   if (c) c.textContent = "Gestión de clientes";
-
+  box.className = "card";
   if (box) {
     box.innerHTML = `
       <div class="client-table">
@@ -962,6 +964,7 @@ if (id === "tiendas") {
   if (s) s.textContent = "Gestiona tus tiendas conectadas";
   if (c) c.textContent = "Tiendas";
 
+  box.className = "card";  
   if (box) {
     box.innerHTML = `
       <div style="display:flex; justify-content:flex-end; margin-bottom:20px;">
@@ -990,6 +993,7 @@ if (id === "pedidos") {
   if (s) s.textContent = "Gestión de pedidos";
   if (c) c.textContent = "Pedidos";
 
+  box.className = "card";
   if (box) {
     box.innerHTML = `
       <div class="orders-header">
