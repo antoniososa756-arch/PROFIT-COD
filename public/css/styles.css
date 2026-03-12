@@ -1293,10 +1293,11 @@ body.dark .btn-filter:hover { background: rgba(22,163,74,.12); }
   background: var(--card, #fff);
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 12px;
-  padding: 14px 14px;
+  padding: 14px;
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 80px;
 }
 
 .stat-icon {
@@ -1388,4 +1389,11 @@ body.dark input[type="date"] {
 
 body.dark input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
+}
+
+#cardBox {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }

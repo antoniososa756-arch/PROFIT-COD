@@ -621,8 +621,8 @@ const now = new Date();
 
       <div class="stats-grid" id="statsGrid">
 
-        <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:6px;">
-          <div style="display:flex;align-items:center;gap:14px;">
+        <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:6px;justify-content:center;">
+          <div style="display:flex;align-items:center;gap:10px;">
             <div class="stat-icon blue">
               <svg viewBox="0 0 24 24"><path d="M3 7l9 5 9-5M3 7v10l9 5 9-5V7" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
