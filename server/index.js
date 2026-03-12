@@ -42,6 +42,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/metrics", metricsRoutes);
 app.use("/api/orders", ordersRoutes);
 app.use("/api/tracking", require("./routes/tracking.routes"));
+app.use("/api/ads", require("./routes/ads.routes"));
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));

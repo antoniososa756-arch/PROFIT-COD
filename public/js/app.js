@@ -1058,6 +1058,58 @@ if (id === "pedidos") {
   return;
 }
 
+// =========================
+// SECCIÓN GASTOS ADS
+// =========================
+if (id === "gastos-ads") {
+  if (t) t.textContent = "Gastos Ads";
+  if (s) s.textContent = "Rendimiento publicitario por tienda";
+  if (c) c.textContent = "Gastos Ads";
+
+  box.className = "card";
+  if (box) {
+    box.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+        <select id="ads-shop-sel"
+          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          <option value="">Cargando tiendas...</option>
+        </select>
+        <select id="ads-month-sel"
+          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${Array.from({length:12},(_,i)=>{
+            const d = new Date(); d.setMonth(i);
+            return `<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${d.toLocaleString("es",{month:"long"})}</option>`;
+          }).join("")}
+        </select>
+        <select id="ads-year-sel"
+          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
+        </select>
+        <button onclick="loadAdsTable()"
+          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          Ver
+        </button>
+      </div>
+      <div id="ads-table-wrap" style="overflow-x:auto;"></div>
+    `;
+  }
+
+  // Cargar tiendas
+  fetch(`${API_BASE}/api/shopify/stores`, {
+    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+  }).then(r=>r.json()).then(stores => {
+    const sel = document.getElementById("ads-shop-sel");
+    if (!sel || !Array.isArray(stores)) return;
+    sel.innerHTML = stores.map(s =>
+      `<option value="${s.domain}">${escapeHtml(s.shop_name || s.domain)}</option>`
+    ).join("");
+    loadAdsTable();
+  }).catch(()=>{});
+
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
 
 // ⬅️ AQUÍ SE CIERRA setSection CORRECTAMENTE
 }
@@ -1786,6 +1838,144 @@ async function loadMetricas() {
   }
 }
 window.loadMetricas = loadMetricas;
+
+// =========================
+// GASTOS ADS
+// =========================
+async function loadAdsTable() {
+  const shop  = document.getElementById("ads-shop-sel")?.value;
+  const month = document.getElementById("ads-month-sel")?.value;
+  const year  = document.getElementById("ads-year-sel")?.value;
+  const wrap  = document.getElementById("ads-table-wrap");
+  if (!wrap || !shop || !month || !year) return;
+
+  wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+
+  // Días del mes
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  // Pedidos del mes
+  let orders = [];
+  try {
+    const r = await fetch(`${API_BASE}/api/orders`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const all = await r.json();
+    orders = Array.isArray(all) ? all.filter(o => {
+      if (!o.created_at) return false;
+      const d = new Date(o.created_at);
+      return o.shop_domain === shop &&
+             d.getMonth()+1 === parseInt(month) &&
+             d.getFullYear() === parseInt(year);
+    }) : [];
+  } catch {}
+
+  // Gastos guardados
+  let spends = {};
+  try {
+    const r = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(shop)}&month=${month}&year=${year}`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const rows = await r.json();
+    if (Array.isArray(rows)) rows.forEach(r => { spends[r.date] = r.spend; });
+  } catch {}
+
+  // Construir filas
+  let totalFact = 0, totalGasto = 0, totalPedidos = 0;
+
+  const rows = Array.from({length: daysInMonth}, (_, i) => {
+    const day   = i + 1;
+    const dateStr = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const dayOrders = orders.filter(o => o.created_at && o.created_at.startsWith(dateStr));
+    const facturacion = dayOrders.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+    const pedidos = dayOrders.length;
+    const gasto = spends[dateStr] || 0;
+    const cpa   = pedidos > 0 ? (gasto / pedidos) : null;
+    const roas  = gasto > 0   ? (facturacion / gasto) : null;
+
+    totalFact    += facturacion;
+    totalGasto   += gasto;
+    totalPedidos += pedidos;
+
+    return { day, dateStr, facturacion, pedidos, gasto, cpa, roas };
+  });
+
+  const totalCPA  = totalPedidos > 0 ? totalGasto / totalPedidos : null;
+  const totalROAS = totalGasto   > 0 ? totalFact  / totalGasto   : null;
+
+  const fmt  = n => n != null ? n.toFixed(2) + " €" : "-";
+  const fmt2 = n => n != null ? n.toFixed(2) : "-";
+
+  wrap.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+          <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Día</th>
+          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">Facturación</th>
+          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">Gasto Publicitario</th>
+          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">Cantidad Pedidos</th>
+          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">CPA</th>
+          <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">ROAS</th>
+        </tr>
+        <tr style="background:#16a34a;">
+          <td style="padding:10px 12px;font-weight:700;color:#fff;">Balance</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${fmt(totalFact)}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${fmt(totalGasto)}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${totalPedidos}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${fmt(totalCPA)}</td>
+          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;">${fmt2(totalROAS)}</td>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr style="border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:9px 12px;color:#6b7280;">${r.day}</td>
+            <td style="padding:9px 12px;text-align:right;">${r.facturacion > 0 ? fmt(r.facturacion) : "-"}</td>
+            <td style="padding:9px 12px;text-align:right;">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value="${r.gasto || ""}"
+                placeholder="0.00"
+                data-date="${r.dateStr}"
+                data-shop="${shop}"
+                onchange="saveAdsSpend(this)"
+                style="width:90px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
+              />
+            </td>
+            <td style="padding:9px 12px;text-align:right;">${r.pedidos > 0 ? r.pedidos : "-"}</td>
+            <td style="padding:9px 12px;text-align:right;">${fmt(r.cpa)}</td>
+            <td style="padding:9px 12px;text-align:right;font-weight:${r.roas!=null && r.roas>=2 ? '700' : '400'};color:${r.roas!=null && r.roas>=2 ? '#16a34a' : r.roas!=null && r.roas<1 ? '#dc2626' : 'inherit'};">${fmt2(r.roas)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+async function saveAdsSpend(input) {
+  const date  = input.dataset.date;
+  const shop  = input.dataset.shop;
+  const spend = parseFloat(input.value) || 0;
+
+  try {
+    await fetch(`${API_BASE}/api/ads`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + localStorage.getItem("token")
+      },
+      body: JSON.stringify({ shop, date, spend })
+    });
+    loadAdsTable();
+  } catch(e) {
+    console.error("Error guardando gasto:", e);
+  }
+}
+
+window.loadAdsTable  = loadAdsTable;
+window.saveAdsSpend  = saveAdsSpend;
 
 // =========================
 // CARGAR PEDIDOS REALES
