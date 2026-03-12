@@ -3,6 +3,7 @@ const auth = require("../middlewares/auth");
 const db = require("../db");
 const router = express.Router();
 
+// ── TABLAS ──────────────────────────────────────────────
 db.run(`
   CREATE TABLE IF NOT EXISTS gastos_fijos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -15,7 +16,6 @@ db.run(`
 
 db.run(`ALTER TABLE gastos_fijos ADD COLUMN precio_unit REAL DEFAULT NULL`, () => {});
 
-// Tabla de valores mensuales
 db.run(`
   CREATE TABLE IF NOT EXISTS gastos_fijos_valores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +27,18 @@ db.run(`
   )
 `, () => {});
 
-// GET — gastos fijos + valores del mes indicado
+db.run(`
+  CREATE TABLE IF NOT EXISTS gastos_fijos_precios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gasto_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    mes TEXT NOT NULL,
+    precio_unit REAL DEFAULT 0,
+    UNIQUE(gasto_id, user_id, mes)
+  )
+`, () => {});
+
+// ── GET — gastos fijos + valores + precios del mes ──────
 router.get("/", auth, (req, res) => {
   const { mes } = req.query;
   const userId = req.user.id;
@@ -72,12 +83,12 @@ router.get("/", auth, (req, res) => {
   );
 });
 
-// POST — crear gasto fijo
+// ── POST — crear gasto fijo ─────────────────────────────
 router.post("/", auth, (req, res) => {
   const { nombre, precio_unit, fijo, orden } = req.body;
   db.run(
     `INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?,?,?,?,?)`,
-    [req.user.id, nombre||"", precio_unit!=null?parseFloat(precio_unit):null, fijo?1:0, orden||0],
+    [req.user.id, nombre||"", precio_unit!=null ? parseFloat(precio_unit) : null, fijo?1:0, orden||0],
     function(err) {
       if (err) return res.status(500).json({ error: "Error guardando" });
       res.json({ id: this.lastID });
@@ -85,12 +96,12 @@ router.post("/", auth, (req, res) => {
   );
 });
 
-// PUT — actualizar nombre/precio_unit del gasto fijo
+// ── PUT — actualizar nombre/precio_unit global ──────────
 router.put("/:id", auth, (req, res) => {
   const { nombre, precio_unit } = req.body;
   db.run(
     `UPDATE gastos_fijos SET nombre=?, precio_unit=? WHERE id=? AND user_id=?`,
-    [nombre, precio_unit!=null?parseFloat(precio_unit):null, req.params.id, req.user.id],
+    [nombre, precio_unit!=null ? parseFloat(precio_unit) : null, req.params.id, req.user.id],
     (err) => {
       if (err) return res.status(500).json({ error: "Error actualizando" });
       res.json({ ok: true });
@@ -98,7 +109,7 @@ router.put("/:id", auth, (req, res) => {
   );
 });
 
-// PUT valor mensual
+// ── PUT — valor mensual ─────────────────────────────────
 router.put("/:id/valor", auth, (req, res) => {
   const { mes, valor } = req.body;
   db.run(
@@ -112,6 +123,7 @@ router.put("/:id/valor", auth, (req, res) => {
   );
 });
 
+// ── PUT — precio_unit mensual ───────────────────────────
 router.put("/:id/precio", auth, (req, res) => {
   const { mes, precio_unit } = req.body;
   db.run(
@@ -125,24 +137,18 @@ router.put("/:id/precio", auth, (req, res) => {
   );
 });
 
-// DELETE
+// ── DELETE ──────────────────────────────────────────────
 router.delete("/:id", auth, (req, res) => {
-  db.run(`DELETE FROM gastos_fijos WHERE id=? AND user_id=?`, [req.params.id, req.user.id], (err) => {
-    if (err) return res.status(500).json({ error: "Error eliminando" });
-    db.run(`DELETE FROM gastos_fijos_valores WHERE gasto_id=? AND user_id=?`, [req.params.id, req.user.id], () => {});
-    res.json({ ok: true });
-  });
+  db.run(
+    `DELETE FROM gastos_fijos WHERE id=? AND user_id=?`,
+    [req.params.id, req.user.id],
+    (err) => {
+      if (err) return res.status(500).json({ error: "Error eliminando" });
+      db.run(`DELETE FROM gastos_fijos_valores WHERE gasto_id=? AND user_id=?`, [req.params.id, req.user.id], () => {});
+      db.run(`DELETE FROM gastos_fijos_precios WHERE gasto_id=? AND user_id=?`, [req.params.id, req.user.id], () => {});
+      res.json({ ok: true });
+    }
+  );
 });
-
-db.run(`
-  CREATE TABLE IF NOT EXISTS gastos_fijos_precios (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    gasto_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    mes TEXT NOT NULL,
-    precio_unit REAL DEFAULT 0,
-    UNIQUE(gasto_id, user_id, mes)
-  )
-`, () => {});
 
 module.exports = router;
