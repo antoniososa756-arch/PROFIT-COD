@@ -2011,7 +2011,7 @@ async function loadGastosFijos() {
   if (!wrap) return;
 
   // Selector de mes/año si no existe, crearlo
-  if (!document.getElementById("gf-mes-sel")) {
+  if (true) {
     const now = new Date();
     const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
     wrap.innerHTML = `
@@ -2050,7 +2050,6 @@ async function loadGastosFijosData() {
 
   content.innerHTML = `<div style="padding:16px;color:#6b7280;">Cargando...</div>`;
 
-  // Total pedidos del mes (excluyendo cancelados)
   let totalPedidos = 0;
   try {
     const r = await fetch(`${API_BASE}/api/orders`, {
@@ -2067,16 +2066,16 @@ async function loadGastosFijosData() {
     }
   } catch {}
 
-  // Gastos fijos del mes
- let items = [];
+  let items = [];
   try {
     const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
-    items = await r.json();
+    const data = await r.json();
+    items = Array.isArray(data) ? data : [];
   } catch {}
 
-  if (!Array.isArray(items) || items.length === 0) {
+  if (items.length === 0) {
     const defaults = [
       { nombre: "MRW",       precio_unit: 0, fijo: 1, orden: 0 },
       { nombre: "LOGÍSTICA", precio_unit: 0, fijo: 1, orden: 1 },
@@ -2101,16 +2100,16 @@ async function loadGastosFijosData() {
     items = defaults;
   }
 
-  // Impuestos
   let impuestos = [];
   try {
     const r = await fetch(`${API_BASE}/api/impuestos`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
-    impuestos = await r.json();
+    const data = await r.json();
+    impuestos = Array.isArray(data) ? data : [];
   } catch {}
 
-  if (!Array.isArray(impuestos) || impuestos.length === 0) {
+  if (impuestos.length === 0) {
     try {
       const r = await fetch(`${API_BASE}/api/impuestos`, {
         method: "POST",
@@ -2123,13 +2122,10 @@ async function loadGastosFijosData() {
   }
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
-  const inp = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;` ;
-  const onEnter = `onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"`;
-
+  const inp = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
   const totalValor = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
-
-  // Tabla gastos fijos
   const thStyle = `padding:11px 14px;border:1px solid #d1fae5;font-weight:600;color:#fff;text-align:`;
+
   const tablaGF = `
     <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -2145,7 +2141,7 @@ async function loadGastosFijosData() {
             <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
             <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;text-align:right;">${fmt(totalValor)} €</td>
             <td style="padding:10px 14px;border:1px solid #e5e7eb;"></td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;text-align:right;" id="gf-total-est">— €</td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;text-align:right;">— €</td>
             <td style="padding:10px 14px;border:1px solid #e5e7eb;"></td>
           </tr>
         </thead>
@@ -2165,13 +2161,17 @@ async function loadGastosFijosData() {
               </td>
               <td style="padding:7px 12px;border:1px solid #e5e7eb;">
                 <input type="number" min="0" step="0.01" value="${fmt(item.valor)}"
-                  data-id="${item.id}" data-field="valor" data-mes="${mes}" onchange="updateGastoFijoValor(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();this.style.borderColor='#16a34a';setTimeout(()=>{this.style.borderColor='#e5e7eb'},1500);this.dispatchEvent(new Event('change'));}"
+                  data-id="${item.id}" data-field="valor" data-mes="${mes}"
+                  onchange="updateGastoFijoValor(this)"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();this.style.borderColor='#16a34a';setTimeout(()=>{this.style.borderColor='#e5e7eb'},1500);this.dispatchEvent(new Event('change'));}"
                   style="${inp}text-align:right;">
               </td>
               <td style="padding:7px 12px;border:1px solid #e5e7eb;">
                 ${esFijo
                   ? `<input type="number" min="0" step="0.01" value="${fmt(item.precio_unit)}"
-                      data-id="${item.id}" data-field="precio_unit" data-mes="${mes}" onchange="updateGastoFijoPrecio(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
+                      data-id="${item.id}" data-field="precio_unit" data-mes="${mes}"
+                      onchange="updateGastoFijoPrecio(this)"
+                      onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
                       style="${inp}text-align:right;">`
                   : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
                 }
@@ -2199,7 +2199,6 @@ async function loadGastosFijosData() {
     </div>
   `;
 
-  // Tabla impuestos — solo IVA, sin botón añadir
   const tablaIMP = `
     <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -2215,7 +2214,9 @@ async function loadGastosFijosData() {
             <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">IVA</td>
             <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;">
               <input type="number" min="0" step="0.01" value="${fmt(imp.porcentaje)}"
-                data-id="${imp.id}" data-field="porcentaje" onchange="updateImpuesto(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
+                data-id="${imp.id}" data-field="porcentaje"
+                onchange="updateImpuesto(this)"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
                 style="${inp}text-align:right;">
             </td>
           </tr>`).join("")}
