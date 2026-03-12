@@ -1066,7 +1066,7 @@ if (id === "gastos-ads") {
   if (s) s.textContent = "Rendimiento publicitario por tienda";
   if (c) c.textContent = "Gastos Ads";
 
-  box.className = "card";
+  box.className = "card metricas-box";
   if (box) {
     box.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
@@ -1090,7 +1090,7 @@ if (id === "gastos-ads") {
           Ver
         </button>
       </div>
-      <div id="ads-table-wrap" style="overflow-x:auto;"></div>
+      <div id="ads-table-wrap" style="overflow-x:auto;margin:0 auto;"></div>
     `;
   }
 
@@ -1909,8 +1909,8 @@ async function loadAdsTable() {
 
   const fmt  = n => n != null ? n.toFixed(2)+" €" : "-";
   const fmt2 = n => n != null ? n.toFixed(2) : "-";
-  const td   = (content, extra="") => `<td style="padding:9px 12px;border:1px solid #e5e7eb;${extra}">${content}</td>`;
-  const th   = (content, extra="") => `<th style="padding:10px 12px;border:1px solid #e5e7eb;font-weight:600;color:#374151;${extra}">${content}</th>`;
+  const td   = (content, extra="") => `<td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;${extra}">${content}</td>`;
+  const th   = (content, extra="") => `<th style="padding:11px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;font-size:13px;${extra}">${content}</th>`;
 
   wrap.innerHTML = `
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -1925,7 +1925,7 @@ async function loadAdsTable() {
           ${th("ROAS","text-align:right;")}
         </tr>
         <tr style="background:#16a34a;">
-          <td style="padding:10px 12px;font-weight:700;color:#fff;border:1px solid #15803d;">Balance del mes</td>
+          <td style="padding:11px 14px;font-weight:700;color:#fff;border:1px solid #15803d;font-size:15px;">Balance del mes</td>
           <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalMeta)}</td>
           <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalTiktok)}</td>
           <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalFact)}</td>
