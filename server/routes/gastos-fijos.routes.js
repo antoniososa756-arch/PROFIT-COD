@@ -18,8 +18,8 @@ db.run(`
 `);
 
 // Migración por si la tabla ya existe sin las columnas nuevas
-db.run(`ALTER TABLE gastos_fijos ADD COLUMN precio_envio REAL DEFAULT NULL`).catch?.(()=>{});
-db.run(`ALTER TABLE gastos_fijos ADD COLUMN precio_prep REAL DEFAULT NULL`).catch?.(()=>{});
+db.run(`ALTER TABLE gastos_fijos ADD COLUMN precio_envio REAL DEFAULT NULL`, () => {});
+db.run(`ALTER TABLE gastos_fijos ADD COLUMN precio_prep REAL DEFAULT NULL`, () => {});
 
 router.get("/", auth, (req, res) => {
   db.all(
