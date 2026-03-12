@@ -1111,6 +1111,23 @@ if (id === "gastos-ads") {
   return;
 }
 
+// =========================
+// SECCIÓN GASTOS FIJOS
+// =========================
+if (id === "gastos-fijos") {
+  if (t) t.textContent = "Gastos Fijos";
+  if (s) s.textContent = "Gestión de gastos fijos mensuales";
+  if (c) c.textContent = "Gastos Fijos";
+  box.className = "card";
+  if (box) {
+    box.innerHTML = `<div id="gastos-fijos-wrap">Cargando...</div>`;
+  }
+  loadGastosFijos();
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
 // ⬅️ AQUÍ SE CIERRA setSection CORRECTAMENTE
 }
 
@@ -1950,6 +1967,148 @@ async function loadAdsTable() {
     </table>
   `;
 }
+
+// =========================
+// GASTOS FIJOS
+// =========================
+async function loadGastosFijos() {
+  const wrap = document.getElementById("gastos-fijos-wrap");
+  if (!wrap) return;
+
+  let items = [];
+  try {
+    const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    items = await r.json();
+  } catch {}
+
+  // Si no hay datos, inicializar con filas por defecto
+  if (!Array.isArray(items) || items.length === 0) {
+    const defaults = [
+      { nombre: "MRW",        valor: 0, estimado: 0, fijo: 1 },
+      { nombre: "LOGÍSTICA",  valor: 0, estimado: 0, fijo: 1 },
+      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
+      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
+      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
+      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
+      { nombre: "",           valor: 0, estimado: null, fijo: 0 },
+    ];
+    for (let i = 0; i < defaults.length; i++) {
+      try {
+        const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+          body: JSON.stringify({ ...defaults[i], orden: i })
+        });
+        const saved = await r.json();
+        defaults[i].id = saved.id;
+      } catch {}
+    }
+    items = defaults;
+  }
+
+  const fmt = n => (parseFloat(n)||0).toFixed(2);
+
+  const totalValor    = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
+  const totalEstimado = items.filter(i=>i.estimado!=null).reduce((s,i) => s+(parseFloat(i.estimado)||0), 0);
+
+  const inputStyle = `width:100%;padding:7px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
+
+  wrap.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <thead>
+        <tr style="background:#1a1a2e;">
+          <th style="padding:13px 16px;border:1px solid #374151;color:#fff;font-weight:700;text-align:left;">GASTO FIJO</th>
+          <th style="padding:13px 16px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">VALOR</th>
+          <th style="padding:13px 16px;border:1px solid #374151;color:#fff;font-weight:700;text-align:right;">ESTIMADO</th>
+        </tr>
+        <tr style="background:#16a34a;">
+          <td style="padding:13px 16px;border:1px solid #15803d;color:#fff;font-weight:700;">TOTAL</td>
+          <td style="padding:13px 16px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;" id="gf-total-valor">${fmt(totalValor)} €</td>
+          <td style="padding:13px 16px;border:1px solid #15803d;color:#fff;font-weight:700;text-align:right;" id="gf-total-estimado">${fmt(totalEstimado)} €</td>
+        </tr>
+      </thead>
+      <tbody id="gf-tbody">
+        ${items.map(item => `
+          <tr data-id="${item.id}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:8px 12px;border:1px solid #e5e7eb;">
+              ${item.fijo
+                ? `<span style="font-weight:600;color:#374151;">${item.nombre}</span>`
+                : `<input type="text" value="${escapeHtml(item.nombre||'')}" placeholder="Descripción..." 
+                    data-id="${item.id}" data-field="nombre"
+                    onchange="updateGastoFijo(this)"
+                    style="${inputStyle}">`
+              }
+            </td>
+            <td style="padding:8px 12px;border:1px solid #e5e7eb;">
+              <input type="number" min="0" step="0.01" value="${fmt(item.valor)}" 
+                data-id="${item.id}" data-field="valor"
+                onchange="updateGastoFijo(this)"
+                style="${inputStyle}text-align:right;">
+            </td>
+            <td style="padding:8px 12px;border:1px solid #e5e7eb;">
+              ${item.fijo || item.estimado != null
+                ? `<input type="number" min="0" step="0.01" value="${fmt(item.estimado)}" 
+                    data-id="${item.id}" data-field="estimado"
+                    onchange="updateGastoFijo(this)"
+                    style="${inputStyle}text-align:right;">`
+                : `<span style="color:#d1d5db;text-align:center;display:block;">—</span>`
+              }
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+    <div style="margin-top:14px;">
+      <button onclick="addGastoFijo()"
+        style="padding:9px 20px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        + Añadir fila
+      </button>
+    </div>
+  `;
+}
+
+async function updateGastoFijo(input) {
+  const id    = input.dataset.id;
+  const field = input.dataset.field;
+  const value = field === "nombre" ? input.value : parseFloat(input.value)||0;
+
+  // Leer valores actuales de la fila
+  const row   = input.closest("tr");
+  const nombre   = row.querySelector("[data-field='nombre']")?.value || row.querySelector("span")?.textContent || "";
+  const valor    = parseFloat(row.querySelector("[data-field='valor']")?.value) || 0;
+  const estimadoEl = row.querySelector("[data-field='estimado']");
+  const estimado = estimadoEl ? parseFloat(estimadoEl.value)||0 : null;
+
+  try {
+    await fetch(`${API_BASE}/api/gastos-fijos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({
+        nombre:   field==="nombre" ? value : nombre,
+        valor:    field==="valor"  ? value : valor,
+        estimado: field==="estimado" ? value : estimado
+      })
+    });
+    loadGastosFijos();
+  } catch(e) { console.error(e); }
+}
+
+async function addGastoFijo() {
+  try {
+    await fetch(`${API_BASE}/api/gastos-fijos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ nombre: "", valor: 0, estimado: null, fijo: 0 })
+    });
+    loadGastosFijos();
+  } catch(e) { console.error(e); }
+}
+
+window.loadGastosFijos  = loadGastosFijos;
+window.updateGastoFijo  = updateGastoFijo;
+window.addGastoFijo     = addGastoFijo;
 
 async function saveAdsSpend(input) {
   const date  = input.dataset.date;
