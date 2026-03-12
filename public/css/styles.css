@@ -1285,7 +1285,8 @@ body.dark .btn-filter:hover { background: rgba(22,163,74,.12); }
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  max-width: 100%;
+  width: fit-content;
+  margin: 0 auto;
 }
 
 .stat-card {
@@ -1391,8 +1392,7 @@ body.dark input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 #cardBox {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 20px;
 }
