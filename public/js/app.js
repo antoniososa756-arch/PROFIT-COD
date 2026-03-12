@@ -2073,8 +2073,8 @@ async function loadGastosFijosData() {
 
     // Pre-cargar desde mes anterior si este mes no tiene datos propios
     if (Array.isArray(items) && items.length > 0) {
-      const sinDatos = items.every(i => (parseFloat(i.valor)||0) === 0 && (parseFloat(i.precio_unit)||0) === 0);
-      if (sinDatos) {
+      const sinValores = items.every(i => (parseFloat(i.valor)||0) === 0);
+      if (sinValores) {
         const prevDate = new Date(parseInt(year), parseInt(month)-2, 1);
         const prevMes  = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,"0")}`;
         const rPrev = await fetch(`${API_BASE}/api/gastos-fijos?mes=${prevMes}`, {
