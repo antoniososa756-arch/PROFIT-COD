@@ -1340,3 +1340,47 @@ body.dark .btn-filter:hover { background: rgba(22,163,74,.12); }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
 }
+
+/* =========================
+   DATE PICKER – ESTILO PROFICOD
+   ========================= */
+input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 7px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text, #111827);
+  background: var(--card, #fff);
+  cursor: pointer;
+  transition: border .2s, box-shadow .2s;
+}
+
+input[type="date"]:focus {
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22,163,74,.15);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.5;
+  filter: invert(0);
+  transition: opacity .2s;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+body.dark input[type="date"] {
+  background: #121212;
+  border-color: #374151;
+  color: #ffffff;
+}
+
+body.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
