@@ -593,14 +593,38 @@ if (id === "metricas") {
   if (s) s.textContent = "Estadísticas generales";
   if (c) c.textContent = "Métricas";
 
+const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fmt = d => d.toISOString().split("T")[0];
+
   if (box) {
     box.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:16px;font-weight:600;">Estadísticas</h3>
-        <button class="btn-filter" onclick="loadMetricas()">
-          <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right:6px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M3 6h18M7 12h10M11 18h2" stroke-linecap="round"/></svg>
-          Filtros
-        </button>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <input
+            type="date"
+            id="metrics-date-from"
+            value="${fmt(firstDay)}"
+            onchange="loadMetricas()"
+            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;"
+          />
+          <span style="color:#6b7280;font-size:13px;">—</span>
+          <input
+            type="date"
+            id="metrics-date-to"
+            value="${fmt(now)}"
+            onchange="loadMetricas()"
+            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;"
+          />
+          <select
+            id="metrics-shop"
+            onchange="loadMetricas()"
+            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:#fff;"
+          >
+            <option value="">Todas las tiendas</option>
+          </select>
+        </div>
       </div>
 
       <div class="stats-grid" id="statsGrid">
@@ -682,6 +706,21 @@ if (id === "metricas") {
   }
 
   loadMetricas();
+
+// Cargar tiendas en el selector de métricas
+  fetch(`${API_BASE}/api/shopify/stores`, {
+    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+  }).then(r => r.json()).then(stores => {
+    const sel = document.getElementById("metrics-shop");
+    if (sel && Array.isArray(stores)) {
+      stores.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.domain;
+        opt.textContent = s.shop_name || s.domain;
+        sel.appendChild(opt);
+      });
+    }
+  }).catch(() => {});
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -1617,16 +1656,37 @@ async function disableStore(storeId) {
 // CARGAR MÉTRICAS REALES
 // =========================
 async function loadMetricas() {
+  // Fechas por defecto: del 1 al día de hoy del mes actual
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fmt = d => d.toISOString().split("T")[0];
+
+  const dateFrom = document.getElementById("metrics-date-from")?.value || fmt(firstDay);
+  const dateTo   = document.getElementById("metrics-date-to")?.value   || fmt(now);
+  const shop     = document.getElementById("metrics-shop")?.value       || "";
+
   try {
     const res = await fetch(`${API_BASE}/api/orders`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
     const orders = await res.json();
-    const list = Array.isArray(orders) ? orders : [];
+    let list = Array.isArray(orders) ? orders : [];
+
+    // Filtrar por fecha
+    list = list.filter(o => {
+      if (!o.created_at) return true;
+      const d = o.created_at.split("T")[0];
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo   && d > dateTo)   return false;
+      return true;
+    });
+
+    // Filtrar por tienda
+    if (shop) list = list.filter(o => o.shop_domain === shop);
 
     const total      = list.length;
     const pendientes = list.filter(o => o.fulfillment_status === "pendiente").length;
-    const transito   = list.filter(o => ["en_preparacion", "enviado"].includes(o.fulfillment_status)).length;
+    const transito   = list.filter(o => ["en_preparacion","enviado"].includes(o.fulfillment_status)).length;
     const entregados = list.filter(o => o.fulfillment_status === "entregado").length;
     const devueltos  = list.filter(o => o.fulfillment_status === "devuelto").length;
     const cancelados = list.filter(o => o.fulfillment_status === "cancelado").length;
