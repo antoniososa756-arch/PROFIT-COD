@@ -37,6 +37,7 @@ router.get("/:tracking", auth, async (req, res) => {
     const html = await response.text();
 
     // Extraer estado del td
+    console.log("MRW HTML SNIPPET:", html.substring(html.indexOf("Estado"), html.indexOf("Estado") + 200));
     const match = html.match(/data-title="Estado env[^"]*"[^>]*>([^<]+)</);
     if (!match) {
       return res.json({ ok: false, error: "No se encontró el estado en MRW" });
