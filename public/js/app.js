@@ -1863,6 +1863,7 @@ async function loadAdsTable() {
     const all = await r.json();
     orders = Array.isArray(all) ? all.filter(o => {
       if (!o.created_at) return false;
+      if (o.fulfillment_status === "cancelado") return false;
       const d = new Date(o.created_at);
       return o.shop_domain === shop &&
              d.getMonth()+1 === parseInt(month) &&
