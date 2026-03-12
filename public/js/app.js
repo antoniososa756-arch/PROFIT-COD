@@ -1925,13 +1925,13 @@ async function loadAdsTable() {
           ${th("ROAS","text-align:right;")}
         </tr>
         <tr style="background:#16a34a;">
-          <td style="padding:11px 14px;font-weight:700;color:#fff;border:1px solid #15803d;font-size:15px;">Balance del mes</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalMeta)}</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalTiktok)}</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalFact)}</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${totalPedidos}</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalCPA)}</td>
-          <td style="padding:10px 12px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt2(totalROAS)}</td>
+          <td style="padding:13px 16px;font-weight:700;color:#fff;border:1px solid #15803d;font-size:15px;">Balance del mes</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalMeta)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalTiktok)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalFact)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${totalPedidos}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalCPA)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt2(totalROAS)}</td>
         </tr>
       </thead>
       <tbody>
