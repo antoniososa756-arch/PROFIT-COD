@@ -586,6 +586,108 @@ function setSection(id) {
   if (c) c.textContent = title;
 
 // =========================
+// SECCIÓN MÉTRICAS
+// =========================
+if (id === "metricas") {
+  if (t) t.textContent = "Métricas";
+  if (s) s.textContent = "Estadísticas generales";
+  if (c) c.textContent = "Métricas";
+
+  if (box) {
+    box.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h3 style="margin:0;font-size:16px;font-weight:600;">Estadísticas</h3>
+        <button class="btn-filter" onclick="loadMetricas()">
+          <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right:6px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M3 6h18M7 12h10M11 18h2" stroke-linecap="round"/></svg>
+          Filtros
+        </button>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+
+        <div class="stat-card">
+          <div class="stat-icon blue">
+            <svg viewBox="0 0 24 24"><path d="M3 7l9 5 9-5M3 7v10l9 5 9-5V7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-num" id="stat-total">0</span>
+            <span class="stat-label">Total Pedidos</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon blue">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-num" id="stat-pendientes">0</span>
+            <span class="stat-label">Pendientes</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon blue">
+            <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-num" id="stat-transito">0</span>
+            <span class="stat-label">En tránsito</span>
+          </div>
+        </div>
+
+        <div class="stat-card" style="flex-direction:column;align-items:flex-start;">
+          <div class="stat-label" style="font-weight:600;margin-bottom:10px;">Porcentaje de entrega</div>
+          <div style="position:relative;width:90px;height:90px;margin:0 auto;">
+            <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:90px;height:90px;">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#3b82f6" stroke-width="3"
+                stroke-dasharray="0 100" id="donut-circle" stroke-linecap="round"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;" id="donut-pct">0%</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon blue">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-num" id="stat-entregados">0</span>
+            <span class="stat-label">Entregados</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon blue">
+            <svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-num" id="stat-devueltos">0</span>
+            <span class="stat-label">Devueltos</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon blue">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6" stroke-linecap="round"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-num" id="stat-cancelados">0</span>
+            <span class="stat-label">Cancelados</span>
+          </div>
+        </div>
+
+      </div>
+    `;
+  }
+
+  loadMetricas();
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
+// =========================
 // SECCIONES ADMIN (CUSTOM)
 // =========================
 
@@ -1510,6 +1612,43 @@ async function disableStore(storeId) {
 
   setSection("tiendas");
 }
+
+// =========================
+// CARGAR MÉTRICAS REALES
+// =========================
+async function loadMetricas() {
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const orders = await res.json();
+    const list = Array.isArray(orders) ? orders : [];
+
+    const total      = list.length;
+    const pendientes = list.filter(o => o.fulfillment_status === "pendiente").length;
+    const transito   = list.filter(o => ["en_preparacion", "enviado"].includes(o.fulfillment_status)).length;
+    const entregados = list.filter(o => o.fulfillment_status === "entregado").length;
+    const devueltos  = list.filter(o => o.fulfillment_status === "devuelto").length;
+    const cancelados = list.filter(o => o.fulfillment_status === "cancelado").length;
+    const pct        = total > 0 ? Math.round((entregados / total) * 100) : 0;
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set("stat-total",      total);
+    set("stat-pendientes", pendientes);
+    set("stat-transito",   transito);
+    set("stat-entregados", entregados);
+    set("stat-devueltos",  devueltos);
+    set("stat-cancelados", cancelados);
+    set("donut-pct",       pct + "%");
+
+    const circle = document.getElementById("donut-circle");
+    if (circle) circle.setAttribute("stroke-dasharray", `${pct} ${100 - pct}`);
+
+  } catch(e) {
+    console.error("Error cargando métricas:", e);
+  }
+}
+window.loadMetricas = loadMetricas;
 
 // =========================
 // CARGAR PEDIDOS REALES
