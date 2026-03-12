@@ -2132,7 +2132,7 @@ async function loadGastosFijosData() {
               <td style="padding:7px 12px;border:1px solid #e5e7eb;">
                 ${esFijo
                   ? `<input type="number" min="0" step="0.01" value="${fmt(item.precio_unit)}"
-                      data-id="${item.id}" data-field="precio_unit" onchange="updateGastoFijo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
+                      data-id="${item.id}" data-field="precio_unit" data-mes="${mes}" onchange="updateGastoFijoPrecio(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
                       style="${inp}text-align:right;">`
                   : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
                 }
@@ -2269,6 +2269,23 @@ window.updateGastoFijo      = updateGastoFijo;
 window.addGastoFijo         = addGastoFijo;
 window.deleteGastoFijo      = deleteGastoFijo;
 window.updateImpuesto       = updateImpuesto;
+
+async function updateGastoFijoPrecio(input) {
+  const id         = input.dataset.id;
+  const mes        = input.dataset.mes;
+  const precio_unit = parseFloat(input.value)||0;
+  try {
+    await fetch(`${API_BASE}/api/gastos-fijos/${id}/precio`, {
+      method: "PUT",
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      body: JSON.stringify({ mes, precio_unit })
+    });
+    input.blur();
+    input.style.borderColor = "#16a34a";
+    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
+  } catch(e) { console.error(e); }
+}
+window.updateGastoFijoPrecio = updateGastoFijoPrecio;
 
 async function saveAdsSpend(input) {
   const date  = input.dataset.date;

@@ -29,7 +29,7 @@ db.run(`
 
 // GET — gastos fijos + valores del mes indicado
 router.get("/", auth, (req, res) => {
-  const { mes } = req.query; // formato: "2026-03"
+  const { mes } = req.query;
   const userId = req.user.id;
 
   db.all(
@@ -39,17 +39,26 @@ router.get("/", auth, (req, res) => {
       if (err) return res.status(500).json({ error: "Error BD" });
       if (!mes) return res.json(items);
 
-      db.all(
-        `SELECT * FROM gastos_fijos_valores WHERE user_id=? AND mes=?`,
-        [userId, mes],
-        (err2, valores) => {
-          if (err2) return res.status(500).json({ error: "Error BD valores" });
-          const map = {};
-          valores.forEach(v => { map[v.gasto_id] = v.valor; });
-          const result = items.map(i => ({ ...i, valor: map[i.id] ?? 0 }));
+      db.all(`SELECT * FROM gastos_fijos_valores WHERE user_id=? AND mes=?`, [userId, mes], (err2, valores) => {
+        if (err2) return res.status(500).json({ error: "Error BD valores" });
+
+        db.all(`SELECT * FROM gastos_fijos_precios WHERE user_id=? AND mes=?`, [userId, mes], (err3, precios) => {
+          if (err3) return res.status(500).json({ error: "Error BD precios" });
+
+          const mapVal = {};
+          valores.forEach(v => { mapVal[v.gasto_id] = v.valor; });
+
+          const mapPre = {};
+          precios.forEach(p => { mapPre[p.gasto_id] = p.precio_unit; });
+
+          const result = items.map(i => ({
+            ...i,
+            valor:      mapVal[i.id] ?? 0,
+            precio_unit: mapPre[i.id] ?? i.precio_unit ?? 0
+          }));
           res.json(result);
-        }
-      );
+        });
+      });
     }
   );
 });
@@ -94,6 +103,19 @@ router.put("/:id/valor", auth, (req, res) => {
   );
 });
 
+router.put("/:id/precio", auth, (req, res) => {
+  const { mes, precio_unit } = req.body;
+  db.run(
+    `INSERT INTO gastos_fijos_precios (gasto_id, user_id, mes, precio_unit) VALUES (?,?,?,?)
+     ON CONFLICT(gasto_id, user_id, mes) DO UPDATE SET precio_unit=excluded.precio_unit`,
+    [req.params.id, req.user.id, mes, parseFloat(precio_unit)||0],
+    (err) => {
+      if (err) return res.status(500).json({ error: "Error guardando precio" });
+      res.json({ ok: true });
+    }
+  );
+});
+
 // DELETE
 router.delete("/:id", auth, (req, res) => {
   db.run(`DELETE FROM gastos_fijos WHERE id=? AND user_id=?`, [req.params.id, req.user.id], (err) => {
@@ -102,5 +124,16 @@ router.delete("/:id", auth, (req, res) => {
     res.json({ ok: true });
   });
 });
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS gastos_fijos_precios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gasto_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    mes TEXT NOT NULL,
+    precio_unit REAL DEFAULT 0,
+    UNIQUE(gasto_id, user_id, mes)
+  )
+`, () => {});
 
 module.exports = router;
