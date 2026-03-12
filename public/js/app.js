@@ -2035,6 +2035,42 @@ async function loadGastosFijosData() {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
     items = await r.json();
+
+    // Pre-cargar desde mes anterior si este mes no tiene datos propios
+    if (Array.isArray(items) && items.length > 0) {
+      const sinDatos = items.every(i => (parseFloat(i.valor)||0) === 0 && (parseFloat(i.precio_unit)||0) === 0);
+      if (sinDatos) {
+        const prevDate = new Date(parseInt(year), parseInt(month)-2, 1);
+        const prevMes  = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,"0")}`;
+        const rPrev = await fetch(`${API_BASE}/api/gastos-fijos?mes=${prevMes}`, {
+          headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+        });
+        const prevItems = await rPrev.json();
+        if (Array.isArray(prevItems)) {
+          for (const prev of prevItems) {
+            if ((parseFloat(prev.valor)||0) > 0) {
+              await fetch(`${API_BASE}/api/gastos-fijos/${prev.id}/valor`, {
+                method: "PUT",
+                headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+                body: JSON.stringify({ mes, valor: prev.valor })
+              });
+            }
+            if ((parseFloat(prev.precio_unit)||0) > 0) {
+              await fetch(`${API_BASE}/api/gastos-fijos/${prev.id}/precio`, {
+                method: "PUT",
+                headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+                body: JSON.stringify({ mes, precio_unit: prev.precio_unit })
+              });
+            }
+          }
+          // Recargar con los datos copiados
+          const r2 = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
+            headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+          });
+          items = await r2.json();
+        }
+      }
+    }
   } catch {}
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -2185,7 +2221,13 @@ async function loadGastosFijosData() {
     </div>
   `;
 
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const mesLabel = monthNames[parseInt(month)-1].toUpperCase() + " " + year;
+
   content.innerHTML = `
+    <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
+      📅 Trabajando en: ${mesLabel}
+    </div>
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
       <div>${tablaGF}</div>
       <div>${tablaIMP}</div>
