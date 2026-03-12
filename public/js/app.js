@@ -2197,12 +2197,13 @@ async function updateGastoFijoValor(input) {
   const mes   = input.dataset.mes;
   const valor = parseFloat(input.value)||0;
   try {
-    await fetch(`${API_BASE}/api/gastos-fijos/${id}/valor`, {
+    const r = await fetch(`${API_BASE}/api/gastos-fijos/${id}/valor`, {
       method: "PUT",
       headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
       body: JSON.stringify({ mes, valor })
     });
-    loadGastosFijosData();
+    const data = await r.json();
+    if (!data.ok) console.error("Error guardando valor:", data);
   } catch(e) { console.error(e); }
 }
 
