@@ -2084,7 +2084,8 @@ async function loadGastosFijosData() {
   }
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
-  const inp = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
+  const inp = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;` ;
+  const onEnter = `onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"`;
 
   const totalValor = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
 
@@ -2125,13 +2126,13 @@ async function loadGastosFijosData() {
               </td>
               <td style="padding:7px 12px;border:1px solid #e5e7eb;">
                 <input type="number" min="0" step="0.01" value="${fmt(item.valor)}"
-                  data-id="${item.id}" data-field="valor" data-mes="${mes}" onchange="updateGastoFijoValor(this)"
+                  data-id="${item.id}" data-field="valor" data-mes="${mes}" onchange="updateGastoFijoValor(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();this.style.borderColor='#16a34a';setTimeout(()=>{this.style.borderColor='#e5e7eb'},1500);this.dispatchEvent(new Event('change'));}"
                   style="${inp}text-align:right;">
               </td>
               <td style="padding:7px 12px;border:1px solid #e5e7eb;">
                 ${esFijo
                   ? `<input type="number" min="0" step="0.01" value="${fmt(item.precio_unit)}"
-                      data-id="${item.id}" data-field="precio_unit" onchange="updateGastoFijo(this)"
+                      data-id="${item.id}" data-field="precio_unit" onchange="updateGastoFijo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
                       style="${inp}text-align:right;">`
                   : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
                 }
@@ -2175,7 +2176,7 @@ async function loadGastosFijosData() {
             <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">IVA</td>
             <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;">
               <input type="number" min="0" step="0.01" value="${fmt(imp.porcentaje)}"
-                data-id="${imp.id}" data-field="porcentaje" onchange="updateImpuesto(this)"
+                data-id="${imp.id}" data-field="porcentaje" onchange="updateImpuesto(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
                 style="${inp}text-align:right;">
             </td>
           </tr>`).join("")}
@@ -2211,7 +2212,7 @@ async function updateGastoFijo(input) {
   const id    = input.dataset.id;
   const field = input.dataset.field;
   const row   = input.closest("tr");
-  const nombre    = row.querySelector("[data-field='nombre']")?.value || row.querySelector("span")?.textContent || "";
+  const nombre     = row.querySelector("[data-field='nombre']")?.value || row.querySelector("span")?.textContent || "";
   const precioUnit = parseFloat(row.querySelector("[data-field='precio_unit']")?.value)||0;
   try {
     await fetch(`${API_BASE}/api/gastos-fijos/${id}`, {
@@ -2219,7 +2220,9 @@ async function updateGastoFijo(input) {
       headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
       body: JSON.stringify({ nombre, precio_unit: field==="precio_unit" ? parseFloat(input.value)||0 : precioUnit })
     });
-    loadGastosFijosData();
+    input.blur();
+    input.style.borderColor = "#16a34a";
+    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
   } catch(e) { console.error(e); }
 }
 
@@ -2253,6 +2256,9 @@ async function updateImpuesto(input) {
       headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
       body: JSON.stringify({ nombre:"IVA", porcentaje })
     });
+    input.blur();
+    input.style.borderColor = "#16a34a";
+    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
   } catch(e) { console.error(e); }
 }
 
