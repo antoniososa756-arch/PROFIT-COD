@@ -599,7 +599,7 @@ const now = new Date();
 
   if (box) {
     box.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;max-width:900px;margin-left:auto;margin-right:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <input type="date" id="metrics-date-from" value="${fmt(firstDay)}"

@@ -1285,8 +1285,7 @@ body.dark .btn-filter:hover { background: rgba(22,163,74,.12); }
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  max-width: 900px;
-  margin: 0 auto;
+  max-width: 100%;
 }
 
 .stat-card {
