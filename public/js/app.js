@@ -982,58 +982,56 @@ if (id === "pedidos") {
   box.innerHTML = `
       <div class="orders-header">
 
-        <div class="filters">
-          <!-- Fila 1: Sincronizar | Importar | Buscar -->
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-            <button class="btn-sync" onclick="syncAndRefreshOrders()">
-              <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              Sincronizar
-            </button>
-            <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-              📥 Importar Excel MRW
-              <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="syncExcelMRW(this)">
-            </label>
-            <input type="text" id="orderSearch" placeholder="Buscar un pedido" class="search-input"
-              style="padding:7px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"
-              oninput="filterOrders(this.value)"/>
-          </div>
-          <!-- Fila 2: Fechas | Tiendas | Estado — alineados a la derecha -->
-          <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-            <input type="date" id="filter-date-from" value=""
-              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-            <span style="color:#6b7280;font-size:13px;">—</span>
-            <input type="date" id="filter-date-to" value=""
-              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-            <select id="filter-shop-inline"
-              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-              <option value="">Todas las tiendas</option>
-            </select>
-            <select id="filter-status"
-              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-              <option value="">Todos los estados</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="entregado">Entregado</option>
-              <option value="en_transito">En tránsito</option>
-              <option value="devuelto">Devuelto</option>
-              <option value="destruido">Destruido</option>
-              <option value="franquicia">Franquicia</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-          </div>
-          <!-- Fila 3: Botones Filtrar y Limpiar debajo, alineados a la derecha, mismo tamaño que btn-sync -->
-          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;">
-            <button onclick="applyFilters()" class="btn-sync"
-              style="background:#16a34a;border:none;color:#fff;">
-              Filtrar
-            </button>
-            <button onclick="clearFiltersInline()" class="btn-sync"
-              style="background:#fff;border:1px solid #e5e7eb;color:#6b7280;">
-              Limpiar
-            </button>
+       <div class="filters">
+          <!-- FILA ÚNICA: Filtros izquierda | Acciones derecha -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:10px;width:100%;">
+
+            <!-- IZQUIERDA: filtros -->
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <input type="date" id="filter-date-from" value=""
+                onchange="applyFilters()"
+                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+              <span style="color:#6b7280;font-size:13px;">—</span>
+              <input type="date" id="filter-date-to" value=""
+                onchange="applyFilters()"
+                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+              <select id="filter-shop-inline"
+                onchange="applyFilters()"
+                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+                <option value="">Todas las tiendas</option>
+              </select>
+              <select id="filter-status"
+                onchange="applyFilters()"
+                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="entregado">Entregado</option>
+                <option value="en_transito">En tránsito</option>
+                <option value="devuelto">Devuelto</option>
+                <option value="destruido">Destruido</option>
+                <option value="franquicia">Franquicia</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+              <button onclick="clearFiltersInline()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
+            </div>
+
+            <!-- DERECHA: Sincronizar e Importar -->
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button class="btn-sync" onclick="syncAndRefreshOrders()">
+                <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Sincronizar
+              </button>
+              <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+                📥 Importar Excel MRW
+                <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="syncExcelMRW(this)">
+              </label>
+            </div>
+
           </div>
         </div>
 
         <div class="tabs">
+
           <span class="tab active" onclick="filterByTab(this, '')">Todos</span>
           <span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
           <span class="tab" onclick="filterByTab(this, 'entregado')">Entregado</span>
@@ -1041,6 +1039,8 @@ if (id === "pedidos") {
           <span class="tab" onclick="filterByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
           <span class="tab" onclick="filterByTab(this, 'franquicia')">Franquicia</span>
         </div>
+
+        <div id="orders-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
 
         <div class="orders-table">
           <div class="orders-row head" style="display:grid;grid-template-columns:150px 110px 130px 160px 150px 1fr 110px;gap:0;">
@@ -2788,6 +2788,14 @@ function renderOrdersPage() {
   const totalPages = Math.ceil(currentDisplayOrders.length / ORDERS_PER_PAGE);
   const start = (currentOrdersPage - 1) * ORDERS_PER_PAGE;
   const pageOrders = currentDisplayOrders.slice(start, start + ORDERS_PER_PAGE);
+
+  const counter = document.getElementById("orders-counter");
+  if (counter) {
+    const total = currentDisplayOrders.length;
+    const desde = total === 0 ? 0 : start + 1;
+    const hasta = Math.min(start + ORDERS_PER_PAGE, total);
+    counter.textContent = `Mostrando ${desde}–${hasta} de ${total} pedidos`;
+  }
 
   body.innerHTML = pageOrders.map(o => {
     let paymentBadge = "-";
