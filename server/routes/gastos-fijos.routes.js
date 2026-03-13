@@ -133,6 +133,47 @@ router.get("/", auth, (req, res) => {
   );
 });
 
+// ── POST /reset — limpiar filas vacías basura y garantizar MRW/LOGÍSTICA ──
+router.post("/reset", auth, (req, res) => {
+  const userId = req.user.id;
+
+  // 1. Borrar filas vacías sin nombre (basura de intentos anteriores)
+  db.run(
+    `DELETE FROM gastos_fijos WHERE user_id=? AND fijo=0 AND (nombre IS NULL OR nombre='')`,
+    [userId],
+    () => {
+      // 2. Verificar qué fijos existen
+      db.all(`SELECT nombre FROM gastos_fijos WHERE user_id=? AND fijo=1`, [userId], (err, fijos) => {
+        if (err) return res.status(500).json({ error: "Error BD" });
+
+        const nombres = (fijos || []).map(f => f.nombre);
+        const inserts = [];
+
+        if (!nombres.includes("MRW"))
+          inserts.push([userId, "MRW", 0, 1, 0]);
+        if (!nombres.includes("LOGÍSTICA"))
+          inserts.push([userId, "LOGÍSTICA", 0, 1, 1]);
+
+        // 3. Añadir 5 filas vacías editables
+        for (let orden = 2; orden <= 6; orden++) {
+          inserts.push([userId, "", null, 0, orden]);
+        }
+
+        let done = 0;
+        if (inserts.length === 0) return res.json({ ok: true });
+
+        inserts.forEach(vals => {
+          db.run(
+            `INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?,?,?,?,?)`,
+            vals,
+            () => { if (++done === inserts.length) res.json({ ok: true }); }
+          );
+        });
+      });
+    }
+  );
+});
+
 // ── POST — crear gasto fijo ─────────────────────────────
 router.post("/", auth, (req, res) => {
   const { nombre, precio_unit, fijo, orden } = req.body;
