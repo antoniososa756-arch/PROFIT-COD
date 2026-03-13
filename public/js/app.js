@@ -1008,11 +1008,11 @@ if (id === "pedidos") {
 
         <div class="tabs">
           <span class="tab active" onclick="filterByTab(this, '')">Todos</span>
-          <span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
-          <span class="tab" onclick="filterByTab(this, 'en_preparacion')">En preparación</span>
-          <span class="tab" onclick="filterByTab(this, 'enviado')">Enviado</span>
-          <span class="tab" onclick="filterByTab(this, 'devuelto')">Devuelto</span>
-          <span class="tab" onclick="filterByTab(this, 'cancelado')">Cancelado</span>
+<span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
+<span class="tab" onclick="filterByTab(this, 'entregado')">Entregado</span>
+<span class="tab" onclick="filterByTab(this, 'en_transito')">En tránsito</span>
+<span class="tab" onclick="filterByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
+<span class="tab" onclick="filterByTab(this, 'franquicia')">Franquicia</span>
         </div>
 
         <div class="orders-table">
@@ -3066,11 +3066,12 @@ async function toggleFilterPanel() {
         <select id="filter-status"
           style="width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#fff;">
           <option value="">Todos</option>
-          <option value="pendiente" ${activeFilters.status==="pendiente"?"selected":""}>Pendiente</option>
-          <option value="en_preparacion" ${activeFilters.status==="en_preparacion"?"selected":""}>En preparación</option>
-          <option value="enviado" ${activeFilters.status==="enviado"?"selected":""}>Enviado</option>
-          <option value="devuelto" ${activeFilters.status==="devuelto"?"selected":""}>Devuelto</option>
-          <option value="cancelado" ${activeFilters.status==="cancelado"?"selected":""}>Cancelado</option>
+<option value="pendiente" ${activeFilters.status==="pendiente"?"selected":""}>Pendiente</option>
+<option value="entregado" ${activeFilters.status==="entregado"?"selected":""}>Entregado</option>
+<option value="en_transito" ${activeFilters.status==="en_transito"?"selected":""}>En tránsito</option>
+<option value="devuelto" ${activeFilters.status==="devuelto"?"selected":""}>Devuelto</option>
+<option value="destruido" ${activeFilters.status==="destruido"?"selected":""}>Destruido</option>
+<option value="franquicia" ${activeFilters.status==="franquicia"?"selected":""}>Franquicia</option>
         </select>
       </div>
 
@@ -3203,7 +3204,14 @@ function filterByTab(el, status) {
   const filtered = allOrders.filter(o => o.fulfillment_status === status);
   renderOrders(filtered);
 }
+function filterByTabMulti(el, statuses) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  const filtered = allOrders.filter(o => statuses.includes(o.fulfillment_status));
+  renderOrders(filtered);
+}
 window.filterByTab = filterByTab;
+window.filterByTabMulti = filterByTabMulti;
 
 
 
