@@ -979,6 +979,7 @@ if (id === "pedidos") {
   if (s) s.textContent = "Gestión de pedidos";
   if (c) c.textContent = "Pedidos";
 
+  box.className = "card";
   box.innerHTML = `
       <div class="orders-header">
 
