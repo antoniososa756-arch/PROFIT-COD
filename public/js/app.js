@@ -1088,11 +1088,11 @@ if (id === "pedidos") {
     window.__ordersInterval = setInterval(() => {
       syncAndRefreshOrders();
     }, 5 * 60 * 1000);
-  }
 
   closeAllDrops();
   closeSearchDrop();
   return;
+}
 
 // =========================
 // SECCIÓN FACTURAS
