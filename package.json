@@ -6,6 +6,7 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "node-fetch": "^3.3.2",
+    "pg": "^8.20.0",
     "sqlite3": "^5.1.7"
   },
   "name": "app",
