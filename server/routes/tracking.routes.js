@@ -8,12 +8,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 function mapMRWStatus(texto) {
   const t = (texto || "").toLowerCase();
   if (t.includes("entregado")) return "entregado";
-  if (t.includes("reparto")) return "en_reparto";
-  if (t.includes("tránsito") || t.includes("transito") || t.includes("tr&#225;nsito")) return "en_transito";
-  if (t.includes("devuelto") || t.includes("retorno")) return "devuelto";
-  if (t.includes("destruido")) return "destruido";
-  if (t.includes("ausente") || t.includes("no entregado")) return "no_entregado";
-  if (t.includes("pendiente")) return "pendiente";
+  if (t.includes("devuelto") || t.includes("retorno") || t.includes("no acepta")) return "devuelto";
+  if (t.includes("destruir") || t.includes("destruido")) return "destruido";
+  if (t.includes("recoger en franquicia") || t.includes("franquicia destino")) return "franquicia";
   return "en_transito";
 }
 
@@ -71,16 +68,15 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
     for (const row of rows) {
       const tracking = String(row["Número Envío"] || "").trim();
       const estadoRaw = String(row["Estado_1"] || "").trim().toLowerCase();
+
+      // Si no tiene tracking, no tocar (se queda como pendiente)
       if (!tracking || !estadoRaw) continue;
 
       let status = "en_transito";
       if (estadoRaw.includes("entregado")) status = "entregado";
-      else if (estadoRaw.includes("reparto")) status = "enviado";
-      else if (estadoRaw.includes("devuelto") || estadoRaw.includes("no acepta")) status = "devuelto";
-      else if (estadoRaw.includes("destruir") || estadoRaw.includes("cancelado") || estadoRaw.includes("anula")) status = "cancelado";
-      else if (estadoRaw.includes("ausente") || estadoRaw.includes("aplazada") || estadoRaw.includes("cobro")) status = "no_entregado";
-      else if (estadoRaw.includes("tránsito") || estadoRaw.includes("transito") || estadoRaw.includes("plataforma") || estadoRaw.includes("franquicia") || estadoRaw.includes("recibido") || estadoRaw.includes("salida") || estadoRaw.includes("recogido") || estadoRaw.includes("concertada")) status = "en_transito";
-      else if (estadoRaw.includes("pendiente")) status = "pendiente";
+      else if (estadoRaw.includes("devuelto") || estadoRaw.includes("no acepta") || estadoRaw.includes("retorno")) status = "devuelto";
+      else if (estadoRaw.includes("destruir") || estadoRaw.includes("destruido")) status = "destruido";
+      else if (estadoRaw.includes("recoger en franquicia") || estadoRaw.includes("franquicia destino")) status = "franquicia";
 
       const result = await req.db.run(
         `UPDATE orders SET fulfillment_status = ? WHERE tracking_number = ? AND shop_id IN (SELECT id FROM shops WHERE user_id = ?)`,

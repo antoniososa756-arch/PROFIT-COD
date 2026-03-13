@@ -2758,7 +2758,11 @@ function statusClass(s) {
     pendiente: "yellow",
     en_preparacion: "blue",
     enviado: "green",
+    en_transito: "blue",
+    entregado: "green",
     devuelto: "orange",
+    destruido: "red",
+    franquicia: "purple",
     cancelado: "red",
   };
   return map[s] || "yellow";
@@ -2769,7 +2773,11 @@ function statusLabel(s) {
     pendiente: "Pendiente",
     en_preparacion: "En preparación",
     enviado: "Enviado",
+    en_transito: "En tránsito",
+    entregado: "Entregado",
     devuelto: "Devuelto",
+    destruido: "Destruido",
+    franquicia: "Franquicia",
     cancelado: "Cancelado",
   };
   return map[s] || "Pendiente";
