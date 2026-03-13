@@ -70,7 +70,7 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
     let updated = 0;
     for (const row of rows) {
       const tracking = String(row["Número Envío"] || "").trim();
-      const estadoRaw = String(row["Estado"] || "").trim().toLowerCase();
+      const estadoRaw = String(row["Estado_1"] || "").trim().toLowerCase();
       if (!tracking || !estadoRaw) continue;
 
       let status = "en_transito";
