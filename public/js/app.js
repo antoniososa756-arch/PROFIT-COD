@@ -1106,7 +1106,7 @@ if (id === "gastos-ads") {
         </select>
         <select id="ads-year-sel"
           style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-          ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
+          ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
         <button onclick="loadAdsTable()"
           style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
@@ -1173,7 +1173,7 @@ if (id === "gastos-varios") {
         </select>
         <select id="gv-year-sel"
           style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-          ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
+          ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
         <button onclick="loadGastosVarios()"
           style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
@@ -1508,7 +1508,7 @@ function switchFacturasTab(key) {
           ${Array.from({length:12},(_,i)=>{const d=new Date();d.setMonth(i);return `<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${d.toLocaleString("es",{month:"long"})}</option>`;}).join("")}
         </select>
         <select id="ads-year-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-          ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
+          ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
         <button onclick="loadAdsTable()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
       </div>
@@ -1538,7 +1538,7 @@ function switchFacturasTab(key) {
           ${["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"].map((m,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${m}</option>`).join("")}
         </select>
         <select id="gv-year-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-          ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
+          ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
         <button onclick="loadGastosVarios()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
       </div>
@@ -2194,8 +2194,6 @@ async function loadGastosFijosData() {
       { nombre: "", precio_unit: null, fijo: 0, orden: 2 },
       { nombre: "", precio_unit: null, fijo: 0, orden: 3 },
       { nombre: "", precio_unit: null, fijo: 0, orden: 4 },
-      { nombre: "", precio_unit: null, fijo: 0, orden: 5 },
-      { nombre: "", precio_unit: null, fijo: 0, orden: 6 },
     ];
     for (let i = 0; i < defaults.length; i++) {
       try {
@@ -2387,12 +2385,15 @@ async function updateGastoFijo(input) {
 
 async function addGastoFijo() {
   try {
-    await fetch(`${API_BASE}/api/gastos-fijos`, {
+    const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
       method: "POST",
       headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
       body: JSON.stringify({ nombre:"", precio_unit:null, fijo:0, orden:999 })
     });
-    loadGastosFijosData();
+    const saved = await r.json();
+    if (saved && saved.id) {
+      await loadGastosFijosData();
+    }
   } catch(e) { console.error(e); }
 }
 
