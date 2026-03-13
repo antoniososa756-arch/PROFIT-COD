@@ -43,20 +43,9 @@ db.run(`
 `, () => {});
 
 // ── GET — gastos fijos + valores + precios del mes ──────
-// ── GET — gastos fijos + valores + precios del mes ──────
 router.get("/", auth, (req, res) => {
   const { mes } = req.query;
   const userId = req.user.id;
-
-  const defaults = [
-    { nombre: "MRW",       precio_unit: 0,    fijo: 1, orden: 0 },
-    { nombre: "LOGÍSTICA", precio_unit: 0,    fijo: 1, orden: 1 },
-    { nombre: "",          precio_unit: null, fijo: 0, orden: 2 },
-    { nombre: "",          precio_unit: null, fijo: 0, orden: 3 },
-    { nombre: "",          precio_unit: null, fijo: 0, orden: 4 },
-    { nombre: "",          precio_unit: null, fijo: 0, orden: 5 },
-    { nombre: "",          precio_unit: null, fijo: 0, orden: 6 },
-  ];
 
   const fetchAndRespond = () => {
     db.all(
@@ -86,21 +75,62 @@ router.get("/", auth, (req, res) => {
     );
   };
 
-  db.all(`SELECT id FROM gastos_fijos WHERE user_id=?`, [userId], (err, existing) => {
-    if (err) return res.status(500).json({ error: "Error BD" });
+  // Verificar si ya existen MRW y LOGÍSTICA para este usuario
+  db.all(
+    `SELECT nombre FROM gastos_fijos WHERE user_id=? AND fijo=1`,
+    [userId],
+    (err, fijos) => {
+      if (err) return res.status(500).json({ error: "Error BD" });
 
-    if (existing.length > 0) return fetchAndRespond();
+      const nombres = fijos.map(f => f.nombre);
+      const tareas = [];
 
-    // Seed defaults
-    let done = 0;
-    defaults.forEach((d, i) => {
-      db.run(
-        `INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?,?,?,?,?)`,
-        [userId, d.nombre, d.precio_unit, d.fijo, d.orden],
-        () => { if (++done === defaults.length) fetchAndRespond(); }
-      );
-    });
-  });
+      if (!nombres.includes("MRW")) {
+        tareas.push(new Promise((resolve) => {
+          db.run(
+            `INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?,?,?,?,?)`,
+            [userId, "MRW", 0, 1, 0],
+            () => resolve()
+          );
+        }));
+      }
+
+      if (!nombres.includes("LOGÍSTICA")) {
+        tareas.push(new Promise((resolve) => {
+          db.run(
+            `INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?,?,?,?,?)`,
+            [userId, "LOGÍSTICA", 0, 1, 1],
+            () => resolve()
+          );
+        }));
+      }
+
+      // Si no hay ninguna fila en absoluto, crear también las filas vacías editables
+      db.all(`SELECT id FROM gastos_fijos WHERE user_id=?`, [userId], (err2, all) => {
+        if (err2) return res.status(500).json({ error: "Error BD" });
+
+        const filasVacias = all.length === 0 || (all.length <= 2 && tareas.length > 0);
+
+        if (filasVacias) {
+          for (let orden = 2; orden <= 6; orden++) {
+            tareas.push(new Promise((resolve) => {
+              db.run(
+                `INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?,?,?,?,?)`,
+                [userId, "", null, 0, orden],
+                () => resolve()
+              );
+            }));
+          }
+        }
+
+        if (tareas.length > 0) {
+          Promise.all(tareas).then(() => fetchAndRespond());
+        } else {
+          fetchAndRespond();
+        }
+      });
+    }
+  );
 });
 
 // ── POST — crear gasto fijo ─────────────────────────────
