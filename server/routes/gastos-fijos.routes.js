@@ -49,7 +49,6 @@ router.get("/", auth, async (req, res) => {
 router.post("/reset", auth, async (req, res) => {
   const userId = req.user.id;
   try {
-    await db.run("DELETE FROM gastos_fijos WHERE user_id = ? AND fijo = 0 AND (nombre IS NULL OR nombre = '')", [userId]);
     await ensureBaseRows(userId);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: "Error BD" }); }
