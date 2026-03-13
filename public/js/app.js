@@ -2543,7 +2543,6 @@ async function saveGastoVarioShopify(input) {
     await loadGastosVarios();
   } catch(e) { console.error(e); }
 }
-window.saveGastoVarioShopify = saveGastoVarioShopify;
 
 window.loadGastosVarios      = loadGastosVarios;
 window.saveGastoVarioShopify = saveGastoVarioShopify;
