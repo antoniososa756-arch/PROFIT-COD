@@ -1,6 +1,9 @@
 const express = require("express");
 const auth = require("../middlewares/auth");
+const multer = require("multer");
+const XLSX = require("xlsx");
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 function mapMRWStatus(texto) {
   const t = (texto || "").toLowerCase();
@@ -55,9 +58,6 @@ router.get("/:tracking", auth, async (req, res) => {
     res.status(500).json({ error: "Error consultando MRW" });
   }
 });
-const multer = require("multer");
-const XLSX = require("xlsx");
-const upload = multer({ storage: multer.memoryStorage() });
 
 router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
   try {
@@ -83,7 +83,7 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
       else if (estadoRaw.includes("pendiente")) status = "pendiente";
 
       const result = await req.db.run(
-        `UPDATE orders SET fulfillment_status = ? WHERE tracking_number = ? AND user_id = ?`,
+        `UPDATE orders SET fulfillment_status = ? WHERE tracking_number = ? AND shop_id IN (SELECT id FROM shops WHERE user_id = ?)`,
         [status, tracking, req.user.id]
       );
       if (result.changes > 0) updated++;
