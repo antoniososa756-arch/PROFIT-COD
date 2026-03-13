@@ -60,6 +60,7 @@ if (location.pathname.includes("login")) {
 
 // 🧱 CONTENEDOR PRINCIPAL (OBLIGATORIO)
 
+let currentUser = {};
 const appEl = document.getElementById("app");
 let gastosExtras = {};
 
@@ -562,15 +563,15 @@ function loadApp(section) {
       el.onclick = () => {
         setSection(el.dataset.id);
       };
+    });
 
     document.querySelectorAll(".menu-subitem").forEach((el) => {
       el.onclick = () => setSection(el.dataset.id);
     });
 
     setSection(section);
-
     ensureOutsideClose();
-  }
+}
 
 function setSection(id) {
   const d = dict();
