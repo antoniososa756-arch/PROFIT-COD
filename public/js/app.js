@@ -61,6 +61,7 @@ if (location.pathname.includes("login")) {
 // 🧱 CONTENEDOR PRINCIPAL (OBLIGATORIO)
 
 const appEl = document.getElementById("app");
+let gastosExtras = {};
 
 if (!appEl) {
   console.error("❌ No existe <div id='app'> en index.html");
@@ -2076,9 +2077,6 @@ async function loadGastosFijosData() {
   } catch {}
 
   // Si no hay filas base creadas aún, crearlas UNA SOLA VEZ
-  const rowsBase = await fetch(`${API_BASE}/api/gastos-fijos`, {
-    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-  }).then(r => r.json()).catch(() => []);
 
   if (items.length === 0) {
     const defaults = [
@@ -2444,7 +2442,8 @@ async function loadGastosVarios() {
     const shopify = gastosVarios[store.domain] || 0;
     const mrw       = 0;
     const logistica = 0;
-    const total   = ads.meta + ads.tiktok + shopify + fijoXTienda + mrw + logistica;
+    const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+    const total = ads.meta + ads.tiktok + shopify + fijoXTienda + mrw + logistica + extrasTotal;
 
     return `
       <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:220px;flex:1;">
@@ -3094,11 +3093,6 @@ window.toggleFilterPanel = toggleFilterPanel;
 window.selectFilterShop = selectFilterShop;
 window.applyFilters = applyFilters;
 window.clearFilters = clearFilters;
-
-// =========================
-// GASTOS EXTRAS POR TIENDA
-// =========================
-let gastosExtras = {};
 
 function addGastoExtra(shop) {
   if (!gastosExtras[shop]) gastosExtras[shop] = [];
