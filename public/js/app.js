@@ -810,7 +810,7 @@ if (id === "crear-cliente") {
     const password = document.getElementById("clientPassword").value.trim();
 
     try {
-      const res = await fetch("${API_BASE}/api/auth/create-user", {
+      const res = await fetch(`${API_BASE}/api/auth/create-user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
