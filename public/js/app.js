@@ -2115,32 +2115,29 @@ async function loadGastosFijos() {
   const wrap = document.getElementById("gastos-fijos-wrap");
   if (!wrap) return;
 
-  // Selector de mes/año si no existe, crearlo
-  if (!document.getElementById("gf-month-sel")) {
-    const now = new Date();
-    const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-    wrap.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
-        <select id="gf-month-sel"
-          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-          ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
-        </select>
-        <select id="gf-year-sel"
-          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-          ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
-        </select>
-        <button onclick="loadGastosFijosData()"
-          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-          Ver
-        </button>
-        <button onclick="copiarMesAnteriorGF()"
-          style="padding:7px 16px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-          📋 Copiar mes anterior
-        </button>
-      </div>
-      <div id="gf-content"></div>
-    `;
-  }
+  const now = new Date();
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+      <select id="gf-month-sel"
+        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
+      </select>
+      <select id="gf-year-sel"
+        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
+      </select>
+      <button onclick="loadGastosFijosData()"
+        style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        Ver
+      </button>
+      <button onclick="copiarMesAnteriorGF()"
+        style="padding:7px 16px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        📋 Copiar mes anterior
+      </button>
+    </div>
+    <div id="gf-content"></div>
+  `;
 
   await loadGastosFijosData();
 }
