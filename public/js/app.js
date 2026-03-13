@@ -1043,7 +1043,8 @@ if (id === "pedidos") {
         <div id="orders-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
 
         <div class="orders-table">
-          <div class="orders-row head" style="display:grid;grid-template-columns:150px 110px 130px 160px 150px 1fr 110px;gap:0;">
+          <div class="orders-row head" style="display:grid;grid-template-columns:30px 150px 110px 130px 160px 150px 1fr 110px;gap:0;">
+            <div>#</div>
             <div>Pedido</div>
             <div>Tipo de pago</div>
             <div>Fecha de creación</div>
@@ -2797,7 +2798,8 @@ function renderOrdersPage() {
     counter.textContent = `Mostrando ${desde}–${hasta} de ${total} pedidos`;
   }
 
-  body.innerHTML = pageOrders.map(o => {
+  body.innerHTML = pageOrders.map((o, idx) => {
+    const numero = start + idx + 1;
     let paymentBadge = "-";
     try {
       const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
@@ -2810,7 +2812,8 @@ function renderOrdersPage() {
     } catch(e) { paymentBadge = "-"; }
 
     return `
-    <div class="orders-row" style="display:grid;grid-template-columns:150px 110px 130px 160px 150px 1fr 110px;gap:0;">
+    <div class="orders-row" style="display:grid;grid-template-columns:30px 150px 110px 130px 160px 150px 1fr 110px;gap:0;">
+      <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
       <div>${escapeHtml(o.order_number || "-")}</div>
       <div>${paymentBadge}</div>
       <div>${o.created_at ? new Date(o.created_at).toLocaleDateString('es-ES') : "-"}</div>
