@@ -55,15 +55,24 @@ router.post("/connect-token", auth, async (req, res) => {
     const myshopifyDomain = data.shop.myshopify_domain.toLowerCase();
 
     await db.run(
-      `INSERT INTO shops (user_id, shop_domain, access_token, app_secret, status, last_sync)
-       VALUES (?, ?, ?, ?, 'active', now()::text)
-       ON CONFLICT(user_id, shop_domain) DO UPDATE SET
-         access_token = EXCLUDED.access_token,
-         app_secret = EXCLUDED.app_secret,
-         status = 'active',
-         last_sync = now()::text`,
-      [userId, myshopifyDomain, accessToken, appSecret]
-    );
+  `INSERT INTO shops (user_id, shop_domain, access_token, app_secret, status, last_sync)
+   VALUES (?, ?, ?, ?, 'active', now()::text)
+   ON CONFLICT(user_id, shop_domain) DO UPDATE SET
+     access_token = EXCLUDED.access_token,
+     app_secret = EXCLUDED.app_secret,
+     status = 'active',
+     last_sync = now()::text`,
+  [userId, myshopifyDomain, accessToken, appSecret]
+);
+
+// Reasignar pedidos huérfanos al shop recién conectado
+const newShop = await db.get("SELECT id FROM shops WHERE user_id = ? AND shop_domain = ?", [userId, myshopifyDomain]);
+if (newShop) {
+  await db.run(
+    `UPDATE orders SET shop_id = ? WHERE shop_id NOT IN (SELECT id FROM shops)`,
+    [newShop.id]
+  );
+}
 
     const webhookUrl = "https://profit-cod.onrender.com/api/shopify/webhooks/orders";
     const topics = ["orders/create", "orders/updated", "fulfillments/create", "fulfillments/update"];
