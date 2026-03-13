@@ -1549,33 +1549,53 @@ function switchFacturasTab(key) {
 
   if (key === "reembolsos") {
     content.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <input type="date" id="ree-date-from" value="" onchange="renderReembolsos()"
-            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-          <span style="color:#6b7280;font-size:13px;">—</span>
-          <input type="date" id="ree-date-to" value="" onchange="renderReembolsos()"
-            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-          <select id="ree-shop" onchange="renderReembolsos()"
-            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-            <option value="">Todas las tiendas</option>
-          </select>
-          <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
+      <div class="card" style="padding:20px;">
+        <div class="orders-header">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+            <div class="tabs" style="margin-bottom:0;border-bottom:none;">
+              <span class="tab active" onclick="filterReeByTab(this,'')">Todos</span>
+              <span class="tab" onclick="filterReeByTab(this,'pendiente')">Pendiente</span>
+              <span class="tab" onclick="filterReeByTab(this,'cobrado')">Pagado</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <input type="date" id="ree-date-from" value=""
+                  onchange="renderReembolsos()"
+                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+                <span style="color:#6b7280;font-size:13px;">—</span>
+                <input type="date" id="ree-date-to" value=""
+                  onchange="renderReembolsos()"
+                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+                <select id="ree-shop" onchange="renderReembolsos()"
+                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+                  <option value="">Todas las tiendas</option>
+                </select>
+                <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
+                <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;color:#16a34a;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+                  ✅ Importar Pagados
+                  <input type="file" accept=".pdf" style="display:none;" onchange="importarPagadosPDF(this)">
+                </label>
+              </div>
+          </div>
+          <div style="border-bottom:1px solid #e5e7eb;margin-bottom:12px;"></div>
+
+          <div id="ree-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
+
+          <div class="orders-table">
+            <div class="orders-row head" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
+              <div>#</div>
+              <div>Pedido</div>
+              <div>Nº seguimiento</div>
+              <div>Fecha de creación</div>
+              <div>Nombre del cliente</div>
+              <div>Costo</div>
+              <div>Estado del pago</div>
+            </div>
+            <div id="reeBody"><div class="muted" style="padding:16px;">Cargando...</div></div>
+          </div>
+
+          <div id="reePagination" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:18px 0 4px;flex-wrap:wrap;"></div>
         </div>
       </div>
-      <div id="ree-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
-      <div class="orders-table">
-        <div class="orders-row head" style="display:grid;grid-template-columns:40px 16% 14% 1fr 10% 14%;gap:0;">
-          <div>#</div>
-          <div>Pedido</div>
-          <div>Fecha de creación</div>
-          <div>Nombre del cliente</div>
-          <div>Costo</div>
-          <div>Estado del pago</div>
-        </div>
-        <div id="reeBody"><div class="muted" style="padding:16px;">Cargando...</div></div>
-      </div>
-      <div id="reePagination" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:18px 0 4px;flex-wrap:wrap;"></div>
     `;
     fetch(`${API_BASE}/api/shopify/stores`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
@@ -2871,7 +2891,7 @@ function renderOrdersPage() {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${paymentBadge}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleDateString('es-ES') : "-"}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.tracking_number || "-")}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
@@ -3526,6 +3546,7 @@ function renderReembolsos() {
   const dateFrom = document.getElementById("ree-date-from")?.value || "";
   const dateTo   = document.getElementById("ree-date-to")?.value || "";
   const shop     = document.getElementById("ree-shop")?.value || "";
+  const tabFilter = window.__reeTabFilter || "";
 
   let filtered = allReembolsos.filter(o => {
     if (shop && o.shop_domain !== shop) return false;
@@ -3536,6 +3557,11 @@ function renderReembolsos() {
     if (dateTo) {
       const d = new Date(o.created_at); const to = new Date(dateTo + "T23:59:59");
       if (d > to) return false;
+    }
+    if (tabFilter) {
+      const estadoPago = localStorage.getItem("ree_estado_" + o.id) || "pendiente";
+      if (tabFilter === "cobrado" && estadoPago !== "cobrado") return false;
+      if (tabFilter === "pendiente" && estadoPago !== "pendiente") return false;
     }
     return true;
   });
@@ -3573,25 +3599,24 @@ function renderReePage() {
     const estadoColor = estadoPago === "cobrado" ? "#16a34a" : estadoPago === "no_cobrado" ? "#dc2626" : "#f59e0b";
 
     return `
-    <div class="orders-row" style="display:grid;grid-template-columns:40px 16% 14% 1fr 10% 14%;gap:0;">
+    <div class="orders-row" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
       <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:500;font-size:12px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleDateString("es-ES") : "-"}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${escapeHtml(o.customer_name || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
-      <div>
-        <select onchange="cambiarEstadoReembolso('${o.id}', this.value)"
-          style="padding:4px 8px;border:1px solid ${estadoColor};border-radius:6px;font-size:12px;font-weight:600;color:${estadoColor};background:var(--card);cursor:pointer;font-family:inherit;">
-          <option value="pendiente" ${estadoPago==="pendiente"?"selected":""}>⏳ Pendiente</option>
-          <option value="cobrado" ${estadoPago==="cobrado"?"selected":""}>✅ Cobrado</option>
-          <option value="no_cobrado" ${estadoPago==="no_cobrado"?"selected":""}>❌ No cobrado</option>
-        </select>
+      <div style="display:flex;align-items:center;">
+        ${estadoPago === "cobrado"
+          ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:999px;font-size:12px;font-weight:600;color:#16a34a;">✅ Pagado</span>`
+          : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:999px;font-size:12px;font-weight:600;color:#92400e;">⏳ Pendiente</span>`
+        }
       </div>
     </div>`;
   }).join("");
 
   if (pagination) {
-    if (totalPages <= 1) { pagination.innerHTML = ""; return; }
+    if (totalPages < 1) { pagination.innerHTML = ""; return; }
     const p = currentReePage;
     const delta = 2;
     let pages = "";
@@ -3622,6 +3647,14 @@ function clearReembolsosFilters() {
   if (df) df.value = "";
   if (dt) dt.value = "";
   if (sh) sh.value = "";
+  window.__reeTabFilter = "";
+  renderReembolsos();
+}
+
+function filterReeByTab(el, estado) {
+  document.querySelectorAll(".tabs .tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  window.__reeTabFilter = estado;
   renderReembolsos();
 }
 
@@ -3630,3 +3663,66 @@ window.renderReembolsos       = renderReembolsos;
 window.goToReePage            = goToReePage;
 window.cambiarEstadoReembolso = cambiarEstadoReembolso;
 window.clearReembolsosFilters = clearReembolsosFilters;
+window.filterReeByTab         = filterReeByTab;
+
+// =========================
+// IMPORTAR PAGADOS DESDE PDF MRW
+// =========================
+async function importarPagadosPDF(input) {
+  const file = input.files[0];
+  input.value = "";
+  if (!file) return;
+
+  try {
+    // Leer el PDF como texto usando FileReader
+    const arrayBuffer = await file.arrayBuffer();
+
+    // Cargar pdf.js desde CDN
+    if (!window.pdfjsLib) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      fullText += content.items.map(item => item.str).join(" ") + " ";
+    }
+
+    // Extraer todos los números de seguimiento que empiezan por 04700
+    const matches = [...new Set(fullText.match(/04700[A-Z0-9]{6,12}/g) || [])];
+
+    if (matches.length === 0) {
+      alert("❌ No se encontraron números de seguimiento 04700 en el PDF");
+      return;
+    }
+
+    // Marcar como cobrados los pedidos que coincidan
+    let actualizados = 0;
+    allReembolsos.forEach(o => {
+      const tracking = (o.tracking_number || "").trim().toUpperCase();
+      if (matches.some(m => m.toUpperCase() === tracking)) {
+        localStorage.setItem("ree_estado_" + o.id, "cobrado");
+        actualizados++;
+      }
+    });
+
+    alert(`✅ ${actualizados} reembolsos marcados como Pagados\n(${matches.length} seguimientos encontrados en el PDF)`);
+    renderReembolsos();
+
+  } catch(e) {
+    console.error(e);
+    alert("❌ Error leyendo el PDF: " + e.message);
+  }
+}
+window.importarPagadosPDF = importarPagadosPDF;
