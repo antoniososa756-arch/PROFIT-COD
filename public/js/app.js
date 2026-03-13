@@ -981,28 +981,29 @@ if (id === "pedidos") {
 
   box.innerHTML = `
       <div class="orders-header">
+
         <div class="filters">
 
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;width:100%;">
-          <button class="btn-sync" onclick="syncAndRefreshOrders()">
-            <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Sincronizar
-          </button>
-          <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-            📥 Importar Excel MRW
-            <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="syncExcelMRW(this)">
-          </label>
-          <input
-            type="text"
-            id="orderSearch"
-            placeholder="Buscar un pedido"
-            class="search-input"
-            style="padding:7px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"
-            oninput="filterOrders(this.value)"
-          />
-        </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;width:100%;">
+            <button class="btn-sync" onclick="syncAndRefreshOrders()">
+              <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Sincronizar
+            </button>
+            <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+              📥 Importar Excel MRW
+              <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="syncExcelMRW(this)">
+            </label>
+            <input
+              type="text"
+              id="orderSearch"
+              placeholder="Buscar un pedido"
+              class="search-input"
+              style="padding:7px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"
+              oninput="filterOrders(this.value)"
+            />
+          </div>
 
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;width:100%;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;width:100%;">
             <input type="date" id="filter-date-from" value=""
               style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
             <span style="color:#6b7280;font-size:13px;">—</span>
@@ -1031,15 +1032,17 @@ if (id === "pedidos") {
               style="padding:7px 14px;background:transparent;color:#6b7280;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">
               Limpiar
             </button>
+          </div>
+
         </div>
 
         <div class="tabs">
           <span class="tab active" onclick="filterByTab(this, '')">Todos</span>
-<span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
-<span class="tab" onclick="filterByTab(this, 'entregado')">Entregado</span>
-<span class="tab" onclick="filterByTab(this, 'en_transito')">En tránsito</span>
-<span class="tab" onclick="filterByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
-<span class="tab" onclick="filterByTab(this, 'franquicia')">Franquicia</span>
+          <span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
+          <span class="tab" onclick="filterByTab(this, 'entregado')">Entregado</span>
+          <span class="tab" onclick="filterByTab(this, 'en_transito')">En tránsito</span>
+          <span class="tab" onclick="filterByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
+          <span class="tab" onclick="filterByTab(this, 'franquicia')">Franquicia</span>
         </div>
 
         <div class="orders-table">
@@ -1057,6 +1060,7 @@ if (id === "pedidos") {
             <div class="muted" style="padding:16px;">Cargando pedidos...</div>
           </div>
         </div>
+
       </div>
     `;
 
