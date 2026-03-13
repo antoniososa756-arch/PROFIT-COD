@@ -43,48 +43,64 @@ db.run(`
 `, () => {});
 
 // ── GET — gastos fijos + valores + precios del mes ──────
+// ── GET — gastos fijos + valores + precios del mes ──────
 router.get("/", auth, (req, res) => {
   const { mes } = req.query;
   const userId = req.user.id;
 
-  db.all(
-    `SELECT * FROM gastos_fijos WHERE user_id=? ORDER BY orden ASC, id ASC`,
-    [userId],
-    (err, items) => {
-      if (err) return res.status(500).json({ error: "Error BD" });
-      if (!mes) return res.json(items.map(i => ({ ...i, valor: 0 })));
+  const defaults = [
+    { nombre: "MRW",       precio_unit: 0,    fijo: 1, orden: 0 },
+    { nombre: "LOGÍSTICA", precio_unit: 0,    fijo: 1, orden: 1 },
+    { nombre: "",          precio_unit: null, fijo: 0, orden: 2 },
+    { nombre: "",          precio_unit: null, fijo: 0, orden: 3 },
+    { nombre: "",          precio_unit: null, fijo: 0, orden: 4 },
+    { nombre: "",          precio_unit: null, fijo: 0, orden: 5 },
+    { nombre: "",          precio_unit: null, fijo: 0, orden: 6 },
+  ];
 
-      db.all(
-        `SELECT * FROM gastos_fijos_valores WHERE user_id=? AND mes=?`,
-        [userId, mes],
-        (err2, valores) => {
+  const fetchAndRespond = () => {
+    db.all(
+      `SELECT * FROM gastos_fijos WHERE user_id=? ORDER BY orden ASC, id ASC`,
+      [userId],
+      (err, items) => {
+        if (err) return res.status(500).json({ error: "Error BD" });
+        if (!mes) return res.json(items.map(i => ({ ...i, valor: 0 })));
+
+        db.all(`SELECT * FROM gastos_fijos_valores WHERE user_id=? AND mes=?`, [userId, mes], (err2, valores) => {
           if (err2) return res.status(500).json({ error: "Error BD valores" });
+          db.all(`SELECT * FROM gastos_fijos_precios WHERE user_id=? AND mes=?`, [userId, mes], (err3, precios) => {
+            if (err3) return res.status(500).json({ error: "Error BD precios" });
+            const mapVal = {};
+            valores.forEach(v => { mapVal[v.gasto_id] = v.valor; });
+            const mapPre = {};
+            precios.forEach(p => { mapPre[p.gasto_id] = p.precio_unit; });
+            const result = items.map(i => ({
+              ...i,
+              valor: mapVal[i.id] !== undefined ? mapVal[i.id] : 0,
+              precio_unit: mapPre[i.id] !== undefined ? mapPre[i.id] : (i.precio_unit ?? 0)
+            }));
+            res.json(result);
+          });
+        });
+      }
+    );
+  };
 
-          db.all(
-            `SELECT * FROM gastos_fijos_precios WHERE user_id=? AND mes=?`,
-            [userId, mes],
-            (err3, precios) => {
-              if (err3) return res.status(500).json({ error: "Error BD precios" });
+  db.all(`SELECT id FROM gastos_fijos WHERE user_id=?`, [userId], (err, existing) => {
+    if (err) return res.status(500).json({ error: "Error BD" });
 
-              const mapVal = {};
-              valores.forEach(v => { mapVal[v.gasto_id] = v.valor; });
+    if (existing.length > 0) return fetchAndRespond();
 
-              const mapPre = {};
-              precios.forEach(p => { mapPre[p.gasto_id] = p.precio_unit; });
-
-              const result = items.map(i => ({
-                ...i,
-                valor: mapVal[i.id] !== undefined ? mapVal[i.id] : 0,
-                precio_unit: mapPre[i.id] !== undefined ? mapPre[i.id] : (i.precio_unit ?? 0)
-              }));
-
-              res.json(result);
-            }
-          );
-        }
+    // Seed defaults
+    let done = 0;
+    defaults.forEach((d, i) => {
+      db.run(
+        `INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?,?,?,?,?)`,
+        [userId, d.nombre, d.precio_unit, d.fijo, d.orden],
+        () => { if (++done === defaults.length) fetchAndRespond(); }
       );
-    }
-  );
+    });
+  });
 });
 
 // ── POST — crear gasto fijo ─────────────────────────────
