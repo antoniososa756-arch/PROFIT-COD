@@ -145,12 +145,12 @@ router.post("/sync-orders", auth, async (req, res) => {
             `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, tracking_number, total_price, currency, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(order_id) DO UPDATE SET
-  fulfillment_status = CASE
-    WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','franquicia','en_transito')
-    THEN orders.fulfillment_status
-    ELSE EXCLUDED.fulfillment_status
-  END,
-  tracking_number = COALESCE(EXCLUDED.tracking_number, orders.tracking_number)
+               fulfillment_status = CASE
+                 WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','franquicia','en_transito')
+                 THEN orders.fulfillment_status
+                 ELSE EXCLUDED.fulfillment_status
+               END,
+               tracking_number = COALESCE(EXCLUDED.tracking_number, orders.tracking_number)`,
             [shop.id, String(o.id), o.name || String(o.order_number), customerName, mapSyncStatus(o), o.fulfillments?.[0]?.tracking_number || null, o.total_price, o.currency, o.created_at]
           );
           total++;
