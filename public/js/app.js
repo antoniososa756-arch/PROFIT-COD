@@ -435,13 +435,6 @@ function loadApp(section) {
       ${menuItem("productos", labels)}
       ${menuItem("pedidos", labels)}
       ${menuItem("facturas", labels)}
-      <div class="submenu" id="submenu-facturas" style="display:none;">
-        <div class="menu-subitem" data-id="reembolsos">Reembolsos</div>
-        <div class="menu-subitem" data-id="gastos-ads">Gastos Ads</div>
-        <div class="menu-subitem" data-id="gastos-fijos">Gastos Fijos</div>
-        <div class="menu-subitem" data-id="gastos-varios">Gastos Varios</div>
-        <div class="menu-subitem" data-id="nomina">Nómina</div>
-      </div>
       ${menuItem("informes", labels)}
       ${menuItem("ayuda", labels)}
 
@@ -567,17 +560,8 @@ function loadApp(section) {
 
     document.querySelectorAll(".menu-item").forEach((el) => {
       el.onclick = () => {
-        if (el.dataset.id === "facturas") {
-          const sub = document.getElementById("submenu-facturas");
-          if (sub) {
-            const isOpen = sub.style.display === "block";
-            sub.style.display = isOpen ? "none" : "block";
-          }
-          return;
-        }
         setSection(el.dataset.id);
       };
-    });
 
     document.querySelectorAll(".menu-subitem").forEach((el) => {
       el.onclick = () => setSection(el.dataset.id);
@@ -1058,6 +1042,108 @@ if (id === "pedidos") {
   closeSearchDrop();
   return;
 }
+
+// =========================
+// SECCIÓN FACTURAS
+// =========================
+if (id === "facturas") {
+  if (t) t.textContent = "Facturas";
+  if (s) s.textContent = "Gestión de facturas";
+  if (c) c.textContent = "Facturas";
+  box.className = "";
+  box.removeAttribute("style");
+  box.innerHTML = `
+    <div id="facturas-wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
+        ${[
+          ["reembolsos","Reembolsos"],
+          ["gastos-ads","Gastos Ads"],
+          ["gastos-fijos","Gastos Fijos"],
+          ["gastos-tienda","Gastos por Tienda"],
+          ["nomina","Nómina"]
+        ].map(([key, label]) => `
+          <button id="tab-btn-${key}" onclick="switchFacturasTab('${key}')"
+            style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:var(--card);color:var(--text);">
+            ${label}
+          </button>
+        `).join("")}
+      </div>
+      <div id="facturas-content"></div>
+    </div>
+  `;
+  switchFacturasTab("reembolsos");
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
+async function switchFacturasTab(tab) {
+  ["reembolsos","gastos-ads","gastos-fijos","gastos-tienda","nomina"].forEach(k => {
+    const btn = document.getElementById(`tab-btn-${k}`);
+    if (!btn) return;
+    if (k === tab) { btn.style.background="#16a34a"; btn.style.color="#fff"; btn.style.borderColor="#16a34a"; }
+    else { btn.style.background="var(--card)"; btn.style.color="var(--text)"; btn.style.borderColor="#e5e7eb"; }
+  });
+  const content = document.getElementById("facturas-content");
+  if (!content) return;
+
+  if (tab === "reembolsos") {
+    content.innerHTML = `<div style="padding:16px;color:#6b7280;">Próximamente</div>`;
+  } else if (tab === "gastos-ads") {
+    content.innerHTML = `<div id="gastos-ads-wrap"></div>`;
+    loadGastosAdsTab();
+  } else if (tab === "gastos-fijos") {
+    content.innerHTML = `<div id="gastos-fijos-wrap">Cargando...</div>`;
+    loadGastosFijos();
+  } else if (tab === "gastos-tienda") {
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+        <select id="gv-month-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"].map((m,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${m}</option>`).join("")}
+        </select>
+        <select id="gv-year-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
+        </select>
+        <button onclick="loadGastosVarios()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
+      </div>
+      <div id="gv-mes-label" style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;"></div>
+      <div id="gv-content"></div>
+    `;
+    loadGastosVarios();
+  } else if (tab === "nomina") {
+    content.innerHTML = `<div style="padding:16px;color:#6b7280;">Próximamente</div>`;
+  }
+}
+window.switchFacturasTab = switchFacturasTab;
+
+async function loadGastosAdsTab() {
+  const wrap = document.getElementById("gastos-ads-wrap");
+  if (!wrap) return;
+  const now = new Date();
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+      <select id="ads-shop-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;"><option value="">Cargando...</option></select>
+      <select id="ads-month-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${Array.from({length:12},(_,i)=>{const d=new Date();d.setMonth(i);return `<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${d.toLocaleString("es",{month:"long"})}</option>`;}).join("")}
+      </select>
+      <select id="ads-year-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${[2024,2025,2026].map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
+      </select>
+      <button onclick="loadAdsTable()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
+    </div>
+    <div id="ads-table-wrap" style="overflow-x:auto;"></div>
+  `;
+  fetch(`${API_BASE}/api/shopify/stores`, {
+    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+  }).then(r=>r.json()).then(stores => {
+    const sel = document.getElementById("ads-shop-sel");
+    if (!sel || !Array.isArray(stores)) return;
+    sel.innerHTML = stores.map(s=>`<option value="${s.domain}">${escapeHtml(s.shop_name||s.domain)}</option>`).join("");
+    loadAdsTable();
+  }).catch(()=>{});
+}
+window.loadGastosAdsTab = loadGastosAdsTab;
+
 
 // =========================
 // SECCIÓN GASTOS ADS
