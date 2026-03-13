@@ -2078,8 +2078,7 @@ async function loadGastosFijosData() {
 
   // Si no hay filas base creadas aún, crearlas UNA SOLA VEZ
 
-  if (items.length === 0) {
-    const defaults = [
+  if (items.length === 0 && document.getElementById("gf-content")) {
       { nombre: "MRW",       precio_unit: 0, fijo: 1, orden: 0 },
       { nombre: "LOGÍSTICA", precio_unit: 0, fijo: 1, orden: 1 },
       { nombre: "", precio_unit: null, fijo: 0, orden: 2 },
