@@ -1043,7 +1043,7 @@ if (id === "pedidos") {
         <div id="orders-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
 
         <div class="orders-table">
-          <div class="orders-row head" style="display:grid;grid-template-columns:30px 150px 110px 130px 160px 150px 1fr 110px;gap:0;">
+          <div class="orders-row head" style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;">
             <div>#</div>
             <div>Pedido</div>
             <div>Tipo de pago</div>
@@ -2812,15 +2812,15 @@ function renderOrdersPage() {
     } catch(e) { paymentBadge = "-"; }
 
     return `
-    <div class="orders-row" style="display:grid;grid-template-columns:30px 150px 110px 130px 160px 150px 1fr 110px;gap:0;">
-      <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
-      <div>${escapeHtml(o.order_number || "-")}</div>
-      <div>${paymentBadge}</div>
-      <div>${o.created_at ? new Date(o.created_at).toLocaleDateString('es-ES') : "-"}</div>
-      <div>${escapeHtml(o.tracking_number || "-")}</div>
-      <div><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
-      <div>${escapeHtml(o.customer_name || "-")}</div>
-      <div>${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
+    <div class="orders-row" style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;">
+      <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;overflow:hidden;">${numero}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${paymentBadge}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleDateString('es-ES') : "-"}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.tracking_number || "-")}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
     </div>`;
   }).join("");
 
