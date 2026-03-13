@@ -2540,11 +2540,10 @@ async function saveGastoVarioShopify(input) {
       headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
       body: JSON.stringify({ shop_domain: shop, mes, shopify })
     });
-    input.blur();
-    input.style.borderColor = "#16a34a";
-    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
+    await loadGastosVarios();
   } catch(e) { console.error(e); }
 }
+window.saveGastoVarioShopify = saveGastoVarioShopify;
 
 window.loadGastosVarios      = loadGastosVarios;
 window.saveGastoVarioShopify = saveGastoVarioShopify;
