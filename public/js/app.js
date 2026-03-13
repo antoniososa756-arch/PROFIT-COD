@@ -2073,6 +2073,11 @@ async function loadGastosFijosData() {
 
   let items = [];
   try {
+    // Asegurar que las filas base existen
+    await fetch(`${API_BASE}/api/gastos-fijos/reset`, {
+      method: "POST",
+      headers: { "Content-Type":"application/json", Authorization: "Bearer " + localStorage.getItem("token") }
+    });
     const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
