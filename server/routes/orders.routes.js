@@ -23,4 +23,11 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
+router.get("/debug", auth, async (req, res) => {
+  const userId = req.user.id;
+  const shops = await db.all("SELECT id, user_id, shop_domain FROM shops WHERE user_id = ?", [userId]);
+  const orders = await db.all("SELECT id, shop_id, order_number FROM orders LIMIT 5");
+  res.json({ shops, orders });
+});
+
 module.exports = router;
