@@ -3348,3 +3348,9 @@ function updateGastoExtraValor(input) {
 window.addGastoExtra          = addGastoExtra;
 window.updateGastoExtraNombre = updateGastoExtraNombre;
 window.updateGastoExtraValor  = updateGastoExtraValor;
+
+
+
+
+
+
