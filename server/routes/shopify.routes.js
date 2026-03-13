@@ -150,27 +150,18 @@ function mapSyncStatus(o) {
 
 router.post("/sync-orders", auth, async (req, res) => {
   const userId = req.user.id;
-  console.log("🔄 SYNC START user:", userId);
   try {
     const shops = await db.all("SELECT id, shop_domain, access_token FROM shops WHERE user_id = ? AND status = 'active'", [userId]);
-    console.log("🏪 SHOPS:", shops.length, shops.map(s => s.shop_domain));
     if (!shops.length) return res.json({ ok: true, synced: 0 });
 
     let total = 0;
     for (const shop of shops) {
       try {
-        console.log("📦 Fetching orders for:", shop.shop_domain);
         const r = await fetch(`https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250`, {
           headers: { "X-Shopify-Access-Token": shop.access_token },
         });
-        console.log("📦 Shopify response status:", r.status);
-        if (!r.ok) {
-          const txt = await r.text();
-          console.error("❌ Shopify error:", txt);
-          continue;
-        }
+        if (!r.ok) continue;
         const { orders } = await r.json();
-        console.log("📦 Orders received:", orders.length);
         for (const o of orders) {
           const customerName = o.customer ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim() : "Desconocido";
           await db.run(
@@ -187,12 +178,10 @@ router.post("/sync-orders", auth, async (req, res) => {
           );
           total++;
         }
-      } catch (e) { console.error("❌ Sync error for shop", shop.shop_domain, e.message, e.stack); }
+      } catch (e) { console.error("Sync error for shop", shop.shop_domain, e.message); }
     }
-    console.log("✅ SYNC DONE, total:", total);
     res.json({ ok: true, synced: total });
   } catch (e) {
-    console.error("❌ SYNC GLOBAL ERROR:", e.message, e.stack);
     res.status(500).json({ error: "Error sync" });
   }
 });
