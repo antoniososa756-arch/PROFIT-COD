@@ -4,7 +4,6 @@ const db = require("../db");
 const router = express.Router();
 
 async function ensureBaseRows(userId) {
-  // Filas fijas
   const fijos = await db.all("SELECT nombre FROM gastos_fijos WHERE user_id = ? AND fijo = 1", [userId]);
   const nombres = fijos.map(f => f.nombre);
   if (!nombres.includes("MRW"))
@@ -12,11 +11,12 @@ async function ensureBaseRows(userId) {
   if (!nombres.includes("LOGÍSTICA"))
     await db.run("INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?, 'LOGÍSTICA', 0, 1, 1)", [userId]);
 
-  // Filas vacías editables
-  const all = await db.all("SELECT id FROM gastos_fijos WHERE user_id = ?", [userId]);
-  if (all.length <= 2) {
-    for (let orden = 2; orden <= 6; orden++) {
-      await db.run("INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?, '', NULL, 0, ?)", [userId, orden]);
+  // Contar solo las filas vacías editables (fijo=0 y nombre vacío)
+  const vacias = await db.all("SELECT id FROM gastos_fijos WHERE user_id = ? AND fijo = 0 AND (nombre IS NULL OR nombre = '')", [userId]);
+  if (vacias.length < 3) {
+    const faltan = 3 - vacias.length;
+    for (let i = 0; i < faltan; i++) {
+      await db.run("INSERT INTO gastos_fijos (user_id, nombre, precio_unit, fijo, orden) VALUES (?, '', NULL, 0, 999)", [userId]);
     }
   }
 }
