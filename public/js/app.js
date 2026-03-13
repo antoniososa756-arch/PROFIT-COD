@@ -1089,7 +1089,6 @@ if (id === "pedidos") {
   closeAllDrops();
   closeSearchDrop();
   return;
-}
 
 // =========================
 // SECCIÓN FACTURAS
