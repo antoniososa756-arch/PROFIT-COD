@@ -1115,11 +1115,15 @@ if (id === "gastos-ads") {
 // =========================
 // SECCIÓN GASTOS FIJOS
 // =========================
+// =========================
+// SECCIÓN GASTOS FIJOS
+// =========================
 if (id === "gastos-fijos") {
   if (t) t.textContent = "Gastos Fijos";
   if (s) s.textContent = "Gestión de gastos fijos mensuales";
   if (c) c.textContent = "Gastos Fijos";
-  box.className = "card";
+  box.className = "";           // ← sin clase card, sin borde extra
+  box.removeAttribute("style"); // ← limpia cualquier padding residual
   if (box) {
     box.innerHTML = `<div id="gastos-fijos-wrap">Cargando...</div>`;
   }
