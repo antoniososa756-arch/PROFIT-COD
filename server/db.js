@@ -163,8 +163,8 @@ async function initDB() {
   `);
 
   // Añadir columnas nuevas si no existen (migraciones seguras)
-  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS financial_status TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS raw_json TEXT`).catch(()=>{});
+  try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS financial_status TEXT`); } catch(e) {}
+  try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS raw_json TEXT`); } catch(e) {}
 
   console.log("✅ PostgreSQL tablas inicializadas");
 }

@@ -2812,7 +2812,7 @@ function renderOrdersPage() {
       } else if (finLower === "partially_paid") {
         paymentBadge = `<span class="status blue">Parcial</span>`;
       } else if (finLower === "refunded" || finLower === "voided") {
-        paymentBadge = `<span class="status red">Reembolso</span>`;
+        paymentBadge = `<span class="status red">Null</span>`;
       } else {
         paymentBadge = `<span style="color:#9ca3af;font-size:12px;">${fin || "-"}</span>`;
       }
