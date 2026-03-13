@@ -983,8 +983,7 @@ if (id === "pedidos") {
       <div class="orders-header">
 
         <div class="filters">
-
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;width:100%;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;width:100%;">
             <button class="btn-sync" onclick="syncAndRefreshOrders()">
               <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Sincronizar
@@ -993,17 +992,9 @@ if (id === "pedidos") {
               📥 Importar Excel MRW
               <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="syncExcelMRW(this)">
             </label>
-            <input
-              type="text"
-              id="orderSearch"
-              placeholder="Buscar un pedido"
-              class="search-input"
+            <input type="text" id="orderSearch" placeholder="Buscar un pedido" class="search-input"
               style="padding:7px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"
-              oninput="filterOrders(this.value)"
-            />
-          </div>
-
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;width:100%;">
+              oninput="filterOrders(this.value)"/>
             <input type="date" id="filter-date-from" value=""
               style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
             <span style="color:#6b7280;font-size:13px;">—</span>
@@ -1033,7 +1024,6 @@ if (id === "pedidos") {
               Limpiar
             </button>
           </div>
-
         </div>
 
         <div class="tabs">
@@ -1047,19 +1037,20 @@ if (id === "pedidos") {
 
         <div class="orders-table">
           <div class="orders-row head">
-            <div></div>
             <div>Pedido</div>
+            <div>Tipo de pago</div>
             <div>Fecha de creación</div>
             <div>Nº seguimiento</div>
             <div>Estado logístico</div>
             <div>Nombre del cliente</div>
             <div>Costo</div>
           </div>
-
           <div id="ordersBody">
             <div class="muted" style="padding:16px;">Cargando pedidos...</div>
           </div>
         </div>
+
+        <div id="ordersPagination" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:18px 0 4px;flex-wrap:wrap;"></div>
 
       </div>
     `;
@@ -2766,41 +2757,78 @@ async function fetchOrders() {
   }
 }
 
+let currentOrdersPage = 1;
+const ORDERS_PER_PAGE = 50;
+let currentDisplayOrders = [];
+
 function renderOrders(orders) {
+  currentDisplayOrders = orders;
+  currentOrdersPage = 1;
+  renderOrdersPage();
+}
+
+function renderOrdersPage() {
   const body = document.getElementById("ordersBody");
+  const pagination = document.getElementById("ordersPagination");
   if (!body) return;
 
-  if (!orders.length) {
+  if (!currentDisplayOrders.length) {
     body.innerHTML = `<div class="muted" style="padding:16px;">No hay pedidos todavía</div>`;
+    if (pagination) pagination.innerHTML = "";
     return;
   }
 
-  body.innerHTML = orders.map(o => `
+  const totalPages = Math.ceil(currentDisplayOrders.length / ORDERS_PER_PAGE);
+  const start = (currentOrdersPage - 1) * ORDERS_PER_PAGE;
+  const pageOrders = currentDisplayOrders.slice(start, start + ORDERS_PER_PAGE);
+
+  body.innerHTML = pageOrders.map(o => {
+    let paymentBadge = "-";
+    try {
+      const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+      const fin = raw?.financial_status || o.financial_status || "";
+      if (fin === "pending" || fin === "cod") {
+        paymentBadge = `<span class="status yellow">COD</span>`;
+      } else if (fin === "paid") {
+        paymentBadge = `<span class="status green">Pagado</span>`;
+      }
+    } catch(e) { paymentBadge = "-"; }
+
+    return `
     <div class="orders-row">
-      <div><input type="checkbox"></div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        ${escapeHtml(o.order_number || "-")}
-        ${(() => {
-          try {
-            const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-            const fin = raw?.financial_status || "";
-            if (fin === "pending" || fin === "cod") {
-              return `<span style="background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700;">COD</span>`;
-            } else if (fin === "paid") {
-              return `<span style="background:#dcfce7;color:#166534;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700;">Pagado</span>`;
-            }
-            return "";
-          } catch { return ""; }
-        })()}
-      </div>
+      <div>${escapeHtml(o.order_number || "-")}</div>
+      <div>${paymentBadge}</div>
       <div>${o.created_at ? new Date(o.created_at).toLocaleString() : "-"}</div>
       <div>${escapeHtml(o.tracking_number || "-")}</div>
       <div><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div>${escapeHtml(o.customer_name || "-")}</div>
       <div>${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
-    </div>
-  `).join("");
+    </div>`;
+  }).join("");
+
+  if (pagination) {
+    if (totalPages <= 1) { pagination.innerHTML = ""; return; }
+    let pages = "";
+    for (let i = 1; i <= totalPages; i++) {
+      const isActive = i === currentOrdersPage;
+      pages += `<button onclick="goToOrdersPage(${i})"
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive ? "#16a34a" : "#e5e7eb"};
+          background:${isActive ? "#16a34a" : "var(--card)"};color:${isActive ? "#fff" : "var(--text)"};
+          font-size:13px;font-weight:${isActive ? "700" : "400"};cursor:pointer;font-family:inherit;">
+        ${i}
+      </button>`;
+    }
+    pagination.innerHTML = pages;
+  }
 }
+
+function goToOrdersPage(page) {
+  currentOrdersPage = page;
+  renderOrdersPage();
+  const table = document.querySelector(".orders-table");
+  if (table) table.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+window.goToOrdersPage = goToOrdersPage;
 
 function filterOrders(value) {
   const q = (value || "").toLowerCase();
