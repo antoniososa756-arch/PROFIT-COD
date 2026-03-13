@@ -984,7 +984,8 @@ if (id === "pedidos") {
 
         <div class="filters">
           <!-- Fila 1: controles de izquierda a derecha -->
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;width:100%;">
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:6px;width:100%;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <button class="btn-sync" onclick="syncAndRefreshOrders()">
               <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Sincronizar
@@ -996,6 +997,11 @@ if (id === "pedidos") {
             <input type="text" id="orderSearch" placeholder="Buscar un pedido" class="search-input"
               style="padding:7px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"
               oninput="filterOrders(this.value)"/>
+            <input type="date" id="filter-date-from" value=""
+              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+            <span style="color:#6b7280;font-size:13px;">—</span>
+            </div>
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
             <input type="date" id="filter-date-from" value=""
               style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
             <span style="color:#6b7280;font-size:13px;">—</span>
@@ -1018,6 +1024,7 @@ if (id === "pedidos") {
             </select>
           </div>
           <!-- Fila 2: Filtrar y Limpiar justificados a la derecha -->
+          </div>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;">
             <button onclick="applyFilters()"
               style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
@@ -1028,6 +1035,7 @@ if (id === "pedidos") {
               Limpiar
             </button>
           </div>
+        </div>
         </div>
 
         <div class="tabs">
