@@ -3001,14 +3001,24 @@ async function reactivateStore() {
 }
 
 async function syncAndRefreshOrders() {
+  const btn = document.querySelector(".btn-sync");
+  if (btn) { btn.disabled = true; btn.style.opacity = "0.6"; }
   try {
-    await fetch(`${API_BASE}/api/shopify/sync-orders`, {
+    const res = await fetch(`${API_BASE}/api/shopify/sync-orders`, {
       method: "POST",
       headers: { Authorization: "Bearer " + localStorage.getItem("token") },
     });
-    fetchOrders();
+    const data = await res.json();
+    await fetchOrders();
+    if (btn) { btn.textContent = `✓ ${data.synced || 0} pedidos`; }
+    setTimeout(() => {
+      if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg> Sincronizar`; btn.disabled = false; btn.style.opacity = "1"; }
+    }, 2000);
   } catch (e) {
-    console.warn("Sync falló silenciosamente");
+    if (btn) { btn.textContent = "❌ Error"; btn.disabled = false; btn.style.opacity = "1"; }
+    setTimeout(() => {
+      if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg> Sincronizar`; }
+    }, 2000);
   }
 }
 

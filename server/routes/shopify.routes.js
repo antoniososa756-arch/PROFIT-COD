@@ -109,6 +109,32 @@ router.patch("/stores/:id/name", auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error BD" }); }
 });
 
+// Alias: deshabilitar tienda
+router.post("/disable/:id", auth, async (req, res) => {
+  try {
+    await db.run("UPDATE shops SET status = 'inactive' WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error BD" }); }
+});
+
+// Alias: renombrar tienda
+router.post("/rename/:id", auth, async (req, res) => {
+  const { name } = req.body;
+  try {
+    await db.run("UPDATE shops SET shop_name = ? WHERE id = ? AND user_id = ?", [name, req.params.id, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error BD" }); }
+});
+
+// Alias: obtener secret
+router.get("/secret/:id", auth, async (req, res) => {
+  try {
+    const row = await db.get("SELECT app_secret FROM shops WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+    if (!row) return res.status(404).json({ error: "No encontrada" });
+    res.json({ app_secret: row.app_secret });
+  } catch (e) { res.status(500).json({ error: "Error BD" }); }
+});
+
 router.delete("/delete/:id", auth, async (req, res) => {
   try {
     const result = await db.run("DELETE FROM shops WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
