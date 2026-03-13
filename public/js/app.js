@@ -979,15 +979,41 @@ if (id === "pedidos") {
   if (s) s.textContent = "Gestión de pedidos";
   if (c) c.textContent = "Pedidos";
 
-  box.className = "card";
-  if (box) {
-    box.innerHTML = `
+  box.innerHTML = `
       <div class="orders-header">
         <div class="filters">
-  <button class="btn-filter" onclick="toggleFilterPanel()">
-    <svg viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M11 18h2" stroke-linecap="round"/></svg>
-    Filtros
-  </button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input type="date" id="filter-date-from" value=""
+              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+            <span style="color:#6b7280;font-size:13px;">—</span>
+            <input type="date" id="filter-date-to" value=""
+              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+            <select id="filter-shop-inline"
+              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+              <option value="">Todas las tiendas</option>
+            </select>
+            <select id="filter-status"
+              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="entregado">Entregado</option>
+              <option value="en_transito">En tránsito</option>
+              <option value="devuelto">Devuelto</option>
+              <option value="destruido">Destruido</option>
+              <option value="franquicia">Franquicia</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+            <button onclick="applyFilters()"
+              style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+              Filtrar
+            </button>
+            <button onclick="clearFiltersInline()"
+              style="padding:7px 14px;background:transparent;color:#6b7280;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">
+              Limpiar
+            </button>
+          </div>
+        </div>
   <button class="btn-sync" onclick="syncAndRefreshOrders()">
     <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Sincronizar
@@ -1034,8 +1060,24 @@ if (id === "pedidos") {
     `;
 
     // Cargar pedidos reales
+    // Cargar pedidos reales
     fetchOrders();
     syncAndRefreshOrders();
+
+    // Cargar tiendas en filtro inline
+    fetch(`${API_BASE}/api/shopify/stores`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    }).then(r => r.json()).then(stores => {
+      const sel = document.getElementById("filter-shop-inline");
+      if (sel && Array.isArray(stores)) {
+        stores.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s.domain;
+          opt.textContent = s.shop_name || s.domain;
+          sel.appendChild(opt);
+        });
+      }
+    }).catch(() => {});
 
     // Auto-refresh cada 5 minutos
     if (window.__ordersInterval) clearInterval(window.__ordersInterval);
@@ -2733,7 +2775,21 @@ function renderOrders(orders) {
   body.innerHTML = orders.map(o => `
     <div class="orders-row">
       <div><input type="checkbox"></div>
-      <div>${escapeHtml(o.order_number || "-")}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        ${escapeHtml(o.order_number || "-")}
+        ${(() => {
+          try {
+            const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+            const fin = raw?.financial_status || "";
+            if (fin === "pending" || fin === "cod") {
+              return `<span style="background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700;">COD</span>`;
+            } else if (fin === "paid") {
+              return `<span style="background:#dcfce7;color:#166534;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700;">Pagado</span>`;
+            }
+            return "";
+          } catch { return ""; }
+        })()}
+      </div>
       <div>${o.created_at ? new Date(o.created_at).toLocaleString() : "-"}</div>
       <div>${escapeHtml(o.tracking_number || "-")}</div>
       <div><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
@@ -3157,6 +3213,7 @@ function selectFilterShop(domain) {
 
 function applyFilters() {
   activeFilters.status = document.getElementById("filter-status")?.value || "";
+  activeFilters.shop = document.getElementById("filter-shop-inline")?.value || activeFilters.shop || "";
   activeFilters.dateFrom = document.getElementById("filter-date-from")?.value || "";
   activeFilters.dateTo = document.getElementById("filter-date-to")?.value || "";
 
@@ -3206,6 +3263,20 @@ function clearFilters() {
   renderOrders(allOrders);
   toggleFilterPanel();
 }
+
+function clearFiltersInline() {
+  activeFilters = { status: "", shop: "", dateFrom: "", dateTo: "" };
+  const df = document.getElementById("filter-date-from");
+  const dt = document.getElementById("filter-date-to");
+  const ss = document.getElementById("filter-status");
+  const sh = document.getElementById("filter-shop-inline");
+  if (df) df.value = "";
+  if (dt) dt.value = "";
+  if (ss) ss.value = "";
+  if (sh) sh.value = "";
+  renderOrders(allOrders);
+}
+window.clearFiltersInline = clearFiltersInline;
 
 function filterByTab(el, status) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
