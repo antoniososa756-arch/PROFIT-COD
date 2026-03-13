@@ -55,24 +55,23 @@ router.post("/connect-token", auth, async (req, res) => {
     const myshopifyDomain = data.shop.myshopify_domain.toLowerCase();
 
     await db.run(
-  `INSERT INTO shops (user_id, shop_domain, access_token, app_secret, status, last_sync)
-   VALUES (?, ?, ?, ?, 'active', now()::text)
-   ON CONFLICT(user_id, shop_domain) DO UPDATE SET
-     access_token = EXCLUDED.access_token,
-     app_secret = EXCLUDED.app_secret,
-     status = 'active',
-     last_sync = now()::text`,
-  [userId, myshopifyDomain, accessToken, appSecret]
-);
+      `INSERT INTO shops (user_id, shop_domain, access_token, app_secret, status, last_sync)
+       VALUES (?, ?, ?, ?, 'active', now()::text)
+       ON CONFLICT(user_id, shop_domain) DO UPDATE SET
+         access_token = EXCLUDED.access_token,
+         app_secret = EXCLUDED.app_secret,
+         status = 'active',
+         last_sync = now()::text`,
+      [userId, myshopifyDomain, accessToken, appSecret]
+    );
 
-// Reasignar pedidos huérfanos al shop recién conectado
-const newShop = await db.get("SELECT id FROM shops WHERE user_id = ? AND shop_domain = ?", [userId, myshopifyDomain]);
-if (newShop) {
-  await db.run(
-    `UPDATE orders SET shop_id = ? WHERE shop_id NOT IN (SELECT id FROM shops)`,
-    [newShop.id]
-  );
-}
+    const newShop = await db.get("SELECT id FROM shops WHERE user_id = ? AND shop_domain = ?", [userId, myshopifyDomain]);
+    if (newShop) {
+      await db.run(
+        `UPDATE orders SET shop_id = ? WHERE shop_id NOT IN (SELECT id FROM shops)`,
+        [newShop.id]
+      );
+    }
 
     const webhookUrl = "https://profit-cod.onrender.com/api/shopify/webhooks/orders";
     const topics = ["orders/create", "orders/updated", "fulfillments/create", "fulfillments/update"];
@@ -166,29 +165,41 @@ router.post("/sync-orders", auth, async (req, res) => {
     let total = 0;
     for (const shop of shops) {
       try {
-        const r = await fetch(`https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250`, {
-          headers: { "X-Shopify-Access-Token": shop.access_token },
-        });
-        if (!r.ok) continue;
-        const { orders } = await r.json();
-        for (const o of orders) {
-          const customerName = o.customer ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim() : "Desconocido";
-         await db.run(
-            `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-             ON CONFLICT(order_id) DO UPDATE SET
-               fulfillment_status = CASE
-                 WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','franquicia','en_transito')
-                 THEN orders.fulfillment_status
-                 ELSE EXCLUDED.fulfillment_status
-               END,
-               financial_status = EXCLUDED.financial_status,
-               tracking_number = COALESCE(EXCLUDED.tracking_number, orders.tracking_number),
-               raw_json = EXCLUDED.raw_json`,
-            [shop.id, String(o.id), o.name || String(o.order_number), customerName, mapSyncStatus(o), o.financial_status || null, o.fulfillments?.[0]?.tracking_number || null, o.total_price, o.currency, o.created_at, JSON.stringify(o)]
-          );
-          total++;
+        let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=2026-02-01T00:00:00Z`;
+
+        while (url) {
+          const r = await fetch(url, {
+            headers: { "X-Shopify-Access-Token": shop.access_token },
+          });
+          if (!r.ok) break;
+
+          const { orders } = await r.json();
+
+          for (const o of orders) {
+            const customerName = o.customer ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim() : "Desconocido";
+            await db.run(
+              `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(order_id) DO UPDATE SET
+                 fulfillment_status = CASE
+                   WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','franquicia','en_transito')
+                   THEN orders.fulfillment_status
+                   ELSE EXCLUDED.fulfillment_status
+                 END,
+                 financial_status = EXCLUDED.financial_status,
+                 tracking_number = COALESCE(EXCLUDED.tracking_number, orders.tracking_number),
+                 raw_json = EXCLUDED.raw_json`,
+              [shop.id, String(o.id), o.name || String(o.order_number), customerName, mapSyncStatus(o), o.financial_status || null, o.fulfillments?.[0]?.tracking_number || null, o.total_price, o.currency, o.created_at, JSON.stringify(o)]
+            );
+            total++;
+          }
+
+          // Siguiente página via Link header
+          const linkHeader = r.headers.get("Link") || "";
+          const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+          url = nextMatch ? nextMatch[1] : null;
         }
+
       } catch (e) { console.error("Sync error for shop", shop.shop_domain, e.message); }
     }
     res.json({ ok: true, synced: total });
