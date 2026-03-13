@@ -1237,9 +1237,6 @@ if (id === "gastos-varios") {
   return;
 }
 
-// ⬅️ AQUÍ SE CIERRA setSection CORRECTAMENTE
-}
-
   function toggleTheme() {
   document.body.classList.toggle("dark");
   localStorage.setItem(
@@ -3351,9 +3348,3 @@ function updateGastoExtraValor(input) {
 window.addGastoExtra          = addGastoExtra;
 window.updateGastoExtraNombre = updateGastoExtraNombre;
 window.updateGastoExtraValor  = updateGastoExtraValor;
-
-
-
-
-
-
