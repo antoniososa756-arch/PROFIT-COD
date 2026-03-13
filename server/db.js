@@ -87,6 +87,7 @@ async function initDB() {
       total_price REAL,
       currency TEXT,
       fulfillment_status TEXT,
+      financial_status TEXT,
       tracking_number TEXT,
       carrier TEXT,
       raw_json TEXT,
