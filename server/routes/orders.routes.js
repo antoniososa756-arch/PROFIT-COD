@@ -11,8 +11,8 @@ router.get("/", auth, async (req, res) => {
         o.fulfillment_status, o.customer_name, o.total_price, o.currency,
         s.shop_domain
        FROM orders o
-       JOIN shops s ON s.id = o.shop_id
-       WHERE s.user_id = ?
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.shop_id IN (SELECT id FROM shops WHERE user_id = ?)
        ORDER BY o.created_at DESC`,
       [userId]
     );
