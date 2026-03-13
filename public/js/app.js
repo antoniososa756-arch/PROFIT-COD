@@ -2803,11 +2803,18 @@ function renderOrdersPage() {
     let paymentBadge = "-";
     try {
       const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-      const fin = raw?.financial_status || o.financial_status || "";
-      if (fin === "pending" || fin === "cod") {
+      const fin = raw?.financial_status || raw?.payment_status || o.financial_status || o.payment_status || "";
+      const finLower = fin.toLowerCase().trim();
+      if (finLower === "pending" || finLower === "cod" || finLower === "pendiente") {
         paymentBadge = `<span class="status yellow">COD</span>`;
-      } else if (fin === "paid") {
+      } else if (finLower === "paid" || finLower === "pagado") {
         paymentBadge = `<span class="status green">Pagado</span>`;
+      } else if (finLower === "partially_paid") {
+        paymentBadge = `<span class="status blue">Parcial</span>`;
+      } else if (finLower === "refunded" || finLower === "voided") {
+        paymentBadge = `<span class="status red">Reembolso</span>`;
+      } else {
+        paymentBadge = `<span style="color:#9ca3af;font-size:12px;">${fin || "-"}</span>`;
       }
     } catch(e) { paymentBadge = "-"; }
 

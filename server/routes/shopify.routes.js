@@ -173,17 +173,19 @@ router.post("/sync-orders", auth, async (req, res) => {
         const { orders } = await r.json();
         for (const o of orders) {
           const customerName = o.customer ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim() : "Desconocido";
-          await db.run(
-            `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, tracking_number, total_price, currency, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         await db.run(
+            `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(order_id) DO UPDATE SET
                fulfillment_status = CASE
                  WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','franquicia','en_transito')
                  THEN orders.fulfillment_status
                  ELSE EXCLUDED.fulfillment_status
                END,
-               tracking_number = COALESCE(EXCLUDED.tracking_number, orders.tracking_number)`,
-            [shop.id, String(o.id), o.name || String(o.order_number), customerName, mapSyncStatus(o), o.fulfillments?.[0]?.tracking_number || null, o.total_price, o.currency, o.created_at]
+               financial_status = EXCLUDED.financial_status,
+               tracking_number = COALESCE(EXCLUDED.tracking_number, orders.tracking_number),
+               raw_json = EXCLUDED.raw_json`,
+            [shop.id, String(o.id), o.name || String(o.order_number), customerName, mapSyncStatus(o), o.financial_status || null, o.fulfillments?.[0]?.tracking_number || null, o.total_price, o.currency, o.created_at, JSON.stringify(o)]
           );
           total++;
         }
