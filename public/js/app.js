@@ -459,11 +459,29 @@ function loadApp(section) {
 
       ${menuItem("plan", labels)}
 
-      <div class="spacer"></div>
-
       <div class="toggle">
         <span>${d.ui.night}</span>
         <div class="switch" onclick="toggleTheme()"></div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div style="margin:0 8px 12px;border-top:1px solid #e5e7eb;padding-top:10px;">
+        <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.6px;padding:0 4px 6px;">Pendiente MRW</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;">
+          <span style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;">
+            <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0;"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h6"/></svg>
+            Pedidos
+          </span>
+          <span style="font-size:13px;font-weight:700;color:#374151;" id="sidebar-ree-count">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;">
+          <span style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;">
+            <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0;"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg>
+            Importe
+          </span>
+          <span style="font-size:13px;font-weight:700;color:#374151;" id="sidebar-ree-total">—</span>
+        </div>
       </div>
     </div>
 
@@ -571,6 +589,7 @@ function loadApp(section) {
 
     setSection(section);
     ensureOutsideClose();
+    loadSidebarReembolsos();
 }
 
 function setSection(id) {
@@ -3667,6 +3686,39 @@ window.clearReembolsosFilters = clearReembolsosFilters;
 window.filterReeByTab         = filterReeByTab;
 
 // =========================
+// SIDEBAR CONTADOR REEMBOLSOS
+// =========================
+async function loadSidebarReembolsos() {
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const orders = await res.json();
+    const pendientes = Array.isArray(orders) ? orders.filter(o => {
+      if (o.fulfillment_status !== "entregado") return false;
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || raw?.payment_status || o.financial_status || o.payment_status || "").toLowerCase().trim();
+        if (!(fin === "pending" || fin === "cod" || fin === "pendiente")) return false;
+      } catch { return false; }
+      const estado = localStorage.getItem("ree_estado_" + o.id) || "pendiente";
+      return estado !== "cobrado";
+    }) : [];
+
+    const count = pendientes.length;
+    const total = pendientes.reduce((s, o) => s + (parseFloat(o.total_price) || 0), 0);
+
+    const countEl = document.getElementById("sidebar-ree-count");
+    const totalEl = document.getElementById("sidebar-ree-total");
+    if (countEl) countEl.textContent = count;
+    if (totalEl) totalEl.textContent = total.toFixed(2) + " €";
+  } catch(e) {
+    console.error("Error sidebar reembolsos:", e);
+  }
+}
+window.loadSidebarReembolsos = loadSidebarReembolsos;
+
+// =========================
 // IMPORTAR PAGADOS DESDE PDF MRW
 // =========================
 async function importarPagadosPDF(input) {
@@ -3720,6 +3772,7 @@ async function importarPagadosPDF(input) {
 
     alert(`✅ ${actualizados} reembolsos marcados como Pagados\n(${matches.length} seguimientos encontrados en el PDF)`);
     renderReembolsos();
+    loadSidebarReembolsos();
 
   } catch(e) {
     console.error(e);
