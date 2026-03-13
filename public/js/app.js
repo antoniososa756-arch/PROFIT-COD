@@ -1064,7 +1064,7 @@ if (id === "facturas") {
           ["nomina","Nómina"]
         ].map(([key, label]) => `
           <button id="tab-btn-${key}" onclick="switchFacturasTab('${key}')"
-            style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:var(--card);color:var(--text);">
+            style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;transition:all .15s;">
             ${label}
           </button>
         `).join("")}
@@ -1479,6 +1479,39 @@ function closeModal() {
   const m = document.querySelector(".modal-bg");
   if (m) m.remove();
 }
+
+function switchFacturasTab(key) {
+  // Resaltar botón activo
+  ["reembolsos","gastos-ads","gastos-fijos","gastos-tienda","nomina"].forEach(k => {
+    const btn = document.getElementById("tab-btn-" + k);
+    if (!btn) return;
+    if (k === key) {
+      btn.style.background = "#16a34a";
+      btn.style.color = "#fff";
+      btn.style.borderColor = "#16a34a";
+    } else {
+      btn.style.background = "#fff";
+      btn.style.color = "#374151";
+      btn.style.borderColor = "#e5e7eb";
+    }
+  });
+
+  const content = document.getElementById("facturas-content");
+  if (!content) return;
+
+  if (key === "gastos-ads")    { setSection("gastos-ads");    return; }
+  if (key === "gastos-fijos")  { setSection("gastos-fijos");  return; }
+  if (key === "gastos-tienda") { setSection("gastos-varios"); return; }
+
+  // Reembolsos y Nómina (placeholder por ahora)
+  content.innerHTML = `
+    <div class="card" style="padding:24px;">
+      <div style="font-weight:600;margin-bottom:6px;">${key.charAt(0).toUpperCase()+key.slice(1)}</div>
+      <div class="muted">Próximamente</div>
+    </div>
+  `;
+}
+window.switchFacturasTab = switchFacturasTab;
 
 // Exponer funciones usadas por onclick
 window.loadApp = loadApp;
