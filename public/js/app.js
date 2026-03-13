@@ -1237,7 +1237,9 @@ if (id === "gastos-varios") {
   return;
 }
 
-  function toggleTheme() {
+}
+
+function toggleTheme() {
   document.body.classList.toggle("dark");
   localStorage.setItem(
     "theme",
