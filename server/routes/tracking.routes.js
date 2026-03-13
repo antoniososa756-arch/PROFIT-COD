@@ -55,5 +55,45 @@ router.get("/:tracking", auth, async (req, res) => {
     res.status(500).json({ error: "Error consultando MRW" });
   }
 });
+const multer = require("multer");
+const XLSX = require("xlsx");
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No se recibió archivo" });
+
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    let updated = 0;
+    for (const row of rows) {
+      const tracking = String(row["Número Envío"] || "").trim();
+      const estadoRaw = String(row["Estado"] || "").trim().toLowerCase();
+      if (!tracking || !estadoRaw) continue;
+
+      let status = "en_transito";
+      if (estadoRaw.includes("entregado")) status = "entregado";
+      else if (estadoRaw.includes("reparto")) status = "enviado";
+      else if (estadoRaw.includes("devuelto") || estadoRaw.includes("no acepta")) status = "devuelto";
+      else if (estadoRaw.includes("destruir") || estadoRaw.includes("cancelado") || estadoRaw.includes("anula")) status = "cancelado";
+      else if (estadoRaw.includes("ausente") || estadoRaw.includes("aplazada") || estadoRaw.includes("cobro")) status = "no_entregado";
+      else if (estadoRaw.includes("tránsito") || estadoRaw.includes("transito") || estadoRaw.includes("plataforma") || estadoRaw.includes("franquicia") || estadoRaw.includes("recibido") || estadoRaw.includes("salida") || estadoRaw.includes("recogido") || estadoRaw.includes("concertada")) status = "en_transito";
+      else if (estadoRaw.includes("pendiente")) status = "pendiente";
+
+      const result = await req.db.run(
+        `UPDATE orders SET fulfillment_status = ? WHERE tracking_number = ? AND user_id = ?`,
+        [status, tracking, req.user.id]
+      );
+      if (result.changes > 0) updated++;
+    }
+
+    res.json({ ok: true, updated, total: rows.length });
+  } catch (err) {
+    console.error("Excel sync error:", err);
+    res.status(500).json({ error: "Error procesando Excel" });
+  }
+});
 
 module.exports = router;

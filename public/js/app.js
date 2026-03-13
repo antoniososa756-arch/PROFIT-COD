@@ -992,6 +992,11 @@ if (id === "pedidos") {
     <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Sincronizar
   </button>
+
+<label style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+  📥 Importar Excel MRW
+  <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="syncExcelMRW(this)">
+</label>
           <input
             type="text"
             id="orderSearch"
@@ -3211,6 +3216,32 @@ function updateGastoExtraNombre(input) {
   if (!gastosExtras[shop]) return;
   gastosExtras[shop][idx].nombre = input.value;
 }
+
+async function syncExcelMRW(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  input.value = "";
+
+  try {
+    const res = await fetch(`${API_BASE}/api/tracking/sync-excel`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`✅ ${data.updated} pedidos actualizados de ${data.total} filas`);
+      fetchOrders();
+    } else {
+      alert("❌ Error: " + (data.error || "desconocido"));
+    }
+  } catch {
+    alert("❌ Error de conexión");
+  }
+}
+window.syncExcelMRW = syncExcelMRW; 
 
 function updateGastoExtraValor(input) {
   const shop = input.dataset.shop;
