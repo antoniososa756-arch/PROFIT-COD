@@ -983,7 +983,8 @@ if (id === "pedidos") {
       <div class="orders-header">
 
         <div class="filters">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;width:100%;">
+          <!-- Fila 1: controles de izquierda a derecha -->
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;width:100%;">
             <button class="btn-sync" onclick="syncAndRefreshOrders()">
               <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Sincronizar
@@ -1015,6 +1016,9 @@ if (id === "pedidos") {
               <option value="franquicia">Franquicia</option>
               <option value="cancelado">Cancelado</option>
             </select>
+          </div>
+          <!-- Fila 2: Filtrar y Limpiar justificados a la derecha -->
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;">
             <button onclick="applyFilters()"
               style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
               Filtrar
@@ -1036,7 +1040,7 @@ if (id === "pedidos") {
         </div>
 
         <div class="orders-table">
-          <div class="orders-row head">
+          <div class="orders-row head" style="display:grid;grid-template-columns:150px 110px 130px 160px 150px 1fr 110px;gap:0;">
             <div>Pedido</div>
             <div>Tipo de pago</div>
             <div>Fecha de creación</div>
@@ -2795,10 +2799,10 @@ function renderOrdersPage() {
     } catch(e) { paymentBadge = "-"; }
 
     return `
-    <div class="orders-row">
+    <div class="orders-row" style="display:grid;grid-template-columns:150px 110px 130px 160px 150px 1fr 110px;gap:0;">
       <div>${escapeHtml(o.order_number || "-")}</div>
       <div>${paymentBadge}</div>
-      <div>${o.created_at ? new Date(o.created_at).toLocaleString() : "-"}</div>
+      <div>${o.created_at ? new Date(o.created_at).toLocaleDateString('es-ES') : "-"}</div>
       <div>${escapeHtml(o.tracking_number || "-")}</div>
       <div><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div>${escapeHtml(o.customer_name || "-")}</div>
