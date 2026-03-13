@@ -30,4 +30,12 @@ router.get("/debug", auth, async (req, res) => {
   res.json({ shops, orders });
 });
 
+router.get("/fix-shop-id", auth, async (req, res) => {
+  const userId = req.user.id;
+  const shop = await db.get("SELECT id FROM shops WHERE user_id = ?", [userId]);
+  if (!shop) return res.json({ error: "No shop found" });
+  await db.run("UPDATE orders SET shop_id = ? WHERE shop_id != ?", [shop.id, shop.id]);
+  res.json({ ok: true, new_shop_id: shop.id });
+});
+
 module.exports = router;
