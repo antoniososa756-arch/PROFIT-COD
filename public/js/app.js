@@ -1547,6 +1547,53 @@ function switchFacturasTab(key) {
   const content = document.getElementById("facturas-content");
   if (!content) return;
 
+  if (key === "reembolsos") {
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <input type="date" id="ree-date-from" value="" onchange="renderReembolsos()"
+            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+          <span style="color:#6b7280;font-size:13px;">—</span>
+          <input type="date" id="ree-date-to" value="" onchange="renderReembolsos()"
+            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+          <select id="ree-shop" onchange="renderReembolsos()"
+            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+            <option value="">Todas las tiendas</option>
+          </select>
+          <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
+        </div>
+      </div>
+      <div id="ree-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
+      <div class="orders-table">
+        <div class="orders-row head" style="display:grid;grid-template-columns:40px 16% 14% 1fr 10% 14%;gap:0;">
+          <div>#</div>
+          <div>Pedido</div>
+          <div>Fecha de creación</div>
+          <div>Nombre del cliente</div>
+          <div>Costo</div>
+          <div>Estado del pago</div>
+        </div>
+        <div id="reeBody"><div class="muted" style="padding:16px;">Cargando...</div></div>
+      </div>
+      <div id="reePagination" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:18px 0 4px;flex-wrap:wrap;"></div>
+    `;
+    fetch(`${API_BASE}/api/shopify/stores`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    }).then(r => r.json()).then(stores => {
+      const sel = document.getElementById("ree-shop");
+      if (sel && Array.isArray(stores)) {
+        stores.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s.domain;
+          opt.textContent = s.shop_name || s.domain;
+          sel.appendChild(opt);
+        });
+      }
+    }).catch(() => {});
+    loadReembolsos();
+    return;
+  }
+
   if (key === "gastos-ads") {
     content.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
@@ -3445,3 +3492,141 @@ function updateGastoExtraValor(input) {
 window.addGastoExtra          = addGastoExtra;
 window.updateGastoExtraNombre = updateGastoExtraNombre;
 window.updateGastoExtraValor  = updateGastoExtraValor;
+
+// =========================
+// REEMBOLSOS
+// =========================
+let allReembolsos = [];
+let currentReePage = 1;
+const REE_PER_PAGE = 20;
+let currentReeDisplay = [];
+
+async function loadReembolsos() {
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const orders = await res.json();
+    allReembolsos = Array.isArray(orders) ? orders.filter(o => {
+      if (o.fulfillment_status !== "entregado") return false;
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || raw?.payment_status || o.financial_status || o.payment_status || "").toLowerCase().trim();
+        return fin === "pending" || fin === "cod" || fin === "pendiente";
+      } catch { return false; }
+    }) : [];
+    renderReembolsos();
+  } catch(e) {
+    const body = document.getElementById("reeBody");
+    if (body) body.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando reembolsos</div>`;
+  }
+}
+
+function renderReembolsos() {
+  const dateFrom = document.getElementById("ree-date-from")?.value || "";
+  const dateTo   = document.getElementById("ree-date-to")?.value || "";
+  const shop     = document.getElementById("ree-shop")?.value || "";
+
+  let filtered = allReembolsos.filter(o => {
+    if (shop && o.shop_domain !== shop) return false;
+    if (dateFrom) {
+      const d = new Date(o.created_at); const from = new Date(dateFrom + "T00:00:00");
+      if (d < from) return false;
+    }
+    if (dateTo) {
+      const d = new Date(o.created_at); const to = new Date(dateTo + "T23:59:59");
+      if (d > to) return false;
+    }
+    return true;
+  });
+
+  currentReeDisplay = filtered;
+  currentReePage = 1;
+  renderReePage();
+}
+
+function renderReePage() {
+  const body = document.getElementById("reeBody");
+  const pagination = document.getElementById("reePagination");
+  const counter = document.getElementById("ree-counter");
+  if (!body) return;
+
+  if (!currentReeDisplay.length) {
+    body.innerHTML = `<div class="muted" style="padding:16px;">No hay reembolsos pendientes</div>`;
+    if (pagination) pagination.innerHTML = "";
+    if (counter) counter.textContent = "";
+    return;
+  }
+
+  const totalPages = Math.ceil(currentReeDisplay.length / REE_PER_PAGE);
+  const start = (currentReePage - 1) * REE_PER_PAGE;
+  const pageOrders = currentReeDisplay.slice(start, start + REE_PER_PAGE);
+
+  if (counter) {
+    const total = currentReeDisplay.length;
+    counter.textContent = `Mostrando ${start + 1}–${Math.min(start + REE_PER_PAGE, total)} de ${total} reembolsos`;
+  }
+
+  body.innerHTML = pageOrders.map((o, idx) => {
+    const numero = start + idx + 1;
+    const estadoPago = localStorage.getItem("ree_estado_" + o.id) || "pendiente";
+    const estadoColor = estadoPago === "cobrado" ? "#16a34a" : estadoPago === "no_cobrado" ? "#dc2626" : "#f59e0b";
+
+    return `
+    <div class="orders-row" style="display:grid;grid-template-columns:40px 16% 14% 1fr 10% 14%;gap:0;">
+      <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleDateString("es-ES") : "-"}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
+      <div>
+        <select onchange="cambiarEstadoReembolso('${o.id}', this.value)"
+          style="padding:4px 8px;border:1px solid ${estadoColor};border-radius:6px;font-size:12px;font-weight:600;color:${estadoColor};background:var(--card);cursor:pointer;font-family:inherit;">
+          <option value="pendiente" ${estadoPago==="pendiente"?"selected":""}>⏳ Pendiente</option>
+          <option value="cobrado" ${estadoPago==="cobrado"?"selected":""}>✅ Cobrado</option>
+          <option value="no_cobrado" ${estadoPago==="no_cobrado"?"selected":""}>❌ No cobrado</option>
+        </select>
+      </div>
+    </div>`;
+  }).join("");
+
+  if (pagination) {
+    if (totalPages <= 1) { pagination.innerHTML = ""; return; }
+    const p = currentReePage;
+    const delta = 2;
+    let pages = "";
+    pages += `<button onclick="goToReePage(${Math.max(1,p-1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
+    let sp = Math.max(1,p-delta), ep = Math.min(totalPages,p+delta);
+    if (sp > 1) { pages += `<button onclick="goToReePage(1)" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`; if (sp>2) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; }
+    for (let i=sp;i<=ep;i++) { const a=i===p; pages += `<button onclick="goToReePage(${i})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${a?"#16a34a":"#e5e7eb"};background:${a?"#16a34a":"var(--card)"};color:${a?"#fff":"var(--text)"};font-size:13px;font-weight:${a?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`; }
+    if (ep < totalPages) { if (ep<totalPages-1) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; pages += `<button onclick="goToReePage(${totalPages})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${totalPages}</button>`; }
+    pages += `<button onclick="goToReePage(${Math.min(totalPages,p+1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:${p===totalPages?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===totalPages?"disabled":""}>›</button>`;
+    pagination.innerHTML = pages;
+  }
+}
+
+function goToReePage(page) {
+  currentReePage = page;
+  renderReePage();
+}
+
+function cambiarEstadoReembolso(orderId, estado) {
+  localStorage.setItem("ree_estado_" + orderId, estado);
+  renderReePage();
+}
+
+function clearReembolsosFilters() {
+  const df = document.getElementById("ree-date-from");
+  const dt = document.getElementById("ree-date-to");
+  const sh = document.getElementById("ree-shop");
+  if (df) df.value = "";
+  if (dt) dt.value = "";
+  if (sh) sh.value = "";
+  renderReembolsos();
+}
+
+window.loadReembolsos         = loadReembolsos;
+window.renderReembolsos       = renderReembolsos;
+window.goToReePage            = goToReePage;
+window.cambiarEstadoReembolso = cambiarEstadoReembolso;
+window.clearReembolsosFilters = clearReembolsosFilters;
