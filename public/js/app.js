@@ -2766,7 +2766,7 @@ async function fetchOrders() {
 }
 
 let currentOrdersPage = 1;
-const ORDERS_PER_PAGE = 50;
+const ORDERS_PER_PAGE = 20;
 let currentDisplayOrders = [];
 
 function renderOrders(orders) {
@@ -2824,18 +2824,56 @@ function renderOrdersPage() {
     </div>`;
   }).join("");
 
-  if (pagination) {
-    if (totalPages <= 1) { pagination.innerHTML = ""; return; }
+if (pagination) {
+    if (totalPages < 1) { pagination.innerHTML = ""; return; }
+    const p = currentOrdersPage;
+    const delta = 2;
     let pages = "";
-    for (let i = 1; i <= totalPages; i++) {
-      const isActive = i === currentOrdersPage;
+
+    // Botón anterior
+    pages += `<button onclick="goToOrdersPage(${Math.max(1, p-1)})"
+      style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;
+        background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};
+        font-size:13px;cursor:pointer;font-family:inherit;"
+      ${p===1?"disabled":""}>‹</button>`;
+
+    // Páginas con ventana deslizante
+    let startPage = Math.max(1, p - delta);
+    let endPage   = Math.min(totalPages, p + delta);
+    if (p <= delta) endPage   = Math.min(totalPages, delta * 2 + 1);
+    if (p >= totalPages - delta) startPage = Math.max(1, totalPages - delta * 2);
+
+    if (startPage > 1) {
+      pages += `<button onclick="goToOrdersPage(1)"
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;
+          background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`;
+      if (startPage > 2) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`;
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      const isActive = i === p;
       pages += `<button onclick="goToOrdersPage(${i})"
-        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive ? "#16a34a" : "#e5e7eb"};
-          background:${isActive ? "#16a34a" : "var(--card)"};color:${isActive ? "#fff" : "var(--text)"};
-          font-size:13px;font-weight:${isActive ? "700" : "400"};cursor:pointer;font-family:inherit;">
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#16a34a":"#e5e7eb"};
+          background:${isActive?"#16a34a":"var(--card)"};color:${isActive?"#fff":"var(--text)"};
+          font-size:13px;font-weight:${isActive?"700":"400"};cursor:pointer;font-family:inherit;">
         ${i}
       </button>`;
     }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`;
+      pages += `<button onclick="goToOrdersPage(${totalPages})"
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;
+          background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${totalPages}</button>`;
+    }
+
+    // Botón siguiente
+    pages += `<button onclick="goToOrdersPage(${Math.min(totalPages, p+1)})"
+      style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;
+        background:var(--card);color:${p===totalPages?"#d1d5db":"var(--text)"};
+        font-size:13px;cursor:pointer;font-family:inherit;"
+      ${p===totalPages?"disabled":""}>›</button>`;
+
     pagination.innerHTML = pages;
   }
 }
