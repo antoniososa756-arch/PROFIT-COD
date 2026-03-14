@@ -2288,6 +2288,17 @@ async function loadProductos() {
                 </td>
                 <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
                   <span class="producto-nombre">${escapeHtml(p.title)}</span>
+                  <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">Costo compra:</span>
+                    <input type="number" min="0" step="0.01"
+                      value="${stockInfo.costo_compra || ''}"
+                      placeholder="0.00"
+                      style="width:80px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
+                      onchange="guardarCostoCompra('${shop.shop_domain}','${pid}',this.value)"
+                      title="Costo de compra del producto">
+                    <span style="font-size:11px;color:#9ca3af;">€</span>
+                  </div>
+                </td>
                 <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
                   ${p.variants.map(v => {
                     const vid = String(v.id);
@@ -4246,6 +4257,17 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
     loadProductos();
   } catch(e) { console.error(e); }
 }
+
+async function guardarCostoCompra(shopDomain, productId, costo) {
+  try {
+    await fetch(`${API_BASE}/api/shopify/stock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, costo_compra: parseFloat(costo)||0 })
+    });
+  } catch(e) { console.error(e); }
+}
+window.guardarCostoCompra = guardarCostoCompra;
 
 async function guardarStockMinimo(shopDomain, productId, stock, stockMinimo) {
   try {

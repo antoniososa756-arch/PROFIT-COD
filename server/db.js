@@ -174,9 +174,11 @@ await pool.query(`
       product_id TEXT NOT NULL,
       stock INTEGER DEFAULT 0,
       stock_minimo INTEGER DEFAULT 5,
+      costo_compra NUMERIC(10,2) DEFAULT 0,
       UNIQUE(user_id, shop_domain, product_id)
     )
   `);
+  await pool.query(`ALTER TABLE productos_stock ADD COLUMN IF NOT EXISTS costo_compra NUMERIC(10,2) DEFAULT 0`);
 
 await pool.query(`
     CREATE TABLE IF NOT EXISTS productos_variantes_config (
@@ -202,6 +204,7 @@ await pool.query(`
       created_at TEXT NOT NULL DEFAULT now()::text
     )
   `);
+await pool.query(`ALTER TABLE productos_stock ADD COLUMN IF NOT EXISTS costo_compra NUMERIC(10,2) DEFAULT 0`);
 
   console.log("✅ PostgreSQL tablas inicializadas");
 }

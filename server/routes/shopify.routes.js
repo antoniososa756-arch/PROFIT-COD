@@ -257,7 +257,7 @@ router.get("/products", auth, async (req, res) => {
 router.get("/stock", auth, async (req, res) => {
   try {
     const rows = await db.all(
-      "SELECT shop_domain, product_id, stock, stock_minimo FROM productos_stock WHERE user_id = ?",
+      "SELECT shop_domain, product_id, stock, stock_minimo, costo_compra FROM productos_stock WHERE user_id = ?",
       [req.user.id]
     );
     res.json(rows);
@@ -265,15 +265,16 @@ router.get("/stock", auth, async (req, res) => {
 });
 
 router.post("/stock", auth, async (req, res) => {
-  const { shop_domain, product_id, stock, stock_minimo } = req.body;
+  const { shop_domain, product_id, stock, stock_minimo, costo_compra } = req.body;
   try {
     await db.run(
-      `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo)
-       VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo, costo_compra)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET
-         stock = EXCLUDED.stock,
-         stock_minimo = COALESCE(EXCLUDED.stock_minimo, productos_stock.stock_minimo)`,
-      [req.user.id, shop_domain, product_id, stock ?? 0, stock_minimo ?? 5]
+         stock = COALESCE(EXCLUDED.stock, productos_stock.stock),
+         stock_minimo = COALESCE(EXCLUDED.stock_minimo, productos_stock.stock_minimo),
+         costo_compra = COALESCE(EXCLUDED.costo_compra, productos_stock.costo_compra)`,
+      [req.user.id, shop_domain, product_id, stock ?? null, stock_minimo ?? null, costo_compra ?? null]
     );
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: "Error guardando stock" }); }
