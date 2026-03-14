@@ -2084,13 +2084,13 @@ async function loadMetricas() {
 
     const total      = list.length;
     const pendientes = list.filter(o => o.fulfillment_status === "pendiente").length;
-    const transito   = list.filter(o => ["en_preparacion","enviado","en_transito"].includes(o.fulfillment_status)).length;
+    const transito   = list.filter(o => ["en_preparacion","enviado","en_transito","franquicia"].includes(o.fulfillment_status)).length;
     const entregados = list.filter(o => o.fulfillment_status === "entregado").length;
     const devueltos  = list.filter(o => o.fulfillment_status === "devuelto").length;
     const destruidos = list.filter(o => o.fulfillment_status === "destruido").length;
     const rojos      = devueltos + destruidos;
 
-    const enviados = list.filter(o => ["enviado","entregado","devuelto","destruido"].includes(o.fulfillment_status)).length;
+    const enviados = list.filter(o => ["enviado","en_transito","franquicia","en_preparacion","entregado","devuelto","destruido"].includes(o.fulfillment_status)).length;
     const base     = enviados > 0 ? enviados : 1;
     const pctEntregado = Math.round((entregados / base) * 100);
     const pctRojo      = Math.round((rojos      / base) * 100);
