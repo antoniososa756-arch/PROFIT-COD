@@ -2242,8 +2242,10 @@ async function loadProductos() {
       return;
     }
 
-// Guardar productos para el buscador
+// Guardar productos para el buscador y notificaciones
     window.__allProductos = (data || []).flatMap(s => (s.products || []).map(p => ({ ...p, shop_name: s.shop_name, shop_domain: s.shop_domain })));
+    window.__productosNombreMap = {};
+    window.__allProductos.forEach(p => { window.__productosNombreMap[String(p.id)] = p.title; });
 
     // Filtro de tienda seleccionado
     const shopFilter = document.getElementById("productos-shop-filter")?.value || "";
@@ -2318,18 +2320,74 @@ async function loadProductos() {
       </div>
     `).join("");
 
-  // Si venimos de notificación o búsqueda, hacer scroll al producto
+ // Si venimos de notificación o búsqueda, mostrar solo ese producto
     if (window.__pendingProductoId) {
       const pid = window.__pendingProductoId;
       window.__pendingProductoId = null;
-      setTimeout(() => {
-        const row = document.querySelector(`tr[data-pid="${pid}"]`);
-        if (row) {
-          row.scrollIntoView({ behavior: "smooth", block: "center" });
-          row.style.background = "#fef9c3";
-          setTimeout(() => { row.style.background = ""; }, 2000);
-        }
-      }, 300);
+      const productoFiltrado = window.__allProductos?.find(p => String(p.id) === pid);
+      if (productoFiltrado) {
+        const shopDom = productoFiltrado.shop_domain;
+        const shopNom = productoFiltrado.shop_name;
+        wrap.innerHTML = `
+          <div style="margin-bottom:12px;">
+            <button onclick="loadProductos()" style="padding:6px 14px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">← Volver a todos los productos</button>
+          </div>
+          <div style="margin-bottom:32px;">
+            <h3 style="font-size:15px;font-weight:700;color:#16a34a;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
+              🏪 ${escapeHtml(shopNom)}
+            </h3>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead>
+                <tr style="background:#f9fafb;">
+                  <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:60px;">Imagen</th>
+                  <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
+                  <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Variantes & SKU</th>
+                  <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:120px;">Stock</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(() => {
+                  const p = productoFiltrado;
+                  const pid2 = String(p.id);
+                  const stockInfo = stockMap[pid2] || { stock: 0, stock_minimo: 5 };
+                  const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
+                  return `
+                  <tr data-pid="${pid2}" style="background:#fef9c3;">
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
+                      ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;">` : `<div style="width:48px;height:48px;border-radius:6px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
+                    </td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
+                      <span class="producto-nombre">${escapeHtml(p.title)}</span>
+                    </td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
+                      ${p.variants.map(v => {
+                        const vid = String(v.id);
+                        const uds = variantesMap[vid] || 1;
+                        return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;">
+                          <span style="font-size:12px;color:#374151;flex:1;">${escapeHtml(v.title)}</span>
+                          <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">uds/venta:</span>
+                          <input type="number" min="1" value="${uds}" style="width:52px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarVarianteConfig('${shopDom}','${vid}',this.value)">
+                        </div>`;
+                      }).join("")}
+                    </td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
+                      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <input type="number" min="0" value="${stockInfo.stock}" style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:13px;text-align:center;font-family:inherit;background:${stockBajo?'#fef2f2':'var(--card)'};color:var(--text);" onchange="guardarStock('${shopDom}','${pid2}',this.value,${stockInfo.stock_minimo})">
+                        <div style="display:flex;align-items:center;gap:4px;">
+                          <span style="font-size:10px;color:#9ca3af;">mín:</span>
+                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',${stockInfo.stock},this.value)">
+                        </div>
+                        ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
+                      </div>
+                    </td>
+                  </tr>`;
+                })()}
+              </tbody>
+            </table>
+          </div>
+        `;
+        return;
+      }
     }
 
   } catch(e) {
@@ -4111,7 +4169,7 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
       const notiId = `stock_bajo__${productId}`;
       const notis = JSON.parse(localStorage.getItem("notifications") || "[]");
       if (!notis.find(n => n.id === notiId)) {
-        const productoNombre = document.querySelector(`tr[data-pid="${productId}"] .producto-nombre`)?.textContent || productId;
+        const productoNombre = (window.__productosNombreMap && window.__productosNombreMap[productId]) || document.querySelector(`tr[data-pid="${productId}"] .producto-nombre`)?.textContent || productId;
         notis.unshift({ id: notiId, title: "📦 Stock bajo", text: `${productoNombre} — quedan ${stockNum} uds (mín: ${minimoNum})` });
         localStorage.setItem("notifications", JSON.stringify(notis));
         const panel = document.getElementById("notifPanel");
