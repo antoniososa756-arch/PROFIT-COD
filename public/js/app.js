@@ -3295,7 +3295,6 @@ async function guardarIngresoManual(input) {
   const col   = parseInt(input.dataset.col);
   const field = input.dataset.field;
 
-  // Buscar la otra celda de la misma fila para tener nombre+valor
   const rows = input.closest("tr");
   const inputs = rows ? rows.querySelectorAll("input") : [];
   let nombre = "", valor = 0;
@@ -3310,6 +3309,48 @@ async function guardarIngresoManual(input) {
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
       body: JSON.stringify({ shop_domain: shop, mes, columna: col, nombre, valor })
     });
+
+    // Recalcular totales en pantalla sin recargar
+    const wrap = input.closest("div[style*='border-radius:12px']");
+    if (!wrap) return;
+
+    // Recoger todos los inputs de valor de esta tienda
+    const allValorInputs = wrap.querySelectorAll("input[data-field='valor']");
+    let totalCOD = 0, totalPagado = 0, totalManual = 0;
+
+    // Leer COD y TARJETA de las celdas de texto (no editables)
+    const tds = wrap.querySelectorAll("td");
+    tds.forEach(td => {
+      const txt = td.textContent.trim();
+      if (td.previousElementSibling?.textContent?.includes("COD") && txt.includes("€")) {
+        totalCOD = parseFloat(txt.replace("€","").trim()) || 0;
+      }
+      if (td.previousElementSibling?.textContent?.includes("TARJETA") && txt.includes("€")) {
+        totalPagado = parseFloat(txt.replace("€","").trim()) || 0;
+      }
+    });
+
+    allValorInputs.forEach(inp => {
+      totalManual += parseFloat(inp.value) || 0;
+    });
+
+    const totalTienda = totalCOD + totalPagado + totalManual;
+    const totalEl = wrap.querySelector("tr[style*='#f0fdf4'] td:last-child");
+    if (totalEl) totalEl.textContent = totalTienda.toFixed(2) + " €";
+
+    // Actualizar el gran total del banner
+    const allCards = document.querySelectorAll("#inf-ingresos-wrap div[style*='border-radius:12px']");
+    let grandTotal = 0;
+    allCards.forEach(card => {
+      const totEl = card.querySelector("tr[style*='#f0fdf4'] td:last-child");
+      if (totEl) grandTotal += parseFloat(totEl.textContent) || 0;
+    });
+    const bannerEl = document.querySelector("#inf-ingresos-wrap div[style*='bbf7d0']");
+    if (bannerEl) {
+      const mes2 = bannerEl.textContent.split("—")[0].trim();
+      bannerEl.textContent = `📅 ${mes2} — Total ingresos: ${grandTotal.toFixed(2)} €`;
+    }
+
   } catch(e) { console.error(e); }
 }
 window.guardarIngresoManual = guardarIngresoManual;
