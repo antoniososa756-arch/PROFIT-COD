@@ -357,11 +357,7 @@ function escapeAttr(str) {
       list = null;
     }
     if (!Array.isArray(list)) {
-      list = (d.notifications || []).map((n, idx) => ({
-        id: `${Date.now()}_${idx}`,
-        title: n.title,
-        text: n.text,
-      }));
+      list = [];
       localStorage.setItem("notifications", JSON.stringify(list));
     }
     return list;
@@ -3260,6 +3256,7 @@ async function syncAndRefreshOrders() {
     });
     const data = await res.json();
     await fetchOrders();
+await checkNotificaciones();
     if (btn) { btn.textContent = `✓ ${data.synced || 0} pedidos`; }
     setTimeout(() => {
       if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg> Sincronizar`; btn.disabled = false; btn.style.opacity = "1"; }
@@ -3711,6 +3708,82 @@ async function loadSidebarReembolsos() {
   }
 }
 window.loadSidebarReembolsos = loadSidebarReembolsos;
+
+// =========================
+// NOTIFICACIONES REALES
+// =========================
+async function checkNotificaciones() {
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const orders = await res.json();
+    if (!Array.isArray(orders)) return;
+
+    const ahora = new Date();
+    const sietesDias = 7 * 24 * 60 * 60 * 1000;
+
+    // Estados que guardamos para detectar cambios
+    const estadosGuardados = JSON.parse(localStorage.getItem("orders_estados") || "{}");
+    const nuevosEstados = {};
+    const notisActuales = JSON.parse(localStorage.getItem("notifications") || "[]");
+    const notisIds = new Set(notisActuales.map(n => n.id));
+    const nuevasNotis = [...notisActuales];
+
+    for (const o of orders) {
+      const id = String(o.id || o.order_id);
+      const estado = o.fulfillment_status;
+      const nombre = o.order_number || id;
+      nuevosEstados[id] = estado;
+
+      const estadoAnterior = estadosGuardados[id];
+
+      // 1. Entregado
+      if (estado === "entregado" && estadoAnterior && estadoAnterior !== "entregado") {
+        const notiId = `entregado_${id}`;
+        if (!notisIds.has(notiId)) {
+          nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: `${nombre} — ${o.customer_name || ""}` });
+          notisIds.add(notiId);
+        }
+      }
+
+      // 2. Franquicia
+      if (estado === "franquicia" && estadoAnterior && estadoAnterior !== "franquicia") {
+        const notiId = `franquicia_${id}`;
+        if (!notisIds.has(notiId)) {
+          nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: `${nombre} — Llamar al cliente: ${o.customer_name || ""}` });
+          notisIds.add(notiId);
+        }
+      }
+
+      // 3. Más de 7 días sin resolver
+      const estadosSinResolver = ["en_transito", "franquicia", "enviado", "en_preparacion"];
+      if (estadosSinResolver.includes(estado) && o.created_at) {
+        const fechaPedido = new Date(o.created_at);
+        const diasTranscurridos = Math.floor((ahora - fechaPedido) / (1000 * 60 * 60 * 24));
+        if (diasTranscurridos >= 7) {
+          const notiId = `7dias_${id}`;
+          if (!notisIds.has(notiId)) {
+            nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: `${nombre} — ${o.customer_name || ""} (${estado})` });
+            notisIds.add(notiId);
+          }
+        }
+      }
+    }
+
+    localStorage.setItem("orders_estados", JSON.stringify(nuevosEstados));
+    localStorage.setItem("notifications", JSON.stringify(nuevasNotis));
+
+    const panel = document.getElementById("notifPanel");
+    const d = dict();
+    if (panel) renderNotifPanel(panel, nuevasNotis, d);
+    updateNotifBadge(nuevasNotis.length);
+
+  } catch(e) {
+    console.error("Error checkNotificaciones:", e);
+  }
+}
+window.checkNotificaciones = checkNotificaciones;
 
 // =========================
 // IMPORTAR PAGADOS DESDE PDF MRW
