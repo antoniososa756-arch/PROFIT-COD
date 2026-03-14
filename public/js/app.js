@@ -4015,6 +4015,7 @@ async function checkNotificaciones() {
         if (!notisIds.has(notiId)) {
           nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: `${nombre} — ${o.customer_name || ""}` });
           notisIds.add(notiId);
+          showToast("✅ Pedido entregado", `${nombre} — ${o.customer_name || ""}`, "#16a34a");
         }
       }
 
@@ -4024,6 +4025,7 @@ async function checkNotificaciones() {
         if (!notisIds.has(notiId)) {
           nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: `${nombre} — Llamar al cliente: ${o.customer_name || ""}` });
           notisIds.add(notiId);
+          showToast("🏪 Pedido en franquicia", `${nombre} — Llamar al cliente: ${o.customer_name || ""}`, "#f59e0b");
         }
       }
 
@@ -4038,6 +4040,7 @@ async function checkNotificaciones() {
         if (!notisIds.has(notiId) && !gestionados.includes(notiId)) {
             nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: `${nombre} — ${o.customer_name || ""} (${estado})` });
             notisIds.add(notiId);
+            showToast(`⚠️ ${diasTranscurridos} días sin resolver`, `${nombre} — ${o.customer_name || ""} (${estado})`, "#f59e0b");
           }
         }
       }
@@ -4055,6 +4058,48 @@ async function checkNotificaciones() {
     console.error("Error checkNotificaciones:", e);
   }
 }
+
+function showToast(title, text, color) {
+  const id = "toast_" + Date.now();
+  const toast = document.createElement("div");
+  toast.id = id;
+  toast.style.cssText = `
+    position:fixed;
+    bottom:24px;
+    right:24px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-left:4px solid ${color || "#16a34a"};
+    border-radius:10px;
+    box-shadow:0 4px 20px rgba(0,0,0,0.12);
+    padding:14px 18px;
+    max-width:320px;
+    z-index:99999;
+    font-family:inherit;
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    opacity:1;
+    transition:opacity 0.6s ease, transform 0.6s ease;
+    transform:translateY(0);
+  `;
+  toast.innerHTML = `
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:3px;">${escapeHtml(title)}</div>
+      <div style="font-size:12px;color:#6b7280;">${escapeHtml(text)}</div>
+    </div>
+    <div onclick="document.getElementById('${id}')?.remove()" style="cursor:pointer;color:#9ca3af;font-size:16px;line-height:1;flex-shrink:0;">×</div>
+  `;
+  document.body.appendChild(toast);
+
+  // Desvanece después de 4 segundos
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(16px)";
+    setTimeout(() => toast.remove(), 700);
+  }, 4000);
+}
+window.showToast = showToast;
 window.checkNotificaciones = checkNotificaciones;
 
 function irAPedidoDesdeNotif(notiId) {
@@ -4172,6 +4217,7 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
         const productoNombre = (window.__productosNombreMap && window.__productosNombreMap[productId]) || document.querySelector(`tr[data-pid="${productId}"] .producto-nombre`)?.textContent || productId;
         notis.unshift({ id: notiId, title: "📦 Stock bajo", text: `${productoNombre} — quedan ${stockNum} uds (mín: ${minimoNum})` });
         localStorage.setItem("notifications", JSON.stringify(notis));
+        showToast("📦 Stock bajo", `${productoNombre} — quedan ${stockNum} uds (mín: ${minimoNum})`, "#dc2626");
         const panel = document.getElementById("notifPanel");
         const d = dict();
         if (panel) renderNotifPanel(panel, notis, d);
