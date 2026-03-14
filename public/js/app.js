@@ -3155,25 +3155,135 @@ async function renderInformesIngresos() {
 
   let stores = [], orders = [], manuales = [];
   try {
-    stores = await fetch(`${API_BASE}/api/shopify/stores`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-    }).then(r=>r.json());
+    stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
     if (!Array.isArray(stores)) stores = [];
   } catch {}
-
   try {
-    orders = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-    }).then(r=>r.json());
+    orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
     if (!Array.isArray(orders)) orders = [];
   } catch {}
-
   try {
-    manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-    }).then(r=>r.json());
+    manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
     if (!Array.isArray(manuales)) manuales = [];
   } catch {}
+
+  const pedidosMes = orders.filter(o => {
+    if (o.fulfillment_status !== "entregado") return false;
+    if (!o.created_at) return false;
+    const d = new Date(o.created_at);
+    return d.getMonth()+1 === parseInt(month) && d.getFullYear() === parseInt(year);
+  });
+
+  const fmt = n => (parseFloat(n)||0).toFixed(2);
+  const inp = `padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;`;
+  const MRW_COMISION = 0.67;
+  const TARJETA_PCT  = 0.04;
+
+  let grandTotal = 0;
+
+  const cols = stores.map(store => {
+    const pedidosTienda = pedidosMes.filter(o => o.shop_domain === store.domain);
+
+    const pedidosCOD = pedidosTienda.filter(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "pending" || fin === "cod" || fin === "pendiente";
+      } catch { return false; }
+    });
+
+    const pedidosPagado = pedidosTienda.filter(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "paid" || fin === "pagado";
+      } catch { return false; }
+    });
+
+    const totalCOD    = pedidosCOD.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const totalPagado = pedidosPagado.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const descCOD     = pedidosCOD.length * MRW_COMISION;
+    const descPagado  = totalPagado * TARJETA_PCT;
+    const netoCOD     = totalCOD - descCOD;
+    const netoPagado  = totalPagado - descPagado;
+
+    const man1 = manuales.find(m => m.shop_domain === store.domain && m.columna === 1) || { nombre: "", valor: 0 };
+    const man2 = manuales.find(m => m.shop_domain === store.domain && m.columna === 2) || { nombre: "", valor: 0 };
+    const totalManual = (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
+    const totalTienda = netoCOD + netoPagado + totalManual;
+    grandTotal += totalTienda;
+
+    return `
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+        <div style="background:#dc2626;padding:10px 14px;">
+          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
+          <div style="font-size:11px;color:#fca5a5;">${store.domain}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tbody>
+            <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
+                COD
+                <div style="font-size:10px;color:#9ca3af;font-weight:400;">${fmt(totalCOD)} € — ${pedidosCOD.length} pedidos</div>
+                <div style="font-size:10px;color:#dc2626;">− Comisión MRW (${pedidosCOD.length} × 0.67€) = −${fmt(descCOD)} €</div>
+              </td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoCOD)} €</td>
+            </tr>
+            <tr style="background:#f9fafb;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
+                TARJETA
+                <div style="font-size:10px;color:#9ca3af;font-weight:400;">${fmt(totalPagado)} € — ${pedidosPagado.length} pedidos</div>
+                <div style="font-size:10px;color:#dc2626;">− Comisión tarjeta (4%) = −${fmt(descPagado)} €</div>
+              </td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoPagado)} €</td>
+            </tr>
+            <tr style="background:#eff6ff;">
+              <td style="padding:8px 14px;border:1px solid #bfdbfe;">
+                <input type="text" value="${escapeHtml(man1.nombre||'')}" placeholder="Nombre ingreso extra 1..."
+                  data-shop="${store.domain}" data-mes="${mes}" data-col="1" data-field="nombre"
+                  onchange="guardarIngresoManual(this)"
+                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;margin-bottom:4px;">
+              </td>
+              <td style="padding:8px 14px;border:1px solid #bfdbfe;">
+                <input type="number" min="0" step="0.01" value="${fmt(man1.valor)}" placeholder="0.00"
+                  data-shop="${store.domain}" data-mes="${mes}" data-col="1" data-field="valor"
+                  onchange="guardarIngresoManual(this)"
+                  style="${inp}text-align:right;background:#eff6ff;color:#2563eb;font-weight:600;">
+              </td>
+            </tr>
+            <tr style="background:#eff6ff;">
+              <td style="padding:8px 14px;border:1px solid #bfdbfe;">
+                <input type="text" value="${escapeHtml(man2.nombre||'')}" placeholder="Nombre ingreso extra 2..."
+                  data-shop="${store.domain}" data-mes="${mes}" data-col="2" data-field="nombre"
+                  onchange="guardarIngresoManual(this)"
+                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;margin-bottom:4px;">
+              </td>
+              <td style="padding:8px 14px;border:1px solid #bfdbfe;">
+                <input type="number" min="0" step="0.01" value="${fmt(man2.valor)}" placeholder="0.00"
+                  data-shop="${store.domain}" data-mes="${mes}" data-col="2" data-field="valor"
+                  onchange="guardarIngresoManual(this)"
+                  style="${inp}text-align:right;background:#eff6ff;color:#2563eb;font-weight:600;">
+              </td>
+            </tr>
+            <tr style="background:#f0fdf4;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalTienda)} €</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
+
+  wrap.innerHTML = `
+    <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
+      📅 ${mesLabel} — Total ingresos: ${fmt(grandTotal)} €
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+      ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+    </div>
+  `;
+}
 
   // Filtrar pedidos entregados del mes
   const pedidosMes = orders.filter(o => {
