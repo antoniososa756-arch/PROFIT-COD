@@ -1396,28 +1396,40 @@ function doSearch(value) {
     return;
   }
 
-  const results = searchIndex
-    .filter(it => it.label.toLowerCase().includes(q))
-    .slice(0, 12);
+  // Secciones fijas
+  const secciones = [
+    { label: "Métricas", section: "metricas" },
+    { label: "Tiendas", section: "tiendas" },
+    { label: "Pedidos", section: "pedidos" },
+    { label: "Facturas", section: "facturas" },
+    { label: "Informes", section: "informes" },
+  ].filter(s => s.label.toLowerCase().includes(q))
+   .map(s => ({ label: `📂 ${s.label}`, section: s.section, type: "seccion" }));
+
+  // Pedidos reales
+  const pedidos = (allOrders || []).filter(o =>
+    (o.order_number || "").toLowerCase().includes(q) ||
+    (o.customer_name || "").toLowerCase().includes(q) ||
+    (o.tracking_number || "").toLowerCase().includes(q)
+  ).slice(0, 8).map(o => ({
+    label: `🛍️ ${o.order_number || "-"} — ${o.customer_name || "-"}`,
+    section: "pedidos",
+    type: "pedido"
+  }));
+
+  const results = [...secciones, ...pedidos].slice(0, 12);
 
   if (results.length === 0) {
-    drop.innerHTML = `
-      <div class="search-empty">${d.ui.notFound}</div>
-    `;
+    drop.innerHTML = `<div class="search-empty">${d.ui.notFound}</div>`;
     drop.classList.add("open");
     return;
   }
 
-  drop.innerHTML = results
-    .map(r => `
-      <div
-        class="search-item"
-        onclick="goToSearch('${escapeAttr(r.section)}','${escapeAttr(r.label)}')"
-      >
-        ${escapeHtml(r.label)}
-      </div>
-    `)
-    .join("");
+  drop.innerHTML = results.map(r => `
+    <div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','')">
+      ${escapeHtml(r.label)}
+    </div>
+  `).join("");
 
   drop.classList.add("open");
 }
