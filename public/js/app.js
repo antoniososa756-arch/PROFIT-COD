@@ -2243,7 +2243,6 @@ async function loadProductos() {
               <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:60px;">Imagen</th>
               <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
               <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Variantes & SKU</th>
-              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:100px;">Uds/venta</th>
               <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:120px;">Stock</th>
             </tr>
           </thead>
@@ -2262,20 +2261,18 @@ async function loadProductos() {
                 </td>
                 <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
                   ${escapeHtml(p.title)}
-                </td><td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
+                <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
                   ${p.variants.map(v => {
                     const vid = String(v.id);
                     const uds = variantesMap[vid] || 1;
                     return `
-                    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f3f4f6;">
-                      <span style="font-size:12px;color:#374151;min-width:120px;">${escapeHtml(v.title)}</span>
-                      <span style="font-size:11px;color:#9ca3af;background:#f3f4f6;padding:2px 6px;border-radius:4px;">SKU: ${escapeHtml(v.sku)}</span>
-                      <span style="font-size:11px;color:#16a34a;font-weight:600;">${v.price} €</span>
-                      <span style="font-size:10px;color:#9ca3af;margin-left:auto;">uds:</span>
+                    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;">
+                      <span style="font-size:12px;color:#374151;flex:1;">${escapeHtml(v.title)}</span>
+                      <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">uds/venta:</span>
                       <input type="number" min="1" value="${uds}"
-                        style="width:48px;padding:2px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
+                        style="width:52px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
                         onchange="guardarVarianteConfig('${shop.shop_domain}','${vid}',this.value)"
-                        title="Unidades que descuenta esta variante al venderse">
+                        title="Unidades reales que consume esta variante">
                     </div>`;
                   }).join("")}
                 </td>
