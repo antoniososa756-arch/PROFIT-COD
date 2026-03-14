@@ -2637,17 +2637,7 @@ async function loadGastosFijosData() {
     items = Array.isArray(data) ? data : [];
   } catch {}
 
-// Precargar P.UNIT de MRW y LOGÍSTICA desde precios globales
-  if (Array.isArray(items)) {
-    items = items.map(item => {
-      if (item.nombre === "MRW") return { ...item, precio_unit: preciosGlobales.precio_mrw };
-      if (item.nombre === "LOGÍSTICA") return { ...item, precio_unit: preciosGlobales.precio_logistica };
-      return item;
-    });
-  }
-
-
-  // Si no hay filas base creadas aún, crearlas UNA SOLA VEZ
+// Si no hay filas base creadas aún, crearlas UNA SOLA VEZ
 
   if (items.length === 0) {
     const defaults = [
