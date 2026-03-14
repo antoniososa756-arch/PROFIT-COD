@@ -3225,7 +3225,7 @@ async function renderInformesIngresos() {
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
                 COD
                 <div style="font-size:10px;color:#9ca3af;font-weight:400;">${fmt(totalCOD)} € — ${pedidosCOD.length} pedidos</div>
-                <div style="font-size:10px;color:#dc2626;">− Comisión MRW (${pedidosCOD.length}×0.67€) = −${fmt(descCOD)}€</div>
+                <div style="font-size:10px;color:#dc2626;">Comisión MRW (${pedidosCOD.length}×0.67€) = −${fmt(descCOD)}€</div>
               </td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoCOD)} €</td>
             </tr>
@@ -3233,7 +3233,7 @@ async function renderInformesIngresos() {
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
                 TARJETA
                 <div style="font-size:10px;color:#9ca3af;font-weight:400;">${fmt(totalPagado)} € — ${pedidosPagado.length} pedidos</div>
-                <div style="font-size:10px;color:#dc2626;">− Comisión tarjeta (4%) = −${fmt(descPagado)}€</div>
+                <div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(descPagado)}€</div>
               </td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoPagado)} €</td>
             </tr>
@@ -3451,7 +3451,7 @@ async function renderInformesBalance() {
 
     return `
       <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-        <div style="background:#dc2626;padding:10px 14px;">
+       <div style="background:#16a34a;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
           <div style="font-size:11px;color:#bbf7d0;">${store.domain}</div>
         </div>
