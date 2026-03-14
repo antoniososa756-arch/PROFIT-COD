@@ -4315,7 +4315,6 @@ async function switchEntradaTab(tab) {
 async function cargarTabNuevaEntrada() {
   const content = document.getElementById("entrada-content");
   if (!content) return;
-  content.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
 
   const productos = window.__allProductos || [];
   const stockData = await fetch(`${API_BASE}/api/shopify/stock`, {
@@ -4326,86 +4325,27 @@ async function cargarTabNuevaEntrada() {
   if (Array.isArray(stockData)) stockData.forEach(s => { stockMap[s.product_id] = s.stock || 0; });
 
   if (!productos.length) {
-    content.innerHTML = `<div class="muted" style="padding:16px;">Primero sincroniza los productos.</div>`;
+    content.innerHTML = `<div class="muted" style="padding:16px;">Primero sincroniza los productos desde la sección Productos.</div>`;
     return;
   }
 
   content.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead>
-        <tr style="background:#f9fafb;">
-          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
-          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:80px;">Tienda</th>
-          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;">Stock actual</th>
-          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:100px;">Cantidad a ingresar</th>
-          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:90px;">Stock nuevo</th>
-          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;"></th>
-        </tr>
-      </thead>
-      <tbody>
-        ${productos.map(p => {
-          const pid = String(p.id);
-          const stockActual = stockMap[pid] || 0;
-          return `
-          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;">
-              ${escapeHtml(p.title)}
-            </td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280;">
-              ${escapeHtml(p.shop_name || p.shop_domain)}
-            </td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">
-              ${stockActual}
-            </td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
-              <input type="number" min="1" value="" placeholder="0"
-                id="entrada-qty-${pid}"
-                oninput="actualizarStockNuevo('${pid}', ${stockActual})"
-                style="width:70px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;text-align:center;font-family:inherit;">
-            </td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
-              <span id="entrada-nuevo-${pid}" style="font-weight:700;color:#16a34a;">${stockActual}</span>
-            </td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
-              <button onclick="confirmarEntrada('${pid}','${escapeAttr(p.title)}','${p.shop_domain}',${stockActual})"
-                style="padding:5px 12px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
-                ✓ Ingresar
-              </button>
-            </td>
-          </tr>`;
-        }).join("")}
-      </tbody>
-    </table>
+    <div style="margin-bottom:16px;">
+      <input id="entrada-search" type="text" placeholder="🔍 Buscar producto por nombre..."
+        oninput="filtrarProductosEntrada()"
+        style="width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+      <div id="entrada-search-results" style="margin-top:8px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;display:none;"></div>
+    </div>
+    <div id="entrada-producto-seleccionado" style="display:none;">
+      <div id="entrada-producto-card"></div>
+    </div>
+    <div id="entrada-placeholder" style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">
+      Busca y selecciona un producto para registrar la entrada
+    </div>
   `;
-}
 
-function actualizarStockNuevo(pid, stockActual) {
-  const qty = parseInt(document.getElementById(`entrada-qty-${pid}`)?.value) || 0;
-  const nuevoEl = document.getElementById(`entrada-nuevo-${pid}`);
-  if (nuevoEl) {
-    const nuevo = stockActual + qty;
-    nuevoEl.textContent = nuevo;
-    nuevoEl.style.color = qty > 0 ? "#16a34a" : "#9ca3af";
-  }
-}
-
-async function confirmarEntrada(productId, productName, shopDomain, stockAnterior) {
-  const qty = parseInt(document.getElementById(`entrada-qty-${productId}`)?.value) || 0;
-  if (qty <= 0) { alert("Ingresa una cantidad mayor a 0"); return; }
-
-  try {
-    const res = await fetch(`${API_BASE}/api/shopify/entrada-mercancia`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, product_name: productName, cantidad: qty, stock_anterior: stockAnterior })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      showToast("✅ Entrada registrada", `${productName} — +${qty} uds (stock: ${data.stock_nuevo})`, "#16a34a");
-      await cargarTabNuevaEntrada();
-      loadProductos();
-    }
-  } catch(e) { alert("Error registrando entrada"); }
+  window.__entradaStockMap = stockMap;
+  window.__entradaProductos = productos;
 }
 
 async function cargarTabHistorial() {
@@ -4459,10 +4399,125 @@ async function cargarTabHistorial() {
   }
 }
 
+function filtrarProductosEntrada() {
+  const q = (document.getElementById("entrada-search")?.value || "").toLowerCase().trim();
+  const resultsEl = document.getElementById("entrada-search-results");
+  if (!resultsEl) return;
+
+  if (!q) { resultsEl.style.display = "none"; resultsEl.innerHTML = ""; return; }
+
+  const productos = window.__entradaProductos || [];
+  const matches = productos.filter(p => (p.title || "").toLowerCase().includes(q)).slice(0, 8);
+
+  if (!matches.length) {
+    resultsEl.style.display = "block";
+    resultsEl.innerHTML = `<div style="padding:12px 14px;color:#6b7280;font-size:13px;">No se encontraron productos</div>`;
+    return;
+  }
+
+  resultsEl.style.display = "block";
+  resultsEl.innerHTML = matches.map(p => `
+    <div onclick="seleccionarProductoEntrada('${String(p.id)}')"
+      style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:10px;"
+      onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+      ${p.image ? `<img src="${p.image}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;">` : `<div style="width:32px;height:32px;border-radius:4px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📦</div>`}
+      <div>
+        <div style="font-weight:600;color:#111827;">${escapeHtml(p.title)}</div>
+        <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name || p.shop_domain)}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function seleccionarProductoEntrada(pid) {
+  const productos = window.__entradaProductos || [];
+  const p = productos.find(x => String(x.id) === pid);
+  if (!p) return;
+
+  const stockActual = (window.__entradaStockMap || {})[pid] || 0;
+
+  const resultsEl = document.getElementById("entrada-search-results");
+  const searchEl = document.getElementById("entrada-search");
+  if (resultsEl) { resultsEl.style.display = "none"; resultsEl.innerHTML = ""; }
+  if (searchEl) searchEl.value = p.title;
+
+  const placeholder = document.getElementById("entrada-placeholder");
+  const card = document.getElementById("entrada-producto-seleccionado");
+  const cardContent = document.getElementById("entrada-producto-card");
+  if (placeholder) placeholder.style.display = "none";
+  if (card) card.style.display = "block";
+
+  cardContent.innerHTML = `
+    <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+      <div style="background:#16a34a;padding:14px 18px;display:flex;align-items:center;gap:12px;">
+        ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:2px solid rgba(255,255,255,0.3);">` : `<div style="width:48px;height:48px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;">📦</div>`}
+        <div>
+          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(p.title)}</div>
+          <div style="font-size:12px;color:#bbf7d0;">${escapeHtml(p.shop_name || p.shop_domain)}</div>
+        </div>
+      </div>
+      <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:end;">
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stock actual</div>
+          <div style="font-size:28px;font-weight:700;color:#374151;">${stockActual}</div>
+          <div style="font-size:11px;color:#9ca3af;">unidades</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Cantidad a ingresar</div>
+          <input type="number" min="1" id="entrada-qty-selected" placeholder="0"
+            oninput="actualizarPreviewNuevo(${stockActual})"
+            style="width:100%;padding:10px;border:2px solid #16a34a;border-radius:8px;font-size:18px;text-align:center;font-family:inherit;font-weight:700;color:#16a34a;background:var(--card);">
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stock nuevo</div>
+          <div style="font-size:28px;font-weight:700;color:#16a34a;" id="entrada-preview-nuevo">${stockActual}</div>
+          <div style="font-size:11px;color:#9ca3af;">unidades</div>
+        </div>
+      </div>
+      <div style="padding:0 20px 20px;">
+        <button onclick="confirmarEntradaSeleccionada('${pid}','${escapeAttr(p.title)}','${p.shop_domain}',${stockActual})"
+          style="width:100%;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+          ✓ Registrar entrada de mercancía
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function actualizarPreviewNuevo(stockActual) {
+  const qty = parseInt(document.getElementById("entrada-qty-selected")?.value) || 0;
+  const el = document.getElementById("entrada-preview-nuevo");
+  if (el) {
+    el.textContent = stockActual + qty;
+    el.style.color = qty > 0 ? "#16a34a" : "#9ca3af";
+  }
+}
+
+async function confirmarEntradaSeleccionada(productId, productName, shopDomain, stockAnterior) {
+  const qty = parseInt(document.getElementById("entrada-qty-selected")?.value) || 0;
+  if (qty <= 0) { alert("Ingresa una cantidad mayor a 0"); return; }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/shopify/entrada-mercancia`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, product_name: productName, cantidad: qty, stock_anterior: stockAnterior })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast("✅ Entrada registrada", `${productName} — +${qty} uds (stock: ${data.stock_nuevo})`, "#16a34a");
+      await cargarTabNuevaEntrada();
+      loadProductos();
+    }
+  } catch(e) { alert("Error registrando entrada"); }
+}
+
 window.abrirEntradaMercancia = abrirEntradaMercancia;
 window.switchEntradaTab = switchEntradaTab;
-window.actualizarStockNuevo = actualizarStockNuevo;
-window.confirmarEntrada = confirmarEntrada;
+window.filtrarProductosEntrada = filtrarProductosEntrada;
+window.seleccionarProductoEntrada = seleccionarProductoEntrada;
+window.actualizarPreviewNuevo = actualizarPreviewNuevo;
+window.confirmarEntradaSeleccionada = confirmarEntradaSeleccionada;
 window.guardarVarianteConfig = guardarVarianteConfig;
 window.guardarStock = guardarStock;
 window.guardarStockMinimo = guardarStockMinimo;
