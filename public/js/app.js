@@ -1419,7 +1419,8 @@ function doSearch(value) {
   ).slice(0, 8).map(o => ({
     label: `🛍️ ${o.order_number || "-"} — ${o.customer_name || "-"}`,
     section: "pedidos",
-    type: "pedido"
+    type: "pedido",
+    orderNumber: o.order_number || ""
   }));
 
   const results = [...secciones, ...pedidos].slice(0, 12);
@@ -1431,7 +1432,7 @@ function doSearch(value) {
   }
 
   drop.innerHTML = results.map(r => `
-    <div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','')">
+    <div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','${escapeAttr(r.orderNumber || "")}')">
       ${escapeHtml(r.label)}
     </div>
   `).join("");
@@ -1447,20 +1448,22 @@ function closeSearchDrop() {
   }
 }
 
-function goToSearch(section, label) {
-  setSection(section);
-
-  const box = document.getElementById("cardBox");
-  if (box) {
-    box.innerHTML = `
-      <div style="font-weight:600; margin-bottom:6px;">
-        ${escapeHtml(label)}
-      </div>
-      <div class="muted">OK (demo)</div>
-    `;
-  }
-
+function goToSearch(section, orderNumber) {
   closeSearchDrop();
+  const searchEl = document.getElementById("search");
+  if (searchEl) searchEl.value = "";
+
+  if (section === "pedidos" && orderNumber) {
+    window.__pendingSearchNoti = null;
+    setSection(section);
+    setTimeout(() => {
+      filterOrders(orderNumber);
+      const searchEl = document.getElementById("search");
+      if (searchEl) searchEl.value = orderNumber;
+    }, 400);
+  } else {
+    setSection(section);
+  }
 }
 
  // MODAL LOGO
