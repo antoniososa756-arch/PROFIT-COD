@@ -4240,11 +4240,11 @@ function applyFilters() {
     if (shop && o.shop_domain !== shop) return false;
     if (dateFrom) {
       if (!o.created_at) return false;
-      if (new Date(o.created_at) < new Date(dateFrom + "T00:00:00")) return false;
+      if (o.created_at.split("T")[0] < dateFrom) return false;
     }
     if (dateTo) {
       if (!o.created_at) return false;
-      if (new Date(o.created_at) > new Date(dateTo + "T23:59:59")) return false;
+      if (o.created_at.split("T")[0] > dateTo) return false;
     }
     return true;
   });
