@@ -358,17 +358,17 @@ router.post("/informes-ingresos", auth, async (req, res) => {
 
 router.get("/precios-globales", auth, async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM gastos_fijos_precios_globales WHERE user_id = $1", [req.user.id]);
-    res.json(result.rows[0] || { precio_mrw: 0, precio_logistica: 0 });
+    const row = await db.get("SELECT * FROM gastos_fijos_precios_globales WHERE user_id = ?", [req.user.id]);
+    res.json(row || { precio_mrw: 0, precio_logistica: 0 });
   } catch(e) { res.status(500).json({ error: "Error" }); }
 });
 
 router.post("/precios-globales", auth, async (req, res) => {
   const { precio_mrw, precio_logistica } = req.body;
   try {
-    await pool.query(
+    await db.run(
       `INSERT INTO gastos_fijos_precios_globales (user_id, precio_mrw, precio_logistica)
-       VALUES ($1, $2, $3)
+       VALUES (?, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET precio_mrw=EXCLUDED.precio_mrw, precio_logistica=EXCLUDED.precio_logistica`,
       [req.user.id, parseFloat(precio_mrw)||0, parseFloat(precio_logistica)||0]
     );
