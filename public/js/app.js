@@ -3221,8 +3221,8 @@ async function renderInformesIngresos() {
     grandTotal += totalTienda;
 
     return `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:200px;flex:1;">
-        <div style="background:#16a34a;padding:12px 16px;">
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+        <div style="background:#dc2626;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
           <div style="font-size:11px;color:#bbf7d0;">${store.domain}</div>
         </div>
@@ -3284,7 +3284,7 @@ async function renderInformesIngresos() {
     <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
       📅 ${mesLabel} — Total ingresos: ${fmt(grandTotal)} €
     </div>
-    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
       ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
     </div>
   `;
@@ -3412,8 +3412,8 @@ async function renderInformesBalance() {
     grandTotalNeto += totalNeto;
 
     return `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:200px;flex:1;">
-        <div style="background:#16a34a;padding:12px 16px;">
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+        <div style="background:#dc2626;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
           <div style="font-size:11px;color:#bbf7d0;">${store.domain}</div>
         </div>
@@ -3469,7 +3469,7 @@ async function renderInformesBalance() {
     <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
       📅 ${mesLabel} — Balance neto total: ${fmt(grandTotalNeto)} €
     </div>
-    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
       ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
     </div>
   `;
