@@ -1004,7 +1004,7 @@ if (id === "productos") {
 
   box.className = "card";
   box.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;">
       <select id="productos-shop-filter" onchange="loadProductos()"
         style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         <option value="">Todas las tiendas</option>
@@ -4046,12 +4046,41 @@ async function importarPagadosPDF(input) {
 }
 
 async function guardarStock(shopDomain, productId, stock, stockMinimo) {
+  const stockNum = parseInt(stock)||0;
+  const minimoNum = parseInt(stockMinimo)||5;
   try {
     await fetch(`${API_BASE}/api/shopify/stock`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
-      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, stock: parseInt(stock)||0, stock_minimo: parseInt(stockMinimo)||5 })
+      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, stock: stockNum, stock_minimo: minimoNum })
     });
+
+    // Notificación campanita si stock bajo
+    if (stockNum <= minimoNum) {
+      const notiId = `stock_bajo__${productId}`;
+      const notis = JSON.parse(localStorage.getItem("notifications") || "[]");
+      if (!notis.find(n => n.id === notiId)) {
+        notis.unshift({ id: notiId, title: "📦 Stock bajo", text: `Producto ${productId} en ${shopDomain} — quedan ${stockNum} unidades (mín: ${minimoNum})` });
+        localStorage.setItem("notifications", JSON.stringify(notis));
+        const panel = document.getElementById("notifPanel");
+        const d = dict();
+        if (panel) renderNotifPanel(panel, notis, d);
+        updateNotifBadge(notis.length);
+      }
+    } else {
+      // Si sube el stock, eliminar la notificación de stock bajo
+      const notiId = `stock_bajo__${productId}`;
+      const notis = JSON.parse(localStorage.getItem("notifications") || "[]");
+      const next = notis.filter(n => n.id !== notiId);
+      if (next.length !== notis.length) {
+        localStorage.setItem("notifications", JSON.stringify(next));
+        const panel = document.getElementById("notifPanel");
+        const d = dict();
+        if (panel) renderNotifPanel(panel, next, d);
+        updateNotifBadge(next.length);
+      }
+    }
+
     loadProductos();
   } catch(e) { console.error(e); }
 }
