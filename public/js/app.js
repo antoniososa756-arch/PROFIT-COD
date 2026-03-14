@@ -2402,6 +2402,16 @@ async function loadProductos() {
                     </td>
                     <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
                       <span class="producto-nombre">${escapeHtml(p.title)}</span>
+                      <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">Costo compra:</span>
+                        <input type="number" min="0" step="0.01"
+                          value="${stockInfo.costo_compra || ''}"
+                          placeholder="0.00"
+                          style="width:80px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
+                          onchange="guardarCostoCompra('${shopDom}','${pid2}',this.value)">
+                        <span style="font-size:11px;color:#9ca3af;">€</span>
+                      </div>
+                    </td>
                     </td>
                     <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
                       ${p.variants.map(v => {
@@ -2627,7 +2637,17 @@ async function loadGastosFijosData() {
     items = Array.isArray(data) ? data : [];
   } catch {}
 
-// Si no hay filas base creadas aún, crearlas UNA SOLA VEZ
+// Precargar P.UNIT de MRW y LOGÍSTICA desde precios globales
+  if (Array.isArray(items)) {
+    items = items.map(item => {
+      if (item.nombre === "MRW") return { ...item, precio_unit: preciosGlobales.precio_mrw };
+      if (item.nombre === "LOGÍSTICA") return { ...item, precio_unit: preciosGlobales.precio_logistica };
+      return item;
+    });
+  }
+
+
+  // Si no hay filas base creadas aún, crearlas UNA SOLA VEZ
 
   if (items.length === 0) {
     const defaults = [
@@ -2659,16 +2679,6 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     }).then(r => r.json());
   } catch {}
-
-  // Precargar P.UNIT de MRW y LOGÍSTICA desde precios globales
-  if (Array.isArray(items)) {
-    items = items.map(item => {
-      if (item.nombre === "MRW") return { ...item, precio_unit: preciosGlobales.precio_mrw };
-      if (item.nombre === "LOGÍSTICA") return { ...item, precio_unit: preciosGlobales.precio_logistica };
-      return item;
-    });
-  }
-
   let impuestos = [];
   try {
     const r = await fetch(`${API_BASE}/api/impuestos`, {
@@ -4754,7 +4764,9 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
     if (stockNum <= minimoNum) {
       const notiId = `stock_bajo__${productId}`;
       const notis = JSON.parse(localStorage.getItem("notifications") || "[]");
-      if (!notis.find(n => n.id === notiId)) {
+      const yaExiste = notis.find(n => n.id === notiId);
+      if (!yaExiste) {
+
         const productoNombre = (window.__productosNombreMap && window.__productosNombreMap[productId]) || document.querySelector(`tr[data-pid="${productId}"] .producto-nombre`)?.textContent || productId;
         notis.unshift({ id: notiId, title: "📦 Stock bajo", text: `${productoNombre} — quedan ${stockNum} uds (mín: ${minimoNum})` });
         localStorage.setItem("notifications", JSON.stringify(notis));
@@ -4778,7 +4790,9 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
       }
     }
 
-    loadProductos();
+    // Recargar solo el input de stock sin recargar toda la tabla
+    const inputStock = document.querySelector(`tr[data-pid="${productId}"] input[title="Stock actual"]`);
+    if (inputStock) inputStock.style.borderColor = stockNum <= minimoNum ? "#dc2626" : "#e5e7eb";
   } catch(e) { console.error(e); }
 }
 
