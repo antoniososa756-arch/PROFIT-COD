@@ -374,7 +374,7 @@ function escapeAttr(str) {
       ${
         list.length
           ? list.map(n => {
-              const es7dias = n.id.startsWith("7dias_");
+              const es7dias = n.id.startsWith("7dias__");
               const orderId = n.id.split("_").pop();
               return `
                 <div class="notif-row" style="cursor:pointer;">
@@ -2862,7 +2862,22 @@ async function fetchOrders() {
     });
 
     const orders = await res.json();
-    allOrders = Array.isArray(orders) ? orders : [];
+  allOrders = Array.isArray(orders) ? orders : [];
+
+    // Si venimos de una notificación, filtrar ese pedido
+    if (window.__pendingSearchNoti) {
+      const orderId = window.__pendingSearchNoti;
+      window.__pendingSearchNoti = null;
+      const order = allOrders.find(o => String(o.id || o.order_id) === orderId);
+      if (order) {
+        const q = order.order_number || "";
+        const searchEl = document.getElementById("search");
+        if (searchEl) { searchEl.value = q; doSearch(q); }
+        filterOrders(q);
+        return;
+      }
+    }
+
     renderOrders(allOrders);
 
   } catch (e) {
@@ -3771,7 +3786,7 @@ async function checkNotificaciones() {
         const fechaPedido = new Date(o.created_at);
         const diasTranscurridos = Math.floor((ahora - fechaPedido) / (1000 * 60 * 60 * 24));
         if (diasTranscurridos >= 7) {
-          const notiId = `7dias_${id}`;
+          const notiId = `7dias__${id}`;
           const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas") || "[]");
         if (!notisIds.has(notiId) && !gestionados.includes(notiId)) {
             nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: `${nombre} — ${o.customer_name || ""} (${estado})` });
@@ -3797,17 +3812,11 @@ window.checkNotificaciones = checkNotificaciones;
 
 function irAPedidoDesdeNotif(notiId) {
   closeAllDrops();
+
+  // Guardar el pedido que queremos ver al cargar
+const orderId = notiId.includes("__") ? notiId.split("__")[1] : notiId.split("_").pop();  window.__pendingSearchNoti = orderId;
+
   setSection("pedidos");
-  setTimeout(() => {
-    const orderId = notiId.split("_").pop();
-    const order = (allOrders || []).find(o => String(o.id || o.order_id) === orderId);
-    if (order) {
-      const q = order.order_number || "";
-      const searchEl = document.getElementById("search");
-      if (searchEl) { searchEl.value = q; doSearch(q); }
-      filterOrders(q);
-    }
-  }, 400);
 }
 
 function marcarGestionado(event, notiId) {
