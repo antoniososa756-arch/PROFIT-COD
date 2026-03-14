@@ -2614,12 +2614,14 @@ async function loadGastosFijosData() {
     });
     const all = await r.json();
     if (Array.isArray(all)) {
-      totalPedidos = all.filter(o => {
+      const pedidosMes = all.filter(o => {
         if (!o.created_at) return false;
         if (o.fulfillment_status === "cancelado") return false;
         const d = new Date(o.created_at);
         return d.getMonth()+1 === parseInt(month) && d.getFullYear() === parseInt(year);
-      }).length;
+      });
+      totalPedidos = pedidosMes.length;
+      window.__allOrdersCache = all; // cache global para el estimado
     }
   } catch {}
 
@@ -2727,7 +2729,22 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
         <tbody>
           ${items.map(item => {
             const esFijo = item.fijo===1||item.fijo===true;
-            const estimado = item.precio_unit!=null ? totalPedidos*(parseFloat(item.precio_unit)||0) : null;
+            let estimado = null;
+            if (item.precio_unit != null && (item.nombre === "MRW" || item.nombre === "LOGÍSTICA")) {
+              // Calcular envíos totales del mes
+              let totalEnvios = 0;
+              try {
+                const mesOrders = (window.__allOrdersCache || []).filter(o => {
+                  if (!o.created_at) return false;
+                  if (o.fulfillment_status === "cancelado") return false;
+                  const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+                  return d.startsWith(mes);
+                });
+                const devueltos = mesOrders.filter(o => o.fulfillment_status === "devuelto").length;
+                totalEnvios = mesOrders.length + devueltos; // +1 extra por cada devuelto
+              } catch {}
+              estimado = totalEnvios * (parseFloat(item.precio_unit) || 0);
+            }
             return `
             <tr data-id="${item.id}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
               <td style="padding:7px 12px;border:1px solid #e5e7eb;">
