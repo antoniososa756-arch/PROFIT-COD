@@ -3228,10 +3228,6 @@ async function renderInformesIngresos() {
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
-            <tr style="background:#f0fdf4;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalTienda)} €</td>
-            </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
                 COD
@@ -3272,7 +3268,10 @@ async function renderInformesIngresos() {
                   data-shop="${store.domain}" data-mes="${mes}" data-col="2" data-field="valor"
                   onchange="guardarIngresoManual(this)"
                   style="${inp}text-align:right;background:#eff6ff;color:#2563eb;font-weight:600;">
-              </td>
+              </tr>
+            <tr style="background:#f0fdf4;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalTienda)} €</td>
             </tr>
           </tbody>
         </table>
@@ -3419,10 +3418,6 @@ async function renderInformesBalance() {
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
-            <tr style="background:#f0fdf4;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">INGRESO NETO</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalNeto)} €</td>
-            </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
                 COD bruto
@@ -3459,6 +3454,10 @@ async function renderInformesBalance() {
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">${escapeHtml(man2.nombre||"Extra 2")}</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;">${fmt(man2.valor)} €</td>
             </tr>` : ""}
+            <tr style="background:#f0fdf4;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">INGRESO NETO</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalNeto)} €</td>
+            </tr>
           </tbody>
         </table>
       </div>
