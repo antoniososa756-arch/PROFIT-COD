@@ -1020,14 +1020,6 @@ if (id === "productos") {
         </button>
       </div>
     </div>
-        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-        <option value="">Todas las tiendas</option>
-      </select>
-      <button onclick="loadProductos()"
-        style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-        🔄 Sincronizar productos
-      </button>
-    </div>
     <div id="productos-wrap"><div class="muted" style="padding:16px;">Cargando productos...</div></div>
   `;
 
