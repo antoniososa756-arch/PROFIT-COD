@@ -189,6 +189,20 @@ await pool.query(`
     )
   `);
 
+await pool.query(`
+    CREATE TABLE IF NOT EXISTS entradas_mercancia (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      shop_domain TEXT NOT NULL,
+      product_id TEXT NOT NULL,
+      product_name TEXT NOT NULL,
+      cantidad INTEGER NOT NULL,
+      stock_anterior INTEGER NOT NULL,
+      stock_nuevo INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT now()::text
+    )
+  `);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 

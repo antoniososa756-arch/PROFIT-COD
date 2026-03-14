@@ -302,4 +302,33 @@ router.post("/variantes-config", auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: "Error" }); }
 });
 
+router.post("/entrada-mercancia", auth, async (req, res) => {
+  const { shop_domain, product_id, product_name, cantidad, stock_anterior } = req.body;
+  const stock_nuevo = (parseInt(stock_anterior)||0) + (parseInt(cantidad)||0);
+  try {
+    await db.run(
+      `INSERT INTO entradas_mercancia (user_id, shop_domain, product_id, product_name, cantidad, stock_anterior, stock_nuevo, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, now()::text)`,
+      [req.user.id, shop_domain, product_id, product_name, parseInt(cantidad)||0, parseInt(stock_anterior)||0, stock_nuevo]
+    );
+    await db.run(
+      `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo)
+       VALUES (?, ?, ?, ?, 5)
+       ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET stock = EXCLUDED.stock`,
+      [req.user.id, shop_domain, product_id, stock_nuevo]
+    );
+    res.json({ ok: true, stock_nuevo });
+  } catch(e) { res.status(500).json({ error: "Error guardando entrada" }); }
+});
+
+router.get("/entradas-mercancia", auth, async (req, res) => {
+  try {
+    const rows = await db.all(
+      "SELECT * FROM entradas_mercancia WHERE user_id = ? ORDER BY id DESC LIMIT 100",
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({ error: "Error" }); }
+});
+
 module.exports = router;

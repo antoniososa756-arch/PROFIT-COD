@@ -1004,8 +1004,22 @@ if (id === "productos") {
 
   box.className = "card";
   box.innerHTML = `
-    <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;">
-      <select id="productos-shop-filter" onchange="loadProductos()"
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;">
+      <button onclick="abrirEntradaMercancia()"
+        style="padding:7px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        📦 Entrada de mercancía
+      </button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <select id="productos-shop-filter" onchange="loadProductos()"
+          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          <option value="">Todas las tiendas</option>
+        </select>
+        <button onclick="loadProductos()"
+          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          🔄 Sincronizar productos
+        </button>
+      </div>
+    </div>
         style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         <option value="">Todas las tiendas</option>
       </select>
@@ -4260,6 +4274,203 @@ async function guardarVarianteConfig(shopDomain, variantId, unidades) {
     });
   } catch(e) { console.error(e); }
 }
+
+async function abrirEntradaMercancia() {
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.id = "modal-entrada-mercancia";
+  modal.innerHTML = `
+    <div class="modal" style="max-width:700px;width:95%;max-height:85vh;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:16px;font-weight:700;">📦 Entrada de mercancía</h3>
+        <span onclick="closeModal()" style="cursor:pointer;font-size:20px;color:#6b7280;">×</span>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button onclick="switchEntradaTab('nueva')" id="tab-nueva"
+          style="padding:7px 16px;border-radius:8px;border:1px solid #16a34a;background:#16a34a;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          Nueva entrada
+        </button>
+        <button onclick="switchEntradaTab('historial')" id="tab-historial"
+          style="padding:7px 16px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          Historial
+        </button>
+      </div>
+
+      <div id="entrada-content" style="overflow-y:auto;flex:1;">
+        <div class="muted" style="padding:16px;">Cargando productos...</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  await cargarTabNuevaEntrada();
+}
+
+async function switchEntradaTab(tab) {
+  const btnNueva = document.getElementById("tab-nueva");
+  const btnHist = document.getElementById("tab-historial");
+  if (tab === "nueva") {
+    btnNueva.style.background = "#16a34a"; btnNueva.style.color = "#fff"; btnNueva.style.borderColor = "#16a34a";
+    btnHist.style.background = "#fff"; btnHist.style.color = "#374151"; btnHist.style.borderColor = "#e5e7eb";
+    await cargarTabNuevaEntrada();
+  } else {
+    btnHist.style.background = "#16a34a"; btnHist.style.color = "#fff"; btnHist.style.borderColor = "#16a34a";
+    btnNueva.style.background = "#fff"; btnNueva.style.color = "#374151"; btnNueva.style.borderColor = "#e5e7eb";
+    await cargarTabHistorial();
+  }
+}
+
+async function cargarTabNuevaEntrada() {
+  const content = document.getElementById("entrada-content");
+  if (!content) return;
+  content.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+
+  const productos = window.__allProductos || [];
+  const stockData = await fetch(`${API_BASE}/api/shopify/stock`, {
+    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+  }).then(r => r.json()).catch(() => []);
+
+  const stockMap = {};
+  if (Array.isArray(stockData)) stockData.forEach(s => { stockMap[s.product_id] = s.stock || 0; });
+
+  if (!productos.length) {
+    content.innerHTML = `<div class="muted" style="padding:16px;">Primero sincroniza los productos.</div>`;
+    return;
+  }
+
+  content.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:#f9fafb;">
+          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
+          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:80px;">Tienda</th>
+          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;">Stock actual</th>
+          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:100px;">Cantidad a ingresar</th>
+          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:90px;">Stock nuevo</th>
+          <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${productos.map(p => {
+          const pid = String(p.id);
+          const stockActual = stockMap[pid] || 0;
+          return `
+          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;">
+              ${escapeHtml(p.title)}
+            </td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280;">
+              ${escapeHtml(p.shop_name || p.shop_domain)}
+            </td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">
+              ${stockActual}
+            </td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
+              <input type="number" min="1" value="" placeholder="0"
+                id="entrada-qty-${pid}"
+                oninput="actualizarStockNuevo('${pid}', ${stockActual})"
+                style="width:70px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;text-align:center;font-family:inherit;">
+            </td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
+              <span id="entrada-nuevo-${pid}" style="font-weight:700;color:#16a34a;">${stockActual}</span>
+            </td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
+              <button onclick="confirmarEntrada('${pid}','${escapeAttr(p.title)}','${p.shop_domain}',${stockActual})"
+                style="padding:5px 12px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
+                ✓ Ingresar
+              </button>
+            </td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function actualizarStockNuevo(pid, stockActual) {
+  const qty = parseInt(document.getElementById(`entrada-qty-${pid}`)?.value) || 0;
+  const nuevoEl = document.getElementById(`entrada-nuevo-${pid}`);
+  if (nuevoEl) {
+    const nuevo = stockActual + qty;
+    nuevoEl.textContent = nuevo;
+    nuevoEl.style.color = qty > 0 ? "#16a34a" : "#9ca3af";
+  }
+}
+
+async function confirmarEntrada(productId, productName, shopDomain, stockAnterior) {
+  const qty = parseInt(document.getElementById(`entrada-qty-${productId}`)?.value) || 0;
+  if (qty <= 0) { alert("Ingresa una cantidad mayor a 0"); return; }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/shopify/entrada-mercancia`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, product_name: productName, cantidad: qty, stock_anterior: stockAnterior })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast("✅ Entrada registrada", `${productName} — +${qty} uds (stock: ${data.stock_nuevo})`, "#16a34a");
+      await cargarTabNuevaEntrada();
+      loadProductos();
+    }
+  } catch(e) { alert("Error registrando entrada"); }
+}
+
+async function cargarTabHistorial() {
+  const content = document.getElementById("entrada-content");
+  if (!content) return;
+  content.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+
+  try {
+    const rows = await fetch(`${API_BASE}/api/shopify/entradas-mercancia`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    }).then(r => r.json());
+
+    if (!Array.isArray(rows) || !rows.length) {
+      content.innerHTML = `<div class="muted" style="padding:16px;">No hay entradas registradas.</div>`;
+      return;
+    }
+
+    content.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#f9fafb;">
+            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Fecha</th>
+            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
+            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:80px;">Tienda</th>
+            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;">Cantidad</th>
+            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;">Anterior</th>
+            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;">Nuevo</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;color:#6b7280;white-space:nowrap;">
+              ${r.created_at ? new Date(r.created_at).toLocaleString("es-ES") : "-"}
+            </td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;">
+              ${escapeHtml(r.product_name)}
+            </td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280;">
+              ${escapeHtml(r.shop_domain)}
+            </td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:#16a34a;">+${r.cantidad}</td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;color:#6b7280;">${r.stock_anterior}</td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:#16a34a;">${r.stock_nuevo}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    `;
+  } catch(e) {
+    content.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando historial</div>`;
+  }
+}
+
+window.abrirEntradaMercancia = abrirEntradaMercancia;
+window.switchEntradaTab = switchEntradaTab;
+window.actualizarStockNuevo = actualizarStockNuevo;
+window.confirmarEntrada = confirmarEntrada;
 window.guardarVarianteConfig = guardarVarianteConfig;
 window.guardarStock = guardarStock;
 window.guardarStockMinimo = guardarStockMinimo;
