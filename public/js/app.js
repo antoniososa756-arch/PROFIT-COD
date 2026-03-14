@@ -1454,6 +1454,16 @@ function doSearch(value) {
   ].filter(s => s.label.toLowerCase().includes(q))
    .map(s => ({ label: `📂 ${s.label}`, section: s.section, type: "seccion" }));
 
+// Productos reales
+  const productos = (window.__allProductos || []).filter(p =>
+    (p.title || "").toLowerCase().includes(q)
+  ).slice(0, 5).map(p => ({
+    label: `📦 ${p.title}`,
+    section: "productos",
+    type: "producto",
+    orderNumber: String(p.id)
+  }));
+
   // Pedidos reales
   const pedidos = (allOrders || []).filter(o =>
     (o.order_number || "").toLowerCase().includes(q) ||
@@ -1466,7 +1476,7 @@ function doSearch(value) {
     orderNumber: o.order_number || ""
   }));
 
-  const results = [...secciones, ...pedidos].slice(0, 12);
+  const results = [...secciones, ...productos, ...pedidos].slice(0, 12);
 
   if (results.length === 0) {
     drop.innerHTML = `<div class="search-empty">${d.ui.notFound}</div>`;
@@ -1495,6 +1505,12 @@ function goToSearch(section, orderNumber) {
   closeSearchDrop();
   const searchEl = document.getElementById("search");
   if (searchEl) searchEl.value = "";
+
+if (section === "productos" && orderNumber) {
+    window.__pendingProductoId = orderNumber;
+    setSection(section);
+    return;
+  }
 
   if (section === "pedidos" && orderNumber) {
     window.__pendingSearchNoti = null;
@@ -2226,6 +2242,9 @@ async function loadProductos() {
       return;
     }
 
+// Guardar productos para el buscador
+    window.__allProductos = (data || []).flatMap(s => (s.products || []).map(p => ({ ...p, shop_name: s.shop_name, shop_domain: s.shop_domain })));
+
     // Filtro de tienda seleccionado
     const shopFilter = document.getElementById("productos-shop-filter")?.value || "";
 
@@ -2252,7 +2271,7 @@ async function loadProductos() {
               const stockInfo = stockMap[pid] || { stock: 0, stock_minimo: 5 };
               const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
               return `
-              <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+              <tr data-pid="${pid}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
                 <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
                   ${p.image
                     ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;">`
@@ -2260,7 +2279,7 @@ async function loadProductos() {
                   }
                 </td>
                 <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
-                  ${escapeHtml(p.title)}
+                  <span class="producto-nombre">${escapeHtml(p.title)}</span>
                 <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
                   ${p.variants.map(v => {
                     const vid = String(v.id);
@@ -2298,6 +2317,20 @@ async function loadProductos() {
         </table>
       </div>
     `).join("");
+
+  // Si venimos de notificación o búsqueda, hacer scroll al producto
+    if (window.__pendingProductoId) {
+      const pid = window.__pendingProductoId;
+      window.__pendingProductoId = null;
+      setTimeout(() => {
+        const row = document.querySelector(`tr[data-pid="${pid}"]`);
+        if (row) {
+          row.scrollIntoView({ behavior: "smooth", block: "center" });
+          row.style.background = "#fef9c3";
+          setTimeout(() => { row.style.background = ""; }, 2000);
+        }
+      }, 300);
+    }
 
   } catch(e) {
     wrap.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando productos</div>`;
@@ -3969,9 +4002,15 @@ window.checkNotificaciones = checkNotificaciones;
 function irAPedidoDesdeNotif(notiId) {
   closeAllDrops();
 
-  // Guardar el pedido que queremos ver al cargar
-const orderId = notiId.includes("__") ? notiId.split("__")[1] : notiId.split("_").pop();  window.__pendingSearchNoti = orderId;
+  if (notiId.startsWith("stock_bajo__")) {
+    const productId = notiId.replace("stock_bajo__", "");
+    window.__pendingProductoId = productId;
+    setSection("productos");
+    return;
+  }
 
+  const orderId = notiId.includes("__") ? notiId.split("__")[1] : notiId.split("_").pop();
+  window.__pendingSearchNoti = orderId;
   setSection("pedidos");
 }
 
@@ -4072,7 +4111,8 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
       const notiId = `stock_bajo__${productId}`;
       const notis = JSON.parse(localStorage.getItem("notifications") || "[]");
       if (!notis.find(n => n.id === notiId)) {
-        notis.unshift({ id: notiId, title: "📦 Stock bajo", text: `Producto ${productId} en ${shopDomain} — quedan ${stockNum} unidades (mín: ${minimoNum})` });
+        const productoNombre = document.querySelector(`tr[data-pid="${productId}"] .producto-nombre`)?.textContent || productId;
+        notis.unshift({ id: notiId, title: "📦 Stock bajo", text: `${productoNombre} — quedan ${stockNum} uds (mín: ${minimoNum})` });
         localStorage.setItem("notifications", JSON.stringify(notis));
         const panel = document.getElementById("notifPanel");
         const d = dict();
