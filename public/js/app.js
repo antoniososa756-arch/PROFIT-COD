@@ -3215,9 +3215,9 @@ async function renderInformesIngresos() {
 
     return `
       <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-        <div style="background:#dc2626;padding:10px 14px;">
+        <div style="background:#16a34a;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
-          <div style="font-size:11px;color:#fca5a5;">${store.domain}</div>
+          <div style="font-size:11px;color:#bbf7d0;">${store.domain}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
