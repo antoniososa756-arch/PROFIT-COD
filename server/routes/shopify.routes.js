@@ -208,4 +208,50 @@ router.post("/sync-orders", auth, async (req, res) => {
   }
 });
 
+router.get("/products", auth, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const shops = await db.all(
+      "SELECT id, shop_domain, shop_name, access_token FROM shops WHERE user_id = ? AND status = 'active'",
+      [userId]
+    );
+    if (!shops.length) return res.json([]);
+
+    const result = [];
+    for (const shop of shops) {
+      try {
+        const r = await fetch(
+          `https://${shop.shop_domain}/admin/api/2024-10/products.json?limit=250`,
+          { headers: { "X-Shopify-Access-Token": shop.access_token } }
+        );
+        if (!r.ok) {
+          console.error("Shopify products error:", shop.shop_domain, r.status, await r.text());
+          continue;
+        }
+        const json = await r.json();
+        console.log("Productos recibidos:", shop.shop_domain, json.products?.length);
+        const { products } = json;
+        const allProducts = products || [];
+        const activeProducts = allProducts.filter(p => p.status === "active");
+        result.push({
+          shop_domain: shop.shop_domain,
+          shop_name: shop.shop_name || shop.shop_domain,
+          products: activeProducts.map(p => ({
+            id: p.id,
+            title: p.title,
+            image: p.image?.src || null,
+            variants: (p.variants || []).map(v => ({
+              id: v.id,
+              title: v.title,
+              sku: v.sku || "-",
+              price: v.price
+            }))
+          }))
+        });
+      } catch(e) { console.error("Products error:", shop.shop_domain, e.message); }
+    }
+    res.json(result);
+  } catch(e) { res.status(500).json({ error: "Error obteniendo productos" }); }
+});
+
 module.exports = router;
