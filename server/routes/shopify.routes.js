@@ -332,4 +332,28 @@ router.get("/entradas-mercancia", auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: "Error" }); }
 });
 
+router.get("/informes-ingresos", auth, async (req, res) => {
+  const { mes } = req.query;
+  try {
+    const rows = await db.all(
+      "SELECT shop_domain, columna, nombre, valor FROM informes_ingresos_manuales WHERE user_id = ? AND mes = ?",
+      [req.user.id, mes]
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({ error: "Error" }); }
+});
+
+router.post("/informes-ingresos", auth, async (req, res) => {
+  const { shop_domain, mes, columna, nombre, valor } = req.body;
+  try {
+    await db.run(
+      `INSERT INTO informes_ingresos_manuales (user_id, shop_domain, mes, columna, nombre, valor)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id, shop_domain, mes, columna) DO UPDATE SET nombre=EXCLUDED.nombre, valor=EXCLUDED.valor`,
+      [req.user.id, shop_domain, mes, columna, nombre || '', parseFloat(valor)||0]
+    );
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: "Error" }); }
+});
+
 module.exports = router;

@@ -1279,6 +1279,33 @@ if (id === "gastos-fijos") {
   closeSearchDrop();
   return;
 }
+// =========================
+// SECCIÓN INFORMES
+// =========================
+if (id === "informes") {
+  if (t) t.textContent = "Informes";
+  if (s) s.textContent = "Resumen de ingresos por tienda";
+  if (c) c.textContent = "Informes";
+  box.className = "";
+  box.removeAttribute("style");
+  box.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
+      <button id="inf-tab-btn-ingresos" onclick="switchInformesTab('ingresos')"
+        style="padding:8px 18px;border-radius:8px;border:1px solid #16a34a;font-size:13px;font-weight:600;cursor:pointer;background:#16a34a;color:#fff;">
+        Ingresos
+      </button>
+      <button id="inf-tab-btn-balance" onclick="switchInformesTab('balance')"
+        style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;">
+        Balance Final
+      </button>
+    </div>
+    <div id="informes-content"></div>
+  `;
+  switchInformesTab("ingresos");
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
 
 // =========================
 // SECCIÓN GASTOS VARIOS
@@ -3071,6 +3098,387 @@ async function saveGastoVarioShopify(input) {
 
 window.loadGastosVarios      = loadGastosVarios;
 window.saveGastoVarioShopify = saveGastoVarioShopify;
+
+// =========================
+// INFORMES
+// =========================
+async function switchInformesTab(tab) {
+  ["ingresos","balance"].forEach(k => {
+    const btn = document.getElementById(`inf-tab-btn-${k}`);
+    if (!btn) return;
+    if (k === tab) {
+      btn.style.background = "#16a34a"; btn.style.color = "#fff"; btn.style.borderColor = "#16a34a";
+    } else {
+      btn.style.background = "#fff"; btn.style.color = "#374151"; btn.style.borderColor = "#e5e7eb";
+    }
+  });
+  const content = document.getElementById("informes-content");
+  if (!content) return;
+  if (tab === "ingresos") await loadInformesIngresos();
+  else await loadInformesBalance();
+}
+window.switchInformesTab = switchInformesTab;
+
+async function loadInformesIngresos() {
+  const content = document.getElementById("informes-content");
+  if (!content) return;
+
+  const now = new Date();
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+  content.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+      <select id="inf-month-sel" onchange="renderInformesIngresos()"
+        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
+      </select>
+      <select id="inf-year-sel" onchange="renderInformesIngresos()"
+        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
+      </select>
+    </div>
+    <div id="inf-ingresos-wrap"><div class="muted" style="padding:16px;">Cargando...</div></div>
+  `;
+  await renderInformesIngresos();
+}
+
+async function renderInformesIngresos() {
+  const wrap = document.getElementById("inf-ingresos-wrap");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+
+  const month = document.getElementById("inf-month-sel")?.value || (new Date().getMonth()+1);
+  const year  = document.getElementById("inf-year-sel")?.value  || new Date().getFullYear();
+  const mes   = `${year}-${String(month).padStart(2,"0")}`;
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const mesLabel = monthNames[parseInt(month)-1].toUpperCase() + " " + year;
+
+  let stores = [], orders = [], manuales = [];
+  try {
+    stores = await fetch(`${API_BASE}/api/shopify/stores`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    }).then(r=>r.json());
+    if (!Array.isArray(stores)) stores = [];
+  } catch {}
+
+  try {
+    orders = await fetch(`${API_BASE}/api/orders`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    }).then(r=>r.json());
+    if (!Array.isArray(orders)) orders = [];
+  } catch {}
+
+  try {
+    manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    }).then(r=>r.json());
+    if (!Array.isArray(manuales)) manuales = [];
+  } catch {}
+
+  // Filtrar pedidos entregados del mes
+  const pedidosMes = orders.filter(o => {
+    if (o.fulfillment_status !== "entregado") return false;
+    if (!o.created_at) return false;
+    const d = new Date(o.created_at);
+    return d.getMonth()+1 === parseInt(month) && d.getFullYear() === parseInt(year);
+  });
+
+  const fmt = n => (parseFloat(n)||0).toFixed(2);
+  const inp = `padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;`;
+
+  let grandTotal = 0;
+
+  const cols = stores.map(store => {
+    const pedidosTienda = pedidosMes.filter(o => o.shop_domain === store.domain);
+
+    // COD: pedidos entregados con pago COD/pending
+    const pedidosCOD = pedidosTienda.filter(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "pending" || fin === "cod" || fin === "pendiente";
+      } catch { return false; }
+    });
+
+    // PAGADO: pedidos entregados con pago paid
+    const pedidosPagado = pedidosTienda.filter(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "paid" || fin === "pagado";
+      } catch { return false; }
+    });
+
+    const totalCOD    = pedidosCOD.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const totalPagado = pedidosPagado.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+
+    // Manuales guardados
+    const man1 = manuales.find(m => m.shop_domain === store.domain && m.columna === 1) || { nombre: "", valor: 0 };
+    const man2 = manuales.find(m => m.shop_domain === store.domain && m.columna === 2) || { nombre: "", valor: 0 };
+
+    const totalManual = (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
+    const totalTienda = totalCOD + totalPagado + totalManual;
+    grandTotal += totalTienda;
+
+    return `
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:200px;flex:1;">
+        <div style="background:#16a34a;padding:12px 16px;">
+          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
+          <div style="font-size:11px;color:#bbf7d0;">${store.domain}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tbody>
+            <tr style="background:#f0fdf4;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalTienda)} €</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
+                COD
+                <div style="font-size:10px;color:#9ca3af;font-weight:400;">${pedidosCOD.length} pedidos entregados</div>
+              </td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(totalCOD)} €</td>
+            </tr>
+            <tr style="background:#f9fafb;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
+                TARJETA
+                <div style="font-size:10px;color:#9ca3af;font-weight:400;">${pedidosPagado.length} pedidos entregados</div>
+              </td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(totalPagado)} €</td>
+            </tr>
+            <tr style="background:#eff6ff;">
+              <td style="padding:8px 14px;border:1px solid #bfdbfe;">
+                <input type="text" value="${escapeHtml(man1.nombre||'')}" placeholder="Nombre ingreso extra 1..."
+                  data-shop="${store.domain}" data-mes="${mes}" data-col="1" data-field="nombre"
+                  onchange="guardarIngresoManual(this)"
+                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;margin-bottom:4px;">
+              </td>
+              <td style="padding:8px 14px;border:1px solid #bfdbfe;">
+                <input type="number" min="0" step="0.01" value="${fmt(man1.valor)}" placeholder="0.00"
+                  data-shop="${store.domain}" data-mes="${mes}" data-col="1" data-field="valor"
+                  onchange="guardarIngresoManual(this)"
+                  style="${inp}text-align:right;background:#eff6ff;color:#2563eb;font-weight:600;">
+              </td>
+            </tr>
+            <tr style="background:#eff6ff;">
+              <td style="padding:8px 14px;border:1px solid #bfdbfe;">
+                <input type="text" value="${escapeHtml(man2.nombre||'')}" placeholder="Nombre ingreso extra 2..."
+                  data-shop="${store.domain}" data-mes="${mes}" data-col="2" data-field="nombre"
+                  onchange="guardarIngresoManual(this)"
+                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;margin-bottom:4px;">
+              </td>
+              <td style="padding:8px 14px;border:1px solid #bfdbfe;">
+                <input type="number" min="0" step="0.01" value="${fmt(man2.valor)}" placeholder="0.00"
+                  data-shop="${store.domain}" data-mes="${mes}" data-col="2" data-field="valor"
+                  onchange="guardarIngresoManual(this)"
+                  style="${inp}text-align:right;background:#eff6ff;color:#2563eb;font-weight:600;">
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
+
+  wrap.innerHTML = `
+    <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
+      📅 ${mesLabel} — Total ingresos: ${fmt(grandTotal)} €
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
+      ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+    </div>
+  `;
+}
+
+async function guardarIngresoManual(input) {
+  const shop  = input.dataset.shop;
+  const mes   = input.dataset.mes;
+  const col   = parseInt(input.dataset.col);
+  const field = input.dataset.field;
+
+  // Buscar la otra celda de la misma fila para tener nombre+valor
+  const rows = input.closest("tr");
+  const inputs = rows ? rows.querySelectorAll("input") : [];
+  let nombre = "", valor = 0;
+  inputs.forEach(inp => {
+    if (inp.dataset.field === "nombre") nombre = inp.value;
+    if (inp.dataset.field === "valor") valor = parseFloat(inp.value)||0;
+  });
+
+  try {
+    await fetch(`${API_BASE}/api/shopify/informes-ingresos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ shop_domain: shop, mes, columna: col, nombre, valor })
+    });
+  } catch(e) { console.error(e); }
+}
+window.guardarIngresoManual = guardarIngresoManual;
+
+async function loadInformesBalance() {
+  const content = document.getElementById("informes-content");
+  if (!content) return;
+
+  const now = new Date();
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+  content.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+      <select id="inf-bal-month-sel" onchange="renderInformesBalance()"
+        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
+      </select>
+      <select id="inf-bal-year-sel" onchange="renderInformesBalance()"
+        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
+      </select>
+    </div>
+    <div id="inf-balance-wrap"><div class="muted" style="padding:16px;">Cargando...</div></div>
+  `;
+  await renderInformesBalance();
+}
+
+async function renderInformesBalance() {
+  const wrap = document.getElementById("inf-balance-wrap");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+
+  const month = document.getElementById("inf-bal-month-sel")?.value || (new Date().getMonth()+1);
+  const year  = document.getElementById("inf-bal-year-sel")?.value  || new Date().getFullYear();
+  const mes   = `${year}-${String(month).padStart(2,"0")}`;
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const mesLabel = monthNames[parseInt(month)-1].toUpperCase() + " " + year;
+
+  let stores = [], orders = [], manuales = [];
+  try {
+    stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+    if (!Array.isArray(stores)) stores = [];
+  } catch {}
+  try {
+    orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+    if (!Array.isArray(orders)) orders = [];
+  } catch {}
+  try {
+    manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+    if (!Array.isArray(manuales)) manuales = [];
+  } catch {}
+
+  const pedidosMes = orders.filter(o => {
+    if (o.fulfillment_status !== "entregado") return false;
+    if (!o.created_at) return false;
+    const d = new Date(o.created_at);
+    return d.getMonth()+1 === parseInt(month) && d.getFullYear() === parseInt(year);
+  });
+
+  const fmt = n => (parseFloat(n)||0).toFixed(2);
+  const MRW_COMISION = 0.67;
+  const TARJETA_PCT  = 0.04;
+
+  let grandTotalNeto = 0;
+
+  const cols = stores.map(store => {
+    const pedidosTienda = pedidosMes.filter(o => o.shop_domain === store.domain);
+
+    const pedidosCOD = pedidosTienda.filter(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "pending" || fin === "cod" || fin === "pendiente";
+      } catch { return false; }
+    });
+
+    const pedidosPagado = pedidosTienda.filter(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "paid" || fin === "pagado";
+      } catch { return false; }
+    });
+
+    const totalCOD    = pedidosCOD.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const totalPagado = pedidosPagado.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+
+    const descCOD    = pedidosCOD.length * MRW_COMISION;
+    const descPagado = totalPagado * TARJETA_PCT;
+
+    const netoCOD    = totalCOD - descCOD;
+    const netoPagado = totalPagado - descPagado;
+
+    const man1 = manuales.find(m => m.shop_domain === store.domain && m.columna === 1) || { nombre: "Extra 1", valor: 0 };
+    const man2 = manuales.find(m => m.shop_domain === store.domain && m.columna === 2) || { nombre: "Extra 2", valor: 0 };
+    const totalManual = (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
+
+    const totalNeto = netoCOD + netoPagado + totalManual;
+    grandTotalNeto += totalNeto;
+
+    return `
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:200px;flex:1;">
+        <div style="background:#16a34a;padding:12px 16px;">
+          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
+          <div style="font-size:11px;color:#bbf7d0;">${store.domain}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tbody>
+            <tr style="background:#f0fdf4;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">INGRESO NETO</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalNeto)} €</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
+                COD bruto
+                <div style="font-size:10px;color:#9ca3af;">${fmt(totalCOD)} € — ${pedidosCOD.length} pedidos</div>
+              </td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;">${fmt(netoCOD)} €</td>
+            </tr>
+            <tr style="background:#fef2f2;">
+              <td style="padding:6px 14px;border:1px solid #e5e7eb;font-size:11px;color:#dc2626;">
+                − Comisión MRW (${pedidosCOD.length} × 0.67€)
+              </td>
+              <td style="padding:6px 14px;border:1px solid #e5e7eb;text-align:right;font-size:11px;color:#dc2626;">−${fmt(descCOD)} €</td>
+            </tr>
+            <tr style="background:#f9fafb;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
+                TARJETA bruto
+                <div style="font-size:10px;color:#9ca3af;">${fmt(totalPagado)} € — ${pedidosPagado.length} pedidos</div>
+              </td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;">${fmt(netoPagado)} €</td>
+            </tr>
+            <tr style="background:#fef2f2;">
+              <td style="padding:6px 14px;border:1px solid #e5e7eb;font-size:11px;color:#dc2626;">
+                − Comisión tarjeta (4%)
+              </td>
+              <td style="padding:6px 14px;border:1px solid #e5e7eb;text-align:right;font-size:11px;color:#dc2626;">−${fmt(descPagado)} €</td>
+            </tr>
+            ${(parseFloat(man1.valor)||0) > 0 ? `
+            <tr>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">${escapeHtml(man1.nombre||"Extra 1")}</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;">${fmt(man1.valor)} €</td>
+            </tr>` : ""}
+            ${(parseFloat(man2.valor)||0) > 0 ? `
+            <tr style="background:#f9fafb;">
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">${escapeHtml(man2.nombre||"Extra 2")}</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;">${fmt(man2.valor)} €</td>
+            </tr>` : ""}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
+
+  wrap.innerHTML = `
+    <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
+      📅 ${mesLabel} — Balance neto total: ${fmt(grandTotalNeto)} €
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
+      ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+    </div>
+  `;
+}
+
+window.loadInformesIngresos  = loadInformesIngresos;
+window.renderInformesIngresos = renderInformesIngresos;
+window.loadInformesBalance   = loadInformesBalance;
+window.renderInformesBalance = renderInformesBalance;
 
 async function copiarMesAnteriorGF() {
   const month = document.getElementById("gf-month-sel")?.value;

@@ -181,6 +181,19 @@ await pool.query(`
   await pool.query(`ALTER TABLE productos_stock ADD COLUMN IF NOT EXISTS costo_compra NUMERIC(10,2) DEFAULT 0`);
 
 await pool.query(`
+    CREATE TABLE IF NOT EXISTS informes_ingresos_manuales (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      shop_domain TEXT NOT NULL,
+      mes TEXT NOT NULL,
+      columna INTEGER NOT NULL,
+      nombre TEXT DEFAULT '',
+      valor NUMERIC(10,2) DEFAULT 0,
+      UNIQUE(user_id, shop_domain, mes, columna)
+    )
+  `);
+
+await pool.query(`
     CREATE TABLE IF NOT EXISTS productos_variantes_config (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL,
