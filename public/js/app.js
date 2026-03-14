@@ -2187,7 +2187,7 @@ async function loadMetricas() {
 
     list = list.filter(o => {
       if (!o.created_at) return true;
-      const d = o.created_at.split("T")[0];
+      const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
       if (dateFrom && d < dateFrom) return false;
       if (dateTo   && d > dateTo)   return false;
       return true;
@@ -4240,11 +4240,13 @@ function applyFilters() {
     if (shop && o.shop_domain !== shop) return false;
     if (dateFrom) {
       if (!o.created_at) return false;
-      if (o.created_at.split("T")[0] < dateFrom) return false;
+      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      if (localDate < dateFrom) return false;
     }
     if (dateTo) {
       if (!o.created_at) return false;
-      if (o.created_at.split("T")[0] > dateTo) return false;
+      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      if (localDate > dateTo) return false;
     }
     return true;
   });
