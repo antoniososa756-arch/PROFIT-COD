@@ -2669,6 +2669,16 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     }).then(r => r.json());
   } catch {}
+
+  // Precargar P.UNIT de MRW y LOGÍSTICA desde precios globales
+  if (Array.isArray(items)) {
+    items = items.map(item => {
+      if (item.nombre === "MRW") return { ...item, precio_unit: preciosGlobales.precio_mrw };
+      if (item.nombre === "LOGÍSTICA") return { ...item, precio_unit: preciosGlobales.precio_logistica };
+      return item;
+    });
+  }
+
   let impuestos = [];
   try {
     const r = await fetch(`${API_BASE}/api/impuestos`, {
