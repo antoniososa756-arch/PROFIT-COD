@@ -2201,12 +2201,19 @@ async function loadProductos() {
   wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
 
   try {
-    const [resP, resS] = await Promise.all([
+    const [resP, resS, resV] = await Promise.all([
       fetch(`${API_BASE}/api/shopify/products`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }),
-      fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } })
+      fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }),
+      fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } })
     ]);
     const data = await resP.json();
     const stockData = await resS.json();
+    const variantesData = await resV.json();
+
+    const variantesMap = {};
+    if (Array.isArray(variantesData)) {
+      variantesData.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta; });
+    }
 
     // Mapa de stock por product_id
     const stockMap = {};
@@ -2236,6 +2243,7 @@ async function loadProductos() {
               <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:60px;">Imagen</th>
               <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
               <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Variantes & SKU</th>
+              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:100px;">Uds/venta</th>
               <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:120px;">Stock</th>
             </tr>
           </thead>
@@ -2263,6 +2271,19 @@ async function loadProductos() {
                       <span style="font-size:11px;color:#16a34a;font-weight:600;">${v.price} €</span>
                     </div>
                   `).join("")}
+                </td>
+                <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
+                  ${p.variants.map(v => {
+                    const vid = String(v.id);
+                    const uds = variantesMap[vid] || 1;
+                    return `
+                    <div style="padding:3px 0;border-bottom:1px solid #f3f4f6;display:flex;justify-content:center;">
+                      <input type="number" min="1" value="${uds}"
+                        style="width:55px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
+                        onchange="guardarVarianteConfig('${shop.shop_domain}','${vid}',this.value)"
+                        title="Unidades que descuenta esta variante">
+                    </div>`;
+                  }).join("")}
                 </td>
                 <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
                   <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
@@ -4094,6 +4115,17 @@ async function guardarStockMinimo(shopDomain, productId, stock, stockMinimo) {
     });
   } catch(e) { console.error(e); }
 }
+
+async function guardarVarianteConfig(shopDomain, variantId, unidades) {
+  try {
+    await fetch(`${API_BASE}/api/shopify/variantes-config`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ shop_domain: shopDomain, variant_id: variantId, unidades_por_venta: parseInt(unidades)||1 })
+    });
+  } catch(e) { console.error(e); }
+}
+window.guardarVarianteConfig = guardarVarianteConfig;
 window.guardarStock = guardarStock;
 window.guardarStockMinimo = guardarStockMinimo;
 window.importarPagadosPDF = importarPagadosPDF;

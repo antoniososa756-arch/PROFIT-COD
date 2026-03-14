@@ -279,4 +279,27 @@ router.post("/stock", auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: "Error guardando stock" }); }
 });
 
+router.get("/variantes-config", auth, async (req, res) => {
+  try {
+    const rows = await db.all(
+      "SELECT shop_domain, variant_id, unidades_por_venta FROM productos_variantes_config WHERE user_id = ?",
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({ error: "Error" }); }
+});
+
+router.post("/variantes-config", auth, async (req, res) => {
+  const { shop_domain, variant_id, unidades_por_venta } = req.body;
+  try {
+    await db.run(
+      `INSERT INTO productos_variantes_config (user_id, shop_domain, variant_id, unidades_por_venta)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, shop_domain, variant_id) DO UPDATE SET unidades_por_venta = EXCLUDED.unidades_por_venta`,
+      [req.user.id, shop_domain, variant_id, parseInt(unidades_por_venta)||1]
+    );
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: "Error" }); }
+});
+
 module.exports = router;

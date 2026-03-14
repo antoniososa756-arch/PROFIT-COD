@@ -178,6 +178,17 @@ await pool.query(`
     )
   `);
 
+await pool.query(`
+    CREATE TABLE IF NOT EXISTS productos_variantes_config (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      shop_domain TEXT NOT NULL,
+      variant_id TEXT NOT NULL,
+      unidades_por_venta INTEGER DEFAULT 1,
+      UNIQUE(user_id, shop_domain, variant_id)
+    )
+  `);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 
