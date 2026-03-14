@@ -2292,54 +2292,7 @@ async function loadProductos() {
   }
 }
 window.loadProductos = loadProductos;
-      <div style="margin-bottom:32px;">
-        <h3 style="font-size:15px;font-weight:700;color:#16a34a;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
-          🏪 ${escapeHtml(shop.shop_name)}
-          <span style="font-size:12px;color:#9ca3af;font-weight:400;margin-left:8px;">${shop.products.length} productos</span>
-        </h3>
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead>
-            <tr style="background:#f9fafb;">
-              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:60px;">Imagen</th>
-              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
-              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Variantes & SKU</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${shop.products.map(p => `
-              <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-                <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
-                  ${p.image
-                    ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;">`
-                    : `<div style="width:48px;height:48px;border-radius:6px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`
-                  }
-                </td>
-                <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
-                  ${escapeHtml(p.title)}
-                </td>
-                <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
-                  ${p.variants.map(v => `
-                    <div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6;">
-                      <span style="font-size:12px;color:#374151;">${escapeHtml(v.title)}</span>
-                      <span style="font-size:11px;color:#9ca3af;background:#f3f4f6;padding:2px 6px;border-radius:4px;">SKU: ${escapeHtml(v.sku)}</span>
-                      <span style="font-size:11px;color:#16a34a;font-weight:600;">${v.price} €</span>
-                    </div>
-                  `).join("")}
-                </td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    `).join("");
-
-  } catch(e) {
-    wrap.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando productos</div>`;
-  }
-}
-window.loadProductos = loadProductos;
-
-window.loadMetricas = loadMetricas;
+window.loadMetricas = loadMetricas;     
 
 // =========================
 // GASTOS ADS
