@@ -373,15 +373,24 @@ function escapeAttr(str) {
       <div class="dropdown-title">${d.ui.notiTitle}</div>
       ${
         list.length
-          ? list
-              .map(
-                (n, i) => `
-                <div class="notif-row" onclick="openNotif(event, '${escapeAttr(n.id)}')" style="cursor:pointer;">
-                  <strong>${escapeHtml(n.title)}</strong>
-                  <span>${escapeHtml(n.text)}</span>
-                </div>`
-              )
-              .join("")
+          ? list.map(n => {
+              const es7dias = n.id.startsWith("7dias_");
+              const orderId = n.id.split("_").pop();
+              return `
+                <div class="notif-row" style="cursor:pointer;">
+                  <div onclick="irAPedidoDesdeNotif('${escapeAttr(n.id)}')" style="flex:1;">
+                    <strong>${escapeHtml(n.title)}</strong>
+                    <span>${escapeHtml(n.text)}</span>
+                  </div>
+                  ${es7dias ? `
+                  <div style="margin-top:6px;display:flex;gap:6px;">
+                    <button onclick="marcarGestionado(event,'${escapeAttr(n.id)}')"
+                      style="font-size:11px;padding:3px 8px;border:1px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#16a34a;cursor:pointer;font-family:inherit;">
+                      ✓ Gestionado
+                    </button>
+                  </div>` : ""}
+                </div>`;
+            }).join("")
           : `<div class="notif-row"><strong>OK</strong><span>No hay notificaciones</span></div>`
       }
       <div class="drop-item" onclick="clearNotif()" style="justify-content:center;">
@@ -3763,7 +3772,8 @@ async function checkNotificaciones() {
         const diasTranscurridos = Math.floor((ahora - fechaPedido) / (1000 * 60 * 60 * 24));
         if (diasTranscurridos >= 7) {
           const notiId = `7dias_${id}`;
-          if (!notisIds.has(notiId)) {
+          const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas") || "[]");
+        if (!notisIds.has(notiId) && !gestionados.includes(notiId)) {
             nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: `${nombre} — ${o.customer_name || ""} (${estado})` });
             notisIds.add(notiId);
           }
@@ -3784,6 +3794,41 @@ async function checkNotificaciones() {
   }
 }
 window.checkNotificaciones = checkNotificaciones;
+
+function irAPedidoDesdeNotif(notiId) {
+  closeAllDrops();
+  setSection("pedidos");
+  setTimeout(() => {
+    const orderId = notiId.split("_").pop();
+    const order = (allOrders || []).find(o => String(o.id || o.order_id) === orderId);
+    if (order) {
+      const q = order.order_number || "";
+      const searchEl = document.getElementById("search");
+      if (searchEl) { searchEl.value = q; doSearch(q); }
+      filterOrders(q);
+    }
+  }, 400);
+}
+
+function marcarGestionado(event, notiId) {
+  event.stopPropagation();
+  // Guardar en lista de gestionados para no volver a notificar
+  const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas") || "[]");
+  if (!gestionados.includes(notiId)) gestionados.push(notiId);
+  localStorage.setItem("notis_gestionadas", JSON.stringify(gestionados));
+
+  // Eliminar de la lista de notificaciones
+  const list = JSON.parse(localStorage.getItem("notifications") || "[]");
+  const next = list.filter(n => n.id !== notiId);
+  localStorage.setItem("notifications", JSON.stringify(next));
+
+  const d = dict();
+  const panel = document.getElementById("notifPanel");
+  renderNotifPanel(panel, next, d);
+  updateNotifBadge(next.length);
+}
+window.irAPedidoDesdeNotif = irAPedidoDesdeNotif;
+window.marcarGestionado = marcarGestionado;
 
 // =========================
 // IMPORTAR PAGADOS DESDE PDF MRW
