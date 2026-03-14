@@ -2627,6 +2627,16 @@ async function loadGastosFijosData() {
     items = Array.isArray(data) ? data : [];
   } catch {}
 
+// Precargar P.UNIT de MRW y LOGÍSTICA desde precios globales
+  if (Array.isArray(items)) {
+    items = items.map(item => {
+      if (item.nombre === "MRW") return { ...item, precio_unit: preciosGlobales.precio_mrw };
+      if (item.nombre === "LOGÍSTICA") return { ...item, precio_unit: preciosGlobales.precio_logistica };
+      return item;
+    });
+  }
+
+
   // Si no hay filas base creadas aún, crearlas UNA SOLA VEZ
 
   if (items.length === 0) {
@@ -2653,6 +2663,12 @@ async function loadGastosFijosData() {
     items = defaults.filter(d => d.id);
   }
 
+let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
+  try {
+    preciosGlobales = await fetch(`${API_BASE}/api/shopify/precios-globales`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    }).then(r => r.json());
+  } catch {}
   let impuestos = [];
   try {
     const r = await fetch(`${API_BASE}/api/impuestos`, {
@@ -2753,7 +2769,7 @@ async function loadGastosFijosData() {
   `;
 
   const tablaIMP = `
-    <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+    <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:16px;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
           <tr style="background:#16a34a;">
@@ -2773,6 +2789,38 @@ async function loadGastosFijosData() {
                 style="${inp}text-align:right;">
             </td>
           </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+    <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#16a34a;">
+            <th style="${thStyle}left;">PRECIO UNIT. ENVÍO</th>
+            <th style="${thStyle}right;">€</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">MRW</td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;">
+              <input type="number" min="0" step="0.01" value="${fmt(preciosGlobales.precio_mrw)}"
+                id="precio-global-mrw"
+                onchange="guardarPreciosGlobales()"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
+                style="${inp}text-align:right;">
+            </td>
+          </tr>
+          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">LOGÍSTICA</td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;">
+              <input type="number" min="0" step="0.01" value="${fmt(preciosGlobales.precio_logistica)}"
+                id="precio-global-logistica"
+                onchange="guardarPreciosGlobales()"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
+                style="${inp}text-align:right;">
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -2888,6 +2936,36 @@ async function updateGastoFijoPrecio(input) {
   } catch(e) { console.error(e); }
 }
 window.updateGastoFijoPrecio = updateGastoFijoPrecio;
+
+async function guardarPreciosGlobales() {
+  const mrw = parseFloat(document.getElementById("precio-global-mrw")?.value) || 0;
+  const log = parseFloat(document.getElementById("precio-global-logistica")?.value) || 0;
+  try {
+    await fetch(`${API_BASE}/api/shopify/precios-globales`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ precio_mrw: mrw, precio_logistica: log })
+    });
+    // Actualizar automáticamente el P.UNIT de MRW y LOGÍSTICA en la tabla
+    const items = document.querySelectorAll("tr[data-id]");
+    items.forEach(row => {
+      const nameEl = row.querySelector("span");
+      if (!nameEl) return;
+      const nombre = nameEl.textContent.trim();
+      const precioInput = row.querySelector("[data-field='precio_unit']");
+      if (!precioInput) return;
+      if (nombre === "MRW") {
+        precioInput.value = mrw.toFixed(2);
+        precioInput.dispatchEvent(new Event("change"));
+      }
+      if (nombre === "LOGÍSTICA") {
+        precioInput.value = log.toFixed(2);
+        precioInput.dispatchEvent(new Event("change"));
+      }
+    });
+  } catch(e) { console.error(e); }
+}
+window.guardarPreciosGlobales = guardarPreciosGlobales;
 
 async function saveAdsSpend(input) {
   const date  = input.dataset.date;
