@@ -182,7 +182,7 @@ router.post("/sync-orders", auth, async (req, res) => {
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(order_id) DO UPDATE SET
                  fulfillment_status = CASE
-                   WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','franquicia','en_transito')
+                   WHEN orders.tracking_number IS NOT NULL
                    THEN orders.fulfillment_status
                    ELSE EXCLUDED.fulfillment_status
                  END,
