@@ -659,7 +659,7 @@ const now = new Date();
             </div>
           </div>
           <div style="border-top:1px solid #e5e7eb;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:12px;color:#6b7280;">Enviados <span style="font-size:10px;color:#9ca3af;">(excl. pendientes y cancelados)</span></span>
+            <span style="font-size:12px;color:#6b7280;display:flex;flex-direction:column;line-height:1.4;">Enviados<span style="font-size:10px;color:#9ca3af;">(excl. pendientes y cancelados)</span></span>
             <span style="font-size:14px;font-weight:700;color:#16a34a;" id="stat-enviados">0</span>
           </div>
         </div>
@@ -1030,6 +1030,7 @@ if (id === "pedidos") {
                 <option value="devuelto">Devuelto</option>
                 <option value="destruido">Destruido</option>
                 <option value="franquicia">Franquicia</option>
+                <option value="enviado">Enviado</option>
                 <option value="cancelado">Cancelado</option>
               </select>
               <button onclick="clearFiltersInline()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
@@ -3393,50 +3394,31 @@ function selectFilterShop(domain) {
 }
 
 function applyFilters() {
-  activeFilters.status = document.getElementById("filter-status")?.value || "";
-  activeFilters.shop = document.getElementById("filter-shop-inline")?.value || activeFilters.shop || "";
-  activeFilters.dateFrom = document.getElementById("filter-date-from")?.value || "";
-  activeFilters.dateTo = document.getElementById("filter-date-to")?.value || "";
+  const status   = document.getElementById("filter-status")?.value || "";
+  const shop     = document.getElementById("filter-shop-inline")?.value || "";
+  const dateFrom = document.getElementById("filter-date-from")?.value || "";
+  const dateTo   = document.getElementById("filter-date-to")?.value || "";
 
-  // ✅ VALIDACIÓN: fecha desde no puede ser mayor que fecha hasta
-  if (activeFilters.dateFrom && activeFilters.dateTo) {
-    if (activeFilters.dateFrom > activeFilters.dateTo) {
-      alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin");
-      return;
-    }
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin");
+    return;
   }
-  console.log("Aplicando filtros:", activeFilters);
-  console.log("Total pedidos:", allOrders.length);
 
   const filtered = allOrders.filter(o => {
-    // Filtro estado
-    if (activeFilters.status && o.fulfillment_status !== activeFilters.status) return false;
-
-    // Filtro tienda
-    if (activeFilters.shop && o.shop_domain !== activeFilters.shop) return false;
-
-    // Filtro fecha desde
-    if (activeFilters.dateFrom) {
-      const from = new Date(activeFilters.dateFrom + "T00:00:00");
-      const orderDate = new Date(o.created_at);
-      if (orderDate < from) return false;
+    if (status && o.fulfillment_status !== status) return false;
+    if (shop && o.shop_domain !== shop) return false;
+    if (dateFrom) {
+      if (!o.created_at) return false;
+      if (new Date(o.created_at) < new Date(dateFrom + "T00:00:00")) return false;
     }
-
-    // Filtro fecha hasta
-    if (activeFilters.dateTo) {
-      const to = new Date(activeFilters.dateTo + "T23:59:59");
-      const orderDate = new Date(o.created_at);
-      if (orderDate > to) return false;
+    if (dateTo) {
+      if (!o.created_at) return false;
+      if (new Date(o.created_at) > new Date(dateTo + "T23:59:59")) return false;
     }
-
     return true;
   });
 
-  console.log("Pedidos filtrados:", filtered.length);
   renderOrders(filtered);
-
-  const panel = document.getElementById("filter-panel");
-  if (panel) panel.remove();
 }
 
 function clearFilters() {
