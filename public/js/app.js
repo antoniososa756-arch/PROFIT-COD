@@ -3347,8 +3347,8 @@ async function guardarIngresoManual(input) {
     });
     const bannerEl = document.querySelector("#inf-ingresos-wrap div[style*='bbf7d0']");
     if (bannerEl) {
-      const mes2 = bannerEl.textContent.split("—")[0].trim();
-      bannerEl.textContent = `📅 ${mes2} — Total ingresos: ${grandTotal.toFixed(2)} €`;
+      const mesLabel = bannerEl.textContent.replace(/📅/g,"").split("—")[0].trim();
+      bannerEl.textContent = `📅 ${mesLabel} — Total ingresos: ${grandTotal.toFixed(2)} €`;
     }
 
   } catch(e) { console.error(e); }
