@@ -166,6 +166,18 @@ async function initDB() {
   try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS financial_status TEXT`); } catch(e) {}
   try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS raw_json TEXT`); } catch(e) {}
 
+await pool.query(`
+    CREATE TABLE IF NOT EXISTS productos_stock (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      shop_domain TEXT NOT NULL,
+      product_id TEXT NOT NULL,
+      stock INTEGER DEFAULT 0,
+      stock_minimo INTEGER DEFAULT 5,
+      UNIQUE(user_id, shop_domain, product_id)
+    )
+  `);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 

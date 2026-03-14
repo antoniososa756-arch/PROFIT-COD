@@ -1004,7 +1004,11 @@ if (id === "productos") {
 
   box.className = "card";
   box.innerHTML = `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <select id="productos-shop-filter" onchange="loadProductos()"
+        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        <option value="">Todas las tiendas</option>
+      </select>
       <button onclick="loadProductos()"
         style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
         🔄 Sincronizar productos
@@ -1014,6 +1018,20 @@ if (id === "productos") {
   `;
 
   loadProductos();
+  // Cargar tiendas en filtro
+  fetch(`${API_BASE}/api/shopify/stores`, {
+    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+  }).then(r => r.json()).then(stores => {
+    const sel = document.getElementById("productos-shop-filter");
+    if (sel && Array.isArray(stores)) {
+      stores.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.domain;
+        opt.textContent = s.shop_name || s.domain;
+        sel.appendChild(opt);
+      });
+    }
+  }).catch(() => {});
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -2183,17 +2201,97 @@ async function loadProductos() {
   wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
 
   try {
-    const res = await fetch(`${API_BASE}/api/shopify/products`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-    });
-    const data = await res.json();
+    const [resP, resS] = await Promise.all([
+      fetch(`${API_BASE}/api/shopify/products`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }),
+      fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } })
+    ]);
+    const data = await resP.json();
+    const stockData = await resS.json();
+
+    // Mapa de stock por product_id
+    const stockMap = {};
+    if (Array.isArray(stockData)) {
+      stockData.forEach(s => { stockMap[s.product_id] = s; });
+    }
 
     if (!Array.isArray(data) || data.length === 0) {
       wrap.innerHTML = `<div class="muted" style="padding:16px;">No hay productos activos.</div>`;
       return;
     }
 
-    wrap.innerHTML = data.map(shop => `
+    // Filtro de tienda seleccionado
+    const shopFilter = document.getElementById("productos-shop-filter")?.value || "";
+
+    const filtered = shopFilter ? data.filter(s => s.shop_domain === shopFilter) : data;
+
+    wrap.innerHTML = filtered.map(shop => `
+      <div style="margin-bottom:32px;">
+        <h3 style="font-size:15px;font-weight:700;color:#16a34a;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
+          🏪 ${escapeHtml(shop.shop_name)}
+          <span style="font-size:12px;color:#9ca3af;font-weight:400;margin-left:8px;">${shop.products.length} productos</span>
+        </h3>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#f9fafb;">
+              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:60px;">Imagen</th>
+              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
+              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Variantes & SKU</th>
+              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:120px;">Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${shop.products.map(p => {
+              const pid = String(p.id);
+              const stockInfo = stockMap[pid] || { stock: 0, stock_minimo: 5 };
+              const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
+              return `
+              <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+                <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
+                  ${p.image
+                    ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;">`
+                    : `<div style="width:48px;height:48px;border-radius:6px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`
+                  }
+                </td>
+                <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
+                  ${escapeHtml(p.title)}
+                </td>
+                <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
+                  ${p.variants.map(v => `
+                    <div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6;">
+                      <span style="font-size:12px;color:#374151;min-width:120px;">${escapeHtml(v.title)}</span>
+                      <span style="font-size:11px;color:#9ca3af;background:#f3f4f6;padding:2px 6px;border-radius:4px;">SKU: ${escapeHtml(v.sku)}</span>
+                      <span style="font-size:11px;color:#16a34a;font-weight:600;">${v.price} €</span>
+                    </div>
+                  `).join("")}
+                </td>
+                <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                    <input type="number" min="0" value="${stockInfo.stock}"
+                      style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:13px;text-align:center;font-family:inherit;background:${stockBajo?'#fef2f2':'var(--card)'};color:var(--text);"
+                      onchange="guardarStock('${shop.shop_domain}','${pid}',this.value,${stockInfo.stock_minimo})"
+                      title="Stock actual">
+                    <div style="display:flex;align-items:center;gap:4px;">
+                      <span style="font-size:10px;color:#9ca3af;">mín:</span>
+                      <input type="number" min="0" value="${stockInfo.stock_minimo}"
+                        style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
+                        onchange="guardarStockMinimo('${shop.shop_domain}','${pid}',${stockInfo.stock},this.value)"
+                        title="Stock mínimo para alerta">
+                    </div>
+                    ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
+                  </div>
+                </td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    `).join("");
+
+  } catch(e) {
+    wrap.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando productos</div>`;
+  }
+}
+window.loadProductos = loadProductos;
       <div style="margin-bottom:32px;">
         <h3 style="font-size:15px;font-weight:700;color:#16a34a;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
           🏪 ${escapeHtml(shop.shop_name)}
@@ -3993,4 +4091,27 @@ async function importarPagadosPDF(input) {
     alert("❌ Error leyendo el PDF: " + e.message);
   }
 }
+
+async function guardarStock(shopDomain, productId, stock, stockMinimo) {
+  try {
+    await fetch(`${API_BASE}/api/shopify/stock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, stock: parseInt(stock)||0, stock_minimo: parseInt(stockMinimo)||5 })
+    });
+    loadProductos();
+  } catch(e) { console.error(e); }
+}
+
+async function guardarStockMinimo(shopDomain, productId, stock, stockMinimo) {
+  try {
+    await fetch(`${API_BASE}/api/shopify/stock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, stock: parseInt(stock)||0, stock_minimo: parseInt(stockMinimo)||5 })
+    });
+  } catch(e) { console.error(e); }
+}
+window.guardarStock = guardarStock;
+window.guardarStockMinimo = guardarStockMinimo;
 window.importarPagadosPDF = importarPagadosPDF;
