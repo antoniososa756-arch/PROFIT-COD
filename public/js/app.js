@@ -647,7 +647,7 @@ const now = new Date();
             onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
             Filtrar
           </button>
-          <div id="metrics-store-filter-inline" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"></div>
+          
         </div>
       </div>
 
@@ -2444,24 +2444,17 @@ async function loadMetricasBalance(dateFrom, dateTo) {
           </div>
         </div>
       </div>
-      <div id="met-bal-filtro-lateral" style="display:none;"></div>
+      <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:20px;">
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
+          <input type="checkbox" id="met-bal-check-all" checked onchange="toggleAllMetricasBalance(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          Todas las tiendas
+        </label>
+        ${storeCheckboxes}
+      </div>
     </div>
   `;
   recalcMetricasBalance();
-
-  // Inyectar filtro inline en la cabecera de métricas
-  const inlineWrap = document.getElementById("metrics-store-filter-inline");
-  if (inlineWrap) {
-    inlineWrap.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--card);border:1px solid #e5e7eb;border-radius:8px;font-size:12px;flex-wrap:wrap;gap:8px;">
-        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-weight:700;color:var(--text);">
-          <input type="checkbox" id="met-bal-check-all" checked onchange="toggleAllMetricasBalance(this.checked)" style="width:13px;height:13px;accent-color:#16a34a;cursor:pointer;">
-          Todas
-        </label>
-        ${storeCheckboxes.replace(/padding:8px 0/g, "padding:0").replace(/font-size:13px/g, "font-size:12px")}
-      </div>
-    `;
-  }
 }
 
 function recalcMetricasBalance() {
