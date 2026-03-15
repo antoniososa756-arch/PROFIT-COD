@@ -5031,6 +5031,16 @@ window.filterReeByTab         = filterReeByTab;
 // =========================
 async function loadSidebarReembolsos() {
   try {
+    // Cargar estados desde BD siempre, no depender de window.__reembolsosEstados
+    const estadosRes = await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const estadosData = await estadosRes.json();
+    const estadosMap = {};
+    if (Array.isArray(estadosData)) {
+      estadosData.forEach(e => { estadosMap[e.order_id] = e.estado; });
+    }
+
     const res = await fetch(`${API_BASE}/api/orders`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
@@ -5042,7 +5052,7 @@ async function loadSidebarReembolsos() {
         const fin = (raw?.financial_status || raw?.payment_status || o.financial_status || o.payment_status || "").toLowerCase().trim();
         if (!(fin === "pending" || fin === "cod" || fin === "pendiente")) return false;
       } catch { return false; }
-      const estado = (window.__reembolsosEstados || {})[o.id] || "pendiente";
+      const estado = estadosMap[o.id] || "pendiente";
       return estado !== "cobrado";
     }) : [];
 
