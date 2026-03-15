@@ -2420,7 +2420,8 @@ function recalcMetricasBalance() {
     document.body.appendChild(hiddenInput);
   }
   hiddenInput.value = shopSeleccionada;
-  loadMetricas();
+  // Actualizar métricas de arriba sin recargar el balance (evitar bucle)
+  actualizarMetricasSinBalance();
 }
 window.recalcMetricasBalance = recalcMetricasBalance;
 
@@ -2430,6 +2431,72 @@ function toggleAllMetricasBalance(checked) {
 }
 window.toggleAllMetricasBalance = toggleAllMetricasBalance;
 window.loadMetricasBalance = loadMetricasBalance;
+
+async function actualizarMetricasSinBalance() {
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fmtD = d => d.toISOString().split("T")[0];
+  const dateFrom = document.getElementById("metrics-date-from")?.value || fmtD(firstDay);
+  const dateTo   = document.getElementById("metrics-date-to")?.value   || fmtD(now);
+  const shopFiltro = document.getElementById("met-bal-shop-filter-val")?.value || "";
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const orders = await res.json();
+    let list = Array.isArray(orders) ? orders : [];
+
+    list = list.filter(o => {
+      if (!o.created_at) return true;
+      const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo   && d > dateTo)   return false;
+      return true;
+    });
+
+    if (shopFiltro) list = list.filter(o => o.shop_domain === shopFiltro);
+
+    const total      = list.length;
+    const pendientes = list.filter(o => o.fulfillment_status === "pendiente").length;
+    const transito   = list.filter(o => ["en_preparacion","enviado","en_transito","franquicia"].includes(o.fulfillment_status)).length;
+    const entregados = list.filter(o => o.fulfillment_status === "entregado").length;
+    const devueltos  = list.filter(o => o.fulfillment_status === "devuelto").length;
+    const destruidos = list.filter(o => o.fulfillment_status === "destruido").length;
+    const rojos      = devueltos + destruidos;
+    const enviados   = list.filter(o => ["enviado","en_transito","franquicia","en_preparacion","entregado","devuelto","destruido"].includes(o.fulfillment_status)).length;
+    const base       = enviados > 0 ? enviados : 1;
+    const pctEntregado = Math.round((entregados / base) * 100);
+    const pctRojo      = Math.round((rojos      / base) * 100);
+    const pctPendiente = Math.round((transito   / base) * 100);
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set("stat-total",      total);
+    set("stat-enviados",   enviados);
+    set("stat-pendientes", pendientes);
+    set("stat-transito",   transito);
+    set("stat-entregados", entregados);
+    set("stat-devueltos",  devueltos);
+    set("stat-destruidos", destruidos);
+    set("donut-pct",       pctEntregado + "%");
+    set("legend-entregado", `Entregado ${pctEntregado}%`);
+    set("legend-rojo",      `Dev+Dest ${pctRojo}%`);
+    set("legend-pendiente", `En tránsito ${pctPendiente}%`);
+
+    const circumference = 100;
+    let offset = 0;
+    function setArc(id, pct, off) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.setAttribute("stroke-dasharray", `${pct} ${circumference - pct}`);
+      el.setAttribute("stroke-dashoffset", -off);
+    }
+    setArc("donut-entregado", pctEntregado, offset); offset += pctEntregado;
+    setArc("donut-rojo",      pctRojo,      offset); offset += pctRojo;
+    setArc("donut-pendiente", pctPendiente, offset);
+  } catch(e) { console.error(e); }
+}
+window.actualizarMetricasSinBalance = actualizarMetricasSinBalance;
 
 async function loadProductos() {
   const wrap = document.getElementById("productos-wrap");
