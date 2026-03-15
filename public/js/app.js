@@ -914,9 +914,26 @@ if (id === "gestion-clientes") {
           return;
         }
 
-        <div>
-              <button class="btn-edit" onclick="">Editar</button>
-            </div> "Administrador" : "Cliente"}</div>
+        table.innerHTML = users.map(u => `
+          <div class="client-row">
+
+            <div>${u.email}</div>
+
+            <div class="password-cell">
+              <span>••••••••</span>
+              <button
+                class="reset-icon"
+                onclick="resetPassword('${u.id}')"
+                title="Generar nueva contraseña"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+                  <path d="M21 3v6h-6"/>
+                </svg>
+              </button>
+            </div>
+
+            <div>${u.role === "admin" ? "Administrador" : "Cliente"}</div>
 
             <div class="view-eye" onclick="viewClient('${u.id}')">
               <svg viewBox="0 0 24 24">
@@ -925,16 +942,15 @@ if (id === "gestion-clientes") {
               </svg>
             </div>
 
-            <div>
-              <button class="btn-edit">Editar</button>
-            </div>
-
+            ${u.role !== "admin" ? `
             <div>
               <label class="user-switch">
-                <input type="checkbox" checked>
+                <input type="checkbox" ${u.active !== 0 ? "checked" : ""}
+                  onchange="toggleUserStatus('${u.id}', this.checked)">
                 <span class="user-slider"></span>
               </label>
             </div>
+            ` : `<div style="color:#9ca3af;font-size:12px;text-align:center;">—</div>`}
 
           </div>
         `).join("");
@@ -2309,6 +2325,26 @@ window.submitShopifyConnection = submitShopifyConnection;
 
 // 👇 ESTA LÍNEA VA FUERA DE LA FUNCIÓN
 window.viewClient = viewClient;
+
+async function toggleUserStatus(userId, active) {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users/${userId}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + localStorage.getItem("token"),
+      },
+      body: JSON.stringify({ active: active ? 1 : 0 }),
+    });
+    if (!res.ok) {
+      alert("Error al cambiar estado");
+      setSection("gestion-clientes");
+    }
+  } catch {
+    alert("Error de conexión");
+  }
+}
+window.toggleUserStatus = toggleUserStatus;
 
 async function disableStore(storeId) {
   if (!confirm("¿Seguro que quieres deshabilitar esta tienda?")) return;
