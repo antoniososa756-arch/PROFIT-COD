@@ -45,11 +45,12 @@ router.post("/login", async (req, res) => {
   if (typeof password !== "string") return res.status(400).json({ error: "Contraseña inválida" });
 
   try {
-    const row = await db.get("SELECT id, email, password_hash, role FROM users WHERE email = ?", [email]);
+    const row = await db.get("SELECT id, email, password_hash, role, active FROM users WHERE email = ?", [email]);
     if (!row) return res.status(401).json({ error: "Credenciales inválidas" });
 
     const ok = await bcrypt.compare(password, row.password_hash);
     if (!ok) return res.status(401).json({ error: "Credenciales inválidas" });
+    if (row.active === 0) return res.status(403).json({ error: "Cuenta desactivada. Contacta al administrador." });
 
     const user = { id: row.id, email: row.email, role: row.role };
     return res.json({ token: signToken(user), user });

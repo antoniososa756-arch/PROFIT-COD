@@ -48,4 +48,17 @@ router.post("/impersonate/:id", auth, admin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error DB" }); }
 });
 
+router.patch("/users/:id/status", auth, admin, async (req, res) => {
+  try {
+    const user = await db.get("SELECT id, role, active FROM users WHERE id = ?", [req.params.id]);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+    if (user.role === "admin") return res.status(403).json({ error: "No se puede desactivar un administrador" });
+    const newStatus = req.body.active ? 1 : 0;
+    await db.run("UPDATE users SET active = ? WHERE id = ?", [newStatus, req.params.id]);
+    res.json({ ok: true, active: newStatus });
+  } catch (e) { res.status(500).json({ error: "Error DB" }); }
+});
+
+module.exports = router;
+
 module.exports = router;

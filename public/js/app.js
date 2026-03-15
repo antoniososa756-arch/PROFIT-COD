@@ -887,7 +887,6 @@ if (id === "gestion-clientes") {
           <div>Contraseña</div>
           <div>Rol</div>
           <div>Ver</div>
-          <div>Editar</div>
           <div>Estado</div>
         </div>
 
@@ -915,26 +914,9 @@ if (id === "gestion-clientes") {
           return;
         }
 
-        table.innerHTML = users.map(u => `
-          <div class="client-row">
-
-            <div>${u.email}</div>
-
-            <div class="password-cell">
-              <span>••••••••</span>
-              <button
-                class="reset-icon"
-                onclick="resetPassword('${u.id}')"
-                title="Generar nueva contraseña"
-              >
-                <svg viewBox="0 0 24 24">
-                  <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
-                  <path d="M21 3v6h-6"/>
-                </svg>
-              </button>
-            </div>
-
-            <div>${u.role === "admin" ? "Administrador" : "Cliente"}</div>
+        <div>
+              <button class="btn-edit" onclick="">Editar</button>
+            </div> "Administrador" : "Cliente"}</div>
 
             <div class="view-eye" onclick="viewClient('${u.id}')">
               <svg viewBox="0 0 24 24">
@@ -1485,6 +1467,9 @@ if (id === "ayuda") {
       <p>Si MRW te envía un PDF con los comprobantes de liquidación, súbelo al sistema. PROFICOD extrae automáticamente los números de seguimiento y marca esos pedidos como pagados.</p>
       <div class="help-tip">💡 Los pedidos cancelados y pendientes no se cuentan en el balance de Métricas.</div>
     </div>
+  </div>
+
+  <div id="help-panel-facturas" class="help-panel">
     <div class="help-section">
       <h2>🧾 Facturas</h2>
       <p>Gestiona los documentos de facturación. Dentro encontrarás varias pestañas:</p>
@@ -1497,6 +1482,9 @@ if (id === "ayuda") {
       </ul>
       <div class="help-tip">💡 Las notificaciones te avisarán cuando tengas reembolsos pendientes de cobro.</div>
     </div>
+  </div>
+
+  <div id="help-panel-informes" class="help-panel">
     <div class="help-section">
       <h2>📈 Informes</h2>
       <p>Resúmenes consolidados organizados en dos pestañas:</p>
