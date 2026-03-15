@@ -639,8 +639,7 @@ const now = new Date();
           <span style="color:#6b7280;font-size:13px;">—</span>
           <input type="date" id="metrics-date-to" value="${fmt(now)}"
             style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-          <select id="metrics-shop"
-            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          <select id="metrics-shop" style="display:none;">
             <option value="">Todas las tiendas</option>
           </select>
           <button onclick="aplicarFiltroMetricas()"
@@ -752,6 +751,7 @@ const now = new Date();
         </div>
 
       </div>
+      <div id="metrics-balance-wrap" style="margin-top:24px;"></div>
     `;
   }
 
@@ -2193,7 +2193,8 @@ async function loadMetricas() {
       return true;
     });
 
-    if (shop) list = list.filter(o => o.shop_domain === shop);
+    const shopMetricas = document.getElementById("met-bal-shop-filter-val")?.value || shop;
+    if (shopMetricas) list = list.filter(o => o.shop_domain === shopMetricas);
 
     const total      = list.length;
     const pendientes = list.filter(o => o.fulfillment_status === "pendiente").length;
@@ -2242,7 +2243,193 @@ async function loadMetricas() {
   } catch(e) {
     console.error("Error cargando métricas:", e);
   }
+
+  // Cargar panel de balance por tienda
+  await loadMetricasBalance(dateFrom, dateTo);
 }
+
+async function loadMetricasBalance(dateFrom, dateTo) {
+  const wrap = document.getElementById("metrics-balance-wrap");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando balance...</div>`;
+
+  const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const MRW_COMISION = 0.67;
+  const TARJETA_PCT  = 0.04;
+
+  let stores = [], orders = [], manuales = [];
+  try { stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(stores)) stores = []; } catch {}
+  try { orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(orders)) orders = []; } catch {}
+
+  // Filtrar por rango de fechas
+  const ordersRango = orders.filter(o => {
+    if (!o.created_at) return false;
+    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo && d > dateTo) return false;
+    return true;
+  });
+
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fmtD = d => d.toISOString().split("T")[0];
+  const mesActual = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  const mesFrom = dateFrom ? dateFrom.slice(0,7) : mesActual;
+
+  try { 
+    const r = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } });
+    manuales = await r.json(); 
+    if (!Array.isArray(manuales)) manuales = []; 
+  } catch {}
+
+  const numTiendas = stores.length || 1;
+  let gastosFijos = [];
+  try { gastosFijos = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(gastosFijos)) gastosFijos = []; } catch {}
+  const totalMRW = gastosFijos.filter(g=>g.nombre==="MRW").reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  const totalLogistica = gastosFijos.filter(g=>g.nombre==="LOGÍSTICA").reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  const totalOtrosFijos = gastosFijos.filter(g=>!["MRW","LOGÍSTICA"].includes(g.nombre)).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  const fijoXTienda = totalOtrosFijos / numTiendas;
+
+  let gastosVarios = {};
+  try { const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; }); } catch {}
+
+  let adsSpends = {};
+  const month = parseInt(mesFrom.split("-")[1]);
+  const year  = parseInt(mesFrom.split("-")[0]);
+  try { for (const store of stores) { const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); let meta=0,tiktok=0; if(Array.isArray(rows)) rows.forEach(r=>{meta+=r.meta||0;tiktok+=r.tiktok||0;}); adsSpends[store.domain]={meta,tiktok}; } } catch {}
+
+  const stockMap = {};
+  try { const d = await fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if(Array.isArray(d)) d.forEach(s=>{stockMap[s.product_id]=s.costo_compra||0;}); } catch {}
+  const variantesMap = {};
+  try { const d = await fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if(Array.isArray(d)) d.forEach(v=>{variantesMap[v.variant_id]=v.unidades_por_venta||1;}); } catch {}
+
+  const estadosEnvioMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
+  const pedidosBase = ordersRango.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status));
+  const enviosGlobalesMRW = pedidosBase.filter(o => estadosEnvioMRW.includes(o.fulfillment_status));
+  const devueltosTodas = enviosGlobalesMRW.filter(o=>o.fulfillment_status==="devuelto").length;
+  const totalEnviosGlobales = enviosGlobalesMRW.length + devueltosTodas;
+  const totalPedidosGlobales = pedidosBase.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status)).length;
+
+  const pedidosTarjeta = ordersRango.filter(o => o.fulfillment_status !== "cancelado");
+
+  const balanceData = stores.map(store => {
+    const ads = adsSpends[store.domain] || { meta:0, tiktok:0 };
+    const shopify = gastosVarios[store.domain] || 0;
+
+    const pedEnt = ordersRango.filter(o => o.shop_domain === store.domain && o.fulfillment_status === "entregado");
+    const pedCOD = pedEnt.filter(o => { try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="pending"||fin==="cod"||fin==="pendiente"; } catch{return false;} });
+    const pedPag = pedidosTarjeta.filter(o => o.shop_domain === store.domain && (()=>{ try{ const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"; }catch{return false;} })());
+    const tCOD = pedCOD.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
+    const tPag = pedPag.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
+    const man1 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===1)||{valor:0};
+    const man2 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===2)||{valor:0};
+    const totalIngreso = (tCOD - pedCOD.length*MRW_COMISION) + (tPag - tPag*TARJETA_PCT) + (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
+
+    const pedTienda = pedidosBase.filter(o => o.shop_domain === store.domain);
+    let costoProductos = 0;
+    pedTienda.filter(o=>!["devuelto","cancelado","pendiente"].includes(o.fulfillment_status)).forEach(o=>{
+      try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ costoProductos+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(variantesMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{}
+    });
+    const envTienda = pedTienda.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status));
+    const devTienda = envTienda.filter(o=>o.fulfillment_status==="devuelto").length;
+    const mrw = (totalEnviosGlobales>0?totalMRW/totalEnviosGlobales:0)*(envTienda.length+devTienda);
+    const logistica = (totalPedidosGlobales>0?totalLogistica/totalPedidosGlobales:0)*envTienda.length;
+    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda;
+    const resultado = totalIngreso - totalGasto;
+    return { domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado };
+  });
+
+  window.__metricasBalanceData = balanceData;
+
+  const cols = balanceData.map(d => {
+    const resColor = d.resultado >= 0 ? "#16a34a" : "#dc2626";
+    const resBg    = d.resultado >= 0 ? "#f0fdf4" : "#fef2f2";
+    const resBorder= d.resultado >= 0 ? "#bbf7d0" : "#fecaca";
+    return `
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;" data-domain="${d.domain}">
+        <div style="background:#16a34a;padding:10px 14px;">
+          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
+          <div style="font-size:11px;color:#bbf7d0;">${d.domain}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tbody>
+            <tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Total Ingreso</td><td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#16a34a;">${fmt(d.totalIngreso)} €</td></tr>
+            <tr style="background:#fef2f2;"><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Total Gasto</td><td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#dc2626;">− ${fmt(d.totalGasto)} €</td></tr>
+            <tr style="background:${resBg};"><td style="padding:12px 14px;border:1px solid ${resBorder};font-weight:700;color:${resColor};font-size:14px;">RESULTADO</td><td style="padding:12px 14px;border:1px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:16px;">${fmt(d.resultado)} €</td></tr>
+          </tbody>
+        </table>
+      </div>`;
+  }).join("");
+
+  const storeCheckboxes = balanceData.map(d =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
+      <input type="checkbox" checked value="${d.domain}" onchange="recalcMetricasBalance()" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+      ${escapeHtml(d.name)}
+    </label>`
+  ).join("");
+
+  wrap.innerHTML = `
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">📊 Balance por tienda</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;" id="met-bal-cols">${cols}</div>
+        <div id="met-bal-sumatoria" style="margin-top:20px;padding:16px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
+          <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Sumatoria seleccionada</div>
+          <div id="met-bal-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
+          <div style="border-top:2px solid #16a34a;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+            <span id="met-bal-total" style="font-weight:800;font-size:22px;"></span>
+          </div>
+        </div>
+      </div>
+      <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:80px;">
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
+          <input type="checkbox" id="met-bal-check-all" checked onchange="toggleAllMetricasBalance(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          Todas las tiendas
+        </label>
+        ${storeCheckboxes}
+      </div>
+    </div>
+  `;
+  recalcMetricasBalance();
+}
+
+function recalcMetricasBalance() {
+  const data = window.__metricasBalanceData || [];
+  const checks = document.querySelectorAll("#metrics-balance-wrap input[type='checkbox'][value]");
+  const sel = new Set([...checks].filter(c=>c.checked).map(c=>c.value));
+  const filtradas = data.filter(d=>sel.has(d.domain));
+  const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.querySelectorAll("#met-bal-cols > div[data-domain]").forEach(card => { card.style.display = sel.has(card.dataset.domain) ? "" : "none"; });
+  const total = filtradas.reduce((s,d)=>s+d.resultado,0);
+  const filasEl = document.getElementById("met-bal-filas");
+  const totalEl = document.getElementById("met-bal-total");
+  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#16a34a;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#16a34a':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
+  if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total>=0?"#16a34a":"#dc2626"; }
+  const allCheck = document.getElementById("met-bal-check-all");
+  if (allCheck) allCheck.checked = filtradas.length === data.length;
+
+  // Sincronizar filtro oculto y refrescar métricas
+  const shopSeleccionada = filtradas.length === 1 ? filtradas[0].domain : "";
+  let hiddenInput = document.getElementById("met-bal-shop-filter-val");
+  if (!hiddenInput) {
+    hiddenInput = document.createElement("input");
+    hiddenInput.type = "hidden";
+    hiddenInput.id = "met-bal-shop-filter-val";
+    document.body.appendChild(hiddenInput);
+  }
+  hiddenInput.value = shopSeleccionada;
+  loadMetricas();
+}
+window.recalcMetricasBalance = recalcMetricasBalance;
+
+function toggleAllMetricasBalance(checked) {
+  document.querySelectorAll("#metrics-balance-wrap input[type='checkbox'][value]").forEach(c=>c.checked=checked);
+  recalcMetricasBalance();
+}
+window.toggleAllMetricasBalance = toggleAllMetricasBalance;
+window.loadMetricasBalance = loadMetricasBalance;
 
 async function loadProductos() {
   const wrap = document.getElementById("productos-wrap");
