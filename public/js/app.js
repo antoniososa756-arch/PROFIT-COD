@@ -3679,9 +3679,7 @@ async function renderInformesBalance() {
     const mrw = (totalEnviosGlobales>0?totalMRW/totalEnviosGlobales:0)*(enviosTiendaMRW.length+devTienda);
     const logistica = (totalPedidosGlobales>0?totalLogistica/totalPedidosGlobales:0)*enviosTiendaMRW.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-    const totalGasto = (window.__gastosPorTienda && window.__gastosPorTienda[store.domain] != null)
-      ? window.__gastosPorTienda[store.domain]
-      : ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + extrasTotal;
+    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + extrasTotal;
 
     const resultado = totalIngreso - totalGasto;
     return { domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado };
