@@ -3153,19 +3153,24 @@ async function loadGastosVarios() {
       } catch {}
     });
 
-    // MRW: valor gastos fijos ÷ total envíos globales (devueltos cuentan doble)
-    const devueltosTodas = pedidosTodas.filter(o => o.fulfillment_status === "devuelto").length;
-    const totalEnviosGlobales = pedidosTodas.length + devueltosTodas;
-    const devueltosTienda = pedidosTienda.filter(o => o.fulfillment_status === "devuelto").length;
-    const enviosTienda = pedidosTienda.length + devueltosTienda;
+    // MRW: solo enviados + 1 extra por cada devuelto (cancelados y pendientes NO cuentan)
+    const estadosEnvioMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
+    const enviosGlobalesMRW = pedidosTodas.filter(o => estadosEnvioMRW.includes(o.fulfillment_status));
+    const devueltosTodas = enviosGlobalesMRW.filter(o => o.fulfillment_status === "devuelto").length;
+    const totalEnviosGlobales = enviosGlobalesMRW.length + devueltosTodas;
+
+    const enviosTiendaMRW = pedidosTienda.filter(o => estadosEnvioMRW.includes(o.fulfillment_status));
+    const devueltosTienda = enviosTiendaMRW.filter(o => o.fulfillment_status === "devuelto").length;
+    const enviosTienda = enviosTiendaMRW.length + devueltosTienda;
+
     const mrwUnitario = totalEnviosGlobales > 0 ? totalMRW / totalEnviosGlobales : 0;
     const mrw = mrwUnitario * enviosTienda;
 
-    // Logística: valor gastos fijos ÷ total pedidos globales (sin extra por devueltos)
-    const valorLogistica = totalLogistica;
-    const totalPedidosGlobales = pedidosTodas.length;
-    const logisticaUnitaria = totalPedidosGlobales > 0 ? valorLogistica / totalPedidosGlobales : 0;
-    const logistica = logisticaUnitaria * pedidosTienda.length;
+    // Logística: solo enviados (sin extra por devueltos, sin cancelados ni pendientes)
+    const enviosGlobalesLog = pedidosTodas.filter(o => estadosEnvioMRW.includes(o.fulfillment_status));
+    const totalPedidosGlobales = enviosGlobalesLog.length;
+    const logisticaUnitaria = totalPedidosGlobales > 0 ? totalLogistica / totalPedidosGlobales : 0;
+    const logistica = logisticaUnitaria * enviosTiendaMRW.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
     const total = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + extrasTotal;
 
