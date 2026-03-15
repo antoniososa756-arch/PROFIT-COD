@@ -2528,6 +2528,16 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   }
   const fijoXTienda = totalOtrosFijos / numTiendas;
 
+  // IVA desde base de datos
+  let ivaPorcentaje = 0.21;
+  try {
+    const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const impData = await impRes.json();
+    if (Array.isArray(impData) && impData.length > 0) {
+      ivaPorcentaje = (parseFloat(impData[0].porcentaje) || 21) / 100;
+    }
+  } catch {}
+
   let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   try { preciosGlobales = await fetch(`${API_BASE}/api/shopify/precios-globales`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); } catch {}
 
@@ -2588,7 +2598,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     const precioLogistica = preciosGlobales.precio_logistica || 0;
      const mrw      = precioMRW      * (envTienda.length + devTienda);
     const logistica = precioLogistica * envTienda.length;
-    const ivaTotal = pedEnt.reduce((s,o) => s + (parseFloat(o.total_price)||0) * 0.21, 0);
+    const ivaTotal = pedEnt.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
     const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + ivaTotal;
     const resultado = totalIngreso - totalGasto;
     return { 
@@ -2633,7 +2643,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
             <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gastos Fijos<div style="font-size:10px;color:#9ca3af;">${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.fijoXTienda)} €</td></tr>
             <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Shopify</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.shopify)} €</td></tr>
             <tr style="background:#fefce8;"><td style="padding:8px 14px;border:1px solid #fef08a;color:#854d0e;font-weight:600;">IVA (21%)<div style="font-size:10px;color:#a16207;">${pedEnt.filter(o=>o.shop_domain===store.domain).length} pedidos entregados × 21%</div></td><td style="padding:8px 14px;border:1px solid #fef08a;text-align:right;color:#854d0e;font-weight:600;">${fmt(ivaTotal)} €</td></tr>
-            <tr style="background:#fef2f2;"><td style="padding:8px 14px;border:1px solid #fecaca;font-weight:700;color:#dc2626;">Total Gastos</td>
+             <tr style="background:#fef2f2;"><td style="padding:8px 14px;border:1px solid #fecaca;font-weight:700;color:#dc2626;">Total Gastos</td><td style="padding:8px 14px;border:1px solid #fecaca;text-align:right;font-weight:700;color:#dc2626;">− ${fmt(d.totalGasto)} €</td></tr>
             <tr style="background:${resBg};"><td style="padding:12px 14px;border:1px solid ${resBorder};font-weight:700;color:${resColor};font-size:14px;">RESULTADO</td><td style="padding:12px 14px;border:1px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:16px;">${fmt(d.resultado)} €</td></tr>
           </tbody>
         </table>
@@ -3622,6 +3632,16 @@ async function loadGastosVarios() {
   const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
   const fijoXTienda    = totalOtrosFijos / numTiendas;
 
+  // IVA desde base de datos
+  let ivaPorcentaje = 0.21;
+  try {
+    const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const impData = await impRes.json();
+    if (Array.isArray(impData) && impData.length > 0) {
+      ivaPorcentaje = (parseFloat(impData[0].porcentaje) || 21) / 100;
+    }
+  } catch {}
+
   // 4. Gastos varios guardados (Shopify)
   let gastosVarios = {};
   try {
@@ -3706,7 +3726,7 @@ async function loadGastosVarios() {
     const logistica = logisticaUnitaria * enviosTiendaMRW.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
     const entregadosTienda = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
-    const ivaTotal = entregadosTienda.reduce((s,o) => s + (parseFloat(o.total_price)||0) * 0.21, 0);
+    const ivaTotal = entregadosTienda.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
     const total = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + extrasTotal + ivaTotal;
     if (!window.__gastosPorTienda) window.__gastosPorTienda = {};
     window.__gastosPorTienda[store.domain] = total;
@@ -4160,6 +4180,16 @@ async function renderInformesBalance() {
   const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
   const fijoXTienda     = totalOtrosFijos / numTiendas;
 
+  // IVA desde base de datos
+  let ivaPorcentaje = 0.21;
+  try {
+    const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const impData = await impRes.json();
+    if (Array.isArray(impData) && impData.length > 0) {
+      ivaPorcentaje = (parseFloat(impData[0].porcentaje) || 21) / 100;
+    }
+  } catch {}
+
   // ── Gastos Varios (Shopify) ───────────────────────────────
   let gastosVarios = {};
   try { const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; }); } catch {}
@@ -4222,7 +4252,7 @@ async function renderInformesBalance() {
     const logistica = (totalPedidosGlobales>0?totalLogistica/totalPedidosGlobales:0)*enviosTiendaMRW.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
     const entregadosTiendaMet = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
-    const ivaTotal = entregadosTiendaMet.reduce((s,o) => s + (parseFloat(o.total_price)||0) * 0.21, 0);
+    const ivaTotal = entregadosTiendaMet.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
     const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + extrasTotal + ivaTotal;
 
     const resultado = totalIngreso - totalGasto;
