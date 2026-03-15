@@ -3191,7 +3191,6 @@ async function loadGastosVarios() {
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
             </tr>
             <tr style="background:#f9fafb;">
-              <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Productos</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(costoProductos)} €
                 <div style="font-size:10px;color:#9ca3af;">costo × uds × cantidad por pedido</div>
@@ -3365,6 +3364,7 @@ async function renderInformesIngresos() {
   const TARJETA_PCT  = 0.04;
 
   let grandTotal = 0;
+  const totalPedidosEntregados = pedidosMes.length;
 
   const cols = stores.map(store => {
     const pedidosTienda = pedidosMes.filter(o => o.shop_domain === store.domain);
@@ -3462,7 +3462,7 @@ async function renderInformesIngresos() {
 
   wrap.innerHTML = `
     <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
-      📅 ${mesLabel} — Total ingresos: ${fmt(grandTotal)} €
+      📅 ${mesLabel} — ${totalPedidosEntregados} pedidos entregados — Total ingresos: ${fmt(grandTotal)} €
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
       ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
