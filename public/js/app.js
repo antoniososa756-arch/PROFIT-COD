@@ -1,5 +1,12 @@
 const API_BASE = "https://profit-cod.onrender.com";
 
+function getActiveToken() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("impersonated") === "1"
+    ? localStorage.getItem("impersonated_token")
+    : localStorage.getItem("token");
+}
+
 console.log("🟢 app.js cargado");
 // public/js/app.js
 (() => {
@@ -777,7 +784,7 @@ window.aplicarFiltroMetricas = aplicarFiltroMetricas;
 
 // Cargar tiendas en el selector de métricas
   fetch(`${API_BASE}/api/shopify/stores`, {
-    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    headers: { Authorization: "Bearer " + getActiveToken() }
   }).then(r => r.json()).then(stores => {
     const sel = document.getElementById("metrics-shop");
     if (sel && Array.isArray(stores)) {
@@ -843,7 +850,7 @@ if (id === "crear-cliente") {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer " + localStorage.getItem("token")
+          "Authorization": "Bearer " + getActiveToken()
         },
         body: JSON.stringify({ email, password })
       });
@@ -899,7 +906,7 @@ if (id === "gestion-clientes") {
 
     fetch(`${API_BASE}/api/users`, {
       headers: {
-        "Authorization": "Bearer " + localStorage.getItem("token")
+        "Authorization": "Bearer " + getActiveToken()
       }
     })
       .then(res => res.json())
@@ -1029,7 +1036,7 @@ if (id === "productos") {
   loadProductos();
   // Cargar tiendas en filtro
   fetch(`${API_BASE}/api/shopify/stores`, {
-    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    headers: { Authorization: "Bearer " + getActiveToken() }
   }).then(r => r.json()).then(stores => {
     const sel = document.getElementById("productos-shop-filter");
     if (sel && Array.isArray(stores)) {
@@ -1148,7 +1155,7 @@ if (id === "pedidos") {
 
     // Cargar tiendas en filtro inline
     fetch(`${API_BASE}/api/shopify/stores`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json()).then(stores => {
       const sel = document.getElementById("filter-shop-inline");
       if (sel && Array.isArray(stores)) {
@@ -1247,7 +1254,7 @@ if (id === "gastos-ads") {
 
   // Cargar tiendas
   fetch(`${API_BASE}/api/shopify/stores`, {
-    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    headers: { Authorization: "Bearer " + getActiveToken() }
   }).then(r=>r.json()).then(stores => {
     const sel = document.getElementById("ads-shop-sel");
     if (!sel || !Array.isArray(stores)) return;
@@ -1914,7 +1921,7 @@ function switchFacturasTab(key) {
       </div>
     `;
     fetch(`${API_BASE}/api/shopify/stores`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json()).then(stores => {
       const sel = document.getElementById("ree-shop");
       if (sel && Array.isArray(stores)) {
@@ -1947,7 +1954,7 @@ function switchFacturasTab(key) {
       <div id="ads-table-wrap" style="overflow-x:auto;"></div>
     `;
     fetch(`${API_BASE}/api/shopify/stores`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r=>r.json()).then(stores => {
       const sel = document.getElementById("ads-shop-sel");
       if (!sel || !Array.isArray(stores)) return;
@@ -2123,7 +2130,7 @@ async function confirmReset(userId) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + getActiveToken(),
       },
       body: JSON.stringify({ password }),
     }
@@ -2151,7 +2158,7 @@ async function viewClient(userId) {
       {
         method: "POST",
         headers: {
-          Authorization: "Bearer " + localStorage.getItem("token"),
+          Authorization: "Bearer " + getActiveToken(),
         },
       }
     );
@@ -2195,7 +2202,7 @@ async function fetchStores() {
   try {
     const res = await fetch(`${API_BASE}/api/shopify/stores`, {
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + getActiveToken(),
       },
     });
 
@@ -2285,7 +2292,7 @@ async function submitShopifyConnection() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + getActiveToken(),
       },
       body: JSON.stringify({
         shop,
@@ -2332,7 +2339,7 @@ async function toggleUserStatus(userId, active) {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + getActiveToken(),
       },
       body: JSON.stringify({ active: active ? 1 : 0 }),
     });
@@ -2354,7 +2361,7 @@ async function disableStore(storeId) {
     {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + getActiveToken(),
       },
     }
   );
@@ -2383,7 +2390,7 @@ async function loadMetricas() {
 
   try {
     const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const orders = await res.json();
     let list = Array.isArray(orders) ? orders : [];
@@ -2461,8 +2468,8 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   const TARJETA_PCT  = 0.04;
 
   let stores = [], orders = [], manuales = [];
-  try { stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(stores)) stores = []; } catch {}
-  try { orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(orders)) orders = []; } catch {}
+  try { stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(stores)) stores = []; } catch {}
+  try { orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(orders)) orders = []; } catch {}
 
   // Filtrar por rango de fechas
   const ordersRango = orders.filter(o => {
@@ -2480,7 +2487,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   const mesFrom = dateFrom ? dateFrom.slice(0,7) : mesActual;
 
   try { 
-    const r = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } });
+    const r = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
     manuales = await r.json(); 
     if (!Array.isArray(manuales)) manuales = []; 
   } catch {}
@@ -2503,20 +2510,20 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   let gastosVarios = {};
   for (const mes of mesesRango) {
     try {
-      const gf = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+      const gf = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
       if (Array.isArray(gf)) {
         totalOtrosFijos += gf.filter(g=>!["MRW","LOGÍSTICA"].includes(g.nombre)).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
       }
     } catch {}
     try {
-      const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+      const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
       if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = (gastosVarios[r.shop_domain]||0) + (r.shopify||0); });
     } catch {}
   }
   const fijoXTienda = totalOtrosFijos / numTiendas;
 
   let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
-  try { preciosGlobales = await fetch(`${API_BASE}/api/shopify/precios-globales`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); } catch {}
+  try { preciosGlobales = await fetch(`${API_BASE}/api/shopify/precios-globales`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); } catch {}
 
   // Ads — filtrar por rango de fechas sumando todos los meses
   let adsSpends = {};
@@ -2525,7 +2532,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     const y = parseInt(mes.split("-")[0]);
     try {
       for (const store of stores) {
-        const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+        const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
         let meta=0, tiktok=0;
         if (Array.isArray(rows)) rows.filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo)).forEach(r=>{meta+=r.meta||0;tiktok+=r.tiktok||0;});
         if (!adsSpends[store.domain]) adsSpends[store.domain] = { meta:0, tiktok:0 };
@@ -2537,9 +2544,9 @@ async function loadMetricasBalance(dateFrom, dateTo) {
 
 
   const stockMap = {};
-  try { const d = await fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if(Array.isArray(d)) d.forEach(s=>{stockMap[s.product_id]=s.costo_compra||0;}); } catch {}
+  try { const d = await fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if(Array.isArray(d)) d.forEach(s=>{stockMap[s.product_id]=s.costo_compra||0;}); } catch {}
   const variantesMap = {};
-  try { const d = await fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if(Array.isArray(d)) d.forEach(v=>{variantesMap[v.variant_id]=v.unidades_por_venta||1;}); } catch {}
+  try { const d = await fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if(Array.isArray(d)) d.forEach(v=>{variantesMap[v.variant_id]=v.unidades_por_venta||1;}); } catch {}
 
   const estadosEnvioMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
   const pedidosBase = ordersRango.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status));
@@ -2706,7 +2713,7 @@ async function actualizarMetricasSinBalance() {
 
   try {
     const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const orders = await res.json();
     let list = Array.isArray(orders) ? orders : [];
@@ -2769,9 +2776,9 @@ async function loadProductos() {
 
   try {
     const [resP, resS, resV] = await Promise.all([
-      fetch(`${API_BASE}/api/shopify/products`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }),
-      fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }),
-      fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } })
+      fetch(`${API_BASE}/api/shopify/products`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
+      fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
+      fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + getActiveToken() } })
     ]);
     const data = await resP.json();
     const stockData = await resS.json();
@@ -2988,7 +2995,7 @@ async function loadAdsTable() {
   let orders = [];
   try {
     const r = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const all = await r.json();
     orders = Array.isArray(all) ? all.filter(o => {
@@ -3004,7 +3011,7 @@ async function loadAdsTable() {
   let spends = {};
   try {
     const r = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(shop)}&month=${month}&year=${year}`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const rows = await r.json();
     if (Array.isArray(rows)) rows.forEach(r => { spends[r.date] = { meta: r.meta||0, tiktok: r.tiktok||0 }; });
@@ -3128,7 +3135,7 @@ async function loadGastosFijosData() {
   let totalPedidos = 0;
   try {
     const r = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const all = await r.json();
     if (Array.isArray(all)) {
@@ -3148,10 +3155,10 @@ async function loadGastosFijosData() {
     // Asegurar que las filas base existen
     await fetch(`${API_BASE}/api/gastos-fijos/reset`, {
       method: "POST",
-      headers: { "Content-Type":"application/json", Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { "Content-Type":"application/json", Authorization: "Bearer " + getActiveToken() }
     });
     const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const data = await r.json();
     items = Array.isArray(data) ? data : [];
@@ -3171,7 +3178,7 @@ async function loadGastosFijosData() {
       try {
         const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
           method: "POST",
-          headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+          headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
           body: JSON.stringify(defaults[i])
         });
         const saved = await r.json();
@@ -3186,7 +3193,7 @@ async function loadGastosFijosData() {
 let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   try {
     preciosGlobales = await fetch(`${API_BASE}/api/shopify/precios-globales`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json());
   } catch {}
 
@@ -3202,7 +3209,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   let impuestos = [];
   try {
     const r = await fetch(`${API_BASE}/api/impuestos`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const data = await r.json();
     impuestos = Array.isArray(data) ? data : [];
@@ -3212,7 +3219,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
     try {
       const r = await fetch(`${API_BASE}/api/impuestos`, {
         method: "POST",
-        headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+        headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
         body: JSON.stringify({ nombre:"IVA", porcentaje:21, fijo:1, orden:0 })
       });
       const saved = await r.json();
@@ -3392,7 +3399,7 @@ async function updateGastoFijoValor(input) {
   try {
     const r = await fetch(`${API_BASE}/api/gastos-fijos/${id}/valor`, {
       method: "PUT",
-      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ mes, valor })
     });
     const data = await r.json();
@@ -3409,7 +3416,7 @@ async function updateGastoFijo(input) {
   try {
     await fetch(`${API_BASE}/api/gastos-fijos/${id}`, {
       method: "PUT",
-      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ nombre, precio_unit: field==="precio_unit" ? parseFloat(input.value)||0 : precioUnit })
     });
     input.blur();
@@ -3422,7 +3429,7 @@ async function addGastoFijo() {
   try {
     const r = await fetch(`${API_BASE}/api/gastos-fijos`, {
       method: "POST",
-      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ nombre:"", precio_unit:null, fijo:0, orden:999 })
     });
     const saved = await r.json();
@@ -3436,7 +3443,7 @@ async function deleteGastoFijo(id) {
   try {
     await fetch(`${API_BASE}/api/gastos-fijos/${id}`, {
       method: "DELETE",
-      headers: { Authorization:"Bearer "+localStorage.getItem("token") }
+      headers: { Authorization:"Bearer "+getActiveToken() }
     });
     loadGastosFijosData();
   } catch(e) { console.error(e); }
@@ -3448,7 +3455,7 @@ async function updateImpuesto(input) {
   try {
     await fetch(`${API_BASE}/api/impuestos/${id}`, {
       method: "PUT",
-      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ nombre:"IVA", porcentaje })
     });
     input.blur();
@@ -3472,7 +3479,7 @@ async function updateGastoFijoPrecio(input) {
   try {
     await fetch(`${API_BASE}/api/gastos-fijos/${id}/precio`, {
       method: "PUT",
-      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ mes, precio_unit })
     });
     input.blur();
@@ -3488,7 +3495,7 @@ async function guardarPreciosGlobales() {
   try {
     await fetch(`${API_BASE}/api/shopify/precios-globales`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ precio_mrw: mrw, precio_logistica: log })
     });
     // Actualizar automáticamente el P.UNIT de MRW y LOGÍSTICA en la tabla
@@ -3523,7 +3530,7 @@ async function saveAdsSpend(input) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("token")
+        Authorization: "Bearer " + getActiveToken()
       },
       body: JSON.stringify({ shop, date, type, spend })
     });
@@ -3555,7 +3562,7 @@ async function loadGastosVarios() {
 // Cargar pedidos al cache global
   try {
     const ordersRes = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     window.__allOrdersCache = await ordersRes.json();
   } catch {}
@@ -3564,7 +3571,7 @@ async function loadGastosVarios() {
   let stores = [];
   try {
     const r = await fetch(`${API_BASE}/api/shopify/stores`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const all = await r.json();
     stores = Array.isArray(all) ? all.filter(s => s.active || s.status === "active" || s.is_active) : [];
@@ -3578,7 +3585,7 @@ async function loadGastosVarios() {
   try {
     for (const store of stores) {
       const r = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, {
-        headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+        headers: { Authorization: "Bearer " + getActiveToken() }
       });
       const rows = await r.json();
       let meta = 0, tiktok = 0;
@@ -3591,7 +3598,7 @@ async function loadGastosVarios() {
   let gastosFijos = [];
   try {
     const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     gastosFijos = await r.json();
     if (!Array.isArray(gastosFijos)) gastosFijos = [];
@@ -3611,7 +3618,7 @@ async function loadGastosVarios() {
   let gastosVarios = {};
   try {
     const r = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const rows = await r.json();
     if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; });
@@ -3625,7 +3632,7 @@ async function loadGastosVarios() {
   const stockMap = {};
   try {
     const stockData = await fetch(`${API_BASE}/api/shopify/stock`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json());
     if (Array.isArray(stockData)) stockData.forEach(s => { stockMap[s.product_id] = s.costo_compra || 0; });
   } catch {}
@@ -3633,7 +3640,7 @@ async function loadGastosVarios() {
   const variantesMap = {};
   try {
     const varData = await fetch(`${API_BASE}/api/shopify/variantes-config`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json());
     if (Array.isArray(varData)) varData.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta || 1; });
   } catch {}
@@ -3792,7 +3799,7 @@ async function saveGastoVarioShopify(input) {
   try {
     await fetch(`${API_BASE}/api/gastos-varios/shopify`, {
       method: "PUT",
-      headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ shop_domain: shop, mes, shopify })
     });
     await loadGastosVarios();
@@ -3858,15 +3865,15 @@ async function renderInformesIngresos() {
 
   let stores = [], orders = [], manuales = [];
   try {
-    stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+    stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
     if (!Array.isArray(stores)) stores = [];
   } catch {}
   try {
-    orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+    orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
     if (!Array.isArray(orders)) orders = [];
   } catch {}
   try {
-    manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+    manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
     if (!Array.isArray(manuales)) manuales = [];
   } catch {}
 
@@ -4018,7 +4025,7 @@ async function guardarIngresoManual(input) {
   try {
     await fetch(`${API_BASE}/api/shopify/informes-ingresos`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ shop_domain: shop, mes, columna: col, nombre, valor })
     });
 
@@ -4107,9 +4114,9 @@ async function renderInformesBalance() {
 
   // ── Cargar datos ──────────────────────────────────────────
   let stores = [], orders = [], manuales = [];
-  try { stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(stores)) stores = []; } catch {}
-  try { orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(orders)) orders = []; } catch {}
-  try { manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(manuales)) manuales = []; } catch {}
+  try { stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(stores)) stores = []; } catch {}
+  try { orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(orders)) orders = []; } catch {}
+  try { manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(manuales)) manuales = []; } catch {}
 
   window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
@@ -4118,7 +4125,7 @@ async function renderInformesBalance() {
   let adsSpends = {};
   try {
     for (const store of stores) {
-      const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+      const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
       let meta = 0, tiktok = 0;
       if (Array.isArray(rows)) rows.forEach(r => { meta += r.meta||0; tiktok += r.tiktok||0; });
       adsSpends[store.domain] = { meta, tiktok };
@@ -4127,7 +4134,7 @@ async function renderInformesBalance() {
 
   // ── Gastos Fijos ──────────────────────────────────────────
   let gastosFijos = [];
-  try { gastosFijos = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(gastosFijos)) gastosFijos = []; } catch {}
+  try { gastosFijos = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(gastosFijos)) gastosFijos = []; } catch {}
   const gastosMRW       = gastosFijos.filter(g => g.nombre === "MRW");
   const gastosLogistica = gastosFijos.filter(g => g.nombre === "LOGÍSTICA");
   const gastosOtrosFijos = gastosFijos.filter(g => !["MRW","LOGÍSTICA"].includes(g.nombre));
@@ -4138,17 +4145,17 @@ async function renderInformesBalance() {
 
   // ── Gastos Varios (Shopify) ───────────────────────────────
   let gastosVarios = {};
-  try { const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; }); } catch {}
+  try { const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; }); } catch {}
 
   // ── Gastos Extras por tienda ──────────────────────────────
   let gastosExtras = {};
-  try { const rows = await fetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (Array.isArray(rows)) rows.forEach(r => { if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = []; gastosExtras[r.shop_domain].push(r); }); } catch {}
+  try { const rows = await fetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (Array.isArray(rows)) rows.forEach(r => { if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = []; gastosExtras[r.shop_domain].push(r); }); } catch {}
 
   // ── Stock y variantes ─────────────────────────────────────
   const stockMap = {};
-  try { const d = await fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (Array.isArray(d)) d.forEach(s => { stockMap[s.product_id] = s.costo_compra||0; }); } catch {}
+  try { const d = await fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (Array.isArray(d)) d.forEach(s => { stockMap[s.product_id] = s.costo_compra||0; }); } catch {}
   const variantesMap = {};
-  try { const d = await fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (Array.isArray(d)) d.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta||1; }); } catch {}
+  try { const d = await fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (Array.isArray(d)) d.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta||1; }); } catch {}
 
   // ── Pedidos del mes ───────────────────────────────────────
   const pedidosMesBase = orders.filter(o => {
@@ -4329,7 +4336,7 @@ async function copiarMesAnteriorGF() {
 
   try {
     const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${prevMes}`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const prevItems = await r.json();
     if (!Array.isArray(prevItems)) return;
@@ -4338,14 +4345,14 @@ async function copiarMesAnteriorGF() {
       if ((parseFloat(prev.valor)||0) > 0) {
         await fetch(`${API_BASE}/api/gastos-fijos/${prev.id}/valor`, {
           method: "PUT",
-          headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+          headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
           body: JSON.stringify({ mes, valor: prev.valor })
         });
       }
       if ((parseFloat(prev.precio_unit)||0) > 0) {
         await fetch(`${API_BASE}/api/gastos-fijos/${prev.id}/precio`, {
           method: "PUT",
-          headers: { "Content-Type":"application/json", Authorization:"Bearer "+localStorage.getItem("token") },
+          headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
           body: JSON.stringify({ mes, precio_unit: prev.precio_unit })
         });
       }
@@ -4368,7 +4375,7 @@ async function fetchOrders() {
   try {
     const res = await fetch(`${API_BASE}/api/orders`, {
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + getActiveToken(),
       },
     });
 
@@ -4596,7 +4603,7 @@ function editStoreName(storeId) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer " + localStorage.getItem("token"),
+          Authorization: "Bearer " + getActiveToken(),
         },
         body: JSON.stringify({ name: newName }),
       });
@@ -4672,7 +4679,7 @@ async function deleteStore(storeId) {
 
   const res = await fetch(`${API_BASE}/api/shopify/delete/${storeId}`, {
     method: "DELETE",
-    headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+    headers: { Authorization: "Bearer " + getActiveToken() },
   });
 
   const data = await res.json();
@@ -4752,7 +4759,7 @@ async function reactivateStore() {
 
   try {
     const secretRes = await fetch(`${API_BASE}/api/shopify/secret/${storeId}`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { Authorization: "Bearer " + getActiveToken() },
     });
     const secretData = await secretRes.json();
     const appSecret = secretData.app_secret || "";
@@ -4761,7 +4768,7 @@ async function reactivateStore() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + getActiveToken(),
       },
       body: JSON.stringify({ shop, accessToken, appSecret }),
     });
@@ -4787,7 +4794,7 @@ async function syncAndRefreshOrders() {
   try {
     const res = await fetch(`${API_BASE}/api/shopify/sync-orders`, {
       method: "POST",
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { Authorization: "Bearer " + getActiveToken() },
     });
     const data = await res.json();
     await fetchOrders();
@@ -4821,7 +4828,7 @@ async function toggleFilterPanel() {
   let stores = [];
   try {
     const r = await fetch(`${API_BASE}/api/shopify/stores`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { Authorization: "Bearer " + getActiveToken() },
     });
     stores = await r.json();
     if (!Array.isArray(stores)) stores = [];
@@ -5033,7 +5040,7 @@ async function syncExcelMRW(input) {
   try {
     const res = await fetch(`${API_BASE}/api/tracking/sync-excel`, {
       method: "POST",
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { Authorization: "Bearer " + getActiveToken() },
       body: formData,
     });
     const data = await res.json();
@@ -5072,7 +5079,7 @@ let currentReeDisplay = [];
 async function loadReembolsos() {
   try {
     const estadosRes = await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const estadosData = await estadosRes.json();
     window.__reembolsosEstados = {};
@@ -5080,7 +5087,7 @@ async function loadReembolsos() {
       estadosData.forEach(e => { window.__reembolsosEstados[e.order_id] = e.estado; });
     }
     const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const orders = await res.json();
     allReembolsos = Array.isArray(orders) ? orders.filter(o => {
@@ -5195,7 +5202,7 @@ async function cambiarEstadoReembolso(orderId, estado) {
   try {
     await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ order_id: String(orderId), estado })
     });
     if (!window.__reembolsosEstados) window.__reembolsosEstados = {};
@@ -5236,7 +5243,7 @@ async function loadSidebarReembolsos() {
   try {
     // Cargar estados desde BD siempre, no depender de window.__reembolsosEstados
     const estadosRes = await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const estadosData = await estadosRes.json();
     const estadosMap = {};
@@ -5245,7 +5252,7 @@ async function loadSidebarReembolsos() {
     }
 
     const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const orders = await res.json();
     const pendientes = Array.isArray(orders) ? orders.filter(o => {
@@ -5278,7 +5285,7 @@ window.loadSidebarReembolsos = loadSidebarReembolsos;
 async function checkNotificaciones() {
   try {
     const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const orders = await res.json();
     if (!Array.isArray(orders)) return;
@@ -5482,7 +5489,7 @@ async function importarPagadosPDF(input) {
       if (matches.some(m => m.toUpperCase() === tracking)) {
         await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
           body: JSON.stringify({ order_id: String(o.id), estado: "cobrado" })
         });
         if (!window.__reembolsosEstados) window.__reembolsosEstados = {};
@@ -5513,7 +5520,7 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
   try {
     await fetch(`${API_BASE}/api/shopify/stock`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, stock: stockNum, stock_minimo: minimoNum })
     });
 
@@ -5557,7 +5564,7 @@ async function guardarCostoCompra(shopDomain, productId, costo) {
   try {
     await fetch(`${API_BASE}/api/shopify/stock`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, costo_compra: parseFloat(costo)||0 })
     });
   } catch(e) { console.error(e); }
@@ -5568,7 +5575,7 @@ async function guardarStockMinimo(shopDomain, productId, stock, stockMinimo) {
   try {
     await fetch(`${API_BASE}/api/shopify/stock`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, stock: parseInt(stock)||0, stock_minimo: parseInt(stockMinimo)||5 })
     });
   } catch(e) { console.error(e); }
@@ -5578,7 +5585,7 @@ async function guardarVarianteConfig(shopDomain, variantId, unidades) {
   try {
     await fetch(`${API_BASE}/api/shopify/variantes-config`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ shop_domain: shopDomain, variant_id: variantId, unidades_por_venta: parseInt(unidades)||1 })
     });
   } catch(e) { console.error(e); }
@@ -5635,7 +5642,7 @@ async function cargarTabNuevaEntrada() {
 
   const productos = window.__allProductos || [];
   const stockData = await fetch(`${API_BASE}/api/shopify/stock`, {
-    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    headers: { Authorization: "Bearer " + getActiveToken() }
   }).then(r => r.json()).catch(() => []);
 
   const stockMap = {};
@@ -5672,7 +5679,7 @@ async function cargarTabHistorial() {
 
   try {
     const rows = await fetch(`${API_BASE}/api/shopify/entradas-mercancia`, {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json());
 
     if (!Array.isArray(rows) || !rows.length) {
@@ -5817,7 +5824,7 @@ async function confirmarEntradaSeleccionada(productId, productName, shopDomain, 
   try {
     const res = await fetch(`${API_BASE}/api/shopify/entrada-mercancia`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, product_name: productName, cantidad: qty, stock_anterior: stockAnterior })
     });
     const data = await res.json();
