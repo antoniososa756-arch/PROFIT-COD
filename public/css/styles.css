@@ -1287,6 +1287,7 @@ body.dark .btn-filter:hover { background: rgba(22,163,74,.12); }
   gap: 12px;
   width: 100%;
   margin: 0;
+  justify-items: start;
   justify-content: start;
 }
 
@@ -1397,8 +1398,8 @@ body.dark input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 #cardBox.metricas-box {
-  width: fit-content;
-  margin: 0;
+  width: 100%;
+  margin: 0 auto;
 }
 
 /* =========================
