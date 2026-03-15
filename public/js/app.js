@@ -2466,7 +2466,7 @@ async function loadMetricas() {
     set("stat-destruidos", destruidos);
 
     // Facturación, CPA y ROAS por rango de fechas y tienda
-    const facturacion = list.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status))
+    const facturacion = list.filter(o => o.fulfillment_status !== "cancelado")
       .reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
 
     let gastoAdsTotal = 0;
@@ -2496,7 +2496,7 @@ async function loadMetricas() {
       }
     } catch {}
 
-    const pedidosParaCPA = list.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status)).length;
+    const pedidosParaCPA = list.filter(o => o.fulfillment_status !== "cancelado").length;
     const cpa  = (gastoAdsTotal > 0 && pedidosParaCPA > 0) ? gastoAdsTotal / pedidosParaCPA : null;
     const roas = (gastoAdsTotal > 0) ? facturacion / gastoAdsTotal : null;
     const fmtEur = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 }) + " €";
@@ -2838,7 +2838,7 @@ async function actualizarMetricasSinBalance() {
     set("stat-destruidos", destruidos);
 
     // Actualizar facturación al filtrar tienda
-    const facturacionSB = list.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status))
+    const facturacionSB = list.filter(o => o.fulfillment_status !== "cancelado")
       .reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
     const fmtEurSB = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 }) + " €";
     set("stat-facturacion", fmtEurSB(facturacionSB));
