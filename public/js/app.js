@@ -2586,9 +2586,10 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     // Precio unitario directo × pedidos del rango (no división del mes)
     const precioMRW      = preciosGlobales.precio_mrw      || 0;
     const precioLogistica = preciosGlobales.precio_logistica || 0;
-    const mrw      = precioMRW      * (envTienda.length + devTienda);
+     const mrw      = precioMRW      * (envTienda.length + devTienda);
     const logistica = precioLogistica * envTienda.length;
-    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda;
+    const ivaTotal = pedEnt.reduce((s,o) => s + (parseFloat(o.total_price)||0) * 0.21, 0);
+    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + ivaTotal;
     const resultado = totalIngreso - totalGasto;
     return { 
       domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado,
@@ -3703,7 +3704,9 @@ async function loadGastosVarios() {
     const logisticaUnitaria = totalPedidosGlobales > 0 ? totalLogistica / totalPedidosGlobales : 0;
     const logistica = logisticaUnitaria * enviosTiendaMRW.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
-    const total = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + extrasTotal;
+    const entregadosTienda = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
+    const ivaTotal = entregadosTienda.reduce((s,o) => s + (parseFloat(o.total_price)||0) * 0.21, 0);
+    const total = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + extrasTotal + ivaTotal;
     if (!window.__gastosPorTienda) window.__gastosPorTienda = {};
     window.__gastosPorTienda[store.domain] = total;
 
@@ -4210,7 +4213,9 @@ async function renderInformesBalance() {
     const mrw = (totalEnviosGlobales>0?totalMRW/totalEnviosGlobales:0)*(enviosTiendaMRW.length+devTienda);
     const logistica = (totalPedidosGlobales>0?totalLogistica/totalPedidosGlobales:0)*enviosTiendaMRW.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + extrasTotal;
+    const entregadosTiendaMet = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
+    const ivaTotal = entregadosTiendaMet.reduce((s,o) => s + (parseFloat(o.total_price)||0) * 0.21, 0);
+    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + extrasTotal + ivaTotal;
 
     const resultado = totalIngreso - totalGasto;
     return { domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado };
