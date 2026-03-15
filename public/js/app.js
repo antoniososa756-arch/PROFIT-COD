@@ -36,6 +36,12 @@ if (location.pathname.includes("login")) {
   },
 })
     .then((res) => {
+      if (res.status === 403) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("impersonated_token");
+        window.location.href = "/login.html";
+        throw new Error("Cuenta desactivada");
+      }
       if (!res.ok) throw new Error("No autorizado");
       return res.json();
     })

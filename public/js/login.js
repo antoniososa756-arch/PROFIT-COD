@@ -2,14 +2,17 @@ async function doLogin() {
   const user = document.getElementById("user").value.trim();
   const pass = document.getElementById("pass").value.trim();
   const remember = document.getElementById("remember").checked;
+  const errorMsg = document.getElementById("login-error");
 
   if (!user || !pass) {
-    alert("Completa los datos");
+    if (errorMsg) { errorMsg.style.display = "block"; errorMsg.textContent = "Completa los datos"; }
     return;
   }
 
+  if (errorMsg) errorMsg.style.display = "none";
+
   try {
-    const res = await fetch("http://localhost:3001/api/auth/login", {
+    const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -23,7 +26,14 @@ async function doLogin() {
     const data = await res.json();
 
     if (!res.ok) {
-      alert(data.error || "Error de login");
+      if (errorMsg) {
+        errorMsg.style.display = "block";
+        if (res.status === 403) {
+          errorMsg.textContent = "Cuenta desactivada. Contacta al administrador.";
+        } else {
+          errorMsg.textContent = "Usuario o contraseña incorrectos";
+        }
+      }
       return;
     }
 
