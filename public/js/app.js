@@ -766,6 +766,36 @@ const now = new Date();
           </div>
         </div>
 
+    <div class="stat-card">
+          <div class="stat-icon" style="background:#0ea5e9;">
+            <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-num" id="stat-facturacion">0,00 €</span>
+            <span class="stat-label">Facturación</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#f97316;">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-num" id="stat-cpa">— €</span>
+            <span class="stat-label">CPA</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#10b981;">
+            <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-num" id="stat-roas">—</span>
+            <span class="stat-label">ROAS</span>
+          </div>
+        </div>
+
     </div>
       <div id="metrics-balance-wrap" style="margin-top:32px;"></div>
       </div>
@@ -2434,6 +2464,46 @@ async function loadMetricas() {
     set("stat-entregados", entregados);
     set("stat-devueltos",  devueltos);
     set("stat-destruidos", destruidos);
+
+    // Facturación, CPA y ROAS por rango de fechas y tienda
+    const facturacion = list.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status))
+      .reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+
+    let gastoAdsTotal = 0;
+    try {
+      const shopFiltroAds = document.getElementById("met-bal-shop-filter-val")?.value || shop;
+      const dStart = dateFrom ? new Date(dateFrom + "T00:00:00") : new Date();
+      const dEnd   = dateTo   ? new Date(dateTo   + "T00:00:00") : new Date();
+      const mesesRangoAds = [];
+      let curAds = new Date(dStart.getFullYear(), dStart.getMonth(), 1);
+      while (curAds <= dEnd) {
+        mesesRangoAds.push({ m: curAds.getMonth()+1, y: curAds.getFullYear() });
+        curAds.setMonth(curAds.getMonth() + 1);
+      }
+      const storesAds = shopFiltroAds
+        ? [{ domain: shopFiltroAds }]
+        : (await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()).catch(()=>[]));
+      for (const store of (Array.isArray(storesAds) ? storesAds : [])) {
+        for (const { m, y } of mesesRangoAds) {
+          const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, {
+            headers: { Authorization: "Bearer " + getActiveToken() }
+          }).then(r=>r.json()).catch(()=>[]);
+          if (Array.isArray(rows)) {
+            rows.filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo))
+              .forEach(r => { gastoAdsTotal += (r.meta||0) + (r.tiktok||0); });
+          }
+        }
+      }
+    } catch {}
+
+    const pedidosParaCPA = list.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status)).length;
+    const cpa  = (gastoAdsTotal > 0 && pedidosParaCPA > 0) ? gastoAdsTotal / pedidosParaCPA : null;
+    const roas = (gastoAdsTotal > 0) ? facturacion / gastoAdsTotal : null;
+    const fmtEur = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 }) + " €";
+    set("stat-facturacion", fmtEur(facturacion));
+    set("stat-cpa",  cpa  != null ? fmtEur(cpa)  : "— €");
+    set("stat-roas", roas != null ? roas.toFixed(2) : "—");
+
     set("donut-pct",       pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}%`);
     set("legend-rojo",      `Dev+Dest ${pctRojo}%`);
@@ -2766,6 +2836,13 @@ async function actualizarMetricasSinBalance() {
     set("stat-entregados", entregados);
     set("stat-devueltos",  devueltos);
     set("stat-destruidos", destruidos);
+
+    // Actualizar facturación al filtrar tienda
+    const facturacionSB = list.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status))
+      .reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+    const fmtEurSB = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 }) + " €";
+    set("stat-facturacion", fmtEurSB(facturacionSB));
+
     set("donut-pct",       pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}%`);
     set("legend-rojo",      `Dev+Dest ${pctRojo}%`);
