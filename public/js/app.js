@@ -3124,15 +3124,15 @@ async function loadGastosVarios() {
     const allOrders = window.__allOrdersCache || [];
     const pedidosTienda = allOrders.filter(o => {
       if (!o.created_at) return false;
-      if (o.fulfillment_status === "cancelado") return false;
+      if (["cancelado", "pendiente"].includes(o.fulfillment_status)) return false;
       const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
       return d.startsWith(mes) && o.shop_domain === store.domain;
     });
 
-    // Todos los pedidos del mes (todas las tiendas, excl. cancelados)
+    // Todos los pedidos del mes (todas las tiendas, excl. cancelados y pendientes)
     const pedidosTodas = allOrders.filter(o => {
       if (!o.created_at) return false;
-      if (o.fulfillment_status === "cancelado") return false;
+      if (["cancelado", "pendiente"].includes(o.fulfillment_status)) return false;
       const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
       return d.startsWith(mes);
     });
