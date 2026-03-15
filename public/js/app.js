@@ -3172,7 +3172,7 @@ async function loadGastosVarios() {
     const logisticaUnitaria = totalPedidosGlobales > 0 ? totalLogistica / totalPedidosGlobales : 0;
     const logistica = logisticaUnitaria * enviosTiendaMRW.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
-    const total = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + extrasTotal;
+    const total = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + extrasTotal;
     if (!window.__gastosPorTienda) window.__gastosPorTienda = {};
     window.__gastosPorTienda[store.domain] = total;
 
