@@ -1345,8 +1345,8 @@ if (id === "gastos-varios") {
   closeAllDrops();
   closeSearchDrop();
   return;
-
 }
+
 if (id === "ayuda") {
   if (t) t.textContent = "Centro de ayuda";
   if (s) s.textContent = "Guías y explicaciones del sistema";
@@ -1514,6 +1514,8 @@ if (id === "ayuda") {
   closeSearchDrop();
   return;
 }
+
+} // fin setSection
 
 function toggleTheme() {
   document.body.classList.toggle("dark");
