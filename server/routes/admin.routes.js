@@ -12,7 +12,7 @@ function admin(req, res, next) {
 
 router.get("/users", auth, admin, async (req, res) => {
   try {
-    const rows = await db.all("SELECT id, email, role, created_at FROM users ORDER BY created_at DESC");
+    const rows = await db.all("SELECT id, email, role, active, created_at FROM users ORDER BY created_at DESC");
     res.json(rows);
   } catch (e) { res.status(500).json({ error: "Error DB" }); }
 });

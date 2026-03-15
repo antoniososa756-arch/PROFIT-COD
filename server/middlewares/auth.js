@@ -11,7 +11,7 @@ module.exports = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Verificar que el usuario sigue activo en la BD
+    // Si NO es impersonación, verificar que el usuario sigue activo en BD
     if (!decoded.isImpersonated) {
       const row = await db.get("SELECT active FROM users WHERE id = ?", [decoded.id]);
       if (!row || row.active === 0) {
