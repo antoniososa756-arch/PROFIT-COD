@@ -3193,15 +3193,21 @@ async function loadGastosVarios() {
             <tr style="background:#f9fafb;">
               <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Productos</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(costoProductos)} €</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(costoProductos)} €
+                <div style="font-size:10px;color:#9ca3af;">costo × uds × cantidad por pedido</div>
+              </td>
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">MRW</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(mrw)} €</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(mrw)} €
+                <div style="font-size:10px;color:#9ca3af;">${fmt(totalMRW)}€ ÷ ${totalEnviosGlobales} envíos × ${enviosTienda} tienda</div>
+              </td>
             </tr>
             <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Logística</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(logistica)} €</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(logistica)} €
+                <div style="font-size:10px;color:#9ca3af;">${fmt(totalLogistica)}€ ÷ ${totalPedidosGlobales} envíos × ${enviosTiendaMRW.length} tienda</div>
+              </td>
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gastos Fijos</td>
