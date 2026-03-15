@@ -2293,6 +2293,9 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   let gastosVarios = {};
   try { const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; }); } catch {}
 
+  let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
+  try { preciosGlobales = await fetch(`${API_BASE}/api/shopify/precios-globales`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); } catch {}
+
   let adsSpends = {};
   const month = parseInt(mesFrom.split("-")[1]);
   const year  = parseInt(mesFrom.split("-")[0]);
@@ -2332,8 +2335,11 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     });
     const envTienda = pedTienda.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status));
     const devTienda = envTienda.filter(o=>o.fulfillment_status==="devuelto").length;
-    const mrw = (totalEnviosGlobales>0?totalMRW/totalEnviosGlobales:0)*(envTienda.length+devTienda);
-    const logistica = (totalPedidosGlobales>0?totalLogistica/totalPedidosGlobales:0)*envTienda.length;
+    // Precio unitario directo × pedidos del rango (no división del mes)
+    const precioMRW      = preciosGlobales.precio_mrw      || 0;
+    const precioLogistica = preciosGlobales.precio_logistica || 0;
+    const mrw      = precioMRW      * (envTienda.length + devTienda);
+    const logistica = precioLogistica * envTienda.length;
     const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda;
     const resultado = totalIngreso - totalGasto;
     return { domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado };
