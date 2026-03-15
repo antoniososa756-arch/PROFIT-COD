@@ -151,7 +151,26 @@ button:hover{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 16px 0 22px;
+  margin-bottom: 22px;
+  margin-top: -8px;
+}
+
+.remember-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.remember-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #16a34a;
+  cursor: pointer;
 }
 
 .remember-label {
