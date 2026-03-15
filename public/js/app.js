@@ -1710,7 +1710,7 @@ function switchFacturasTab(key) {
                 <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
                 <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;color:#16a34a;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
                   ✅ Importar Pagados
-                  <input type="file" accept=".pdf" style="display:none;" onchange="importarPagadosPDF(this)">
+                  <input type="file" accept=".pdf" multiple style="display:none;" onchange="importarPagadosPDF(this)">
                 </label>
               </div>
           </div>
@@ -5235,29 +5235,33 @@ window.marcarGestionado = marcarGestionado;
 // IMPORTAR PAGADOS DESDE PDF MRW
 // =========================
 async function importarPagadosPDF(input) {
-  const file = input.files[0];
+  const files = Array.from(input.files);
   input.value = "";
-  if (!file) return;
+  if (!files.length) return;
 
-  try {
-    // Leer el PDF como texto usando FileReader
-    const arrayBuffer = await file.arrayBuffer();
+  // Cargar pdf.js una sola vez antes de procesar todos
+  if (!window.pdfjsLib) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
 
-    // Cargar pdf.js desde CDN
-    if (!window.pdfjsLib) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    }
+  let totalActualizados = 0;
+  let totalSeguimientos = 0;
+  let errores = 0;
 
-    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = "";
+  for (let fi = 0; fi < files.length; fi++) {
+    const file = files[fi];
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = "";
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
@@ -5289,14 +5293,20 @@ async function importarPagadosPDF(input) {
       }
     }
 
-    alert(`✅ ${actualizados} reembolsos marcados como Pagados\n(${matches.length} seguimientos encontrados en el PDF)`);
-    renderReembolsos();
-    loadSidebarReembolsos();
+    totalActualizados += actualizados;
+      totalSeguimientos += matches.length;
 
-  } catch(e) {
-    console.error(e);
-    alert("❌ Error leyendo el PDF: " + e.message);
-  }
+    } catch(e) {
+      console.error("Error en archivo " + file.name + ":", e);
+      errores++;
+    }
+  } // fin bucle archivos
+
+  let msg = `✅ ${totalActualizados} reembolsos marcados como Pagados\n(${totalSeguimientos} seguimientos encontrados en ${files.length} PDF${files.length > 1 ? "s" : ""})`;
+  if (errores > 0) msg += `\n⚠️ ${errores} archivo${errores > 1 ? "s" : ""} no se pudieron leer`;
+  alert(msg);
+  renderReembolsos();
+  loadSidebarReembolsos();
 }
 
 async function guardarStock(shopDomain, productId, stock, stockMinimo) {
