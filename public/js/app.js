@@ -3695,18 +3695,103 @@ async function renderInformesBalance() {
     `;
   }).join("");
 
+  // Calcular balance por tienda para la sumatoria
+  const balanceData = stores.map(store => {
+    const pedidosTienda = pedidosMes.filter(o => o.shop_domain === store.domain);
+    const pedidosCOD2 = pedidosTienda.filter(o => {
+      try { const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "pending" || fin === "cod" || fin === "pendiente"; } catch { return false; }
+    });
+    const pedidosPagado2 = pedidosTienda.filter(o => {
+      try { const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "paid" || fin === "pagado"; } catch { return false; }
+    });
+    const tCOD = pedidosCOD2.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const tPag = pedidosPagado2.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const man1b = manuales.find(m => m.shop_domain === store.domain && m.columna === 1) || { valor: 0 };
+    const man2b = manuales.find(m => m.shop_domain === store.domain && m.columna === 2) || { valor: 0 };
+    const ingresoNeto = (tCOD - pedidosCOD2.length * MRW_COMISION) + (tPag - tPag * TARJETA_PCT) + (parseFloat(man1b.valor)||0) + (parseFloat(man2b.valor)||0);
+    return { domain: store.domain, name: store.shop_name || store.domain, ingresoNeto };
+  });
+
+  const storeCheckboxes = stores.map(s =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
+      <input type="checkbox" checked value="${s.domain}"
+        onchange="recalcBalanceSuma()"
+        style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+      ${escapeHtml(s.shop_name || s.domain)}
+    </label>`
+  ).join("");
+
+  window.__balanceData = balanceData;
+
   wrap.innerHTML = `
     <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
       📅 ${mesLabel} — Balance neto total: ${fmt(grandTotalNeto)} €
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
-      ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+          ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+        </div>
+        <div id="bal-sumatoria" style="margin-top:24px;padding:16px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
+          <div style="font-size:12px;color:#6b7280;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">Sumatoria seleccionada</div>
+          <div id="bal-suma-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
+          <div style="border-top:2px solid #16a34a;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+            <span id="bal-suma-total" style="font-weight:800;font-size:22px;color:#16a34a;"></span>
+          </div>
+        </div>
+      </div>
+      <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:80px;">
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
+          <input type="checkbox" id="bal-check-all" checked
+            onchange="toggleAllBalanceShops(this.checked)"
+            style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          Todas las tiendas
+        </label>
+        ${storeCheckboxes}
+      </div>
     </div>
   `;
+  recalcBalanceSuma();
 }
 
-window.loadInformesIngresos  = loadInformesIngresos;
-window.renderInformesIngresos = renderInformesIngresos;
+function recalcBalanceSuma() {
+  const data = window.__balanceData || [];
+  const checks = document.querySelectorAll("#inf-balance-wrap input[type='checkbox'][value]");
+  const seleccionadas = new Set([...checks].filter(c => c.checked).map(c => c.value));
+  const filtradas = data.filter(d => seleccionadas.has(d.domain));
+  const total = filtradas.reduce((s, d) => s + d.ingresoNeto, 0);
+  const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+  const filasEl = document.getElementById("bal-suma-filas");
+  const totalEl = document.getElementById("bal-suma-total");
+  if (filasEl) filasEl.innerHTML = filtradas.map(d =>
+    `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:6px 12px;font-size:12px;">
+      <span style="color:#6b7280;">${escapeHtml(d.name)}</span>
+      <span style="font-weight:700;color:${d.ingresoNeto>=0?'#16a34a':'#dc2626'};margin-left:8px;">${fmt(d.ingresoNeto)} €</span>
+    </div>`
+  ).join("");
+  if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total >= 0 ? "#16a34a" : "#dc2626"; }
+
+  // Sincronizar checkbox "Todas"
+  const allCheck = document.getElementById("bal-check-all");
+  if (allCheck) allCheck.checked = filtradas.length === data.length;
+}
+window.recalcBalanceSuma = recalcBalanceSuma;
+
+function toggleAllBalanceShops(checked) {
+  const checks = document.querySelectorAll("#inf-balance-wrap input[type='checkbox'][value]");
+  checks.forEach(c => c.checked = checked);
+  recalcBalanceSuma();
+}
+window.toggleAllBalanceShops = toggleAllBalanceShops;
+
+window.loadInformesIngresos  = loadInformesIngresos;window.renderInformesIngresos = renderInformesIngresos;
 window.loadInformesBalance   = loadInformesBalance;
 window.renderInformesBalance = renderInformesBalance;
 
