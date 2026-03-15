@@ -2283,23 +2283,55 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   } catch {}
 
   const numTiendas = stores.length || 1;
-  let gastosFijos = [];
-  try { gastosFijos = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (!Array.isArray(gastosFijos)) gastosFijos = []; } catch {}
-  const totalMRW = gastosFijos.filter(g=>g.nombre==="MRW").reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-  const totalLogistica = gastosFijos.filter(g=>g.nombre==="LOGÍSTICA").reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-  const totalOtrosFijos = gastosFijos.filter(g=>!["MRW","LOGÍSTICA"].includes(g.nombre)).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-  const fijoXTienda = totalOtrosFijos / numTiendas;
 
+  // Calcular todos los meses del rango
+  const mesesRango = [];
+  const dStart = dateFrom ? new Date(dateFrom + "T00:00:00") : new Date();
+  const dEnd   = dateTo   ? new Date(dateTo   + "T00:00:00") : new Date();
+  let cur = new Date(dStart.getFullYear(), dStart.getMonth(), 1);
+  while (cur <= dEnd) {
+    mesesRango.push(`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,"0")}`);
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  if (mesesRango.length === 0) mesesRango.push(mesFrom);
+
+  // Gastos fijos — sumar todos los meses del rango
+  let totalOtrosFijos = 0;
   let gastosVarios = {};
-  try { const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; }); } catch {}
+  for (const mes of mesesRango) {
+    try {
+      const gf = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+      if (Array.isArray(gf)) {
+        totalOtrosFijos += gf.filter(g=>!["MRW","LOGÍSTICA"].includes(g.nombre)).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+      }
+    } catch {}
+    try {
+      const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+      if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = (gastosVarios[r.shop_domain]||0) + (r.shopify||0); });
+    } catch {}
+  }
+  const fijoXTienda = totalOtrosFijos / numTiendas;
 
   let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   try { preciosGlobales = await fetch(`${API_BASE}/api/shopify/precios-globales`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); } catch {}
 
+  // Ads — filtrar por rango de fechas sumando todos los meses
   let adsSpends = {};
-  const month = parseInt(mesFrom.split("-")[1]);
-  const year  = parseInt(mesFrom.split("-")[0]);
-  try { for (const store of stores) { const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); let meta=0,tiktok=0; if(Array.isArray(rows)) rows.forEach(r=>{meta+=r.meta||0;tiktok+=r.tiktok||0;}); adsSpends[store.domain]={meta,tiktok}; } } catch {}
+  for (const mes of mesesRango) {
+    const m = parseInt(mes.split("-")[1]);
+    const y = parseInt(mes.split("-")[0]);
+    try {
+      for (const store of stores) {
+        const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json());
+        let meta=0, tiktok=0;
+        if (Array.isArray(rows)) rows.filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo)).forEach(r=>{meta+=r.meta||0;tiktok+=r.tiktok||0;});
+        if (!adsSpends[store.domain]) adsSpends[store.domain] = { meta:0, tiktok:0 };
+        adsSpends[store.domain].meta   += meta;
+        adsSpends[store.domain].tiktok += tiktok;
+      }
+    } catch {}
+  }
+
 
   const stockMap = {};
   try { const d = await fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }).then(r=>r.json()); if(Array.isArray(d)) d.forEach(s=>{stockMap[s.product_id]=s.costo_compra||0;}); } catch {}
