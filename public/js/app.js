@@ -3354,6 +3354,14 @@ async function renderInformesIngresos() {
     return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
   });
 
+  const pedidosMesTarjeta = orders.filter(o => {
+    if (o.fulfillment_status === "cancelado") return false;
+    if (!o.created_at) return false;
+    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+    const [y, m] = d.split("-");
+    return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
+  });
+
   const fmt = n => (parseFloat(n)||0).toFixed(2);
   const inp = `padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;`;
   const MRW_COMISION = 0.67;
@@ -3373,7 +3381,8 @@ async function renderInformesIngresos() {
       } catch { return false; }
     });
 
-    const pedidosPagado = pedidosTienda.filter(o => {
+    const pedidosTiendaTarjeta = pedidosMesTarjeta.filter(o => o.shop_domain === store.domain);
+    const pedidosPagado = pedidosTiendaTarjeta.filter(o => {
       try {
         const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
         const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
@@ -3410,6 +3419,7 @@ async function renderInformesIngresos() {
               </td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoCOD)} €</td>
             </tr>
+            ${pedidosPagado.length > 0 ? `
             <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
                 TARJETA
@@ -3417,7 +3427,7 @@ async function renderInformesIngresos() {
                 <div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(descPagado)}€</div>
               </td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoPagado)} €</td>
-            </tr>
+            </tr>` : ""}
             <tr style="background:#eff6ff;">
               <td style="padding:8px 14px;border:1px solid #bfdbfe;">
                 <input type="text" value="${escapeHtml(man1.nombre||'')}" placeholder="Nombre ingreso extra 1..."
