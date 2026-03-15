@@ -3080,10 +3080,12 @@ async function loadGastosVarios() {
   } catch {}
 
   // Separar MRW/Logística del resto de fijos
-  const gastosMRW      = gastosFijos.filter(g => ["MRW","LOGÍSTICA"].includes(g.nombre));
+  const gastosMRW        = gastosFijos.filter(g => g.nombre === "MRW");
+  const gastosLogistica  = gastosFijos.filter(g => g.nombre === "LOGÍSTICA");
   const gastosOtrosFijos = gastosFijos.filter(g => !["MRW","LOGÍSTICA"].includes(g.nombre));
 
-  const totalMRW       = gastosMRW.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const totalMRW        = gastosMRW.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const totalLogistica  = gastosLogistica.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
   const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
   const fijoXTienda    = totalOtrosFijos / numTiendas;
 
@@ -3160,7 +3162,7 @@ async function loadGastosVarios() {
     const mrw = mrwUnitario * enviosTienda;
 
     // Logística: valor gastos fijos ÷ total pedidos globales (sin extra por devueltos)
-    const valorLogistica = gastosFijos.find(g => g.nombre === "LOGÍSTICA") ? parseFloat(gastosFijos.find(g => g.nombre === "LOGÍSTICA").valor)||0 : 0;
+    const valorLogistica = totalLogistica;
     const totalPedidosGlobales = pedidosTodas.length;
     const logisticaUnitaria = totalPedidosGlobales > 0 ? valorLogistica / totalPedidosGlobales : 0;
     const logistica = logisticaUnitaria * pedidosTienda.length;
