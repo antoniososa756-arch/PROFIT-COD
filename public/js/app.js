@@ -1373,7 +1373,10 @@ if (id === "ayuda") {
   <div class="help-tabs">
     <button class="help-tab-btn active" onclick="helpTab(event,'metricas')">📊 Métricas</button>
     <button class="help-tab-btn" onclick="helpTab(event,'tiendas')">🏪 Tiendas</button>
-    <button class="help-tab-btn" onclick="helpTab(event,'gestion')">📦 Productos, Pedidos, Facturas e Informes</button>
+    <button class="help-tab-btn" onclick="helpTab(event,'productos')">📦 Productos</button>
+    <button class="help-tab-btn" onclick="helpTab(event,'pedidos')">🛒 Pedidos</button>
+    <button class="help-tab-btn" onclick="helpTab(event,'facturas')">🧾 Facturas</button>
+    <button class="help-tab-btn" onclick="helpTab(event,'informes')">📈 Informes</button>
   </div>
 
   <div id="help-panel-metricas" class="help-panel active">
@@ -1451,7 +1454,7 @@ if (id === "ayuda") {
     </div>
   </div>
 
-  <div id="help-panel-gestion" class="help-panel">
+  <div id="help-panel-productos" class="help-panel">
     <div class="help-section">
       <h2>📦 Productos</h2>
       <p>Catálogo completo de artículos sincronizados desde Shopify. Desde aquí puedes:</p>
@@ -1463,6 +1466,9 @@ if (id === "ayuda") {
       </ul>
       <div class="help-tip">💡 Cuanto más exacto sea el coste de compra, más preciso será el cálculo de rentabilidad en Métricas.</div>
     </div>
+  </div>
+
+  <div id="help-panel-pedidos" class="help-panel">
     <div class="help-section">
       <h2>🛒 Pedidos</h2>
       <p>Centraliza todos los pedidos de todas tus tiendas en una sola vista. Puedes filtrar por tienda, estado, fecha o buscar por número de pedido o nombre de cliente.</p>
