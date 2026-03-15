@@ -1348,6 +1348,173 @@ if (id === "gastos-varios") {
 }
 
 }
+if (id === "ayuda") {
+  if (t) t.textContent = "Centro de ayuda";
+  if (s) s.textContent = "Guías y explicaciones del sistema";
+  if (c) c.textContent = "Centro de ayuda";
+  box.className = "";
+  box.removeAttribute("style");
+
+  box.innerHTML = `
+  <style>
+    .help-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:28px; }
+    .help-tab-btn { padding:9px 20px; border-radius:10px; border:1.5px solid #e5e7eb; font-size:13px; font-weight:600; cursor:pointer; background:var(--card,#fff); color:var(--text,#111827); transition:all .15s; }
+    .help-tab-btn.active, .help-tab-btn:hover { background:#16a34a; color:#fff; border-color:#16a34a; }
+    .help-panel { display:none; }
+    .help-panel.active { display:block; }
+    .help-section { background:var(--card,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; padding:24px 28px; margin-bottom:18px; }
+    .help-section h2 { font-size:17px; font-weight:700; color:var(--text,#111827); margin:0 0 8px 0; }
+    .help-section h3 { font-size:14px; font-weight:700; color:#16a34a; margin:18px 0 6px 0; }
+    .help-section p, .help-section li { font-size:14px; color:var(--muted,#4b5563); line-height:1.7; margin:0 0 6px 0; }
+    .help-section ul { padding-left:20px; margin:0 0 10px 0; }
+    .help-tip { background:#f0fdf4; border-left:3px solid #16a34a; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#15803d; margin-top:12px; }
+    .help-warning { background:#fefce8; border-left:3px solid #ca8a04; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#92400e; margin-top:12px; }
+  </style>
+
+  <div class="help-tabs">
+    <button class="help-tab-btn active" onclick="helpTab(event,'metricas')">📊 Métricas</button>
+    <button class="help-tab-btn" onclick="helpTab(event,'tiendas')">🏪 Tiendas</button>
+    <button class="help-tab-btn" onclick="helpTab(event,'gestion')">📦 Productos, Pedidos, Facturas e Informes</button>
+  </div>
+
+  <div id="help-panel-metricas" class="help-panel active">
+    <div class="help-section">
+      <h2>📊 ¿Qué son las Métricas?</h2>
+      <p>Las Métricas son el panel principal de control de tu negocio. Te muestran de un solo vistazo cómo están funcionando todos tus pedidos dentro del rango de fechas que tú elijas.</p>
+    </div>
+    <div class="help-section">
+      <h2>📅 Filtro de fechas y tienda</h2>
+      <p>En la parte superior encontrarás dos campos de fecha: <strong>Desde</strong> y <strong>Hasta</strong>. Elige cualquier rango y pulsa <strong>Filtrar</strong> para actualizar todos los datos. También puedes filtrar por una tienda específica. Por defecto muestra siempre el mes en curso.</p>
+      <div class="help-tip">💡 Por defecto el sistema muestra siempre el mes en curso, desde el día 1 hasta hoy.</div>
+    </div>
+    <div class="help-section">
+      <h2>📦 Tarjetas de estado de pedidos</h2>
+      <p>Cada tarjeta representa el estado en que se encuentran tus pedidos:</p>
+      <ul>
+        <li><strong>Total:</strong> todos los pedidos dentro del rango seleccionado.</li>
+        <li><strong>Enviados:</strong> pedidos que ya tienen número de seguimiento MRW asignado.</li>
+        <li><strong>Pendientes:</strong> pedidos recibidos pero aún no procesados.</li>
+        <li><strong>En tránsito:</strong> pedidos que ya salieron pero no llegaron al cliente.</li>
+        <li><strong>Entregados:</strong> pedidos que el cliente recibió correctamente.</li>
+        <li><strong>Devueltos:</strong> pedidos que el cliente rechazó o no recogió.</li>
+        <li><strong>Destruidos:</strong> pedidos que MRW destruyó tras no poder entregarlos.</li>
+      </ul>
+      <div class="help-tip">💡 El gráfico circular (donut) muestra el porcentaje de entregados, devueltos+destruidos y en tránsito sobre el total enviado.</div>
+    </div>
+    <div class="help-section">
+      <h2>💰 Balance aproximado por tienda</h2>
+      <p>Debajo de las tarjetas está el panel de Balance. El sistema calcula para cada tienda un resumen financiero del período seleccionado.</p>
+      <h3>Ingresos que se tienen en cuenta:</h3>
+      <ul>
+        <li><strong>COD (contra reembolso):</strong> se descuenta automáticamente la comisión MRW (0,67€ por pedido).</li>
+        <li><strong>Tarjeta/Online:</strong> se descuenta automáticamente el 4% de comisión bancaria.</li>
+        <li><strong>Ingresos manuales:</strong> puedes añadir ingresos adicionales que no vengan de Shopify.</li>
+      </ul>
+      <h3>Gastos que se tienen en cuenta:</h3>
+      <ul>
+        <li><strong>Meta Ads y TikTok Ads:</strong> el gasto en publicidad introducido para ese mes.</li>
+        <li><strong>Coste de productos:</strong> calculado según el coste de compra × unidades vendidas.</li>
+        <li><strong>MRW:</strong> precio por envío × número de envíos + devoluciones.</li>
+        <li><strong>Logística:</strong> precio por gestión × número de envíos.</li>
+        <li><strong>Shopify:</strong> cuota mensual introducida en Gastos Varios.</li>
+        <li><strong>Gastos fijos prorrateados:</strong> divididos entre el número de tiendas activas.</li>
+      </ul>
+      <div class="help-warning">⚠️ Este balance es una estimación. Para mayor precisión asegúrate de tener bien configurados los costes de productos, gastos fijos y publicidad.</div>
+    </div>
+  </div>
+
+  <div id="help-panel-tiendas" class="help-panel">
+    <div class="help-section">
+      <h2>🏪 ¿Qué es la sección Tiendas?</h2>
+      <p>Aquí gestionas todas las conexiones entre PROFICOD y tus tiendas de Shopify. Cada tienda conectada sincronizará automáticamente sus pedidos y productos.</p>
+    </div>
+    <div class="help-section">
+      <h2>➕ Conectar una nueva tienda</h2>
+      <p>Pulsa <strong>+ Conectar tienda Shopify</strong>. Necesitarás introducir:</p>
+      <ul>
+        <li><strong>Dominio:</strong> formato tutienda.myshopify.com</li>
+        <li><strong>Access Token:</strong> comienza por shpat_, encuéntralo en Shopify → Apps → Tu app → Credenciales API.</li>
+        <li><strong>App Secret:</strong> también en la misma pantalla de credenciales de la app.</li>
+      </ul>
+      <div class="help-tip">💡 PROFICOD nunca te pedirá la contraseña de tu cuenta de Shopify.</div>
+    </div>
+    <div class="help-section">
+      <h2>🔄 Sincronización automática</h2>
+      <p>Los pedidos nuevos se sincronizan automáticamente mediante webhooks. Si necesitas forzar una sincronización puedes usar el botón <strong>Sincronizar</strong> en la sección de Pedidos.</p>
+    </div>
+    <div class="help-section">
+      <h2>💸 Gastos Fijos y Gastos Varios</h2>
+      <ul>
+        <li><strong>Gastos Fijos:</strong> costes fijos mensuales (oficina, herramientas, etc.). Se distribuyen automáticamente entre todas tus tiendas activas.</li>
+        <li><strong>Gastos Varios:</strong> costes variables por tienda como la cuota mensual de Shopify. Se asignan individualmente por tienda y por mes.</li>
+      </ul>
+      <p>Los precios de MRW y Logística se configuran en Gastos Fijos y se aplican automáticamente según los envíos de cada tienda.</p>
+    </div>
+  </div>
+
+  <div id="help-panel-gestion" class="help-panel">
+    <div class="help-section">
+      <h2>📦 Productos</h2>
+      <p>Catálogo completo de artículos sincronizados desde Shopify. Desde aquí puedes:</p>
+      <ul>
+        <li>Ver el stock disponible por producto y tienda.</li>
+        <li>Introducir el <strong>coste de compra</strong> de cada producto (clave para el balance).</li>
+        <li>Configurar <strong>unidades por venta</strong> si un pack incluye varias unidades.</li>
+        <li>Registrar <strong>entradas de mercancía</strong> cuando recibes nuevo stock.</li>
+      </ul>
+      <div class="help-tip">💡 Cuanto más exacto sea el coste de compra, más preciso será el cálculo de rentabilidad en Métricas.</div>
+    </div>
+    <div class="help-section">
+      <h2>🛒 Pedidos</h2>
+      <p>Centraliza todos los pedidos de todas tus tiendas en una sola vista. Puedes filtrar por tienda, estado, fecha o buscar por número de pedido o nombre de cliente.</p>
+      <h3>Estados de un pedido:</h3>
+      <ul>
+        <li><strong>Pendiente:</strong> recibido pero sin procesar todavía.</li>
+        <li><strong>En preparación / Enviado / En tránsito / Franquicia:</strong> en camino al cliente.</li>
+        <li><strong>Entregado:</strong> el cliente lo recibió correctamente.</li>
+        <li><strong>Devuelto:</strong> el cliente lo rechazó o no estaba en casa.</li>
+        <li><strong>Destruido:</strong> MRW no pudo entregarlo y lo destruyó.</li>
+        <li><strong>Cancelado:</strong> el pedido fue anulado.</li>
+      </ul>
+      <h3>Importar pagados desde PDF de MRW:</h3>
+      <p>Si MRW te envía un PDF con los comprobantes de liquidación, súbelo al sistema. PROFICOD extrae automáticamente los números de seguimiento y marca esos pedidos como pagados.</p>
+      <div class="help-tip">💡 Los pedidos cancelados y pendientes no se cuentan en el balance de Métricas.</div>
+    </div>
+    <div class="help-section">
+      <h2>🧾 Facturas</h2>
+      <p>Gestiona los documentos de facturación. Dentro encontrarás varias pestañas:</p>
+      <ul>
+        <li><strong>Reembolsos:</strong> pedidos COD entregados pendientes de cobro. Puedes importar el PDF de MRW para marcarlos automáticamente como pagados.</li>
+        <li><strong>Gastos Ads:</strong> introduce el gasto diario de Meta y TikTok por tienda.</li>
+        <li><strong>Gastos Fijos:</strong> configura los gastos fijos mensuales.</li>
+        <li><strong>Gastos por Tienda:</strong> resumen de todos los gastos variables por tienda.</li>
+        <li><strong>Nómina:</strong> próximamente.</li>
+      </ul>
+      <div class="help-tip">💡 Las notificaciones te avisarán cuando tengas reembolsos pendientes de cobro.</div>
+    </div>
+    <div class="help-section">
+      <h2>📈 Informes</h2>
+      <p>Resúmenes consolidados organizados en dos pestañas:</p>
+      <ul>
+        <li><strong>Ingresos:</strong> detalle de ingresos por tienda y mes — COD, tarjeta y totales netos tras comisiones.</li>
+        <li><strong>Balance Final:</strong> rentabilidad mensual completa por tienda con ingresos, gastos desglosados y resultado final.</li>
+      </ul>
+      <div class="help-warning">⚠️ Los informes se recalculan automáticamente cada vez que los abres, reflejando los datos actuales del sistema.</div>
+    </div>
+  </div>
+  `;
+
+  window.helpTab = function(event, tab) {
+    document.querySelectorAll(".help-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".help-tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("help-panel-" + tab)?.classList.add("active");
+    event.target.classList.add("active");
+  };
+
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
 
 function toggleTheme() {
   document.body.classList.toggle("dark");
