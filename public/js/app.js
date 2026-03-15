@@ -3183,14 +3183,10 @@ async function loadGastosVarios() {
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
             <tr style="background:#f9fafb;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gasto Meta</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.meta)} €</td>
-            </tr>
-            <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gasto TikTok</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
             </tr>
-            <tr style="background:#f9fafb;">
+            <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Productos</td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(costoProductos)} €
                 <div style="font-size:10px;color:#9ca3af;">costo × uds × cantidad por pedido</div>
