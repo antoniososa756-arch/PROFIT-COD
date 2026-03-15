@@ -3095,10 +3095,11 @@ async function loadAdsTable() {
     orders = Array.isArray(all) ? all.filter(o => {
       if (!o.created_at) return false;
       if (o.fulfillment_status === "cancelado") return false;
-      const d = new Date(o.created_at);
+      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      const [y, m] = localDate.split("-");
       return o.shop_domain === shop &&
-             d.getMonth()+1 === parseInt(month) &&
-             d.getFullYear() === parseInt(year);
+             parseInt(m) === parseInt(month) &&
+             parseInt(y) === parseInt(year);
     }) : [];
   } catch {}
 
