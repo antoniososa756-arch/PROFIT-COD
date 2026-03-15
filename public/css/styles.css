@@ -1397,7 +1397,7 @@ body.dark input[type="date"]::-webkit-calendar-picker-indicator {
 
 #cardBox.metricas-box {
   width: fit-content;
-  margin: 0 auto;
+  margin: 0;
 }
 
 /* =========================
