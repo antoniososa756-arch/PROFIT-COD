@@ -1283,12 +1283,10 @@ body.dark .btn-filter:hover { background: rgba(22,163,74,.12); }
    ========================= */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 260px));
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   width: 100%;
   margin: 0;
-  justify-items: start;
-  justify-content: start;
 }
 
 .stat-card {
