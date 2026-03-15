@@ -3479,7 +3479,7 @@ async function renderInformesIngresos() {
   `;
 }
 
-async function guardarIngresoManual
+async function guardarIngresoManual(input) {
   const shop  = input.dataset.shop;
   const mes   = input.dataset.mes;
   const col   = parseInt(input.dataset.col);
