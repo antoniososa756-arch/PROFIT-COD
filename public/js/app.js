@@ -2602,7 +2602,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + ivaTotal;
     const resultado = totalIngreso - totalGasto;
     return { 
-      domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado,
+      domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado, ivaTotal, ivaPorcentaje,
       numCOD: pedCOD.length, brutoCOD: tCOD, descCOD: pedCOD.length*MRW_COMISION, netoCOD: tCOD - pedCOD.length*MRW_COMISION,
       numTarjeta: pedPag.length, brutoTarjeta: tPag, descTarjeta: tPag*TARJETA_PCT, netoTarjeta: tPag - tPag*TARJETA_PCT,
       man1nom: man1.nombre||"", man1val: parseFloat(man1.valor)||0,
@@ -3773,9 +3773,9 @@ async function loadGastosVarios() {
               </td>
             </tr>
             <tr style="background:#fefce8;">
-              <td style="padding:10px 14px;border:1px solid #fef08a;font-weight:600;color:#854d0e;">IVA (21%)</td>
+              <td style="padding:10px 14px;border:1px solid #fef08a;font-weight:600;color:#854d0e;">IVA (${(ivaPorcentaje*100).toFixed(0)}%)</td>
               <td style="padding:10px 14px;border:1px solid #fef08a;text-align:right;color:#854d0e;font-weight:600;">${fmt(ivaTotal)} €
-                <div style="font-size:10px;color:#a16207;">${entregadosTienda.length} pedidos entregados × 21%</div>
+                <div style="font-size:10px;color:#a16207;">${entregadosTienda.length} pedidos entregados × ${(ivaPorcentaje*100).toFixed(0)}%</div>
               </td>
             </tr>
             <tr style="background:#eff6ff;">
