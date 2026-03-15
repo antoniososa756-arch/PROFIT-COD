@@ -1345,7 +1345,6 @@ if (id === "gastos-varios") {
   closeAllDrops();
   closeSearchDrop();
   return;
-}
 
 }
 if (id === "ayuda") {
