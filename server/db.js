@@ -238,6 +238,8 @@ await pool.query(`
     )
   `);
 
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active INTEGER NOT NULL DEFAULT 1`);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 
