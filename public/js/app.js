@@ -4846,7 +4846,6 @@ async function importarPagadosPDF(input) {
         actualizados++;
       }
     }
-  }
 
     alert(`✅ ${actualizados} reembolsos marcados como Pagados\n(${matches.length} seguimientos encontrados en el PDF)`);
     renderReembolsos();
