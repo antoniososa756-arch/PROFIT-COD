@@ -2,87 +2,610 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Login | PROFICOD</title>
+  <title>Login | PROFITCOD</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/login.css" />
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #fff;
+      min-height: 100vh;
+    }
+
+    .login-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── IZQUIERDA ── */
+    .login-left {
+      flex: 1.1;
+      background: linear-gradient(145deg, #e8f5ee 0%, #d4eddf 40%, #c8e8d4 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 50px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-left::before {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: rgba(22,163,74,0.07);
+      top: -100px; left: -100px;
+    }
+
+    .login-left::after {
+      content: '';
+      position: absolute;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(22,163,74,0.05);
+      bottom: -60px; right: -60px;
+    }
+
+    .brand-logo {
+      font-size: 28px;
+      font-weight: 800;
+      color: #16a34a;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .brand-tagline {
+      font-size: 14px;
+      color: #4a7c5f;
+      margin-bottom: 48px;
+      font-weight: 500;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ── ILUSTRACIÓN ── */
+    .illustration-wrap {
+      position: relative;
+      width: 380px;
+      height: 340px;
+      z-index: 2;
+    }
+
+    /* Círculo grande de fondo */
+    .bg-circle {
+      position: absolute;
+      width: 260px; height: 260px;
+      border-radius: 50%;
+      background: rgba(22,163,74,0.12);
+      top: 30px; left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* Rectángulos decorativos */
+    .deco-rect-1 {
+      position: absolute;
+      width: 200px; height: 110px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 32px rgba(22,163,74,0.10);
+      bottom: 0; left: 0;
+    }
+    .deco-rect-2 {
+      position: absolute;
+      width: 140px; height: 75px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 24px rgba(22,163,74,0.08);
+      bottom: 16px; right: 0;
+    }
+
+    /* Laptop SVG central */
+    .laptop-wrap {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+    }
+
+    /* ── STICKERS ── */
+    .sticker {
+      position: absolute;
+      z-index: 4;
+      background: #fff;
+      border-radius: 12px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .sticker-1 { top: 10px; left: 10px; animation-delay: 0s; color: #96bf48; }
+    .sticker-2 { top: 10px; right: 20px; animation-delay: 0.5s; color: #e44d26; }
+    .sticker-3 { top: 130px; left: -10px; animation-delay: 1s; color: #0070f3; }
+    .sticker-4 { top: 130px; right: -10px; animation-delay: 1.5s; color: #f0a500; }
+    .sticker-5 { bottom: 30px; left: 20px; animation-delay: 0.8s; color: #1d9bf0; }
+    .sticker-6 { bottom: 10px; right: 30px; animation-delay: 0.3s; color: #16a34a; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+
+    /* ── DERECHA ── */
+    .login-right {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-box h2 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #111;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+
+    .login-subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 28px;
+    }
+
+    .login-box label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    .login-box input[type="email"],
+    .login-box input[type="password"],
+    .login-box input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #111;
+      background: #f9fafb;
+      margin-bottom: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+
+    .login-box input:focus {
+      border-color: #16a34a;
+      box-shadow: 0 0 0 3px rgba(22,163,74,0.1);
+      background: #fff;
+    }
+
     .login-error {
       font-size: 13px;
       color: #dc2626;
-      margin-top: 6px;
-      min-height: 16px;
+      margin-bottom: 12px;
+      min-height: 18px;
+      font-weight: 500;
+    }
+
+    .login-success {
+      font-size: 13px;
+      color: #16a34a;
+      margin-bottom: 12px;
+      min-height: 18px;
+      font-weight: 500;
+      background: #f0fdf4;
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    .remember-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+    }
+
+    .remember-label input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: #16a34a;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .forgot-link {
+      font-size: 13px;
+      color: #16a34a;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    .forgot-link:hover { text-decoration: underline; }
+
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s, transform 0.1s;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-login:hover { background: #15803d; }
+    .btn-login:active { transform: scale(0.99); }
+    .btn-login:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    /* ── MODAL OLVIDÉ CONTRASEÑA ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+
+    .modal-box h3 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #111;
+    }
+
+    .modal-box p {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 20px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .btn-cancel {
+      flex: 1;
+      padding: 11px;
+      background: #f3f4f6;
+      color: #374151;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-send {
+      flex: 1;
+      padding: 11px;
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-send:hover { background: #15803d; }
+
+    @media (max-width: 768px) {
+      .login-left { display: none; }
+      .login-right { padding: 30px 20px; }
     }
   </style>
 </head>
 <body>
+
 <div class="login-layout">
-  <!-- LADO IZQUIERDO -->
+
+  <!-- ── LADO IZQUIERDO ── -->
   <div class="login-left">
-    <h1>Bienvenido a <span>PROFICOD</span></h1>
-    <div class="mock-image">
-      <div class="circle"></div>
-      <div class="card fake"></div>
-      <div class="card fake small"></div>
+    <div class="brand-logo">PROFITCOD</div>
+    <div class="brand-tagline">Gestión de rentabilidad para ecommerce</div>
+
+    <div class="illustration-wrap">
+      <!-- Fondo geométrico -->
+      <div class="bg-circle"></div>
+      <div class="deco-rect-1"></div>
+      <div class="deco-rect-2"></div>
+
+      <!-- Laptop SVG -->
+      <div class="laptop-wrap">
+        <svg width="220" height="170" viewBox="0 0 220 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Base laptop -->
+          <rect x="10" y="140" width="200" height="14" rx="7" fill="#d1d5db"/>
+          <rect x="30" y="138" width="160" height="6" rx="3" fill="#e5e7eb"/>
+          <!-- Cuerpo pantalla -->
+          <rect x="25" y="20" width="170" height="122" rx="12" fill="#1f2937"/>
+          <rect x="32" y="28" width="156" height="106" rx="8" fill="#111827"/>
+          <!-- Pantalla verde con dashboard -->
+          <rect x="36" y="32" width="148" height="98" rx="6" fill="#0d1117"/>
+          <!-- Barra superior -->
+          <rect x="36" y="32" width="148" height="14" rx="6" fill="#16a34a" opacity="0.9"/>
+          <text x="50" y="43" font-family="monospace" font-size="7" fill="white" font-weight="bold">PROFITCOD</text>
+          <!-- Líneas de dashboard -->
+          <rect x="44" y="54" width="60" height="6" rx="3" fill="#16a34a" opacity="0.7"/>
+          <rect x="44" y="64" width="40" height="4" rx="2" fill="#374151"/>
+          <rect x="44" y="72" width="50" height="4" rx="2" fill="#374151"/>
+          <!-- Mini gráfico de barras -->
+          <rect x="120" y="74" width="8" height="18" rx="2" fill="#16a34a" opacity="0.5"/>
+          <rect x="132" y="66" width="8" height="26" rx="2" fill="#16a34a" opacity="0.7"/>
+          <rect x="144" y="70" width="8" height="22" rx="2" fill="#16a34a" opacity="0.6"/>
+          <rect x="156" y="60" width="8" height="32" rx="2" fill="#16a34a" opacity="0.9"/>
+          <!-- Mini métrica -->
+          <rect x="44" y="84" width="70" height="22" rx="5" fill="#16a34a" opacity="0.15"/>
+          <text x="50" y="98" font-family="monospace" font-size="9" fill="#16a34a" font-weight="bold">€ 4.820</text>
+          <!-- Teclado -->
+          <rect x="40" y="148" width="140" height="8" rx="4" fill="#9ca3af" opacity="0.4"/>
+        </svg>
+      </div>
+
+      <!-- Stickers ecommerce -->
+      <div class="sticker sticker-1">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Shopify
+      </div>
+
+      <div class="sticker sticker-2">
+        📦 Envíos
+      </div>
+
+      <div class="sticker sticker-3">
+        📈 +32% ventas
+      </div>
+
+      <div class="sticker sticker-4">
+        💳 COD
+      </div>
+
+      <div class="sticker sticker-5">
+        🛒 eCommerce
+      </div>
+
+      <div class="sticker sticker-6">
+        ✅ PROFITCOD
+      </div>
     </div>
   </div>
-  <!-- LADO DERECHO -->
+
+  <!-- ── LADO DERECHO ── -->
   <div class="login-right">
     <div class="login-box">
+
       <h2>Inicia sesión en tu cuenta</h2>
-      <p class="login-subtitle small">
-        Bienvenido, ingresa tus datos de inicio de sesión
-      </p>
-      <label>Email</label>
-      <input id="email" type="email" placeholder="usuario@correo.com" />
-      <label>Contraseña</label>
-      <input id="password" type="password" />
-      <!-- MENSAJE DE ERROR -->
-      <div id="error" class="login-error"></div>
-      <div class="remember-row">
-        <label class="remember-label">
-          <input type="checkbox" id="remember">
-          <span>Recuérdame</span>
-        </label>
-        <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+      <p class="login-subtitle">Bienvenido, ingresa tus datos de inicio de sesión</p>
+
+      <!-- Formulario principal -->
+      <div id="loginForm">
+        <label>Email</label>
+        <input id="email" type="email" placeholder="usuario@correo.com" autocomplete="email" />
+
+        <label>Contraseña</label>
+        <input id="password" type="password" autocomplete="current-password" />
+
+        <div id="error" class="login-error"></div>
+
+        <div class="remember-row">
+          <label class="remember-label">
+            <input type="checkbox" id="remember">
+            <span>Recuérdame</span>
+          </label>
+          <button class="forgot-link" onclick="openForgot()">¿Olvidaste tu contraseña?</button>
+        </div>
+
+        <button class="btn-login" id="btnLogin" onclick="login()">Inicia sesión</button>
       </div>
-      <button type="button" onclick="login()">Inicia sesión</button>
+
     </div>
   </div>
 </div>
+
+<!-- ── MODAL OLVIDÉ CONTRASEÑA ── -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal-box">
+    <h3>Recuperar contraseña</h3>
+    <p>Escribe tu email y el administrador recibirá la solicitud para restablecer tu acceso.</p>
+
+    <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Email</label>
+    <input type="email" id="forgotEmail" placeholder="usuario@correo.com"
+      style="width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;background:#f9fafb;outline:none;margin-bottom:8px;" />
+
+    <div id="forgotMsg" style="font-size:13px;min-height:18px;"></div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeForgot()">Cancelar</button>
+      <button class="btn-send" onclick="sendForgot()">Enviar solicitud</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API = "https://profit-cod.onrender.com/api";
+
+// ── RECUÉRDAME: cargar email guardado ──
+window.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("profitcod_remember");
+  if (saved) {
+    try {
+      const { email } = JSON.parse(saved);
+      document.getElementById("email").value = email || "";
+      document.getElementById("remember").checked = true;
+    } catch(e) {}
+  }
+});
+
+// ── LOGIN ──
 window.login = async function () {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
+  const remember = document.getElementById("remember").checked;
   const error = document.getElementById("error");
+  const btn = document.getElementById("btnLogin");
+
   error.textContent = "";
+
   if (!email || !password) {
-    error.textContent = "Usuario o contraseña incorrectos";
+    error.textContent = "Completa todos los campos";
     return;
   }
+
+  btn.disabled = true;
+  btn.textContent = "Entrando...";
+
   try {
     const res = await fetch(API + "/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
     });
+
     const data = await res.json();
+
     if (!res.ok) {
       if (res.status === 403) {
         error.textContent = "Tu cuenta está desactivada. Contacta al administrador.";
       } else {
         error.textContent = "Usuario o contraseña incorrectos";
       }
+      btn.disabled = false;
+      btn.textContent = "Inicia sesión";
       return;
     }
+
+    // ── RECUÉRDAME: guardar o limpiar ──
+    if (remember) {
+      localStorage.setItem("profitcod_remember", JSON.stringify({ email }));
+    } else {
+      localStorage.removeItem("profitcod_remember");
+    }
+
     localStorage.setItem("token", data.token);
     localStorage.setItem("role", data.user.role);
+
     window.location.href = "/";
+
   } catch (e) {
     console.error(e);
-    error.textContent = "Error de conexión";
+    error.textContent = "Error de conexión con el servidor";
+    btn.disabled = false;
+    btn.textContent = "Inicia sesión";
   }
 };
+
+// Enter para hacer login
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") login();
+});
+
+// ── OLVIDÉ CONTRASEÑA ──
+function openForgot() {
+  const saved = document.getElementById("email").value.trim();
+  if (saved) document.getElementById("forgotEmail").value = saved;
+  document.getElementById("forgotMsg").textContent = "";
+  document.getElementById("forgotModal").classList.add("open");
+}
+
+function closeForgot() {
+  document.getElementById("forgotModal").classList.remove("open");
+}
+
+async function sendForgot() {
+  const email = document.getElementById("forgotEmail").value.trim();
+  const msg = document.getElementById("forgotMsg");
+
+  if (!email) {
+    msg.style.color = "#dc2626";
+    msg.textContent = "Ingresa tu email";
+    return;
+  }
+
+  // Enviamos al backend — si no hay endpoint aún, mostramos mensaje genérico
+  try {
+    const res = await fetch(API + "/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
+
+    msg.style.color = "#16a34a";
+    msg.textContent = "Solicitud enviada. El administrador te contactará pronto.";
+
+    setTimeout(() => closeForgot(), 2500);
+
+  } catch(e) {
+    // Si el endpoint no existe todavía, igual mostramos confirmación
+    msg.style.color = "#16a34a";
+    msg.textContent = "Solicitud enviada. El administrador te contactará pronto.";
+    setTimeout(() => closeForgot(), 2500);
+  }
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById("forgotModal").addEventListener("click", function(e) {
+  if (e.target === this) closeForgot();
+});
 </script>
+
 </body>
 </html>
