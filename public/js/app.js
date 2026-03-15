@@ -3354,8 +3354,9 @@ async function renderInformesIngresos() {
   const pedidosMes = orders.filter(o => {
     if (o.fulfillment_status !== "entregado") return false;
     if (!o.created_at) return false;
-    const d = new Date(o.created_at);
-    return d.getMonth()+1 === parseInt(month) && d.getFullYear() === parseInt(year);
+    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+    const [y, m] = d.split("-");
+    return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
   });
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
