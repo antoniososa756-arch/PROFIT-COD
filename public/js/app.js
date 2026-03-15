@@ -3034,6 +3034,13 @@ async function loadGastosVarios() {
   if (label) label.textContent = `📅 Trabajando en: ${monthNames[parseInt(month)-1].toUpperCase()} ${year}`;
 
   content.innerHTML = `<div style="padding:16px;color:#6b7280;">Cargando...</div>`;
+// Cargar pedidos al cache global
+  try {
+    const ordersRes = await fetch(`${API_BASE}/api/orders`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    window.__allOrdersCache = await ordersRes.json();
+  } catch {}
 
   // 1. Tiendas activas
   let stores = [];
@@ -3094,13 +3101,68 @@ async function loadGastosVarios() {
   const inp = `padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;text-align:right;`;
 
   // Construir tabla por tienda
+  // Cargar stock y variantes UNA SOLA VEZ fuera del map
+  const stockMap = {};
+  try {
+    const stockData = await fetch(`${API_BASE}/api/shopify/stock`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    }).then(r => r.json());
+    if (Array.isArray(stockData)) stockData.forEach(s => { stockMap[s.product_id] = s.costo_compra || 0; });
+  } catch {}
+
+  const variantesMap = {};
+  try {
+    const varData = await fetch(`${API_BASE}/api/shopify/variantes-config`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    }).then(r => r.json());
+    if (Array.isArray(varData)) varData.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta || 1; });
+  } catch {}
+
   const cols = stores.map(store => {
     const ads     = adsSpends[store.domain] || { meta: 0, tiktok: 0 };
     const shopify = gastosVarios[store.domain] || 0;
-    const mrw       = 0;
-    const logistica = 0;
+    const allOrders = window.__allOrdersCache || [];
+    const pedidosTienda = allOrders.filter(o => {
+      if (!o.created_at) return false;
+      if (o.fulfillment_status === "cancelado") return false;
+      const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      return d.startsWith(mes) && o.shop_domain === store.domain;
+    });
+
+    // Todos los pedidos del mes (todas las tiendas, excl. cancelados)
+    const pedidosTodas = allOrders.filter(o => {
+      if (!o.created_at) return false;
+      if (o.fulfillment_status === "cancelado") return false;
+      const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      return d.startsWith(mes);
+    });
+
+    let costoProductos = 0;
+    pedidosTienda.filter(o => o.fulfillment_status !== "devuelto").forEach(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        if (!raw?.line_items) return;
+        raw.line_items.forEach(item => {
+          const costo = parseFloat(stockMap[String(item.product_id)] || 0);
+          const uds = parseInt(variantesMap[String(item.variant_id)] || 1);
+          const qty = parseInt(item.quantity || 1);
+          costoProductos += costo * uds * qty;
+        });
+      } catch {}
+    });
+
+    // MRW: valor gastos fijos ÷ total envíos globales (pedidos + devueltos cuentan doble)
+    const totalEnviosGlobales = pedidosTodas.length + pedidosTodas.filter(o => o.fulfillment_status === "devuelto").length;
+    const enviosTienda = pedidosTienda.length + pedidosTienda.filter(o => o.fulfillment_status === "devuelto").length;
+    const mrwUnitario = totalEnviosGlobales > 0 ? totalMRW / totalEnviosGlobales : 0;
+    const mrw = mrwUnitario * enviosTienda;
+
+    // Logística: valor gastos fijos ÷ total pedidos globales (todos los estados)
+    const totalPedidosGlobales = pedidosTodas.length;
+    const logisticaUnitaria = totalPedidosGlobales > 0 ? (gastosFijos.find(g => g.nombre === "LOGÍSTICA") ? parseFloat(gastosFijos.find(g => g.nombre === "LOGÍSTICA").valor)||0 : 0) / totalPedidosGlobales : 0;
+    const logistica = logisticaUnitaria * pedidosTienda.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
-    const total = ads.meta + ads.tiktok + shopify + fijoXTienda + mrw + logistica + extrasTotal;
+    const total = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + extrasTotal;
 
     return `
       <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:220px;flex:1;">
@@ -3119,8 +3181,9 @@ async function loadGastosVarios() {
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
             </tr>
             <tr style="background:#f9fafb;">
+              <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Productos</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">0.00 €</td>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(costoProductos)} €</td>
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">MRW</td>
