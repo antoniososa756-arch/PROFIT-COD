@@ -3138,7 +3138,7 @@ async function loadGastosVarios() {
     });
 
     let costoProductos = 0;
-    pedidosTienda.filter(o => o.fulfillment_status !== "devuelto" && o.fulfillment_status !== "cancelado").forEach(o => {
+    pedidosTienda.filter(o => !["devuelto", "cancelado", "pendiente"].includes(o.fulfillment_status)).forEach(o => {
       try {
         const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
         if (!raw?.line_items) return;
