@@ -631,7 +631,9 @@ const now = new Date();
   if (box) {
     box.className = "card metricas-box";
     box.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;gap:20px;align-items:flex-start;">
+        <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <input type="date" id="metrics-date-from" value="${fmt(firstDay)}"
@@ -751,8 +753,10 @@ const now = new Date();
           </div>
         </div>
 
+    </div>
+      <div id="metrics-balance-wrap" style="margin-top:32px;"></div>
       </div>
-      <div id="metrics-balance-wrap" style="margin-top:48px;"></div>
+    </div>
     `;
   }
 
