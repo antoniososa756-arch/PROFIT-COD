@@ -193,6 +193,13 @@ button:hover{
   font-size: 14px;
   color: var(--green);
   text-decoration: none;
+  width: auto !important;
+  padding: 0 !important;
+  background: none !important;
+  border: none !important;
+  cursor: pointer;
+  font-family: inherit;
+  margin-left: auto;
 }
 
 .forgot-link:hover {
