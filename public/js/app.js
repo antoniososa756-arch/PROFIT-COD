@@ -3117,7 +3117,11 @@ async function loadAdsTable() {
     const day     = i+1;
     const dateStr = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     const label   = `${day} de ${monthName} de ${year}`;
-    const dayOrders = orders.filter(o => o.created_at && o.created_at.startsWith(dateStr));
+    const dayOrders = orders.filter(o => {
+      if (!o.created_at) return false;
+      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      return localDate === dateStr;
+    });
     const facturacion = dayOrders.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
     const pedidos = dayOrders.length;
     const meta    = spends[dateStr]?.meta   || 0;
