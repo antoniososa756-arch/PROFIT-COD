@@ -3421,7 +3421,6 @@ async function renderInformesIngresos() {
               </td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoCOD)} €</td>
             </tr>
-            ${pedidosPagado.length > 0 ? `
             <tr style="background:#f9fafb;">
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
                 TARJETA
@@ -3429,7 +3428,7 @@ async function renderInformesIngresos() {
                 <div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(descPagado)}€</div>
               </td>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoPagado)} €</td>
-            </tr>` : ""}
+            </tr>
             <tr style="background:#eff6ff;">
               <td style="padding:8px 14px;border:1px solid #bfdbfe;">
                 <input type="text" value="${escapeHtml(man1.nombre||'')}" placeholder="Nombre ingreso extra 1..."
@@ -3472,15 +3471,15 @@ async function renderInformesIngresos() {
     <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
       📅 ${mesLabel} — ${totalPedidosEntregados} pedidos entregados — Total ingresos: ${fmt(grandTotal)} €
     </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
       ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+    </div>
     </div>
   `;
 }
 
- 
-
-async function guardarIngresoManual(input) {
+async function guardarIngresoManual
   const shop  = input.dataset.shop;
   const mes   = input.dataset.mes;
   const col   = parseInt(input.dataset.col);
@@ -3728,6 +3727,7 @@ async function renderInformesBalance() {
     <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
       📅 ${mesLabel}
     </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;">
     <div style="display:flex;gap:20px;align-items:flex-start;">
       <div style="flex:1;min-width:0;">
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;" id="bal-cols">
@@ -3750,6 +3750,7 @@ async function renderInformesBalance() {
         </label>
         ${storeCheckboxes}
       </div>
+    </div>
     </div>
   `;
   recalcBalanceSuma();
