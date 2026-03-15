@@ -228,6 +228,16 @@ await pool.query(`
   `);
 await pool.query(`ALTER TABLE productos_stock ADD COLUMN IF NOT EXISTS costo_compra NUMERIC(10,2) DEFAULT 0`);
 
+await pool.query(`
+    CREATE TABLE IF NOT EXISTS reembolsos_estado (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      order_id TEXT NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'pendiente',
+      UNIQUE(user_id, order_id)
+    )
+  `);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 

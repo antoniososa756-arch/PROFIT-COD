@@ -3151,15 +3151,18 @@ async function loadGastosVarios() {
       } catch {}
     });
 
-    // MRW: valor gastos fijos ÷ total envíos globales (pedidos + devueltos cuentan doble)
-    const totalEnviosGlobales = pedidosTodas.length + pedidosTodas.filter(o => o.fulfillment_status === "devuelto").length;
-    const enviosTienda = pedidosTienda.length + pedidosTienda.filter(o => o.fulfillment_status === "devuelto").length;
+    // MRW: valor gastos fijos ÷ total envíos globales (devueltos cuentan doble)
+    const devueltosTodas = pedidosTodas.filter(o => o.fulfillment_status === "devuelto").length;
+    const totalEnviosGlobales = pedidosTodas.length + devueltosTodas;
+    const devueltosTienda = pedidosTienda.filter(o => o.fulfillment_status === "devuelto").length;
+    const enviosTienda = pedidosTienda.length + devueltosTienda;
     const mrwUnitario = totalEnviosGlobales > 0 ? totalMRW / totalEnviosGlobales : 0;
     const mrw = mrwUnitario * enviosTienda;
 
-    // Logística: valor gastos fijos ÷ total pedidos globales (todos los estados)
+    // Logística: valor gastos fijos ÷ total pedidos globales (sin extra por devueltos)
+    const valorLogistica = gastosFijos.find(g => g.nombre === "LOGÍSTICA") ? parseFloat(gastosFijos.find(g => g.nombre === "LOGÍSTICA").valor)||0 : 0;
     const totalPedidosGlobales = pedidosTodas.length;
-    const logisticaUnitaria = totalPedidosGlobales > 0 ? (gastosFijos.find(g => g.nombre === "LOGÍSTICA") ? parseFloat(gastosFijos.find(g => g.nombre === "LOGÍSTICA").valor)||0 : 0) / totalPedidosGlobales : 0;
+    const logisticaUnitaria = totalPedidosGlobales > 0 ? valorLogistica / totalPedidosGlobales : 0;
     const logistica = logisticaUnitaria * pedidosTienda.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
     const total = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + extrasTotal;
@@ -4438,6 +4441,14 @@ let currentReeDisplay = [];
 
 async function loadReembolsos() {
   try {
+    const estadosRes = await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+    });
+    const estadosData = await estadosRes.json();
+    window.__reembolsosEstados = {};
+    if (Array.isArray(estadosData)) {
+      estadosData.forEach(e => { window.__reembolsosEstados[e.order_id] = e.estado; });
+    }
     const res = await fetch(`${API_BASE}/api/orders`, {
       headers: { Authorization: "Bearer " + localStorage.getItem("token") }
     });
@@ -4474,7 +4485,7 @@ function renderReembolsos() {
       if (d > to) return false;
     }
     if (tabFilter) {
-      const estadoPago = localStorage.getItem("ree_estado_" + o.id) || "pendiente";
+      const estadoPago = (window.__reembolsosEstados || {})[o.id] || "pendiente";
       if (tabFilter === "cobrado" && estadoPago !== "cobrado") return false;
       if (tabFilter === "pendiente" && estadoPago !== "pendiente") return false;
     }
@@ -4510,7 +4521,7 @@ function renderReePage() {
 
   body.innerHTML = pageOrders.map((o, idx) => {
     const numero = start + idx + 1;
-    const estadoPago = localStorage.getItem("ree_estado_" + o.id) || "pendiente";
+    const estadoPago = (window.__reembolsosEstados || {})[o.id] || "pendiente";
     const estadoColor = estadoPago === "cobrado" ? "#16a34a" : estadoPago === "no_cobrado" ? "#dc2626" : "#f59e0b";
 
     return `
@@ -4550,8 +4561,16 @@ function goToReePage(page) {
   renderReePage();
 }
 
-function cambiarEstadoReembolso(orderId, estado) {
-  localStorage.setItem("ree_estado_" + orderId, estado);
+async function cambiarEstadoReembolso(orderId, estado) {
+  try {
+    await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+      body: JSON.stringify({ order_id: String(orderId), estado })
+    });
+    if (!window.__reembolsosEstados) window.__reembolsosEstados = {};
+    window.__reembolsosEstados[orderId] = estado;
+  } catch(e) { console.error(e); }
   renderReePage();
 }
 
@@ -4596,7 +4615,7 @@ async function loadSidebarReembolsos() {
         const fin = (raw?.financial_status || raw?.payment_status || o.financial_status || o.payment_status || "").toLowerCase().trim();
         if (!(fin === "pending" || fin === "cod" || fin === "pendiente")) return false;
       } catch { return false; }
-      const estado = localStorage.getItem("ree_estado_" + o.id) || "pendiente";
+      const estado = (window.__reembolsosEstados || {})[o.id] || "pendiente";
       return estado !== "cobrado";
     }) : [];
 
@@ -4814,13 +4833,20 @@ async function importarPagadosPDF(input) {
 
     // Marcar como cobrados los pedidos que coincidan
     let actualizados = 0;
-    allReembolsos.forEach(o => {
+    for (const o of allReembolsos) {
       const tracking = (o.tracking_number || "").trim().toUpperCase();
       if (matches.some(m => m.toUpperCase() === tracking)) {
-        localStorage.setItem("ree_estado_" + o.id, "cobrado");
+        await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + localStorage.getItem("token") },
+          body: JSON.stringify({ order_id: String(o.id), estado: "cobrado" })
+        });
+        if (!window.__reembolsosEstados) window.__reembolsosEstados = {};
+        window.__reembolsosEstados[o.id] = "cobrado";
         actualizados++;
       }
-    });
+    }
+  }
 
     alert(`✅ ${actualizados} reembolsos marcados como Pagados\n(${matches.length} seguimientos encontrados en el PDF)`);
     renderReembolsos();
