@@ -107,8 +107,8 @@ router.post("/mrw-sync", auth, async (req, res) => {
       <tem:pass>${creds.pass}</tem:pass>
       <tem:codigoIdioma>3082</tem:codigoIdioma>
       <tem:tipoFiltro>0</tem:tipoFiltro>
-      <tem:valorFiltroDesde>${order.tracking_number.replace(/F/g,'')}</tem:valorFiltroDesde>
-      <tem:valorFiltroHasta>${order.tracking_number.replace(/F/g,'')}</tem:valorFiltroHasta>
+      <tem:valorFiltroDesde>${order.tracking_number}</tem:valorFiltroDesde>
+      <tem:valorFiltroHasta>${order.tracking_number}</tem:valorFiltroHasta>
       <tem:fechaDesde></tem:fechaDesde>
       <tem:fechaHasta></tem:fechaHasta>
       <tem:tipoInformacion>0</tem:tipoInformacion>
@@ -128,8 +128,8 @@ router.post("/mrw-sync", auth, async (req, res) => {
 
         const xml = await response.text();
         // Guardar solo el primero para debug
-        if (!global.__mrwDebugXml) {
-          global.__mrwDebugXml = { tracking: order.tracking_number, xml };
+        global.__mrwDebugXml = { tracking: order.tracking_number, xml };
+        if (true) {
           console.log(`MRW DEBUG guardado para tracking: ${order.tracking_number}`);
         }
         const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
