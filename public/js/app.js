@@ -2604,7 +2604,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
     const impData = await impRes.json();
     if (Array.isArray(impData) && impData.length > 0) {
-      ivaPorcentaje = (parseFloat(impData[0].porcentaje) || 21) / 100;
+      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
     }
   } catch {}
 
@@ -3719,7 +3719,7 @@ async function loadGastosVarios() {
     const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
     const impData = await impRes.json();
     if (Array.isArray(impData) && impData.length > 0) {
-      ivaPorcentaje = (parseFloat(impData[0].porcentaje) || 21) / 100;
+      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
     }
   } catch {}
 
@@ -4267,7 +4267,7 @@ async function renderInformesBalance() {
     const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
     const impData = await impRes.json();
     if (Array.isArray(impData) && impData.length > 0) {
-      ivaPorcentaje = (parseFloat(impData[0].porcentaje) || 21) / 100;
+      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
     }
   } catch {}
 
