@@ -5,14 +5,14 @@ const verifyToken = require("../middlewares/auth");
 
 // Crear tabla si no existe
 db.run(`CREATE TABLE IF NOT EXISTS nomina_trabajadores (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   nombre TEXT NOT NULL,
   user_id INTEGER,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )`);
 
 db.run(`CREATE TABLE IF NOT EXISTS nomina_pagos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   trabajador_id INTEGER NOT NULL,
   mes TEXT NOT NULL,
   valor REAL DEFAULT 0,
