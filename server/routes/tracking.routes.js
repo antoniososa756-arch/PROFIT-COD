@@ -14,46 +14,147 @@ function mapMRWStatus(texto) {
   return "en_transito";
 }
 
-router.post("/credentials", auth, async (req, res) => {
-  res.json({ ok: true });
+// ── Crear tabla credenciales MRW ──────────────────────────────
+router.use(async (req, res, next) => {
+  try {
+    await req.db.run(`
+      CREATE TABLE IF NOT EXISTS mrw_credentials (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER UNIQUE NOT NULL,
+        login TEXT NOT NULL,
+        pass TEXT NOT NULL,
+        franquicia TEXT,
+        abonado TEXT,
+        created_at TEXT DEFAULT now()::text
+      )
+    `);
+  } catch(e) {}
+  next();
 });
 
-router.get("/:tracking", auth, async (req, res) => {
-  const { tracking } = req.params;
-
+// ── GET credenciales MRW del usuario ─────────────────────────
+router.get("/mrw-credentials", auth, async (req, res) => {
   try {
-    const url = `https://www.mrw.es/seguimiento/envio-actual.asp?nAlbaran=${encodeURIComponent(tracking)}`;
+    const row = await req.db.get(
+      "SELECT login, franquicia, abonado FROM mrw_credentials WHERE user_id = $1",
+      [req.user.id]
+    );
+    res.json({ integrated: !!row, login: row?.login || "", franquicia: row?.franquicia || "", abonado: row?.abonado || "" });
+  } catch(e) {
+    res.json({ integrated: false });
+  }
+});
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "es-ES,es;q=0.9",
-        "Referer": "https://www.mrw.es/",
-        "Cookie": "klaro=%7B%22necessary-cookies%22%3Atrue%2C%22preferences%22%3Afalse%2C%22google-analytics%22%3Afalse%2C%22google-ads%22%3Afalse%7D; ASPSESSIONIDCERRBRTR=DCIJDOOAMCFPLAJIINBCJDJD; ASPSESSIONIDQWRBDTAB=NPPLGJCAMGABLOOIMEBBFMOG; TS01dc4fc6=010de9c722f921bbe38c25ec48994dc1a2dac6e8e805802612724b968b2ab64ec44ffdb4eaed6a9efbbb5ad3507699302d4768c295",
+// ── POST guardar credenciales MRW ────────────────────────────
+router.post("/mrw-credentials", auth, async (req, res) => {
+  const { login, pass, franquicia, abonado } = req.body || {};
+  if (!login || !pass) return res.status(400).json({ error: "Login y contraseña requeridos" });
+  try {
+    await req.db.run(`
+      INSERT INTO mrw_credentials (user_id, login, pass, franquicia, abonado)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (user_id) DO UPDATE SET login = EXCLUDED.login, pass = EXCLUDED.pass,
+        franquicia = EXCLUDED.franquicia, abonado = EXCLUDED.abonado
+    `, [req.user.id, login, pass, franquicia || "", abonado || ""]);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── DELETE eliminar integración MRW ──────────────────────────
+router.delete("/mrw-credentials", auth, async (req, res) => {
+  try {
+    await req.db.run("DELETE FROM mrw_credentials WHERE user_id = $1", [req.user.id]);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST sincronizar estados vía API MRW SOAP ─────────────────
+router.post("/mrw-sync", auth, async (req, res) => {
+  try {
+    const creds = await req.db.get(
+      "SELECT login, pass FROM mrw_credentials WHERE user_id = $1",
+      [req.user.id]
+    );
+    if (!creds) return res.status(400).json({ error: "MRW no integrado" });
+
+    // Obtener pedidos con tracking pendientes de actualizar
+    const orders = await req.db.all(`
+      SELECT o.id, o.tracking_number, o.fulfillment_status
+      FROM orders o
+      JOIN shops s ON s.id = o.shop_id
+      WHERE s.user_id = $1
+        AND o.tracking_number IS NOT NULL
+        AND o.tracking_number != ''
+        AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
+    `, [req.user.id]);
+
+    if (!orders.length) return res.json({ ok: true, updated: 0, total: 0 });
+
+    let updated = 0;
+    const errors = [];
+
+    for (const order of orders) {
+      try {
+        const soapBody = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tem:GetEnvios>
+      <tem:login>${creds.login}</tem:login>
+      <tem:pass>${creds.pass}</tem:pass>
+      <tem:codigoIdioma>3082</tem:codigoIdioma>
+      <tem:tipoFiltro>0</tem:tipoFiltro>
+      <tem:valorFiltroDesde>${order.tracking_number}</tem:valorFiltroDesde>
+      <tem:valorFiltroHasta>${order.tracking_number}</tem:valorFiltroHasta>
+      <tem:fechaDesde></tem:fechaDesde>
+      <tem:fechaHasta></tem:fechaHasta>
+      <tem:tipoInformacion>0</tem:tipoInformacion>
+    </tem:GetEnvios>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+        const response = await fetch("https://trackingservice.mrw.es/TrackingServices/TrackingService.svc", {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/xml; charset=utf-8",
+            "SOAPAction": "http://tempuri.org/ITrackingService/GetEnvios"
+          },
+          body: soapBody
+        });
+
+        const xml = await response.text();
+
+        // Extraer estado de la respuesta XML
+        const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
+        if (!estadoMatch) { errors.push(order.tracking_number); continue; }
+
+        const estadoTexto = estadoMatch[1].trim();
+        const nuevoStatus = mapMRWStatus(estadoTexto);
+
+        if (nuevoStatus !== order.fulfillment_status) {
+          await req.db.run(
+            "UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2",
+            [nuevoStatus, order.id]
+          );
+          updated++;
+        }
+      } catch(e) {
+        errors.push(order.tracking_number);
       }
-    });
-
-    const html = await response.text();
-    console.log("MRW HTML SNIPPET:", html.substring(html.indexOf("Estado"), html.indexOf("Estado") + 200));
-
-    const match = html.match(/data-title="Estado env[^"]*"[^>]*>([^<]+)</);
-    if (!match) {
-      return res.json({ ok: false, error: "No se encontró el estado en MRW" });
     }
 
-    const raw = match[1]
-      .replace(/EnvÃ­o/g, "Envío")
-      .replace(/trÃ¡nsito/g, "tránsito")
-      .replace(/&[a-z]+;/g, "")
-      .trim();
-
-    res.json({ ok: true, raw, status: mapMRWStatus(raw) });
-
-  } catch (err) {
-    console.error("MRW scraping error:", err);
-    res.status(500).json({ error: "Error consultando MRW" });
+    res.json({ ok: true, updated, total: orders.length, errors });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
   }
+});
+
+router.post("/credentials", auth, async (req, res) => {
+  res.json({ ok: true });
 });
 
 router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
@@ -68,8 +169,6 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
     for (const row of rows) {
       const tracking = String(row["Número Envío"] || "").trim();
       const estadoRaw = String(row["Estado_1"] || "").trim().toLowerCase();
-
-      // Si no tiene tracking, no tocar (se queda como pendiente)
       if (!tracking || !estadoRaw) continue;
 
       let status = "en_transito";
@@ -79,17 +178,4 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
       else if (estadoRaw.includes("recoger en franquicia") || estadoRaw.includes("franquicia destino")) status = "franquicia";
 
       const result = await req.db.run(
-        `UPDATE orders SET fulfillment_status = ? WHERE tracking_number = ? AND shop_id IN (SELECT id FROM shops WHERE user_id = ?)`,
-        [status, tracking, req.user.id]
-      );
-      if (result.changes > 0) updated++;
-    }
-
-    res.json({ ok: true, updated, total: rows.length });
-  } catch (err) {
-    console.error("Excel sync error:", err);
-    res.status(500).json({ error: "Error procesando Excel" });
-  }
-});
-
-module.exports = router;
+        `UPDATE orders SET fulfillment_status = $1 WHERE tracking_number = $2 AND shop_id IN (SELECT id FROM

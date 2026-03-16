@@ -1199,11 +1199,23 @@ if (id === "pedidos") {
 
             <!-- DERECHA: Sincronizar e Importar -->
             <div style="display:flex;align-items:center;gap:8px;">
+              <button id="btn-mrw-integrar" onclick="abrirModalMRW()"
+                style="padding:7px 14px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                🔗 Integrar MRW
+              </button>
+              <button id="btn-mrw-sync" onclick="sincronizarMRW()" style="display:none;
+                padding:7px 14px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+                🔄 Sincronizar MRW
+              </button>
+              <button id="btn-mrw-desintegrar" onclick="desintegrarMRW()" style="display:none;
+                padding:7px 14px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+                ✕ Desintegrar MRW
+              </button>
               <button class="btn-sync" onclick="syncAndRefreshOrders()">
                 <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Sincronizar
               </button>
-              <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+              <label id="btn-importar-excel" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 📥 Importar Excel MRW
                 <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="syncExcelMRW(this)">
               </label>
@@ -1249,6 +1261,7 @@ if (id === "pedidos") {
     // Cargar pedidos reales
     fetchOrders();
     syncAndRefreshOrders();
+    checkMRWIntegration();
 
     // Cargar tiendas en filtro inline
     fetch(`${API_BASE}/api/shopify/stores`, {
@@ -5280,6 +5293,13 @@ async function syncAndRefreshOrders() {
     window.__hideLoadingBar?.();
     await fetchOrders();
     await checkNotificaciones();
+    // Auto-sincronizar MRW si está integrado
+    try {
+      const creds = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      }).then(r => r.json());
+      if (creds.integrated) await sincronizarMRW();
+    } catch(e) {}
     if (btn) { btn.textContent = `✓ ${data.synced || 0} pedidos`; }
     setTimeout(() => {
       if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg> Sincronizar`; btn.disabled = false; btn.style.opacity = "1"; }
@@ -6362,3 +6382,153 @@ window.guardarVarianteConfig = guardarVarianteConfig;
 window.guardarStock = guardarStock;
 window.guardarStockMinimo = guardarStockMinimo;
 window.importarPagadosPDF = importarPagadosPDF;
+
+// =========================
+// INTEGRACIÓN MRW API
+// =========================
+async function checkMRWIntegration() {
+  try {
+    const res = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await res.json();
+    const btnIntegrar = document.getElementById("btn-mrw-integrar");
+    const btnSync = document.getElementById("btn-mrw-sync");
+    const btnDesintegrar = document.getElementById("btn-mrw-desintegrar");
+    const btnExcel = document.getElementById("btn-importar-excel");
+    if (data.integrated) {
+      if (btnIntegrar) btnIntegrar.style.display = "none";
+      if (btnSync) btnSync.style.display = "";
+      if (btnDesintegrar) btnDesintegrar.style.display = "";
+      if (btnExcel) btnExcel.style.display = "none";
+    } else {
+      if (btnIntegrar) btnIntegrar.style.display = "";
+      if (btnSync) btnSync.style.display = "none";
+      if (btnDesintegrar) btnDesintegrar.style.display = "none";
+      if (btnExcel) btnExcel.style.display = "";
+    }
+  } catch(e) { console.error(e); }
+}
+
+function abrirModalMRW() {
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.id = "modal-mrw";
+  modal.innerHTML = `
+    <div class="modal" style="max-width:460px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:20px;">🚚</div>
+        <div>
+          <h3 style="margin:0;font-size:16px;font-weight:700;">Integrar MRW Webservice</h3>
+          <div style="font-size:12px;color:#6b7280;">Sincronización automática de estados de envío</div>
+        </div>
+      </div>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#1e40af;margin-bottom:16px;">
+        💡 Necesitas las credenciales SAGEC de MRW (Login y Contraseña del WebService TrackingServices)
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Login SAGEC *</label>
+          <input id="mrw-login" type="text" placeholder="Ej: CD04700Fanomi"
+            style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
+          <input id="mrw-pass" type="password" placeholder="Contraseña"
+            style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Franquicia</label>
+            <input id="mrw-franquicia" type="text" placeholder="Ej: 04700"
+              style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Abonado</label>
+            <input id="mrw-abonado" type="text" placeholder="Ej: 603835"
+              style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+          </div>
+        </div>
+        <div id="mrw-modal-msg" style="font-size:13px;min-height:18px;"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button onclick="closeModal()" style="flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;font-weight:600;">Cancelar</button>
+        <button onclick="guardarCredencialesMRW()" style="flex:1;padding:10px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;">
+          ✓ Conectar MRW
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function guardarCredencialesMRW() {
+  const login = document.getElementById("mrw-login")?.value.trim();
+  const pass  = document.getElementById("mrw-pass")?.value.trim();
+  const franquicia = document.getElementById("mrw-franquicia")?.value.trim();
+  const abonado    = document.getElementById("mrw-abonado")?.value.trim();
+  const msg = document.getElementById("mrw-modal-msg");
+  if (!login || !pass) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = "Login y contraseña son obligatorios"; } return; }
+  if (msg) { msg.style.color = "#6b7280"; msg.textContent = "Guardando..."; }
+  try {
+    const res = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ login, pass, franquicia, abonado })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      closeModal();
+      showToast("✅ MRW integrado", "La sincronización automática está activa", "#16a34a");
+      checkMRWIntegration();
+    } else {
+      if (msg) { msg.style.color = "#dc2626"; msg.textContent = data.error || "Error guardando"; }
+    }
+  } catch(e) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = "Error de conexión"; } }
+}
+
+async function sincronizarMRW() {
+  const btn = document.getElementById("btn-mrw-sync");
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Sincronizando..."; }
+  window.__showLoadingBar?.("Consultando estados MRW...");
+  try {
+    const res = await fetch(`${API_BASE}/api/tracking/mrw-sync`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await res.json();
+    window.__hideLoadingBar?.();
+    if (data.ok) {
+      showToast("✅ MRW sincronizado", `${data.updated} pedidos actualizados de ${data.total} consultados`, "#16a34a");
+      await fetchOrders();
+    } else {
+      showToast("❌ Error MRW", data.error || "Error desconocido", "#dc2626");
+    }
+  } catch(e) {
+    window.__hideLoadingBar?.();
+    showToast("❌ Error", "No se pudo conectar con MRW", "#dc2626");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "🔄 Sincronizar MRW"; }
+  }
+}
+
+async function desintegrarMRW() {
+  if (!confirm("⚠️ ¿Estás seguro de que quieres desintegrar MRW?\n\nEsto dejará de sincronizar el estado de tus pedidos automáticamente. Podrás volver a integrar en cualquier momento.")) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast("MRW desintegrado", "Ya no se sincronizarán estados automáticamente", "#f59e0b");
+      checkMRWIntegration();
+    }
+  } catch(e) { console.error(e); }
+}
+
+window.abrirModalMRW         = abrirModalMRW;
+window.guardarCredencialesMRW = guardarCredencialesMRW;
+window.sincronizarMRW        = sincronizarMRW;
+window.desintegrarMRW        = desintegrarMRW;
+window.checkMRWIntegration   = checkMRWIntegration;
