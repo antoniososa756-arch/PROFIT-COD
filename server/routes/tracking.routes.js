@@ -126,7 +126,11 @@ router.post("/mrw-sync", auth, async (req, res) => {
         });
 
         const xml = await response.text();
-        console.log(`MRW tracking ${order.tracking_number} XML COMPLETO:`, xml);
+        // Guardar solo el primero para debug
+        if (!global.__mrwDebugXml) {
+          global.__mrwDebugXml = { tracking: order.tracking_number, xml };
+          console.log(`MRW DEBUG guardado para tracking: ${order.tracking_number}`);
+        }
         const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
         if (!estadoMatch) { 
           console.log(`MRW: no se encontró estado para ${order.tracking_number}`);
@@ -194,6 +198,11 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
     console.error("Excel sync error:", err);
     res.status(500).json({ error: "Error procesando Excel" });
   }
+});
+
+// ── DEBUG temporal: ver XML de MRW ───────────────────────────
+router.get("/mrw-debug-xml", auth, async (req, res) => {
+  res.json(global.__mrwDebugXml || { msg: "Aún no hay datos, sincroniza primero" });
 });
 
 module.exports = router;
