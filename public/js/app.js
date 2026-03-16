@@ -4052,19 +4052,21 @@ async function loadGastosVarios() {
                   style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;">
               </td>
             </tr>
-            ${(gastosExtras[store.domain]||[]).map((g,idx) => `
+            ${(gastosExtras[store.domain]||[]).map((g) => `
             <tr style="background:#eff6ff;">
               <td style="padding:7px 14px;border:1px solid #bfdbfe;">
                 <input type="text" value="${escapeHtml(g.nombre||'')}" placeholder="Concepto..."
-                  data-shop="${store.domain}" data-idx="${idx}" data-mes="${mes}"
+                  data-id="${g.id}" data-shop="${store.domain}" data-mes="${mes}"
                   onchange="updateGastoExtraNombre(this)"
                   style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:#2563eb;font-family:inherit;">
               </td>
-              <td style="padding:7px 14px;border:1px solid #bfdbfe;">
+              <td style="padding:7px 14px;border:1px solid #bfdbfe;display:flex;align-items:center;gap:6px;">
                 <input type="number" min="0" step="0.01" value="${fmt(g.valor||0)}" placeholder="0.00"
-                  data-shop="${store.domain}" data-idx="${idx}" data-mes="${mes}"
+                  data-id="${g.id}" data-shop="${store.domain}" data-mes="${mes}"
                   onchange="updateGastoExtraValor(this)"
-                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;">
+                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;flex:1;">
+                <button onclick="deleteGastoExtra(${g.id})"
+                  style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px;font-weight:700;padding:0;flex-shrink:0;">✕</button>
               </td>
             </tr>`).join("")}
             <tr style="background:#eff6ff;">
@@ -5392,17 +5394,31 @@ window.selectFilterShop = selectFilterShop;
 window.applyFilters = applyFilters;
 window.clearFilters = clearFilters;
 
-function addGastoExtra(shop) {
-  if (!gastosExtras[shop]) gastosExtras[shop] = [];
-  gastosExtras[shop].push({ nombre: "", valor: 0 });
-  loadGastosVarios();
+async function addGastoExtra(shop) {
+  const mes = document.getElementById("gv-month-sel") 
+    ? `${document.getElementById("gv-year-sel").value}-${String(document.getElementById("gv-month-sel").value).padStart(2,"0")}`
+    : `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}`;
+  try {
+    await fetch(`${API_BASE}/api/gastos-varios/extras`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ shop_domain: shop, mes, nombre: "", valor: 0 })
+    });
+    await loadGastosVarios();
+  } catch(e) { console.error(e); }
 }
 
-function updateGastoExtraNombre(input) {
-  const shop = input.dataset.shop;
-  const idx  = parseInt(input.dataset.idx);
-  if (!gastosExtras[shop]) return;
-  gastosExtras[shop][idx].nombre = input.value;
+async function updateGastoExtraNombre(input) {
+  const id  = input.dataset.id;
+  const val = parseFloat(input.closest("tr")?.querySelector("input[type='number']")?.value) || 0;
+  if (!id) return;
+  try {
+    await fetch(`${API_BASE}/api/gastos-varios/extras/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ nombre: input.value, valor: val })
+    });
+  } catch(e) { console.error(e); }
 }
 
 async function syncExcelMRW(input) {
@@ -5431,12 +5447,18 @@ async function syncExcelMRW(input) {
 }
 window.syncExcelMRW = syncExcelMRW; 
 
-function updateGastoExtraValor(input) {
-  const shop = input.dataset.shop;
-  const idx  = parseInt(input.dataset.idx);
-  if (!gastosExtras[shop]) return;
-  gastosExtras[shop][idx].valor = parseFloat(input.value)||0;
-  loadGastosVarios();
+async function updateGastoExtraValor(input) {
+  const id  = input.dataset.id;
+  const nom = input.closest("tr")?.querySelector("input[type='text']")?.value || "";
+  if (!id) return;
+  try {
+    await fetch(`${API_BASE}/api/gastos-varios/extras/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ nombre: nom, valor: parseFloat(input.value) || 0 })
+    });
+    await loadGastosVarios();
+  } catch(e) { console.error(e); }
 }
 
 window.addGastoExtra          = addGastoExtra;
