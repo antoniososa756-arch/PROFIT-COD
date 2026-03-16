@@ -30,6 +30,52 @@ if (location.pathname.includes("login")) {
     return;
   }
 
+  // Indicador de carga global
+  window.__showLoadingBar = function(msg) {
+    let bar = document.getElementById("__loading-bar");
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "__loading-bar";
+      bar.style.cssText = `
+        position:fixed;top:0;left:0;right:0;z-index:99999;
+        background:#16a34a;color:#fff;
+        font-size:13px;font-weight:600;font-family:inherit;
+        padding:8px 16px;text-align:center;
+        display:flex;align-items:center;justify-content:center;gap:8px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.15);
+      `;
+      document.body.appendChild(bar);
+    }
+    bar.innerHTML = `<span style="font-size:16px;animation:spin 1s linear infinite;display:inline-block;">⏳</span> ${msg || "Actualizando..."}`;
+    if (!document.getElementById("__spin-style")) {
+      const s = document.createElement("style");
+      s.id = "__spin-style";
+      s.textContent = `@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`;
+      document.head.appendChild(s);
+    }
+  };
+  window.__hideLoadingBar = function() {
+    const bar = document.getElementById("__loading-bar");
+    if (bar) bar.remove();
+  };
+
+   // Detectar servidor caído (Render desplegando)
+  async function pingServidor() {
+    try {
+      const r = await fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: "Bearer " + token } });
+      if (r.status === 503 || r.status === 502) {
+        window.__showLoadingBar?.("🔄 Actualizando aplicación, espera un momento...");
+        setTimeout(pingServidor, 4000);
+        return false;
+      }
+      return true;
+    } catch {
+      window.__showLoadingBar?.("🔄 Actualizando aplicación, espera un momento...");
+      setTimeout(pingServidor, 4000);
+      return false;
+    }
+  }
+
   fetch(`${API_BASE}/api/auth/me`, {
   headers: {
     Authorization: "Bearer " + token,
@@ -5181,18 +5227,21 @@ async function syncAndRefreshOrders() {
   const btn = document.querySelector(".btn-sync");
   if (btn) { btn.disabled = true; btn.style.opacity = "0.6"; }
   try {
+    window.__showLoadingBar?.("Sincronizando pedidos...");
     const res = await fetch(`${API_BASE}/api/shopify/sync-orders`, {
       method: "POST",
       headers: { Authorization: "Bearer " + getActiveToken() },
     });
     const data = await res.json();
+    window.__hideLoadingBar?.();
     await fetchOrders();
-await checkNotificaciones();
+    await checkNotificaciones();
     if (btn) { btn.textContent = `✓ ${data.synced || 0} pedidos`; }
     setTimeout(() => {
       if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg> Sincronizar`; btn.disabled = false; btn.style.opacity = "1"; }
     }, 2000);
   } catch (e) {
+    window.__hideLoadingBar?.();
     if (btn) { btn.textContent = "❌ Error"; btn.disabled = false; btn.style.opacity = "1"; }
     setTimeout(() => {
       if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg> Sincronizar`; }
