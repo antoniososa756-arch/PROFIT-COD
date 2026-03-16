@@ -5475,9 +5475,20 @@ async function updateGastoExtraValor(input) {
   } catch(e) { console.error(e); }
 }
 
+async function deleteGastoExtra(id) {
+  try {
+    await fetch(`${API_BASE}/api/gastos-varios/extras/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    await loadGastosVarios();
+  } catch(e) { console.error(e); }
+}
+
 window.addGastoExtra          = addGastoExtra;
 window.updateGastoExtraNombre = updateGastoExtraNombre;
 window.updateGastoExtraValor  = updateGastoExtraValor;
+window.deleteGastoExtra       = deleteGastoExtra;
 
 // =========================
 // REEMBOLSOS
