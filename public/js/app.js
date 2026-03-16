@@ -3056,8 +3056,13 @@ function recalcMetricasBalance() {
     document.body.appendChild(hiddenInput);
   }
   hiddenInput.value = shopSeleccionada;
-  // Actualizar métricas de arriba sin recargar el balance (evitar bucle)
-  actualizarMetricasSinBalance();
+
+  // Cancelar petición anterior si aún estaba en curso
+  if (window.__metricasUpdateId) clearTimeout(window.__metricasUpdateId);
+  window.__metricasUpdateId = setTimeout(async () => {
+    await actualizarMetricasSinBalance();
+    window.__metricasUpdateId = null;
+  }, 150);
 }
 window.recalcMetricasBalance = recalcMetricasBalance;
 
