@@ -126,7 +126,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
         });
 
         const xml = await response.text();
-        console.log(`MRW tracking ${order.tracking_number} XML:`, xml.substring(0, 500));
+        console.log(`MRW tracking ${order.tracking_number} XML COMPLETO:`, xml);
         const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
         if (!estadoMatch) { 
           console.log(`MRW: no se encontró estado para ${order.tracking_number}`);
