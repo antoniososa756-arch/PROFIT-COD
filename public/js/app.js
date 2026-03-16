@@ -444,10 +444,38 @@ function escapeAttr(str) {
   function renderNotifPanel(panelEl, list, d) {
     if (!panelEl) return;
     panelEl.innerHTML = `
-      <div class="dropdown-title">${d.ui.notiTitle}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 8px;">
+        <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">${d.ui.notiTitle}</span>
+        ${list.length ? `<span style="font-size:11px;color:#6b7280;">${list.length} notificaciones</span>` : ""}
+      </div>
       ${
         list.length
-          ? list.map(n => {
+          ? `<div style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-bottom:8px;">
+              ${list.map(n => {
+                const es7dias = n.id.startsWith("7dias__");
+                return `
+                  <div class="notif-row" style="cursor:pointer;margin-bottom:0;">
+                    <div onclick="irAPedidoDesdeNotif('${escapeAttr(n.id)}')" style="flex:1;">
+                      <strong>${escapeHtml(n.title)}</strong>
+                      <span>${escapeHtml(n.text)}</span>
+                    </div>
+                    ${es7dias ? `
+                    <div style="margin-top:6px;display:flex;gap:6px;">
+                      <button onclick="marcarGestionado(event,'${escapeAttr(n.id)}')"
+                        style="font-size:11px;padding:3px 8px;border:1px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#16a34a;cursor:pointer;font-family:inherit;">
+                        ✓ Gestionado
+                      </button>
+                    </div>` : ""}
+                  </div>`;
+              }).join("")}
+            </div>
+            <div class="drop-item" onclick="clearNotif()" style="justify-content:center;border-top:1px solid var(--border);margin-top:4px;padding-top:10px;color:#dc2626;font-weight:600;font-size:12px;">
+              ✓ Marcar todo como leído
+            </div>`
+          : `<div class="notif-row"><strong>OK</strong><span>No hay notificaciones</span></div>`
+      }
+    `;
+  } list.map(n => {
               const es7dias = n.id.startsWith("7dias__");
               const orderId = n.id.split("_").pop();
               return `
