@@ -133,6 +133,43 @@ if (!appSecret) appSecret = process.env.SHOPIFY_API_SECRET || "";
     }
 
     res.json({ ok: true, shop: { name: data.shop.name, domain: myshopifyDomain, status: "active", lastSync: new Date().toISOString() } });
+
+    // Importar pedidos históricos en segundo plano al conectar tienda nueva
+    const shopRow = await db.get(`SELECT id FROM shops WHERE user_id = $1 AND shop_domain = $2`, [userId, myshopifyDomain]);
+    if (shopRow) {
+      (async () => {
+        try {
+          console.log(`Importando pedidos históricos para ${myshopifyDomain}...`);
+          let importUrl = `https://${myshopifyDomain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=2026-02-01T00:00:00Z`;
+          let importado = 0;
+          while (importUrl) {
+            const ir = await fetch(importUrl, { headers: { "X-Shopify-Access-Token": accessToken } });
+            if (!ir.ok) break;
+            const { orders: ords } = await ir.json();
+            for (const o of ords) {
+              const cn = o.customer ? `${o.customer.first_name||""} ${o.customer.last_name||""}`.trim() : "Desconocido";
+              await db.run(
+                `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                 ON CONFLICT(order_id) DO NOTHING`,
+                [shopRow.id, String(o.id), o.name||String(o.order_number), cn,
+                 mapSyncStatus(o), o.financial_status||null,
+                 o.fulfillments?.[0]?.tracking_number||null,
+                 o.total_price, o.currency, o.created_at, JSON.stringify(o)]
+              );
+              importado++;
+            }
+            const lh = ir.headers.get("Link")||"";
+            const nm = lh.match(/<([^>]+)>;\s*rel="next"/);
+            importUrl = nm ? nm[1] : null;
+          }
+          console.log(`✅ Importados ${importado} pedidos históricos para ${myshopifyDomain}`);
+        } catch(e) {
+          console.error(`Error importando históricos ${myshopifyDomain}:`, e.message);
+        }
+      })();
+    }
+
   } catch (err) {
     console.error("Shopify connect-token error:", err);
     res.status(500).json({ error: "Error conectando con Shopify" });
