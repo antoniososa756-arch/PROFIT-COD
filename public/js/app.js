@@ -2756,7 +2756,7 @@ async function loadMetricas() {
 async function loadMetricasBalance(dateFrom, dateTo) {
   const wrap = document.getElementById("metrics-balance-wrap");
   if (!wrap) return;
-  wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando balance...</div>`;
+  window.__showLoadingBar?.("Cargando balance...");
 
   const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 });
   const MRW_COMISION = 0.67;
@@ -2981,6 +2981,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     </div>
   `;
   recalcMetricasBalance();
+  window.__hideLoadingBar?.();
 }
 
 function recalcMetricasBalance() {
@@ -3459,7 +3460,7 @@ async function loadGastosFijosData() {
   const year  = document.getElementById("gf-year-sel")?.value  || new Date().getFullYear();
   const mes   = `${year}-${String(month).padStart(2,"0")}`;
 
-  content.innerHTML = `<div style="padding:16px;color:#6b7280;">Cargando...</div>`;
+  window.__showLoadingBar?.("Cargando gastos fijos...");
 
   let totalPedidos = 0;
   try {
@@ -3719,6 +3720,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
       <div>${tablaIMP}</div>
     </div>
   `;
+  window.__hideLoadingBar?.();
 }
 
 async function updateGastoFijoValor(input) {
@@ -4291,7 +4293,7 @@ async function loadInformesIngresos() {
 async function renderInformesIngresos() {
   const wrap = document.getElementById("inf-ingresos-wrap");
   if (!wrap) return;
-  wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+  window.__showLoadingBar?.("Cargando ingresos...");
 
   const month = document.getElementById("inf-month-sel")?.value || (new Date().getMonth()+1);
   const year  = document.getElementById("inf-year-sel")?.value  || new Date().getFullYear();
@@ -4442,6 +4444,7 @@ async function renderInformesIngresos() {
     </div>
     </div>
   `;
+  window.__hideLoadingBar?.();
 }
 
 async function guardarIngresoManual(input) {
@@ -4536,7 +4539,7 @@ async function loadInformesBalance() {
 async function renderInformesBalance() {
   const wrap = document.getElementById("inf-balance-wrap");
   if (!wrap) return;
-  wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+  window.__showLoadingBar?.("Cargando balance...");
 
   const month = document.getElementById("inf-bal-month-sel")?.value || (new Date().getMonth()+1);
   const year  = document.getElementById("inf-bal-year-sel")?.value  || new Date().getFullYear();
@@ -4737,6 +4740,7 @@ async function renderInformesBalance() {
     </div>
   `;
   recalcBalanceSuma();
+  window.__hideLoadingBar?.();
 }
 
 function recalcBalanceSuma() {
