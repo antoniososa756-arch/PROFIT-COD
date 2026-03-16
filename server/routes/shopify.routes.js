@@ -211,10 +211,19 @@ router.post("/sync-orders", auth, async (req, res) => {
     const shops = await db.all("SELECT id, shop_domain, access_token FROM shops WHERE user_id = $1 AND status = 'active'", [userId]);
     if (!shops.length) return res.json({ ok: true, synced: 0 });
 
+    res.json({ ok: true, synced: 0, msg: "Sincronización iniciada" });
+
     let total = 0;
     for (const shop of shops) {
       try {
-        let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=2026-02-01T00:00:00Z`;
+        const lastOrder = await db.get(
+          `SELECT created_at FROM orders WHERE shop_id = $1 ORDER BY created_at DESC LIMIT 1`,
+          [shop.id]
+        );
+        const since = lastOrder?.created_at
+          ? new Date(new Date(lastOrder.created_at).getTime() - 60 * 60 * 1000).toISOString()
+          : "2026-02-01T00:00:00Z";
+        let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=${since}`;
 
         while (url) {
           const r = await fetch(url, {
@@ -250,9 +259,9 @@ router.post("/sync-orders", auth, async (req, res) => {
 
       } catch (e) { console.error("Sync error for shop", shop.shop_domain, e.message); }
     }
-    res.json({ ok: true, synced: total });
+    console.log(`Sync completado: ${total} pedidos`);
   } catch (e) {
-    res.status(500).json({ error: "Error sync" });
+    console.error("Error sync background:", e.message);
   }
 });
 
@@ -418,5 +427,61 @@ router.post("/precios-globales", auth, async (req, res) => {
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: "Error" }); }
 });
+
+// ── Sync de recuperación: día 1 de cada mes revisa el mes anterior completo ──
+async function syncRecuperacion() {
+  const now = new Date();
+  if (now.getDate() !== 1) return; // Solo ejecutar el día 1
+
+  const primerDiaMesAnterior = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const primerDiaMesActual   = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  console.log(`🔄 Sync recuperación: revisando ${primerDiaMesAnterior.slice(0,7)}`);
+
+  try {
+    const shops = await db.all(`SELECT id, shop_domain, access_token FROM shops WHERE status = 'active'`);
+
+    for (const shop of shops) {
+      try {
+        let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=${primerDiaMesAnterior}&created_at_max=${primerDiaMesActual}`;
+
+        while (url) {
+          const r = await fetch(url, { headers: { "X-Shopify-Access-Token": shop.access_token } });
+          if (!r.ok) break;
+
+          const { orders } = await r.json();
+          for (const o of orders) {
+            const customerName = o.customer
+              ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim()
+              : "Desconocido";
+            await db.run(
+              `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+               ON CONFLICT(order_id) DO NOTHING`,
+              [shop.id, String(o.id), o.name || String(o.order_number), customerName,
+               mapSyncStatus(o), o.financial_status || null,
+               o.fulfillments?.[0]?.tracking_number || null,
+               o.total_price, o.currency, o.created_at, JSON.stringify(o)]
+            );
+          }
+
+          const linkHeader = r.headers.get("Link") || "";
+          const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+          url = nextMatch ? nextMatch[1] : null;
+        }
+      } catch(e) {
+        console.error(`Recuperación error shop ${shop.shop_domain}:`, e.message);
+      }
+    }
+    console.log(`✅ Sync recuperación completado`);
+  } catch(e) {
+    console.error("Sync recuperación error:", e.message);
+  }
+}
+
+// Ejecutar cada 24 horas, el día 1 se activa solo
+setInterval(syncRecuperacion, 24 * 60 * 60 * 1000);
+// También ejecutar al arrancar el servidor (por si reinició el día 1)
+syncRecuperacion();
 
 module.exports = router;
