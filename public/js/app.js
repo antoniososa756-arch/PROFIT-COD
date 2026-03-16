@@ -3069,6 +3069,10 @@ window.toggleAllMetricasBalance = toggleAllMetricasBalance;
 window.loadMetricasBalance = loadMetricasBalance;
 
 async function actualizarMetricasSinBalance() {
+  // Mostrar overlay de carga sobre las tarjetas
+  const grid = document.getElementById("statsGrid");
+  if (grid) { grid.style.opacity = "0.4"; grid.style.pointerEvents = "none"; grid.style.transition = "opacity 0.2s"; }
+
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
   const fmtD = d => d.toISOString().split("T")[0];
@@ -3137,7 +3141,13 @@ async function actualizarMetricasSinBalance() {
     setArc("donut-entregado", pctEntregado, offset); offset += pctEntregado;
     setArc("donut-rojo",      pctRojo,      offset); offset += pctRojo;
     setArc("donut-pendiente", pctPendiente, offset);
-  } catch(e) { console.error(e); }
+
+    // Restaurar tarjetas
+    if (grid) { grid.style.opacity = "1"; grid.style.pointerEvents = ""; }
+  } catch(e) {
+    console.error(e);
+    if (grid) { grid.style.opacity = "1"; grid.style.pointerEvents = ""; }
+  }
 }
 window.actualizarMetricasSinBalance = actualizarMetricasSinBalance;
 
