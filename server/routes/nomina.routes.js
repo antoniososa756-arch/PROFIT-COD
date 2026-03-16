@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const { verifyToken } = require("../middlewares/auth");
+const verifyToken = require("../middlewares/auth");
 
 // Crear tabla si no existe
 db.run(`CREATE TABLE IF NOT EXISTS nomina_trabajadores (
