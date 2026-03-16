@@ -153,8 +153,8 @@ const I18N = {
       tiendas: "Tiendas",
       productos: "Productos",
       pedidos: "Pedidos",
-      facturas: "Facturas",
-      informes: "Informes",
+      facturas: "Gastos",
+      informes: "Ingresos",
       ayuda: "Centro de ayuda",
       plan: "Plan de facturación",
     },
@@ -194,8 +194,8 @@ const I18N = {
       tiendas: "Stores",
       productos: "Products",
       pedidos: "Orders",
-      facturas: "Invoices",
-      informes: "Reports",
+      facturas: "Expenses",
+      informes: "Income",
       ayuda: "Help center",
       plan: "Billing plan",
     },
@@ -235,8 +235,8 @@ const I18N = {
       tiendas: "Lojas",
       productos: "Produtos",
       pedidos: "Pedidos",
-      facturas: "Faturas",
-      informes: "Relatórios",
+      facturas: "Gastos",
+      informes: "Receitas",
       ayuda: "Central de ajuda",
       plan: "Plano de faturação",
     },
@@ -276,8 +276,8 @@ const I18N = {
       tiendas: "Negozi",
       productos: "Prodotti",
       pedidos: "Ordini",
-      facturas: "Fatture",
-      informes: "Report",
+      facturas: "Spese",
+      informes: "Entrate",
       ayuda: "Centro assistenza",
       plan: "Piano di fatturazione",
     },
@@ -1228,7 +1228,6 @@ if (id === "facturas") {
     <div id="facturas-wrap">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
         ${[
-          ["reembolsos","Reembolsos"],
           ["gastos-ads","Gastos Ads"],
           ["gastos-fijos","Gastos Fijos"],
           ["gastos-tienda","Gastos por Tienda"],
@@ -1243,7 +1242,7 @@ if (id === "facturas") {
       <div id="facturas-content"></div>
     </div>
   `;
-  switchFacturasTab("reembolsos");
+  switchFacturasTab("gastos-ads");
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -1336,8 +1335,12 @@ if (id === "informes") {
   box.removeAttribute("style");
   box.innerHTML = `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
-      <button id="inf-tab-btn-ingresos" onclick="switchInformesTab('ingresos')"
+      <button id="inf-tab-btn-reembolsos" onclick="switchInformesTab('reembolsos')"
         style="padding:8px 18px;border-radius:8px;border:1px solid #16a34a;font-size:13px;font-weight:600;cursor:pointer;background:#16a34a;color:#fff;">
+        Reembolsos
+      </button>
+      <button id="inf-tab-btn-ingresos" onclick="switchInformesTab('ingresos')"
+        style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;">
         Ingresos
       </button>
       <button id="inf-tab-btn-balance" onclick="switchInformesTab('balance')"
