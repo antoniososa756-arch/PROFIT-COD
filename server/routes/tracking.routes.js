@@ -116,7 +116,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
   </soapenv:Body>
 </soapenv:Envelope>`;
 
-         console.log(`MRW: llamando API para ${order.tracking_number}...`);
+         
         const response = await fetch("https://trackingservice.mrw.es/TrackingService.svc/TrackingServices", {
           method: "POST",
           headers: {
@@ -128,13 +128,13 @@ router.post("/mrw-sync", auth, async (req, res) => {
 
         const xml = await response.text();
         // Guardar solo el primero para debug
-        global.__mrwDebugXml = { tracking: order.tracking_number, xml };
-        if (true) {
+        if (!global.__mrwDebugXml) {
+          global.__mrwDebugXml = { tracking: order.tracking_number, xml };
           console.log(`MRW DEBUG guardado para tracking: ${order.tracking_number}`);
         }
         const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
         if (!estadoMatch) { 
-          console.log(`MRW: no se encontró estado para ${order.tracking_number}`);
+          
           errors.push(order.tracking_number); 
           continue; 
         }
