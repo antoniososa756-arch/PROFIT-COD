@@ -3073,11 +3073,7 @@ function toggleAllMetricasBalance(checked) {
 window.toggleAllMetricasBalance = toggleAllMetricasBalance;
 window.loadMetricasBalance = loadMetricasBalance;
 
-async function actualizarMetricasSinBalance() {
-  // Mostrar overlay de carga sobre las tarjetas
-  const grid = document.getElementById("statsGrid");
-  if (grid) { grid.style.opacity = "0.4"; grid.style.pointerEvents = "none"; grid.style.transition = "opacity 0.2s"; }
-
+function actualizarMetricasSinBalance() {
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
   const fmtD = d => d.toISOString().split("T")[0];
@@ -3086,11 +3082,7 @@ async function actualizarMetricasSinBalance() {
   const shopFiltro = document.getElementById("met-bal-shop-filter-val")?.value || "";
 
   try {
-    const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const orders = await res.json();
-    let list = Array.isArray(orders) ? orders : [];
+    let list = Array.isArray(allOrders) ? [...allOrders] : [];
 
     list = list.filter(o => {
       if (!o.created_at) return true;
