@@ -97,7 +97,8 @@ router.post("/mrw-sync", auth, async (req, res) => {
         AND o.tracking_number IS NOT NULL
         AND o.tracking_number != ''
         AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
-    LIMIT 200
+    ORDER BY o.last_mrw_check ASC NULLS FIRST
+    LIMIT 170
     `, [req.user.id]);
 
     if (!orders.length) return res.json({ ok: true, updated: 0, total: 0 });
@@ -163,8 +164,10 @@ router.post("/mrw-sync", auth, async (req, res) => {
           updated++;
         }
         global.__mrwSyncStatus[req.user.id].done++;
+        await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]);
     } catch(e) {
         global.__mrwSyncStatus[req.user.id].done++;
+        await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]);
         console.error(`MRW fetch ERROR para ${order.tracking_number}:`, e.message);
         errors.push(order.tracking_number);
       }
