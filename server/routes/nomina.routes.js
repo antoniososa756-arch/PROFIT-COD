@@ -89,18 +89,3 @@ router.get("/total", verifyToken, async (req, res) => {
 });
 
 module.exports = router;
-```
-
----
-
-## Cambio 2 — `server/index.js`
-
-**Busca esta línea:**
-```
-app.use("/api/gastos-varios", require("./routes/gastos-varios.routes"));
-```
-
-**Reemplaza por:**
-```
-app.use("/api/gastos-varios", require("./routes/gastos-varios.routes"));
-app.use("/api/nomina", nominaRoutes);
