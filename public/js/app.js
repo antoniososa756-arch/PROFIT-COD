@@ -3899,7 +3899,7 @@ async function loadGastosVarios() {
     }
   } catch {}
 
-  // 4. Gastos varios guardados (Shopify)
+   // 4. Gastos varios guardados (Shopify)
   let gastosVarios = {};
   try {
     const r = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, {
@@ -3907,6 +3907,18 @@ async function loadGastosVarios() {
     });
     const rows = await r.json();
     if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; });
+  } catch {}
+
+  // Extras por tienda desde BD
+  gastosExtras = {};
+  try {
+    const extRows = await fetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    }).then(r => r.json());
+    if (Array.isArray(extRows)) extRows.forEach(r => {
+      if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = [];
+      gastosExtras[r.shop_domain].push(r);
+    });
   } catch {}
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
