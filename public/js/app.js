@@ -2558,11 +2558,11 @@ grid.innerHTML = stores.map(store => `
 // =========================
 async function submitShopifyConnection() {
   const shop = document.getElementById("pf-shop-domain")?.value.trim();
-  const apiKey = document.getElementById("pf-api-key")?.value.trim();
+  const accessToken = document.getElementById("pf-access-token")?.value.trim();
   const appSecret = document.getElementById("pf-app-secret")?.value.trim();
 
-  if (!shop || !apiKey || !appSecret) {
-    alert("Debes completar dominio, API Key y API Secret");
+  if (!shop || !accessToken || !appSecret) {
+    alert("Debes completar dominio, access token y app secret");
     return;
   }
 
@@ -2575,7 +2575,7 @@ async function submitShopifyConnection() {
       },
       body: JSON.stringify({
         shop,
-        apiKey,
+        accessToken,
         appSecret,
       }),
     });

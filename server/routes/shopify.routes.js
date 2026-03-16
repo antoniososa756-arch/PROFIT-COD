@@ -37,31 +37,17 @@ router.get("/callback", async (req, res) => {
 });
 
 router.post("/connect-token", auth, async (req, res) => {
-  let { shop, accessToken, appSecret, apiKey } = req.body;
+  let { shop, accessToken, appSecret } = req.body;
   const userId = req.user.id;
-  if (!shop || !appSecret) return res.status(400).json({ error: "Debes proporcionar dominio y app secret" });
+  if (!shop || !accessToken || !appSecret) return res.status(400).json({ error: "Debes proporcionar dominio, access token y app secret" });
 
   appSecret = appSecret.trim();
   shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
-
-  // Si viene apiKey pero no accessToken, generar token via Basic Auth
-  let finalToken = accessToken?.trim() || "";
-  if (!finalToken && apiKey) {
-    const basicAuth = Buffer.from(`${apiKey.trim()}:${appSecret}`).toString("base64");
-    const tokenCheck = await fetch(`https://${shop}/admin/api/2024-10/shop.json`, {
-      headers: { "Authorization": `Basic ${basicAuth}` }
-    });
-    if (!tokenCheck.ok) return res.status(401).json({ error: "API Key o Secret incorrectos" });
-    finalToken = `Basic ${basicAuth}`;
-  }
-  accessToken = finalToken;
+  accessToken = accessToken.trim();
 
   try {
-    const authHeader = accessToken.startsWith("Basic ") 
-      ? { "Authorization": accessToken }
-      : { "X-Shopify-Access-Token": accessToken };
     const response = await fetch(`https://${shop}/admin/api/2024-10/shop.json`, {
-      headers: authHeader,
+      headers: { "X-Shopify-Access-Token": accessToken },
     });
     if (!response.ok) return res.status(401).json({ error: "No autorizado por Shopify" });
 
@@ -90,12 +76,9 @@ router.post("/connect-token", auth, async (req, res) => {
     const webhookUrl = "https://profit-cod.onrender.com/api/shopify/webhooks/orders";
     const topics = ["orders/create", "orders/updated", "fulfillments/create", "fulfillments/update"];
     for (const topic of topics) {
-      const whHeaders = accessToken.startsWith("Basic ")
-        ? { "Content-Type": "application/json", "Authorization": accessToken }
-        : { "Content-Type": "application/json", "X-Shopify-Access-Token": accessToken };
-      await fetch(`https://${shop}/admin/api/2024-10/webhooks.json`, {
+       await fetch(`https://${shop}/admin/api/2024-10/webhooks.json`, {
         method: "POST",
-        headers: whHeaders,
+        headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": accessToken },
         body: JSON.stringify({ webhook: { topic, address: webhookUrl, format: "json" } }),
       });
     }
