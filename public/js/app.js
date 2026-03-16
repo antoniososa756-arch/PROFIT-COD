@@ -2794,8 +2794,14 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   const TARJETA_PCT  = 0.04;
 
   let stores = [], orders = [], manuales = [];
-  try { stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(stores)) stores = []; } catch {}
-  try { orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(orders)) orders = []; } catch {}
+  try {
+    [stores, orders] = await Promise.all([
+      fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()).catch(()=>[]),
+      fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()).catch(()=>[])
+    ]);
+    if (!Array.isArray(stores)) stores = [];
+    if (!Array.isArray(orders)) orders = [];
+  } catch {}
 
   // Filtrar por rango de fechas
   const ordersRango = orders.filter(o => {
@@ -2831,10 +2837,10 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   }
   if (mesesRango.length === 0) mesesRango.push(mesFrom);
 
-  // Gastos fijos — sumar todos los meses del rango
+  // Gastos fijos — sumar todos los meses del rango EN PARALELO
   let totalOtrosFijos = 0;
   let gastosVarios = {};
-  for (const mes of mesesRango) {
+  await Promise.all(mesesRango.map(async mes => {
     try {
       const gf = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
       if (Array.isArray(gf)) {
@@ -2845,12 +2851,11 @@ async function loadMetricasBalance(dateFrom, dateTo) {
       const rows = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
       if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = (gastosVarios[r.shop_domain]||0) + (r.shopify||0); });
     } catch {}
-  }
+  }));
   const fijoXTienda = totalOtrosFijos / numTiendas;
 
-  // Gastos extras por tienda (conceptos adicionales)
   let gastosExtrasMetricas = {};
-  for (const mes of mesesRango) {
+  await Promise.all(mesesRango.map(async mes => {
     try {
       const rows = await fetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
       if (Array.isArray(rows)) rows.forEach(r => {
@@ -2858,16 +2863,14 @@ async function loadMetricasBalance(dateFrom, dateTo) {
         gastosExtrasMetricas[r.shop_domain].push(r);
       });
     } catch {}
-  }
+  }));
 
-  // Nómina → dividir entre tiendas y meses del rango
   let nominaXTienda = 0;
   try {
-    for (const mes of mesesRango) {
-      const nomRes = await fetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-      const nomData = await nomRes.json();
-      nominaXTienda += (parseFloat(nomData.total) || 0) / numTiendas;
-    }
+    const nominaTotales = await Promise.all(mesesRango.map(mes =>
+      fetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()).catch(()=>({total:0}))
+    ));
+    nominaTotales.forEach(n => { nominaXTienda += (parseFloat(n.total) || 0) / numTiendas; });
   } catch {}
 
   // IVA desde base de datos
