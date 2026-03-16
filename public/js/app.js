@@ -2568,12 +2568,34 @@ grid.innerHTML = stores.map(store => `
 // =========================
 async function submitShopifyConnection() {
   let shop = document.getElementById("pf-shop-domain")?.value.trim();
+  const accessToken = document.getElementById("pf-access-token")?.value.trim();
+
   if (!shop) { alert("Introduce el dominio de la tienda"); return; }
+  if (!accessToken) { alert("Introduce el Access Token"); return; }
   if (!shop.includes(".myshopify.com")) shop = shop + ".myshopify.com";
 
-  // Redirigir al flujo OAuth de Shopify
-  const token = getActiveToken();
-  window.location.href = `${API_BASE}/api/shopify/connect?shop=${encodeURIComponent(shop)}&token=${encodeURIComponent(token)}`;
+  try {
+    const res = await fetch(`${API_BASE}/api/shopify/connect-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + getActiveToken(),
+      },
+      body: JSON.stringify({ shop, accessToken }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Error conectando tienda");
+      return;
+    }
+
+    closeShopifyStep4();
+    setSection("tiendas");
+  } catch (err) {
+    alert("Error de conexión");
+  }
 }
 
 function openShopifyConnect() {
