@@ -240,6 +240,7 @@ await pool.query(`
   `);
 
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active INTEGER NOT NULL DEFAULT 1`);
+await pool.query(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS tracking_number TEXT`);
 
   console.log("✅ PostgreSQL tablas inicializadas");
 }

@@ -5798,7 +5798,10 @@ async function loadSidebarReembolsos() {
     const estadosData = await estadosRes.json();
     const estadosMap = {};
     if (Array.isArray(estadosData)) {
-      estadosData.forEach(e => { estadosMap[e.order_id] = e.estado; });
+      estadosData.forEach(e => {
+  estadosMap[e.order_id] = e.estado;
+  if (e.tracking_number) estadosMap["trk_" + e.tracking_number.trim().toUpperCase()] = e.estado;
+});
     }
 
     const res = await fetch(`${API_BASE}/api/orders`, {
@@ -5812,7 +5815,8 @@ async function loadSidebarReembolsos() {
         const fin = (raw?.financial_status || raw?.payment_status || o.financial_status || o.payment_status || "").toLowerCase().trim();
         if (!(fin === "pending" || fin === "cod" || fin === "pendiente")) return false;
       } catch { return false; }
-      const estado = estadosMap[o.id] || "pendiente";
+      const trackingKey = "trk_" + (o.tracking_number || "").trim().toUpperCase();
+const estado = estadosMap[String(o.id)] || estadosMap[trackingKey] || (window.__reembolsosEstados || {})[String(o.id)] || "pendiente";
       return estado !== "cobrado";
     }) : [];
 
@@ -6040,7 +6044,7 @@ async function importarPagadosPDF(input) {
         await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-          body: JSON.stringify({ order_id: String(o.id), estado: "cobrado" })
+          body: JSON.stringify({ order_id: String(o.id), tracking_number: (o.tracking_number || "").trim().toUpperCase() || null, estado: "cobrado" })
         });
         if (!window.__reembolsosEstados) window.__reembolsosEstados = {};
         window.__reembolsosEstados[o.id] = "cobrado";

@@ -28,7 +28,7 @@ router.get("/", auth, async (req, res) => {
 router.get("/reembolso-estado", auth, async (req, res) => {
   try {
     const rows = await db.all(
-      "SELECT order_id, estado FROM reembolsos_estado WHERE user_id = $1",
+      "SELECT order_id, tracking_number, estado FROM reembolsos_estado WHERE user_id = $1",
       [req.user.id]
     );
     res.json(rows || []);
@@ -39,10 +39,10 @@ router.post("/reembolso-estado", auth, async (req, res) => {
   const { order_id, estado } = req.body;
   try {
     await db.run(
-     `INSERT INTO reembolsos_estado (user_id, order_id, estado)
-       VALUES ($1, $2, $3)
-       ON CONFLICT(user_id, order_id) DO UPDATE SET estado = EXCLUDED.estado`,
-      [req.user.id, order_id, estado]
+     `INSERT INTO reembolsos_estado (user_id, order_id, tracking_number, estado)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT(user_id, order_id) DO UPDATE SET estado = EXCLUDED.estado, tracking_number = EXCLUDED.tracking_number`,
+      [req.user.id, order_id, req.body.tracking_number || null, estado]
     );
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: "Error" }); }
