@@ -214,7 +214,7 @@ router.post("/sync-orders", auth, async (req, res) => {
     let total = 0;
     for (const shop of shops) {
       try {
-        let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=2025-02-01T00:00:00Z`;
+        let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=2026-02-01T00:00:00Z`;
 
         while (url) {
           const r = await fetch(url, {
