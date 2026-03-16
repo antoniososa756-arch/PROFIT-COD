@@ -99,6 +99,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
 
     for (const order of orders) {
       try {
+        await new Promise(r => setTimeout(r, 300));
         const soapBody = `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
   <soapenv:Header/>
