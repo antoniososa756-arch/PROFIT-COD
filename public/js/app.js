@@ -3097,7 +3097,7 @@ window.actualizarMetricasSinBalance = actualizarMetricasSinBalance;
 async function loadProductos() {
   const wrap = document.getElementById("productos-wrap");
   if (!wrap) return;
-  wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+  window.__showLoadingBar?.("Cargando productos...");
 
   try {
     const [resP, resS, resV] = await Promise.all([
@@ -3297,8 +3297,10 @@ async function loadProductos() {
   } catch(e) {
     wrap.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando productos</div>`;
   }
+  window.__hideLoadingBar?.();
 }
 window.loadProductos = loadProductos;
+
 window.loadMetricas = loadMetricas;     
 
 // =========================
@@ -3311,7 +3313,7 @@ async function loadAdsTable() {
   const wrap  = document.getElementById("ads-table-wrap");
   if (!wrap || !shop || !month || !year) return;
 
-  wrap.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+  window.__showLoadingBar?.("Cargando Gastos Ads...");
 
   const daysInMonth = new Date(year, month, 0).getDate();
   const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -3416,6 +3418,7 @@ async function loadAdsTable() {
       </tbody>
     </table>
   `;
+  window.__hideLoadingBar?.();
 }
 
 // =========================
@@ -4285,7 +4288,7 @@ async function loadInformesIngresos() {
         ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
       </select>
     </div>
-    <div id="inf-ingresos-wrap"><div class="muted" style="padding:16px;">Cargando...</div></div>
+    <div id="inf-ingresos-wrap"></div>
   `;
   await renderInformesIngresos();
 }
@@ -4531,7 +4534,7 @@ async function loadInformesBalance() {
         ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
       </select>
     </div>
-    <div id="inf-balance-wrap"><div class="muted" style="padding:16px;">Cargando...</div></div>
+    <div id="inf-balance-wrap"></div>
   `;
   await renderInformesBalance();
 }
@@ -6171,7 +6174,7 @@ async function cargarTabNuevaEntrada() {
 async function cargarTabHistorial() {
   const content = document.getElementById("entrada-content");
   if (!content) return;
-  content.innerHTML = `<div class="muted" style="padding:16px;">Cargando...</div>`;
+  window.__showLoadingBar?.("Cargando historial...");
 
   try {
     const rows = await fetch(`${API_BASE}/api/shopify/entradas-mercancia`, {
@@ -6217,6 +6220,7 @@ async function cargarTabHistorial() {
   } catch(e) {
     content.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando historial</div>`;
   }
+  window.__hideLoadingBar?.();
 }
 
 function filtrarProductosEntrada() {
