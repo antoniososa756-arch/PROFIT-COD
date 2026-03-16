@@ -26,7 +26,7 @@ router.get("/", auth, async (req, res) => {
 router.get("/reembolso-estado", auth, async (req, res) => {
   try {
     const rows = await db.all(
-      "SELECT order_id, estado FROM reembolsos_estado WHERE user_id = ?",
+      "SELECT order_id, estado FROM reembolsos_estado WHERE user_id = $1",
       [req.user.id]
     );
     res.json(rows || []);
@@ -37,8 +37,8 @@ router.post("/reembolso-estado", auth, async (req, res) => {
   const { order_id, estado } = req.body;
   try {
     await db.run(
-      `INSERT INTO reembolsos_estado (user_id, order_id, estado)
-       VALUES (?, ?, ?)
+     `INSERT INTO reembolsos_estado (user_id, order_id, estado)
+       VALUES ($1, $2, $3)
        ON CONFLICT(user_id, order_id) DO UPDATE SET estado = EXCLUDED.estado`,
       [req.user.id, order_id, estado]
     );
