@@ -1331,7 +1331,7 @@ if (id === "pedidos") {
         }).then(r => r.json());
         if (creds.integrated) await sincronizarMRW();
       } catch(e) {}
-    }, 7 * 60 * 1000);
+    }, 3 * 60 * 1000);
 
   closeAllDrops();
   closeSearchDrop();
