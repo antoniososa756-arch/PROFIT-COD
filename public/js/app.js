@@ -475,31 +475,7 @@ function escapeAttr(str) {
           : `<div class="notif-row"><strong>OK</strong><span>No hay notificaciones</span></div>`
       }
     `;
-  } list.map(n => {
-              const es7dias = n.id.startsWith("7dias__");
-              const orderId = n.id.split("_").pop();
-              return `
-                <div class="notif-row" style="cursor:pointer;">
-                  <div onclick="irAPedidoDesdeNotif('${escapeAttr(n.id)}')" style="flex:1;">
-                    <strong>${escapeHtml(n.title)}</strong>
-                    <span>${escapeHtml(n.text)}</span>
-                  </div>
-                  ${es7dias ? `
-                  <div style="margin-top:6px;display:flex;gap:6px;">
-                    <button onclick="marcarGestionado(event,'${escapeAttr(n.id)}')"
-                      style="font-size:11px;padding:3px 8px;border:1px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#16a34a;cursor:pointer;font-family:inherit;">
-                      ✓ Gestionado
-                    </button>
-                  </div>` : ""}
-                </div>`;
-            }).join("")
-          : `<div class="notif-row"><strong>OK</strong><span>No hay notificaciones</span></div>`
-      }
-      <div class="drop-item" onclick="clearNotif()" style="justify-content:center;">
-        ${d.ui.clearNoti}
-      </div>
-    `;
-  }
+   
 
   function updateNotifBadge(count) {
     const badge = document.querySelector(".notify-badge");
