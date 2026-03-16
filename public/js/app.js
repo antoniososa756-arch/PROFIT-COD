@@ -3889,7 +3889,7 @@ async function loadGastosVarios() {
   const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   if (label) label.textContent = `📅 Trabajando en: ${monthNames[parseInt(month)-1].toUpperCase()} ${year}`;
 
-  content.innerHTML = `<div style="padding:16px;color:#6b7280;">Cargando...</div>`;
+  window.__showLoadingBar?.("Cargando gastos...");
 // Cargar pedidos al cache global
   try {
     const ordersRes = await fetch(`${API_BASE}/api/orders`, {
@@ -4168,6 +4168,7 @@ async function loadGastosVarios() {
       ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
     </div>
   `;
+  window.__hideLoadingBar?.();
 }
 
 async function saveGastoVarioShopify(input) {
