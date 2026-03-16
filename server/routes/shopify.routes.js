@@ -4,7 +4,26 @@ const crypto = require("crypto");
 const db = require("../db");
 const router = express.Router();
 
-router.get("/connect", auth, (req, res) => {
+router.get("/connect", async (req, res) => {
+  let { shop, token } = req.query;
+  if (!shop || !token) return res.status(400).send("Faltan parámetros");
+  
+  const jwt = require("jsonwebtoken");
+  let user;
+  try {
+    user = jwt.verify(token, process.env.JWT_SECRET);
+  } catch(e) {
+    return res.status(401).send("Token inválido");
+  }
+
+  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
+  if (!shop.includes(".myshopify.com")) shop = shop + ".myshopify.com";
+  
+  const state = Buffer.from(JSON.stringify({ userId: user.id, shop })).toString("base64");
+  const redirectUri = process.env.SHOPIFY_REDIRECT_URI;
+  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=${process.env.SHOPIFY_SCOPES}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+  res.redirect(installUrl);
+});
   let { shop } = req.query;
   if (!shop) return res.status(400).send("Falta parámetro shop");
   shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
