@@ -4071,7 +4071,7 @@ async function loadGastosVarios() {
             </tr>`).join("")}
             <tr style="background:#eff6ff;">
               <td colspan="2" style="padding:6px 14px;border:1px solid #bfdbfe;">
-                <button onclick="addGastoExtra('${store.domain}')"
+                <button onclick="addGastoExtra('${store.domain}','${mes}')"
                   style="background:none;border:none;cursor:pointer;color:#2563eb;font-size:12px;font-weight:600;padding:0;font-family:inherit;">
                   + Añadir concepto
                 </button>
@@ -5394,10 +5394,12 @@ window.selectFilterShop = selectFilterShop;
 window.applyFilters = applyFilters;
 window.clearFilters = clearFilters;
 
-async function addGastoExtra(shop) {
-  const mes = document.getElementById("gv-month-sel") 
-    ? `${document.getElementById("gv-year-sel").value}-${String(document.getElementById("gv-month-sel").value).padStart(2,"0")}`
-    : `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}`;
+async function addGastoExtra(shop, mes) {
+  if (!mes) {
+    const m = document.getElementById("gv-month-sel")?.value || (new Date().getMonth()+1);
+    const y = document.getElementById("gv-year-sel")?.value || new Date().getFullYear();
+    mes = `${y}-${String(m).padStart(2,"0")}`;
+  }
   try {
     await fetch(`${API_BASE}/api/gastos-varios/extras`, {
       method: "POST",
