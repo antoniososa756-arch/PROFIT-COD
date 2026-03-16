@@ -29,6 +29,9 @@ router.use(async (req, res, next) => {
       )
     `);
   } catch(e) {}
+  try {
+    await req.db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);
+  } catch(e) {}
   next();
 });
 
