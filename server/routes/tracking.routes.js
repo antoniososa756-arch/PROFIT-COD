@@ -89,6 +89,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
         AND o.tracking_number IS NOT NULL
         AND o.tracking_number != ''
         AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
+    LIMIT 100
     `, [req.user.id]);
 
     if (!orders.length) return res.json({ ok: true, updated: 0, total: 0 });
