@@ -1350,7 +1350,7 @@ if (id === "informes") {
     </div>
     <div id="informes-content"></div>
   `;
-  switchInformesTab("ingresos");
+  switchInformesTab("reembolsos");
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -4088,7 +4088,7 @@ window.saveGastoVarioShopify = saveGastoVarioShopify;
 // INFORMES
 // =========================
 async function switchInformesTab(tab) {
-  ["ingresos","balance"].forEach(k => {
+  ["reembolsos","ingresos","balance"].forEach(k => {
     const btn = document.getElementById(`inf-tab-btn-${k}`);
     if (!btn) return;
     if (k === tab) {
@@ -4099,6 +4099,7 @@ async function switchInformesTab(tab) {
   });
   const content = document.getElementById("informes-content");
   if (!content) return;
+  if (tab === "reembolsos") { loadReembolsos(); return; }
   if (tab === "ingresos") await loadInformesIngresos();
   else await loadInformesBalance();
 }
