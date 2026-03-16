@@ -117,7 +117,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
 </soapenv:Envelope>`;
 
          console.log(`MRW: llamando API para ${order.tracking_number}...`);
-        const response = await fetch("http://clientesbalanceo2.mrw.es/TrackingServices/TrackingService.svc", {
+        const response = await fetch("https://trackingservice.mrw.es/TrackingServices/TrackingService.svc", {
           method: "POST",
           headers: {
             "Content-Type": "text/xml; charset=utf-8",
