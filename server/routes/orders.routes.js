@@ -16,7 +16,8 @@ router.get("/", auth, async (req, res) => {
        ORDER BY o.created_at DESC`,
       [userId]
     );
-    console.log(`Orders query: userId=${userId}, filas=${rows?.length}`);
+    const shopIds = await db.all(`SELECT id FROM shops WHERE user_id = $1`, [userId]);
+    console.log(`Orders query: userId=${userId}, shopIds=${JSON.stringify(shopIds)}, filas=${rows?.length}`);
     res.json(rows || []);
   } catch (e) {
     console.error("Orders fetch error:", e);
