@@ -201,7 +201,7 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
 });
 
 // ── DEBUG temporal: ver XML de MRW ───────────────────────────
-router.get("/mrw-debug-xml", auth, async (req, res) => {
+router.get("/mrw-debug-xml", async (req, res) => {
   res.json(global.__mrwDebugXml || { msg: "Aún no hay datos, sincroniza primero" });
 });
 
