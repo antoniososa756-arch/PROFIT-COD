@@ -1284,6 +1284,17 @@ if (id === "pedidos") {
       syncAndRefreshOrders();
     }, 5 * 60 * 1000);
 
+    // Auto-sincronizar MRW cada 15 minutos si está integrado
+    if (window.__mrwInterval) clearInterval(window.__mrwInterval);
+    window.__mrwInterval = setInterval(async () => {
+      try {
+        const creds = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
+          headers: { Authorization: "Bearer " + getActiveToken() }
+        }).then(r => r.json());
+        if (creds.integrated) await sincronizarMRW();
+      } catch(e) {}
+    }, 7 * 60 * 1000);
+
   closeAllDrops();
   closeSearchDrop();
   return;
