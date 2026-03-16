@@ -12,7 +12,7 @@ router.get("/", auth, async (req, res) => {
         o.raw_json, s.shop_domain
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE o.shop_id IN (SELECT id FROM shops WHERE user_id = ?)
+       WHERE o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
        ORDER BY o.created_at DESC`,
       [userId]
     );
