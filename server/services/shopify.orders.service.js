@@ -8,7 +8,7 @@ async function importOrdersFromShopify(db, shop) {
   const { id: shopId, shop_domain, access_token } = shop;
 
   const res = await fetch(
-    `https://${shop_domain}/admin/api/2026-01/orders.json?status=any&limit=250`,
+    `https://${shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=2025-02-01T00:00:00Z`,
     {
       headers: {
         "X-Shopify-Access-Token": access_token,
