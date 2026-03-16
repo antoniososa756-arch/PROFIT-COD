@@ -5303,8 +5303,11 @@ async function syncAndRefreshOrders() {
     });
     const data = await res.json();
     window.__hideLoadingBar?.();
-    await fetchOrders();
-    await checkNotificaciones();
+    // Esperar 8 segundos para que el background sync termine antes de recargar
+    setTimeout(async () => {
+      await fetchOrders();
+      await checkNotificaciones();
+    }, 8000);
     // Auto-sincronizar MRW si está integrado
     try {
       const creds = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
