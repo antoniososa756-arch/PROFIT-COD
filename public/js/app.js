@@ -31,32 +31,47 @@ if (location.pathname.includes("login")) {
   }
 
   // Indicador de carga global
+  // Sistema de indicador de estado no bloqueante
+  window.__loadingCount = 0;
+
   window.__showLoadingBar = function(msg) {
-    let bar = document.getElementById("__loading-bar");
-    if (!bar) {
-      bar = document.createElement("div");
-      bar.id = "__loading-bar";
-      bar.style.cssText = `
-        position:fixed;top:0;left:0;right:0;z-index:99999;
-        background:#16a34a;color:#fff;
-        font-size:13px;font-weight:600;font-family:inherit;
-        padding:8px 16px;text-align:center;
-        display:flex;align-items:center;justify-content:center;gap:8px;
-        box-shadow:0 2px 8px rgba(0,0,0,0.15);
+    window.__loadingCount = (window.__loadingCount || 0) + 1;
+    let ind = document.getElementById("__status-indicator");
+    if (!ind) {
+      ind = document.createElement("div");
+      ind.id = "__status-indicator";
+      ind.style.cssText = `
+        position:fixed;bottom:20px;right:20px;z-index:99999;
+        background:#1f2937;color:#fff;
+        font-size:12px;font-weight:500;font-family:inherit;
+        padding:8px 14px;border-radius:20px;
+        display:flex;align-items:center;gap:7px;
+        box-shadow:0 4px 12px rgba(0,0,0,0.2);
+        opacity:0;transition:opacity 0.2s ease;
+        pointer-events:none;
       `;
-      document.body.appendChild(bar);
+      document.body.appendChild(ind);
+      setTimeout(() => { if (ind) ind.style.opacity = "1"; }, 10);
     }
-    bar.innerHTML = `<span style="font-size:16px;animation:spin 1s linear infinite;display:inline-block;">⏳</span> ${msg || "Actualizando..."}`;
     if (!document.getElementById("__spin-style")) {
       const s = document.createElement("style");
       s.id = "__spin-style";
       s.textContent = `@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`;
       document.head.appendChild(s);
     }
+    ind.innerHTML = `<span style="display:inline-block;animation:spin 0.8s linear infinite;font-size:13px;">⏳</span><span>${msg || "Guardando..."}</span>`;
   };
+
   window.__hideLoadingBar = function() {
-    const bar = document.getElementById("__loading-bar");
-    if (bar) bar.remove();
+    window.__loadingCount = Math.max(0, (window.__loadingCount || 1) - 1);
+    if (window.__loadingCount > 0) return;
+    const ind = document.getElementById("__status-indicator");
+    if (!ind) return;
+    ind.innerHTML = `<span style="font-size:13px;">✅</span><span>Guardado</span>`;
+    setTimeout(() => {
+      ind.style.opacity = "0";
+      setTimeout(() => { if (ind) ind.remove(); }, 300);
+    }, 1200);
   };
 
    // Detectar servidor caído (Render desplegando)
@@ -2194,16 +2209,17 @@ async function saveNominaPago(input) {
   const mes = input.dataset.mes;
   const valor = parseFloat(input.value) || 0;
   try {
+    window.__showLoadingBar?.("Guardando nómina...");
     await fetch(`${API_BASE}/api/nomina/pagos`, {
       method: "PUT",
       headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ trabajador_id, mes, valor })
     });
+    window.__hideLoadingBar?.();
     input.style.borderColor = "#16a34a";
     setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
-    // Refrescar el total sin recargar todo
     await loadNominaData();
-  } catch(e) { console.error(e); }
+  } catch(e) { window.__hideLoadingBar?.(); console.error(e); }
 }
 
 async function deleteTrabajador(id) {
@@ -3709,6 +3725,7 @@ async function updateGastoFijoValor(input) {
   const id    = input.dataset.id;
   const mes   = input.dataset.mes;
   const valor = parseFloat(input.value)||0;
+  window.__showLoadingBar?.("Guardando...");
   try {
     const r = await fetch(`${API_BASE}/api/gastos-fijos/${id}/valor`, {
       method: "PUT",
@@ -3716,8 +3733,9 @@ async function updateGastoFijoValor(input) {
       body: JSON.stringify({ mes, valor })
     });
     const data = await r.json();
+    window.__hideLoadingBar?.();
     if (!data.ok) console.error("Error guardando valor:", data);
-  } catch(e) { console.error(e); }
+  } catch(e) { window.__hideLoadingBar?.(); console.error(e); }
 }
 
 async function updateGastoFijo(input) {
@@ -4157,13 +4175,15 @@ async function saveGastoVarioShopify(input) {
   const mes     = input.dataset.mes;
   const shopify = parseFloat(input.value)||0;
   try {
+    window.__showLoadingBar?.("Guardando Shopify...");
     await fetch(`${API_BASE}/api/gastos-varios/shopify`, {
       method: "PUT",
       headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ shop_domain: shop, mes, shopify })
     });
+    window.__hideLoadingBar?.();
     await loadGastosVarios();
-  } catch(e) { console.error(e); }
+  } catch(e) { window.__hideLoadingBar?.(); console.error(e); }
 }
 
 window.loadGastosVarios      = loadGastosVarios;
