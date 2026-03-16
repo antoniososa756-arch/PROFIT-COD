@@ -6506,17 +6506,51 @@ async function guardarCredencialesMRW() {
   } catch(e) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = "Error de conexión"; } }
 }
 
+function mostrarBarraProgresoMRW(done, total) {
+  let bar = document.getElementById("mrw-progress-bar");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "mrw-progress-bar";
+    bar.style.cssText = `position:fixed;bottom:20px;right:20px;background:#1e293b;color:#fff;padding:14px 20px;border-radius:12px;font-size:13px;z-index:9999;min-width:260px;box-shadow:0 4px 20px rgba(0,0,0,0.3);`;
+    document.body.appendChild(bar);
+  }
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  bar.innerHTML = `
+    <div style="font-weight:700;margin-bottom:8px;">🔄 Sincronizando MRW...</div>
+    <div style="background:#374151;border-radius:6px;overflow:hidden;height:8px;margin-bottom:6px;">
+      <div style="background:#16a34a;height:8px;width:${pct}%;transition:width 0.3s;border-radius:6px;"></div>
+    </div>
+    <div style="color:#9ca3af;font-size:12px;">${done} de ${total} pedidos (${pct}%)</div>
+  `;
+}
+
+function ocultarBarraProgresoMRW() {
+  const bar = document.getElementById("mrw-progress-bar");
+  if (bar) bar.remove();
+}
+
 async function sincronizarMRW() {
   const btn = document.getElementById("btn-mrw-sync");
   if (btn) { btn.disabled = true; btn.textContent = "⏳ Sincronizando..."; }
-  window.__showLoadingBar?.("Consultando estados MRW...");
+
+  // Iniciar polling de progreso
+  let pollingInterval = setInterval(async () => {
+    try {
+      const status = await fetch(`${API_BASE}/api/tracking/mrw-sync-status`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      }).then(r => r.json());
+      if (status.total > 1) mostrarBarraProgresoMRW(status.done, status.total);
+    } catch(e) {}
+  }, 800);
+
   try {
     const res = await fetch(`${API_BASE}/api/tracking/mrw-sync`, {
       method: "POST",
       headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const data = await res.json();
-    window.__hideLoadingBar?.();
+    clearInterval(pollingInterval);
+    ocultarBarraProgresoMRW();
     if (data.ok) {
       showToast("✅ MRW sincronizado", `${data.updated} pedidos actualizados de ${data.total} consultados`, "#16a34a");
       await fetchOrders();
@@ -6524,7 +6558,8 @@ async function sincronizarMRW() {
       showToast("❌ Error MRW", data.error || "Error desconocido", "#dc2626");
     }
   } catch(e) {
-    window.__hideLoadingBar?.();
+    clearInterval(pollingInterval);
+    ocultarBarraProgresoMRW();
     showToast("❌ Error", "No se pudo conectar con MRW", "#dc2626");
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = "🔄 Sincronizar MRW"; }

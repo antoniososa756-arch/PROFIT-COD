@@ -73,6 +73,14 @@ router.delete("/mrw-credentials", auth, async (req, res) => {
 });
 
 // ── POST sincronizar estados vía API MRW SOAP ─────────────────
+// Estado global de sync MRW por usuario
+if (!global.__mrwSyncStatus) global.__mrwSyncStatus = {};
+
+router.get("/mrw-sync-status", auth, async (req, res) => {
+  const status = global.__mrwSyncStatus[req.user.id] || { running: false, total: 0, done: 0 };
+  res.json(status);
+});
+
 router.post("/mrw-sync", auth, async (req, res) => {
   try {
     const creds = await req.db.get(
@@ -96,6 +104,8 @@ router.post("/mrw-sync", auth, async (req, res) => {
 
     let updated = 0;
     const errors = [];
+
+    global.__mrwSyncStatus[req.user.id] = { running: true, total: orders.length, done: 0 };
 
     for (const order of orders) {
       try {
@@ -152,12 +162,15 @@ router.post("/mrw-sync", auth, async (req, res) => {
           );
           updated++;
         }
+        global.__mrwSyncStatus[req.user.id].done++;
     } catch(e) {
+        global.__mrwSyncStatus[req.user.id].done++;
         console.error(`MRW fetch ERROR para ${order.tracking_number}:`, e.message);
         errors.push(order.tracking_number);
       }
     }
 
+    global.__mrwSyncStatus[req.user.id] = { running: false, total: orders.length, done: orders.length };
     res.json({ ok: true, updated, total: orders.length, errors });
   } catch(e) {
     res.status(500).json({ error: e.message });
