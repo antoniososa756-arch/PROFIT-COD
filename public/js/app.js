@@ -6429,7 +6429,7 @@ function abrirModalMRW() {
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div>
           <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Login SAGEC *</label>
-          <input id="mrw-login" type="text" placeholder="Ej: CD04700Fanomi"
+          <input id="mrw-login" type="text" placeholder="Ej: CD01234Ejemplo"
             style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
         </div>
         <div>
@@ -6440,7 +6440,7 @@ function abrirModalMRW() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Franquicia</label>
-            <input id="mrw-franquicia" type="text" placeholder="Ej: 04700"
+            <input id="mrw-franquicia" type="text" placeholder="Ej: 01234"
               style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
           </div>
           <div>
