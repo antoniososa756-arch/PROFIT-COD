@@ -81,7 +81,6 @@ router.post("/mrw-sync", auth, async (req, res) => {
     );
     if (!creds) return res.status(400).json({ error: "MRW no integrado" });
 
-    // Obtener pedidos con tracking pendientes de actualizar
     const orders = await req.db.all(`
       SELECT o.id, o.tracking_number, o.fulfillment_status
       FROM orders o
@@ -127,8 +126,6 @@ router.post("/mrw-sync", auth, async (req, res) => {
         });
 
         const xml = await response.text();
-
-        // Extraer estado de la respuesta XML
         const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
         if (!estadoMatch) { errors.push(order.tracking_number); continue; }
 
@@ -153,10 +150,12 @@ router.post("/mrw-sync", auth, async (req, res) => {
   }
 });
 
+// ── Ruta legacy ───────────────────────────────────────────────
 router.post("/credentials", auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── POST sync desde Excel MRW ─────────────────────────────────
 router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No se recibió archivo" });
@@ -178,4 +177,17 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
       else if (estadoRaw.includes("recoger en franquicia") || estadoRaw.includes("franquicia destino")) status = "franquicia";
 
       const result = await req.db.run(
-        `UPDATE orders SET fulfillment_status = $1 WHERE tracking_number = $2 AND shop_id IN (SELECT id FROM
+        `UPDATE orders SET fulfillment_status = $1 WHERE tracking_number = $2 AND shop_id IN (SELECT id FROM shops WHERE user_id = $3)`,
+        [status, tracking, req.user.id]
+      );
+      if (result.rowCount > 0) updated++;
+    }
+
+    res.json({ ok: true, updated, total: rows.length });
+  } catch (err) {
+    console.error("Excel sync error:", err);
+    res.status(500).json({ error: "Error procesando Excel" });
+  }
+});
+
+module.exports = router;
