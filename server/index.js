@@ -47,6 +47,7 @@ app.use("/api/ads", require("./routes/ads.routes"));
 app.use("/api/gastos-fijos", require("./routes/gastos-fijos.routes"));
 app.use("/api/impuestos", require("./routes/impuestos.routes"));
 app.use("/api/gastos-varios", require("./routes/gastos-varios.routes"));
+app.use("/api/nomina", nominaRoutes);
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));

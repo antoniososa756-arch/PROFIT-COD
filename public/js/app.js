@@ -2024,6 +2024,12 @@ function switchFacturasTab(key) {
     return;
   }
 
+  if (key === "nomina") {
+    content.innerHTML = `<div id="nomina-wrap">Cargando...</div>`;
+    loadNomina();
+    return;
+  }
+
   content.innerHTML = `
     <div class="card" style="padding:24px;">
       <div style="font-weight:600;margin-bottom:6px;">${key.charAt(0).toUpperCase()+key.slice(1)}</div>
@@ -2032,6 +2038,154 @@ function switchFacturasTab(key) {
   `;
 }
 window.switchFacturasTab = switchFacturasTab;
+
+// =========================
+// NÓMINA
+// =========================
+async function loadNomina() {
+  const wrap = document.getElementById("nomina-wrap");
+  if (!wrap) return;
+
+  const now = new Date();
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+      <select id="nom-month-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
+      </select>
+      <select id="nom-year-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
+      </select>
+      <button onclick="loadNominaData()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
+      <button onclick="openAddTrabajador()" style="padding:7px 16px;background:#fff;color:#16a34a;border:1px solid #16a34a;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">+ Trabajador</button>
+    </div>
+    <div id="nomina-content">Cargando...</div>
+  `;
+  await loadNominaData();
+}
+
+async function loadNominaData() {
+  const content = document.getElementById("nomina-content");
+  if (!content) return;
+
+  const month = parseInt(document.getElementById("nom-month-sel")?.value || new Date().getMonth()+1);
+  const year  = parseInt(document.getElementById("nom-year-sel")?.value  || new Date().getFullYear());
+  const mes   = `${year}-${String(month).padStart(2,"0")}`;
+
+  try {
+    const [trabRes, pagosRes] = await Promise.all([
+      fetch(`${API_BASE}/api/nomina/trabajadores`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
+      fetch(`${API_BASE}/api/nomina/pagos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+    ]);
+    const trabajadores = await trabRes.json();
+    const pagos = await pagosRes.json();
+
+    if (!Array.isArray(trabajadores) || trabajadores.length === 0) {
+      content.innerHTML = `<div style="padding:24px;color:#6b7280;font-size:14px;">No hay trabajadores. Pulsa <strong>+ Trabajador</strong> para añadir.</div>`;
+      return;
+    }
+
+    const pagosMap = {};
+    if (Array.isArray(pagos)) pagos.forEach(p => { pagosMap[p.trabajador_id] = p.valor || 0; });
+
+    const fmt = n => (parseFloat(n)||0).toFixed(2);
+    const thS = `padding:11px 14px;border:1px solid #d1fae5;font-weight:600;color:#fff;text-align:`;
+    const inp = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
+
+    const totalNomina = trabajadores.reduce((s,t) => s + (parseFloat(pagosMap[t.id])||0), 0);
+
+    content.innerHTML = `
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#16a34a;">
+              <th style="${thS}left;">TRABAJADOR</th>
+              <th style="${thS}right;">PAGO DEL MES (€)</th>
+              <th style="${thS}center;">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${trabajadores.map(t => `
+              <tr>
+                <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">${escapeHtml(t.nombre)}</td>
+                <td style="padding:8px 14px;border:1px solid #e5e7eb;">
+                  <input type="number" step="0.01" min="0"
+                    value="${fmt(pagosMap[t.id]||0)}"
+                    data-id="${t.id}" data-mes="${mes}"
+                    onchange="saveNominaPago(this)"
+                    style="${inp}text-align:right;">
+                </td>
+                <td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:center;">
+                  <button onclick="deleteTrabajador(${t.id})"
+                    style="padding:4px 12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:12px;cursor:pointer;">
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f0fdf4;">
+              <td style="padding:11px 14px;border:1px solid #e5e7eb;font-weight:700;">TOTAL NÓMINA</td>
+              <td style="padding:11px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalNomina)} €</td>
+              <td style="border:1px solid #e5e7eb;"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    `;
+  } catch(e) {
+    content.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando nómina: ${e.message}</div>`;
+  }
+}
+
+async function saveNominaPago(input) {
+  const trabajador_id = parseInt(input.dataset.id);
+  const mes = input.dataset.mes;
+  const valor = parseFloat(input.value) || 0;
+  try {
+    await fetch(`${API_BASE}/api/nomina/pagos`, {
+      method: "PUT",
+      headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
+      body: JSON.stringify({ trabajador_id, mes, valor })
+    });
+    input.style.borderColor = "#16a34a";
+    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
+    // Refrescar el total sin recargar todo
+    await loadNominaData();
+  } catch(e) { console.error(e); }
+}
+
+async function deleteTrabajador(id) {
+  if (!confirm("¿Eliminar trabajador y todos sus pagos?")) return;
+  try {
+    await fetch(`${API_BASE}/api/nomina/trabajadores/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    await loadNominaData();
+  } catch(e) { console.error(e); }
+}
+
+function openAddTrabajador() {
+  const nombre = prompt("Nombre del trabajador:");
+  if (!nombre || !nombre.trim()) return;
+  fetch(`${API_BASE}/api/nomina/trabajadores`, {
+    method: "POST",
+    headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
+    body: JSON.stringify({ nombre: nombre.trim() })
+  }).then(r => r.json()).then(data => {
+    if (data.id) loadNominaData();
+    else alert("Error: " + (data.error||"desconocido"));
+  }).catch(e => alert("Error: " + e.message));
+}
+
+window.loadNomina        = loadNomina;
+window.loadNominaData    = loadNominaData;
+window.saveNominaPago    = saveNominaPago;
+window.deleteTrabajador  = deleteTrabajador;
+window.openAddTrabajador = openAddTrabajador;
 
 // Exponer funciones usadas por onclick
 window.loadApp = loadApp;
