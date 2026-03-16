@@ -2817,6 +2817,18 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   }
   const fijoXTienda = totalOtrosFijos / numTiendas;
 
+  // Gastos extras por tienda (conceptos adicionales)
+  let gastosExtrasMetricas = {};
+  for (const mes of mesesRango) {
+    try {
+      const rows = await fetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
+      if (Array.isArray(rows)) rows.forEach(r => {
+        if (!gastosExtrasMetricas[r.shop_domain]) gastosExtrasMetricas[r.shop_domain] = [];
+        gastosExtrasMetricas[r.shop_domain].push(r);
+      });
+    } catch {}
+  }
+
   // Nómina → dividir entre tiendas y meses del rango
   let nominaXTienda = 0;
   try {
@@ -2898,7 +2910,8 @@ async function loadMetricasBalance(dateFrom, dateTo) {
      const mrw      = precioMRW      * (envTienda.length + devTienda);
     const logistica = precioLogistica * envTienda.length;
     const ivaTotal = pedEnt.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
-    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + nominaXTienda + ivaTotal;
+    const extrasTotal = (gastosExtrasMetricas[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
     const resultado = totalIngreso - totalGasto;
     return { 
       domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado, ivaTotal, ivaPorcentaje,
