@@ -163,8 +163,9 @@ async function initDB() {
   `);
 
   // Añadir columnas nuevas si no existen (migraciones seguras)
-  try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS financial_status TEXT`); } catch(e) {}
+try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS financial_status TEXT`); } catch(e) {}
   try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS raw_json TEXT`); } catch(e) {}
+  try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shop_domain TEXT`); } catch(e) {}
 
 await pool.query(`
     CREATE TABLE IF NOT EXISTS productos_stock (
