@@ -17,6 +17,7 @@ const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/users");
 const metricsRoutes = require("./routes/metrics.routes");
 const ordersRoutes = require("./routes/orders.routes");
+const nominaRoutes = require("./routes/nomina.routes");
 
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
@@ -46,6 +47,7 @@ app.use("/api/ads", require("./routes/ads.routes"));
 app.use("/api/gastos-fijos", require("./routes/gastos-fijos.routes"));
 app.use("/api/impuestos", require("./routes/impuestos.routes"));
 app.use("/api/gastos-varios", require("./routes/gastos-varios.routes"));
+const nominaRoutes = require("./routes/nomina.routes");
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));
