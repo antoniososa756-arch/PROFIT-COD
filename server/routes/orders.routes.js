@@ -16,6 +16,7 @@ router.get("/", auth, async (req, res) => {
        ORDER BY o.created_at DESC`,
       [userId]
     );
+    console.log(`Orders query: userId=${userId}, filas=${rows?.length}`);
     res.json(rows || []);
   } catch (e) {
     console.error("Orders fetch error:", e);
