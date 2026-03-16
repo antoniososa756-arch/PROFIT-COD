@@ -7,7 +7,7 @@ const router = express.Router();
 router.get("/connect", async (req, res) => {
   let { shop, token } = req.query;
   if (!shop || !token) return res.status(400).send("Faltan parámetros");
-  
+
   const jwt = require("jsonwebtoken");
   let user;
   try {
@@ -18,17 +18,8 @@ router.get("/connect", async (req, res) => {
 
   shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
   if (!shop.includes(".myshopify.com")) shop = shop + ".myshopify.com";
-  
+
   const state = Buffer.from(JSON.stringify({ userId: user.id, shop })).toString("base64");
-  const redirectUri = process.env.SHOPIFY_REDIRECT_URI;
-  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=${process.env.SHOPIFY_SCOPES}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
-  res.redirect(installUrl);
-});
-  let { shop } = req.query;
-  if (!shop) return res.status(400).send("Falta parámetro shop");
-  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
-  if (!shop.includes(".myshopify.com")) shop = shop + ".myshopify.com";
-  const state = Buffer.from(JSON.stringify({ userId: req.user.id, shop })).toString("base64");
   const redirectUri = process.env.SHOPIFY_REDIRECT_URI;
   const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=${process.env.SHOPIFY_SCOPES}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
   res.redirect(installUrl);
@@ -40,14 +31,12 @@ router.get("/callback", async (req, res) => {
 
   shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
 
-  // Verificar HMAC
   const query = { ...req.query };
   delete query.hmac; delete query.signature;
   const message = Object.keys(query).sort().map(k => `${k}=${query[k]}`).join("&");
   const generatedHmac = crypto.createHmac("sha256", process.env.SHOPIFY_API_SECRET).update(message).digest("hex");
   if (generatedHmac !== hmac) return res.redirect("/?shopify=error&msg=hmac");
 
-  // Recuperar userId del state
   let userId;
   try {
     const decoded = JSON.parse(Buffer.from(state, "base64").toString("utf8"));
@@ -57,7 +46,6 @@ router.get("/callback", async (req, res) => {
   }
 
   try {
-    // Obtener access token
     const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -69,14 +57,12 @@ router.get("/callback", async (req, res) => {
     const accessToken = tokenData.access_token;
     const appSecret = process.env.SHOPIFY_API_SECRET;
 
-    // Obtener info de la tienda
     const shopRes = await fetch(`https://${shop}/admin/api/2024-10/shop.json`, {
       headers: { "X-Shopify-Access-Token": accessToken }
     });
     const shopData = await shopRes.json();
     const shopName = shopData.shop?.name || shop;
 
-    // Guardar en BD
     await db.run(
       `INSERT INTO shops (user_id, shop_domain, shop_name, access_token, app_secret, status, last_sync)
        VALUES ($1, $2, $3, $4, $5, 'active', now()::text)
@@ -89,7 +75,6 @@ router.get("/callback", async (req, res) => {
       [userId, shop, shopName, accessToken, appSecret]
     );
 
-    // Registrar webhooks
     const webhookUrl = `${process.env.APP_URL}/api/shopify/webhooks/orders`;
     const topics = ["orders/create", "orders/updated", "fulfillments/create", "fulfillments/update"];
     for (const topic of topics) {
@@ -127,7 +112,7 @@ router.post("/connect-token", auth, async (req, res) => {
 
     await db.run(
       `INSERT INTO shops (user_id, shop_domain, access_token, app_secret, status, last_sync)
-       VALUES (?, ?, ?, ?, 'active', now()::text)
+       VALUES ($1, $2, $3, $4, 'active', now()::text)
        ON CONFLICT(user_id, shop_domain) DO UPDATE SET
          access_token = EXCLUDED.access_token,
          app_secret = EXCLUDED.app_secret,
@@ -136,18 +121,10 @@ router.post("/connect-token", auth, async (req, res) => {
       [userId, myshopifyDomain, accessToken, appSecret]
     );
 
-    const newShop = await db.get("SELECT id FROM shops WHERE user_id = ? AND shop_domain = ?", [userId, myshopifyDomain]);
-    if (newShop) {
-      await db.run(
-        `UPDATE orders SET shop_id = ? WHERE shop_id NOT IN (SELECT id FROM shops)`,
-        [newShop.id]
-      );
-    }
-
-    const webhookUrl = "https://profit-cod.onrender.com/api/shopify/webhooks/orders";
+    const webhookUrl = `${process.env.APP_URL}/api/shopify/webhooks/orders`;
     const topics = ["orders/create", "orders/updated", "fulfillments/create", "fulfillments/update"];
     for (const topic of topics) {
-       await fetch(`https://${shop}/admin/api/2024-10/webhooks.json`, {
+      await fetch(`https://${shop}/admin/api/2024-10/webhooks.json`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": accessToken },
         body: JSON.stringify({ webhook: { topic, address: webhookUrl, format: "json" } }),
@@ -165,7 +142,7 @@ router.get("/stores", auth, async (req, res) => {
   const userId = req.user.id;
   try {
     const rows = await db.all(
-      `SELECT id, shop_domain AS domain, shop_name, status, last_sync, created_at FROM shops WHERE user_id = ? ORDER BY created_at DESC`,
+      `SELECT id, shop_domain AS domain, shop_name, status, last_sync, created_at FROM shops WHERE user_id = $1 ORDER BY created_at DESC`,
       [userId]
     );
     res.json(rows || []);
@@ -174,7 +151,7 @@ router.get("/stores", auth, async (req, res) => {
 
 router.get("/stores/:id/secret", auth, async (req, res) => {
   try {
-    const row = await db.get("SELECT app_secret FROM shops WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+    const row = await db.get("SELECT app_secret FROM shops WHERE id = $1 AND user_id = $2", [req.params.id, req.user.id]);
     if (!row) return res.status(404).json({ error: "No encontrada" });
     res.json({ app_secret: row.app_secret });
   } catch (e) { res.status(500).json({ error: "Error BD" }); }
@@ -183,14 +160,14 @@ router.get("/stores/:id/secret", auth, async (req, res) => {
 router.patch("/stores/:id/name", auth, async (req, res) => {
   const { shop_name } = req.body;
   try {
-    await db.run("UPDATE shops SET shop_name = ? WHERE id = ? AND user_id = ?", [shop_name, req.params.id, req.user.id]);
+    await db.run("UPDATE shops SET shop_name = $1 WHERE id = $2 AND user_id = $3", [shop_name, req.params.id, req.user.id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: "Error BD" }); }
 });
 
 router.post("/disable/:id", auth, async (req, res) => {
   try {
-    await db.run("UPDATE shops SET status = 'inactive' WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+    await db.run("UPDATE shops SET status = 'inactive' WHERE id = $1 AND user_id = $2", [req.params.id, req.user.id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: "Error BD" }); }
 });
@@ -198,14 +175,14 @@ router.post("/disable/:id", auth, async (req, res) => {
 router.post("/rename/:id", auth, async (req, res) => {
   const { name } = req.body;
   try {
-    await db.run("UPDATE shops SET shop_name = ? WHERE id = ? AND user_id = ?", [name, req.params.id, req.user.id]);
+    await db.run("UPDATE shops SET shop_name = $1 WHERE id = $2 AND user_id = $3", [name, req.params.id, req.user.id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: "Error BD" }); }
 });
 
 router.get("/secret/:id", auth, async (req, res) => {
   try {
-    const row = await db.get("SELECT app_secret FROM shops WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+    const row = await db.get("SELECT app_secret FROM shops WHERE id = $1 AND user_id = $2", [req.params.id, req.user.id]);
     if (!row) return res.status(404).json({ error: "No encontrada" });
     res.json({ app_secret: row.app_secret });
   } catch (e) { res.status(500).json({ error: "Error BD" }); }
@@ -213,8 +190,8 @@ router.get("/secret/:id", auth, async (req, res) => {
 
 router.delete("/delete/:id", auth, async (req, res) => {
   try {
-    const result = await db.run("DELETE FROM shops WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
-    if (!result.changes) return res.status(404).json({ error: "Tienda no encontrada" });
+    const result = await db.run("DELETE FROM shops WHERE id = $1 AND user_id = $2", [req.params.id, req.user.id]);
+    if (!result.rowCount) return res.status(404).json({ error: "Tienda no encontrada" });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: "Error eliminando tienda" }); }
 });
@@ -230,7 +207,7 @@ function mapSyncStatus(o) {
 router.post("/sync-orders", auth, async (req, res) => {
   const userId = req.user.id;
   try {
-    const shops = await db.all("SELECT id, shop_domain, access_token FROM shops WHERE user_id = ? AND status = 'active'", [userId]);
+    const shops = await db.all("SELECT id, shop_domain, access_token FROM shops WHERE user_id = $1 AND status = 'active'", [userId]);
     if (!shops.length) return res.json({ ok: true, synced: 0 });
 
     let total = 0;
@@ -250,7 +227,7 @@ router.post("/sync-orders", auth, async (req, res) => {
             const customerName = o.customer ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim() : "Desconocido";
             await db.run(
               `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                ON CONFLICT(order_id) DO UPDATE SET
                  fulfillment_status = CASE
                    WHEN orders.tracking_number IS NOT NULL
@@ -265,7 +242,6 @@ router.post("/sync-orders", auth, async (req, res) => {
             total++;
           }
 
-          // Siguiente página via Link header
           const linkHeader = r.headers.get("Link") || "";
           const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
           url = nextMatch ? nextMatch[1] : null;
@@ -283,7 +259,7 @@ router.get("/products", auth, async (req, res) => {
   const userId = req.user.id;
   try {
     const shops = await db.all(
-      "SELECT id, shop_domain, shop_name, access_token FROM shops WHERE user_id = ? AND status = 'active'",
+      "SELECT id, shop_domain, shop_name, access_token FROM shops WHERE user_id = $1 AND status = 'active'",
       [userId]
     );
     if (!shops.length) return res.json([]);
@@ -295,14 +271,9 @@ router.get("/products", auth, async (req, res) => {
           `https://${shop.shop_domain}/admin/api/2024-10/products.json?limit=250`,
           { headers: { "X-Shopify-Access-Token": shop.access_token } }
         );
-        if (!r.ok) {
-          console.error("Shopify products error:", shop.shop_domain, r.status, await r.text());
-          continue;
-        }
+        if (!r.ok) { console.error("Shopify products error:", shop.shop_domain, r.status); continue; }
         const json = await r.json();
-        console.log("Productos recibidos:", shop.shop_domain, json.products?.length);
-        const { products } = json;
-        const allProducts = products || [];
+        const allProducts = json.products || [];
         const activeProducts = allProducts.filter(p => p.status === "active");
         result.push({
           shop_domain: shop.shop_domain,
@@ -328,7 +299,7 @@ router.get("/products", auth, async (req, res) => {
 router.get("/stock", auth, async (req, res) => {
   try {
     const rows = await db.all(
-      "SELECT shop_domain, product_id, stock, stock_minimo, costo_compra FROM productos_stock WHERE user_id = ?",
+      "SELECT shop_domain, product_id, stock, stock_minimo, costo_compra FROM productos_stock WHERE user_id = $1",
       [req.user.id]
     );
     res.json(rows);
@@ -340,7 +311,7 @@ router.post("/stock", auth, async (req, res) => {
   try {
     await db.run(
       `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo, costo_compra)
-       VALUES (?, ?, ?, ?, ?, ?)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET
          stock = COALESCE(EXCLUDED.stock, productos_stock.stock),
          stock_minimo = COALESCE(EXCLUDED.stock_minimo, productos_stock.stock_minimo),
@@ -354,7 +325,7 @@ router.post("/stock", auth, async (req, res) => {
 router.get("/variantes-config", auth, async (req, res) => {
   try {
     const rows = await db.all(
-      "SELECT shop_domain, variant_id, unidades_por_venta FROM productos_variantes_config WHERE user_id = ?",
+      "SELECT shop_domain, variant_id, unidades_por_venta FROM productos_variantes_config WHERE user_id = $1",
       [req.user.id]
     );
     res.json(rows);
@@ -366,7 +337,7 @@ router.post("/variantes-config", auth, async (req, res) => {
   try {
     await db.run(
       `INSERT INTO productos_variantes_config (user_id, shop_domain, variant_id, unidades_por_venta)
-       VALUES (?, ?, ?, ?)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT(user_id, shop_domain, variant_id) DO UPDATE SET unidades_por_venta = EXCLUDED.unidades_por_venta`,
       [req.user.id, shop_domain, variant_id, parseInt(unidades_por_venta)||1]
     );
@@ -380,12 +351,12 @@ router.post("/entrada-mercancia", auth, async (req, res) => {
   try {
     await db.run(
       `INSERT INTO entradas_mercancia (user_id, shop_domain, product_id, product_name, cantidad, stock_anterior, stock_nuevo, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, now()::text)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, now()::text)`,
       [req.user.id, shop_domain, product_id, product_name, parseInt(cantidad)||0, parseInt(stock_anterior)||0, stock_nuevo]
     );
     await db.run(
       `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo)
-       VALUES (?, ?, ?, ?, 5)
+       VALUES ($1, $2, $3, $4, 5)
        ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET stock = EXCLUDED.stock`,
       [req.user.id, shop_domain, product_id, stock_nuevo]
     );
@@ -396,7 +367,7 @@ router.post("/entrada-mercancia", auth, async (req, res) => {
 router.get("/entradas-mercancia", auth, async (req, res) => {
   try {
     const rows = await db.all(
-      "SELECT * FROM entradas_mercancia WHERE user_id = ? ORDER BY id DESC LIMIT 100",
+      "SELECT * FROM entradas_mercancia WHERE user_id = $1 ORDER BY id DESC LIMIT 100",
       [req.user.id]
     );
     res.json(rows);
@@ -407,7 +378,7 @@ router.get("/informes-ingresos", auth, async (req, res) => {
   const { mes } = req.query;
   try {
     const rows = await db.all(
-      "SELECT shop_domain, columna, nombre, valor FROM informes_ingresos_manuales WHERE user_id = ? AND mes = ?",
+      "SELECT shop_domain, columna, nombre, valor FROM informes_ingresos_manuales WHERE user_id = $1 AND mes = $2",
       [req.user.id, mes]
     );
     res.json(rows);
@@ -419,7 +390,7 @@ router.post("/informes-ingresos", auth, async (req, res) => {
   try {
     await db.run(
       `INSERT INTO informes_ingresos_manuales (user_id, shop_domain, mes, columna, nombre, valor)
-       VALUES (?, ?, ?, ?, ?, ?)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT(user_id, shop_domain, mes, columna) DO UPDATE SET nombre=EXCLUDED.nombre, valor=EXCLUDED.valor`,
       [req.user.id, shop_domain, mes, columna, nombre || '', parseFloat(valor)||0]
     );
@@ -429,7 +400,7 @@ router.post("/informes-ingresos", auth, async (req, res) => {
 
 router.get("/precios-globales", auth, async (req, res) => {
   try {
-    const row = await db.get("SELECT * FROM gastos_fijos_precios_globales WHERE user_id = ?", [req.user.id]);
+    const row = await db.get("SELECT * FROM gastos_fijos_precios_globales WHERE user_id = $1", [req.user.id]);
     res.json(row || { precio_mrw: 0, precio_logistica: 0 });
   } catch(e) { res.status(500).json({ error: "Error" }); }
 });
@@ -439,7 +410,7 @@ router.post("/precios-globales", auth, async (req, res) => {
   try {
     await db.run(
       `INSERT INTO gastos_fijos_precios_globales (user_id, precio_mrw, precio_logistica)
-       VALUES (?, ?, ?)
+       VALUES ($1, $2, $3)
        ON CONFLICT(user_id) DO UPDATE SET precio_mrw=EXCLUDED.precio_mrw, precio_logistica=EXCLUDED.precio_logistica`,
       [req.user.id, parseFloat(precio_mrw)||0, parseFloat(precio_logistica)||0]
     );
