@@ -4,35 +4,87 @@ const crypto = require("crypto");
 const db = require("../db");
 const router = express.Router();
 
-router.get("/connect", (req, res) => {
+router.get("/connect", auth, (req, res) => {
   let { shop } = req.query;
   if (!shop) return res.status(400).send("Falta parámetro shop");
-  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
+  if (!shop.includes(".myshopify.com")) shop = shop + ".myshopify.com";
+  const state = Buffer.from(JSON.stringify({ userId: req.user.id, shop })).toString("base64");
   const redirectUri = process.env.SHOPIFY_REDIRECT_URI;
-  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=${process.env.SHOPIFY_SCOPES}&redirect_uri=${redirectUri}`;
+  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=${process.env.SHOPIFY_SCOPES}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
   res.redirect(installUrl);
 });
 
 router.get("/callback", async (req, res) => {
-  let { shop, hmac, code } = req.query;
-  if (!shop || !hmac || !code) return res.status(400).send("Parámetros inválidos");
-  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  let { shop, hmac, code, state } = req.query;
+  if (!shop || !hmac || !code || !state) return res.redirect("/?shopify=error&msg=params");
+
+  shop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
+
+  // Verificar HMAC
   const query = { ...req.query };
   delete query.hmac; delete query.signature;
   const message = Object.keys(query).sort().map(k => `${k}=${query[k]}`).join("&");
   const generatedHmac = crypto.createHmac("sha256", process.env.SHOPIFY_API_SECRET).update(message).digest("hex");
-  if (generatedHmac !== hmac) return res.status(401).send("HMAC inválido");
+  if (generatedHmac !== hmac) return res.redirect("/?shopify=error&msg=hmac");
+
+  // Recuperar userId del state
+  let userId;
   try {
+    const decoded = JSON.parse(Buffer.from(state, "base64").toString("utf8"));
+    userId = decoded.userId;
+  } catch(e) {
+    return res.redirect("/?shopify=error&msg=state");
+  }
+
+  try {
+    // Obtener access token
     const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ client_id: process.env.SHOPIFY_API_KEY, client_secret: process.env.SHOPIFY_API_SECRET, code }),
     });
     const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) return res.status(400).json(tokenData);
+    if (!tokenData.access_token) return res.redirect("/?shopify=error&msg=token");
+
+    const accessToken = tokenData.access_token;
+    const appSecret = process.env.SHOPIFY_API_SECRET;
+
+    // Obtener info de la tienda
+    const shopRes = await fetch(`https://${shop}/admin/api/2024-10/shop.json`, {
+      headers: { "X-Shopify-Access-Token": accessToken }
+    });
+    const shopData = await shopRes.json();
+    const shopName = shopData.shop?.name || shop;
+
+    // Guardar en BD
+    await db.run(
+      `INSERT INTO shops (user_id, shop_domain, shop_name, access_token, app_secret, status, last_sync)
+       VALUES ($1, $2, $3, $4, $5, 'active', now()::text)
+       ON CONFLICT(user_id, shop_domain) DO UPDATE SET
+         access_token = EXCLUDED.access_token,
+         app_secret = EXCLUDED.app_secret,
+         shop_name = EXCLUDED.shop_name,
+         status = 'active',
+         last_sync = now()::text`,
+      [userId, shop, shopName, accessToken, appSecret]
+    );
+
+    // Registrar webhooks
+    const webhookUrl = `${process.env.APP_URL}/api/shopify/webhooks/orders`;
+    const topics = ["orders/create", "orders/updated", "fulfillments/create", "fulfillments/update"];
+    for (const topic of topics) {
+      await fetch(`https://${shop}/admin/api/2024-10/webhooks.json`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": accessToken },
+        body: JSON.stringify({ webhook: { topic, address: webhookUrl, format: "json" } }),
+      }).catch(() => {});
+    }
+
     res.redirect("/?shopify=connected");
   } catch (err) {
-    res.status(500).send("Error en callback Shopify");
+    console.error("Shopify callback error:", err);
+    res.redirect("/?shopify=error&msg=server");
   }
 });
 

@@ -483,6 +483,16 @@ function menuItem(id, labels) {
   </div>`;
 }
 function loadApp(section) {
+  // Manejar retorno de OAuth Shopify
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("shopify") === "connected") {
+    history.replaceState({}, "", "/");
+    showToast("✅ Tienda conectada", "La tienda Shopify se conectó correctamente", "#16a34a");
+    section = "tiendas";
+  } else if (urlParams.get("shopify") === "error") {
+    history.replaceState({}, "", "/");
+    showToast("❌ Error", "No se pudo conectar la tienda Shopify", "#dc2626");
+  }
 
   const d = dict();
   const labels = d.labels;
@@ -2557,44 +2567,13 @@ grid.innerHTML = stores.map(store => `
 // SHOPIFY CONEXIÓN (TOKEN + APP SECRET)
 // =========================
 async function submitShopifyConnection() {
-  const shop = document.getElementById("pf-shop-domain")?.value.trim();
-  const accessToken = document.getElementById("pf-access-token")?.value.trim();
-  const appSecret = document.getElementById("pf-app-secret")?.value.trim();
+  let shop = document.getElementById("pf-shop-domain")?.value.trim();
+  if (!shop) { alert("Introduce el dominio de la tienda"); return; }
+  if (!shop.includes(".myshopify.com")) shop = shop + ".myshopify.com";
 
-  if (!shop || !accessToken || !appSecret) {
-    alert("Debes completar dominio, access token y app secret");
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/api/shopify/connect-token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + getActiveToken(),
-      },
-      body: JSON.stringify({
-        shop,
-        accessToken,
-        appSecret,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Error conectando la tienda");
-      return;
-    }
-
-    alert("✅ Tienda conectada correctamente");
-
-    closeShopifyStep4?.();
-    setSection("tiendas");
-
-  } catch (err) {
-    alert("Error de conexión con el servidor");
-  }
+  // Redirigir al flujo OAuth de Shopify
+  const token = getActiveToken();
+  window.location.href = `${API_BASE}/api/shopify/connect?shop=${encodeURIComponent(shop)}&token=${encodeURIComponent(token)}`;
 }
 
 function openShopifyConnect() {
