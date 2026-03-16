@@ -94,28 +94,27 @@
       </div>
 
       <div>
-        <label style="font-size:13px;font-weight:600;">Access Token</label>
+        <label style="font-size:13px;font-weight:600;">API Key (Client ID)</label>
         <input
-  id="pf-access-token"
-  placeholder="shpat_..."
-  type="password"
-  style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;"
-/>
+          id="pf-api-key"
+          placeholder="API Key de tu app Shopify"
+          type="password"
+          style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;"
+        />
       </div>
-<div>
-  <label style="font-size:13px;font-weight:600;">App Secret (Client Secret)</label>
-  <input
-    id="pf-app-secret"
-    placeholder="Pégalo aquí"
-    type="password"
-    style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;"
-  />
-  <div style="font-size:12px;color:#6b7280;margin-top:6px;line-height:1.4;">
-    En Shopify ve a <b>Apps → App desarrollada → Configuración</b>.<br>
-    Copia el <b>Client secret</b> de la app y pégalo aquí.<br>
-    Este valor se usa para verificar la autenticidad de los webhooks.
-  </div>
-</div>
+      <div>
+        <label style="font-size:13px;font-weight:600;">API Secret (Client Secret)</label>
+        <input
+          id="pf-app-secret"
+          placeholder="API Secret de tu app Shopify"
+          type="password"
+          style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;"
+        />
+        <div style="font-size:12px;color:#6b7280;margin-top:6px;line-height:1.4;">
+          En Shopify ve a <b>Apps → Tu app → Configuración API</b>.<br>
+          Copia el <b>API Key</b> y el <b>API Secret</b> y pégalos aquí.
+        </div>
+      </div>
 
     </div>
 
