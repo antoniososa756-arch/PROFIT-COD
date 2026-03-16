@@ -477,6 +477,8 @@ function escapeAttr(str) {
     `;
    
 
+   }  // ← cierre correcto de renderNotifPanel
+
   function updateNotifBadge(count) {
     const badge = document.querySelector(".notify-badge");
     if (badge) badge.textContent = String(count || 0);
