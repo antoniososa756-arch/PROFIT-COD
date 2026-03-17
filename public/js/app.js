@@ -804,7 +804,10 @@ const now = new Date();
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.5"
                   stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
               </svg>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;" id="donut-pct">0%</div>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+                <span style="font-size:12px;font-weight:700;" id="donut-pct">0%</span>
+                <span style="font-size:9px;color:#9ca3af;font-weight:500;" id="donut-base"></span>
+              </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;">
               <div style="display:flex;align-items:center;gap:6px;">
@@ -2816,9 +2819,10 @@ async function loadMetricas() {
     set("stat-roas", roas != null ? roas.toFixed(2) : "—");
 
     set("donut-pct",       pctEntregado + "%");
-    set("legend-entregado", `Entregado ${pctEntregado}%`);
-    set("legend-rojo",      `Dev+Dest ${pctRojo}%`);
-    set("legend-pendiente", `En tránsito ${pctPendiente}%`);
+    set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
+    set("legend-rojo",      `Dev+Dest ${pctRojo}% (${rojos})`);
+    set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})`);
+    set("donut-base",       `Base: ${enviados} enviados`);
 
     // Donut con 3 segmentos (offset acumulado)
     const circumference = 100;
@@ -3200,9 +3204,10 @@ function actualizarMetricasSinBalance() {
     set("stat-facturacion", fmtEurSB(facturacionSB));
 
     set("donut-pct",       pctEntregado + "%");
-    set("legend-entregado", `Entregado ${pctEntregado}%`);
-    set("legend-rojo",      `Dev+Dest ${pctRojo}%`);
-    set("legend-pendiente", `En tránsito ${pctPendiente}%`);
+    set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
+    set("legend-rojo",      `Dev+Dest ${pctRojo}% (${rojos})`);
+    set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})`);
+    set("donut-base",       `Base: ${enviados} enviados`);
 
     const circumference = 100;
     let offset = 0;
