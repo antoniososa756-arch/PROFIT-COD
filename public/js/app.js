@@ -2834,8 +2834,10 @@ async function loadMetricas() {
     function setArc(id, pct, off) {
       const el = document.getElementById(id);
       if (!el) return;
-      el.setAttribute("stroke-dasharray", `${pct} ${circumference - pct}`);
-      el.setAttribute("stroke-dashoffset", -off);
+      const p = parseFloat(pct) || 0;
+      const o = parseFloat(off) || 0;
+      el.setAttribute("stroke-dasharray", `${p} ${100 - p}`);
+      el.setAttribute("stroke-dashoffset", String(-(o)));
     }
 
     const arcE = parseFloat(pctEntregado);
@@ -2957,22 +2959,31 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   try { preciosGlobales = await fetch(`${API_BASE}/api/shopify/precios-globales`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); } catch {}
 
-  // Ads — filtrar por rango de fechas sumando todos los meses
+    // Ads — EN PARALELO
   let adsSpends = {};
-  for (const mes of mesesRango) {
-    const m = parseInt(mes.split("-")[1]);
-    const y = parseInt(mes.split("-")[0]);
-    try {
+  try {
+    const adsFetches = [];
+    for (const mes of mesesRango) {
+      const m = parseInt(mes.split("-")[1]);
+      const y = parseInt(mes.split("-")[0]);
       for (const store of stores) {
-        const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
-        let meta=0, tiktok=0;
-        if (Array.isArray(rows)) rows.filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo)).forEach(r=>{meta+=r.meta||0;tiktok+=r.tiktok||0;});
-        if (!adsSpends[store.domain]) adsSpends[store.domain] = { meta:0, tiktok:0 };
-        adsSpends[store.domain].meta   += meta;
-        adsSpends[store.domain].tiktok += tiktok;
+        adsFetches.push(
+          fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+            .then(r => r.json())
+            .then(rows => ({ domain: store.domain, rows, dateFrom, dateTo }))
+            .catch(() => ({ domain: store.domain, rows: [], dateFrom, dateTo }))
+        );
       }
-    } catch {}
-  }
+    }
+    const adsResults = await Promise.all(adsFetches);
+    for (const { domain, rows, dateFrom, dateTo } of adsResults) {
+      if (!adsSpends[domain]) adsSpends[domain] = { meta:0, tiktok:0 };
+      if (Array.isArray(rows)) {
+        rows.filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo))
+          .forEach(r => { adsSpends[domain].meta += r.meta||0; adsSpends[domain].tiktok += r.tiktok||0; });
+      }
+    }
+  } catch {}
 
 
   const stockMap = {};
@@ -3221,8 +3232,10 @@ function actualizarMetricasSinBalance() {
     function setArc(id, pct, off) {
       const el = document.getElementById(id);
       if (!el) return;
-      el.setAttribute("stroke-dasharray", `${pct} ${circumference - pct}`);
-      el.setAttribute("stroke-dashoffset", -off);
+      const p = parseFloat(pct) || 0;
+      const o = parseFloat(off) || 0;
+      el.setAttribute("stroke-dasharray", `${p} ${100 - p}`);
+      el.setAttribute("stroke-dashoffset", String(-(o)));
     }
     setArc("donut-entregado", pctEntregado, offset); offset += pctEntregado;
     setArc("donut-rojo",      pctRojo,      offset); offset += pctRojo;
