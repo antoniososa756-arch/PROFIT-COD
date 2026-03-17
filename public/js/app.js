@@ -3282,14 +3282,13 @@ async function loadProductos() {
   window.__showLoadingBar?.("Cargando productos...");
 
   try {
-    const [resP, resS, resV] = await Promise.all([
-      fetch(`${API_BASE}/api/shopify/products`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
-      fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
-      fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+    const token = getActiveToken();
+    const h = { Authorization: "Bearer " + token };
+    const [data, stockData, variantesData] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/shopify/products`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h })
     ]);
-    const data = await resP.json();
-    const stockData = await resS.json();
-    const variantesData = await resV.json();
 
     const variantesMap = {};
     if (Array.isArray(variantesData)) {
@@ -4098,28 +4097,42 @@ async function loadGastosVarios() {
 
   const numTiendas = stores.length || 1;
 
-  // 2. Gastos Ads del mes (Meta y TikTok por tienda)
+  // 2. Gastos Ads del mes (Meta y TikTok por tienda) — EN PARALELO
   let adsSpends = {};
   try {
-    for (const store of stores) {
-      const r = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, {
-        headers: { Authorization: "Bearer " + getActiveToken() }
-      });
-      const rows = await r.json();
+    const token = getActiveToken();
+    const adsResults = await Promise.all(stores.map(store =>
+      cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: { Authorization: "Bearer " + token } })
+        .then(rows => ({ domain: store.domain, rows: rows || [] }))
+    ));
+    adsResults.forEach(({ domain, rows }) => {
       let meta = 0, tiktok = 0;
-      if (Array.isArray(rows)) rows.forEach(r => { meta += r.meta||0; tiktok += r.tiktok||0; });
-      adsSpends[store.domain] = { meta, tiktok };
-    }
+      rows.forEach(r => { meta += r.meta||0; tiktok += r.tiktok||0; });
+      adsSpends[domain] = { meta, tiktok };
+    });
   } catch {}
 
-  // 3. Gastos fijos del mes → dividir entre tiendas activas
-  let gastosFijos = [];
+  // 3. Cargar todo en paralelo
+  const token = getActiveToken();
+  const h = { Authorization: "Bearer " + token };
+  let gastosFijos = [], gastosVarios = {}, gastosExtrasRaw = [], nominaData = { total: 0 }, impuestosData = [], stockData2 = [], varData2 = [];
   try {
-    const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    gastosFijos = await r.json();
-    if (!Array.isArray(gastosFijos)) gastosFijos = [];
+    const [gf, gv, ge, nom, imp, st, vr] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/impuestos`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h })
+    ]);
+    gastosFijos = Array.isArray(gf) ? gf : [];
+    if (Array.isArray(gv)) gv.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; });
+    gastosExtrasRaw = Array.isArray(ge) ? ge : [];
+    nominaData = nom || { total: 0 };
+    impuestosData = Array.isArray(imp) ? imp : [];
+    stockData2 = Array.isArray(st) ? st : [];
+    varData2 = Array.isArray(vr) ? vr : [];
   } catch {}
 
   // Separar MRW/Logística del resto de fijos
@@ -4132,66 +4145,28 @@ async function loadGastosVarios() {
   const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
   const fijoXTienda    = totalOtrosFijos / numTiendas;
 
-  // Nómina del mes → dividir entre tiendas
-  let nominaXTienda = 0;
-  try {
-    const nomRes = await fetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    const nomData = await nomRes.json();
-    nominaXTienda = (parseFloat(nomData.total) || 0) / numTiendas;
-  } catch {}
-
-  // IVA desde base de datos
+  // Calcular IVA y nómina desde datos ya cargados en paralelo
   let ivaPorcentaje = 0.21;
-  try {
-    const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    const impData = await impRes.json();
-    if (Array.isArray(impData) && impData.length > 0) {
-      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
-    }
-  } catch {}
+  if (impuestosData.length > 0) {
+    ivaPorcentaje = (impuestosData[0].porcentaje != null ? parseFloat(impuestosData[0].porcentaje) : 21) / 100;
+  }
+  const nominaXTienda = (parseFloat(nominaData.total) || 0) / numTiendas;
 
-   // 4. Gastos varios guardados (Shopify)
-  let gastosVarios = {};
-  try {
-    const r = await fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const rows = await r.json();
-    if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; });
-  } catch {}
-
-  // Extras por tienda desde BD
+  // Extras por tienda
   gastosExtras = {};
-  try {
-    const extRows = await fetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    }).then(r => r.json());
-    if (Array.isArray(extRows)) extRows.forEach(r => {
-      if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = [];
-      gastosExtras[r.shop_domain].push(r);
-    });
-  } catch {}
+  gastosExtrasRaw.forEach(r => {
+    if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = [];
+    gastosExtras[r.shop_domain].push(r);
+  });
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
   const inp = `padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;text-align:right;`;
 
-  // Construir tabla por tienda
-  // Cargar stock y variantes UNA SOLA VEZ fuera del map
+  // Construir mapas desde datos ya cargados
   const stockMap = {};
-  try {
-    const stockData = await fetch(`${API_BASE}/api/shopify/stock`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    }).then(r => r.json());
-    if (Array.isArray(stockData)) stockData.forEach(s => { stockMap[s.product_id] = s.costo_compra || 0; });
-  } catch {}
-
+  stockData2.forEach(s => { stockMap[s.product_id] = s.costo_compra || 0; });
   const variantesMap = {};
-  try {
-    const varData = await fetch(`${API_BASE}/api/shopify/variantes-config`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    }).then(r => r.json());
-    if (Array.isArray(varData)) varData.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta || 1; });
-  } catch {}
+  varData2.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta || 1; });
 
   const cols = stores.map(store => {
     const ads     = adsSpends[store.domain] || { meta: 0, tiktok: 0 };
@@ -4369,7 +4344,8 @@ async function saveGastoVarioShopify(input) {
       headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ shop_domain: shop, mes, shopify })
     });
-    window.__hideLoadingBar?.();
+   window.__hideLoadingBar?.();
+    invalidateCache("gastos");
     await loadGastosVarios();
   } catch(e) { window.__hideLoadingBar?.(); console.error(e); }
 }
@@ -4487,17 +4463,16 @@ async function renderInformesIngresos() {
   const mesLabel = monthNames[parseInt(month)-1].toUpperCase() + " " + year;
 
   let stores = [], orders = [], manuales = [];
+  const _hInf = { Authorization: "Bearer " + getActiveToken() };
   try {
-    stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
-    if (!Array.isArray(stores)) stores = [];
-  } catch {}
-  try {
-    orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
-    if (!Array.isArray(orders)) orders = [];
-  } catch {}
-  try {
-    manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
-    if (!Array.isArray(manuales)) manuales = [];
+    const [_s, _o, _m] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: _hInf }),
+      cachedFetch(`${API_BASE}/api/orders`, { headers: _hInf }),
+      cachedFetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: _hInf })
+    ]);
+    stores = Array.isArray(_s) ? _s : [];
+    orders = Array.isArray(_o) ? _o : [];
+    manuales = Array.isArray(_m) ? _m : [];
   } catch {}
 
   const pedidosMes = orders.filter(o => {
@@ -5012,6 +4987,28 @@ window.copiarMesAnteriorGF = copiarMesAnteriorGF;
 // CARGAR PEDIDOS REALES
 // =========================
 let allOrders = [];
+
+// ===== CACHÉ GLOBAL DE DATOS =====
+const __cache = {};
+const __cacheTime = {};
+const CACHE_TTL = 60000; // 1 minuto
+
+async function cachedFetch(url, opts = {}) {
+  const now = Date.now();
+  if (__cache[url] && (now - (__cacheTime[url]||0)) < CACHE_TTL) return __cache[url];
+  try {
+    const r = await fetch(url, opts);
+    const data = await r.json();
+    __cache[url] = data;
+    __cacheTime[url] = now;
+    return data;
+  } catch { return null; }
+}
+
+function invalidateCache(pattern) {
+  Object.keys(__cache).forEach(k => { if (k.includes(pattern)) { delete __cache[k]; delete __cacheTime[k]; } });
+}
+window.invalidateCache = invalidateCache;
 
 async function fetchOrders() {
   const body = document.getElementById("ordersBody");
