@@ -735,10 +735,10 @@ const now = new Date();
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M7 15h4M7 19h2"/></svg>
             Mes actual
           </button>
-          <input type="date" id="metrics-date-from" value="${fmt(firstDay)}"
+          <input type="date" id="metrics-date-from" value="${savedFrom}"
             style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
           <span style="color:#6b7280;font-size:13px;">—</span>
-          <input type="date" id="metrics-date-to" value="${fmt(now)}"
+          <input type="date" id="metrics-date-to" value="${savedTo}"
             style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
           <select id="metrics-shop" style="display:none;">
             <option value="">Todas las tiendas</option>
@@ -893,6 +893,8 @@ function filtroMetricasHoy() {
   const to   = document.getElementById("metrics-date-to");
   if (from) from.value = hoy;
   if (to)   to.value   = hoy;
+  localStorage.setItem("met_from", hoy);
+  localStorage.setItem("met_to",   hoy);
   loadMetricas();
 }
 window.filtroMetricasHoy = filtroMetricasHoy;
@@ -905,6 +907,8 @@ function filtroMetricasMes() {
   const to   = document.getElementById("metrics-date-to");
   if (from) from.value = firstDay;
   if (to)   to.value   = today;
+  localStorage.setItem("met_from", firstDay);
+  localStorage.setItem("met_to",   today);
   loadMetricas();
 }
 window.filtroMetricasMes = filtroMetricasMes;
@@ -917,6 +921,10 @@ function aplicarFiltroMetricas() {
     alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin");
     return;
   }
+
+  // Guardar fechas en localStorage
+  if (from) localStorage.setItem("met_from", from);
+  if (to)   localStorage.setItem("met_to", to);
 
   loadMetricas();
 }
@@ -2697,6 +2705,8 @@ async function loadMetricas() {
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
   const fmt = d => d.toISOString().split("T")[0];
+  const savedFrom = localStorage.getItem("met_from") || fmt(firstDay);
+  const savedTo   = localStorage.getItem("met_to")   || fmt(now);
 
   const dateFrom = document.getElementById("metrics-date-from")?.value || fmt(firstDay);
   const dateTo   = document.getElementById("metrics-date-to")?.value   || fmt(now);
