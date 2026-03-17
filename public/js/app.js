@@ -3502,14 +3502,15 @@ async function loadAdsTable() {
   const daysInMonth = new Date(year, month, 0).getDate();
   const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const monthName = monthNames[parseInt(month)-1];
+  const h = { Authorization: "Bearer " + getActiveToken() };
 
-  let orders = [];
+  let orders = [], spends = {};
   try {
-    const r = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const all = await r.json();
-    orders = Array.isArray(all) ? all.filter(o => {
+    const [allOrders, adsRows] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/orders`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(shop)}&month=${month}&year=${year}`, { headers: h })
+    ]);
+    orders = Array.isArray(allOrders) ? allOrders.filter(o => {
       if (!o.created_at) return false;
       if (o.fulfillment_status === "cancelado") return false;
       const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
@@ -3520,13 +3521,7 @@ async function loadAdsTable() {
     }) : [];
   } catch {}
 
-  let spends = {};
-  try {
-    const r = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(shop)}&month=${month}&year=${year}`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const rows = await r.json();
-    if (Array.isArray(rows)) rows.forEach(r => { spends[r.date] = { meta: r.meta||0, tiktok: r.tiktok||0 }; });
+  if (Array.isArray(adsRows)) adsRows.forEach(r => { spends[r.date] = { meta: r.meta||0, tiktok: r.tiktok||0 }; });
   } catch {}
 
   let totalFact=0, totalMeta=0, totalTiktok=0, totalPedidos=0;
@@ -5803,18 +5798,15 @@ let currentReeDisplay = [];
 
 async function loadReembolsos() {
   try {
-    const estadosRes = await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const estadosData = await estadosRes.json();
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const [estadosData, orders] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/orders/reembolso-estado`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/orders`, { headers: h })
+    ]);
     window.__reembolsosEstados = {};
     if (Array.isArray(estadosData)) {
       estadosData.forEach(e => { window.__reembolsosEstados[e.order_id] = e.estado; });
     }
-    const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const orders = await res.json();
     allReembolsos = Array.isArray(orders) ? orders.filter(o => {
       if (o.fulfillment_status !== "entregado") return false;
       try {
@@ -5966,23 +5958,18 @@ window.filterReeByTab         = filterReeByTab;
 // =========================
 async function loadSidebarReembolsos() {
   try {
-    // Cargar estados desde BD siempre, no depender de window.__reembolsosEstados
-    const estadosRes = await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const estadosData = await estadosRes.json();
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const [estadosData, orders] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/orders/reembolso-estado`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/orders`, { headers: h })
+    ]);
     const estadosMap = {};
     if (Array.isArray(estadosData)) {
       estadosData.forEach(e => {
-  estadosMap[e.order_id] = e.estado;
-  if (e.tracking_number) estadosMap["trk_" + e.tracking_number.trim().toUpperCase()] = e.estado;
-});
+        estadosMap[e.order_id] = e.estado;
+        if (e.tracking_number) estadosMap["trk_" + e.tracking_number.trim().toUpperCase()] = e.estado;
+      });
     }
-
-    const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const orders = await res.json();
     const pendientes = Array.isArray(orders) ? orders.filter(o => {
       if (o.fulfillment_status !== "entregado") return false;
       try {
