@@ -5010,6 +5010,36 @@ function invalidateCache(pattern) {
 }
 window.invalidateCache = invalidateCache;
 
+// ===== ACTUALIZACIÓN EN SEGUNDO PLANO =====
+async function refreshCacheBackground() {
+  const token = getActiveToken();
+  if (!token) return;
+  const h = { Authorization: "Bearer " + token };
+
+  // Actualiza silenciosamente los datos más usados
+  const urls = [
+    `${API_BASE}/api/orders`,
+    `${API_BASE}/api/shopify/stores`,
+    `${API_BASE}/api/shopify/stock`,
+    `${API_BASE}/api/shopify/variantes-config`,
+    `${API_BASE}/api/shopify/products`,
+  ];
+
+  // Actualiza en paralelo sin bloquear nada
+  Promise.all(urls.map(async url => {
+    try {
+      const r = await fetch(url, { headers: h });
+      const data = await r.json();
+      __cache[url] = data;
+      __cacheTime[url] = Date.now();
+    } catch {}
+  }));
+}
+
+// Arrancar refresco en segundo plano cada 55 segundos
+// (5 segundos antes de que expire el caché de 1 minuto)
+setInterval(refreshCacheBackground, 55000);
+
 async function fetchOrders() {
   const body = document.getElementById("ordersBody");
   if (!body) return;
