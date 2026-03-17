@@ -4716,10 +4716,12 @@ async function renderInformesBalance() {
   window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
 
-  // Cargar gastos por tienda si no están disponibles
-  if (!window.__gastosPorTienda || Object.keys(window.__gastosPorTienda).length === 0) {
-    await loadGastosVarios();
-  }
+  // Forzar mes correcto en Gastos por Tienda antes de leer el dato
+  const gvMonthSel = document.getElementById("gv-month-sel");
+  const gvYearSel  = document.getElementById("gv-year-sel");
+  if (gvMonthSel) gvMonthSel.value = month;
+  if (gvYearSel)  gvYearSel.value  = year;
+  await loadGastosVarios();
 
   // ── Gastos Ads ────────────────────────────────────────────
   let adsSpends = {};
