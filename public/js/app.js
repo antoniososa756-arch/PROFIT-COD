@@ -4747,8 +4747,7 @@ async function renderInformesBalance() {
     let ivaPct = 0.21;
     if (Array.isArray(imp) && imp.length > 0) ivaPct = (parseFloat(imp[0].porcentaje)||21)/100;
 
-        window.__gastosVarMapBalance = {};
-    const gastosVarMap = window.__gastosVarMapBalance;
+        const gastosVarMap = {};
     if (Array.isArray(gv)) gv.forEach(r => { gastosVarMap[r.shop_domain] = r.shopify||0; });
     const extrasMap = {};
     if (Array.isArray(ge)) ge.forEach(r => { if(!extrasMap[r.shop_domain]) extrasMap[r.shop_domain]=[]; extrasMap[r.shop_domain].push(r); });
@@ -4757,8 +4756,7 @@ async function renderInformesBalance() {
     const varMap = {};
     if (Array.isArray(vr)) vr.forEach(v => { varMap[v.variant_id] = v.unidades_por_venta||1; });
 
-    window.__adsMapBalance = {};
-    const adsMap = window.__adsMapBalance;
+    const adsMap = {};
     adsAll.forEach(({domain, rows}) => {
       let meta=0, tiktok=0;
       rows.forEach(r=>{ meta+=r.meta||0; tiktok+=r.tiktok||0; });
@@ -4813,8 +4811,8 @@ async function renderInformesBalance() {
   });
 
   const balanceData = stores.map(store => {
-    const ads     = (window.__adsMapBalance || {})[store.domain] || { meta:0, tiktok:0 };
-    const shopify = (window.__gastosVarMapBalance || {})[store.domain] || 0;
+        const ads     = { meta:0, tiktok:0 };
+    const shopify = 0;
 
     // INGRESOS
     const pedEnt   = pedidosMesEntregados.filter(o => o.shop_domain === store.domain);
