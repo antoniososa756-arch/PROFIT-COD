@@ -4811,7 +4811,9 @@ async function renderInformesBalance() {
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
     const entregadosTiendaMet = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
     const ivaTotal = entregadosTiendaMet.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
-    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
+    const totalGasto = (window.__gastosPorTienda && window.__gastosPorTienda[store.domain] != null)
+      ? window.__gastosPorTienda[store.domain]
+      : 0;
 
     const resultado = totalIngreso - totalGasto;
     return { domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado };
