@@ -4783,12 +4783,6 @@ async function renderInformesBalance() {
   recalcBalanceSuma();
   window.__hideLoadingBar?.();
 }
-
-  window.__allOrdersCache = orders;
-  const numTiendas = stores.length || 1;
-
-  // ── Gastos Ads ────────────────────────────────────────────
-  let adsSpends = {};
   try {
     const h = { Authorization: "Bearer " + getActiveToken() };
     const adsRes = await Promise.all(stores.map(store =>
