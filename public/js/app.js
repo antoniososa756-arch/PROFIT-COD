@@ -4516,8 +4516,10 @@ async function renderInformesIngresos() {
     const man1 = manuales.find(m => m.shop_domain === store.domain && m.columna === 1) || { nombre: "", valor: 0 };
     const man2 = manuales.find(m => m.shop_domain === store.domain && m.columna === 2) || { nombre: "", valor: 0 };
     const totalManual = (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
-    const totalTienda = netoCOD + netoPagado + totalManual;
+        const totalTienda = netoCOD + netoPagado + totalManual;
     grandTotal += totalTienda;
+    if (!window.__ingresosData) window.__ingresosData = {};
+    window.__ingresosData[store.domain] = totalTienda;
 
     return `
       <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
@@ -4691,26 +4693,96 @@ async function renderInformesBalance() {
 
   const month = document.getElementById("inf-bal-month-sel")?.value || (new Date().getMonth()+1);
   const year  = document.getElementById("inf-bal-year-sel")?.value  || new Date().getFullYear();
-  const mes   = `${year}-${String(month).padStart(2,"0")}`;
   const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const mesLabel = monthNames[parseInt(month)-1].toUpperCase() + " " + year;
-
   const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 });
-  const MRW_COMISION = 0.67;
-  const TARJETA_PCT  = 0.04;
 
-  // ── Cargar datos ──────────────────────────────────────────
-  let stores = [], orders = [], manuales = [];
+  const gastos   = window.__gastosPorTienda || {};
+  const ingresos = window.__ingresosData    || {};
+
+  if (Object.keys(gastos).length === 0 || Object.keys(ingresos).length === 0) {
+    wrap.innerHTML = `<div style="padding:24px;color:#6b7280;font-size:14px;">
+      ⚠️ Para ver el Balance Final, abre primero <strong>Gastos por Tienda</strong> e <strong>Ingresos</strong> del mismo mes y vuelve aquí.
+    </div>`;
+    window.__hideLoadingBar?.();
+    return;
+  }
+
+  const dominios = [...new Set([...Object.keys(gastos), ...Object.keys(ingresos)])];
+
+  let stores = [];
   try {
     const h = { Authorization: "Bearer " + getActiveToken() };
-    const [_s, _o, _m] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/orders`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: h })
-    ]);
+    const _s = await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h });
     stores = Array.isArray(_s) ? _s : [];
-    orders = Array.isArray(_o) ? _o : [];
-    manuales = Array.isArray(_m) ? _m : [];
+  } catch {}
+
+  const balanceData = dominios.map(domain => {
+    const store     = stores.find(s => s.domain === domain) || { domain, shop_name: domain };
+    const ingreso   = parseFloat(ingresos[domain]) || 0;
+    const gasto     = parseFloat(gastos[domain])   || 0;
+    const resultado = ingreso - gasto;
+    return { domain, name: store.shop_name || domain, ingreso, gasto, resultado };
+  });
+
+  const storeCheckboxes = balanceData.map(d =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
+      <input type="checkbox" checked value="${d.domain}" onchange="recalcBalanceSuma()" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+      ${escapeHtml(d.name)}
+    </label>`
+  ).join("");
+
+  const cols = balanceData.map(d => {
+    const resColor  = d.resultado >= 0 ? "#16a34a" : "#dc2626";
+    const resBg     = d.resultado >= 0 ? "#f0fdf4" : "#fef2f2";
+    const resBorder = d.resultado >= 0 ? "#bbf7d0" : "#fecaca";
+    return `
+      <div data-domain="${d.domain}" style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:220px;flex:1;">
+        <div style="background:#16a34a;padding:12px 16px;">
+          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
+          <div style="font-size:11px;color:#bbf7d0;margin-top:2px;">${d.domain}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tbody>
+            <tr><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Total Ingreso</td><td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#16a34a;font-weight:700;">${fmt(d.ingreso)} €</td></tr>
+            <tr style="background:#f9fafb;"><td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Total Gasto</td><td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#dc2626;font-weight:700;">− ${fmt(d.gasto)} €</td></tr>
+            <tr style="background:${resBg};"><td style="padding:12px 14px;border:1px solid ${resBorder};font-weight:700;color:${resColor};font-size:14px;">RESULTADO</td><td style="padding:12px 14px;border:1px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:16px;">${fmt(d.resultado)} €</td></tr>
+          </tbody>
+        </table>
+      </div>`;
+  }).join("");
+
+  window.__balanceData = balanceData;
+
+  wrap.innerHTML = `
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;font-weight:700;color:#166534;">
+      📅 ${mesLabel}
+    </div>
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;">${cols}</div>
+        <div id="inf-balance-sumatoria" style="margin-top:20px;padding:16px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
+          <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Sumatoria seleccionada</div>
+          <div id="inf-bal-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
+          <div style="border-top:2px solid #16a34a;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+            <span id="inf-bal-total" style="font-weight:800;font-size:22px;"></span>
+          </div>
+        </div>
+      </div>
+      <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
+          <input type="checkbox" id="bal-check-all" checked onchange="toggleAllBalanceShops(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          Todas las tiendas
+        </label>
+        ${storeCheckboxes}
+      </div>
+    </div>
+  `;
+  recalcBalanceSuma();
+  window.__hideLoadingBar?.();
+} _m : [];
   } catch {}
 
   window.__allOrdersCache = orders;
