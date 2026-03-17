@@ -2764,11 +2764,12 @@ async function loadMetricas() {
     const destruidos = list.filter(o => o.fulfillment_status === "destruido").length;
     const rojos      = devueltos + destruidos;
 
-    const enviados = list.filter(o => ["enviado","en_transito","franquicia","en_preparacion","entregado","devuelto","destruido"].includes(o.fulfillment_status)).length;
-    const base     = enviados > 0 ? enviados : 1;
-    const pctEntregado = ((entregados / base) * 100).toFixed(2);
-    const pctRojo      = ((rojos      / base) * 100).toFixed(2);
-    const pctPendiente = ((transito   / base) * 100).toFixed(2);
+    const base = list.filter(o => !["pendiente","cancelado"].includes(o.fulfillment_status)).length;
+    const baseCalc = base > 0 ? base : 1;
+    const pctEntregado = ((entregados / baseCalc) * 100).toFixed(2);
+    const pctRojo      = ((rojos      / baseCalc) * 100).toFixed(2);
+    const pctPendiente = ((transito   / baseCalc) * 100).toFixed(2);
+    const enviados     = base;
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set("stat-total",      total);
