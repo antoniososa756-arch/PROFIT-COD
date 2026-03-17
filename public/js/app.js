@@ -710,6 +710,8 @@ if (id === "metricas") {
 const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
   const fmt = d => d.toISOString().split("T")[0];
+  const savedFrom = localStorage.getItem("met_from") || fmt(firstDay);
+  const savedTo   = localStorage.getItem("met_to")   || fmt(now);
 
   if (box) {
     box.className = "card metricas-box";
