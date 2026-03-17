@@ -4809,20 +4809,7 @@ async function renderInformesBalance() {
     const man2  = manuales.find(m=>m.shop_domain===store.domain&&m.columna===2)||{nombre:"",valor:0};
     const totalIngreso = (tCOD - pedCOD.length*MRW_COMISION) + (tPag - tPag*TARJETA_PCT) + (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
 
-    // GASTOS (igual que en Gastos por Tienda)
-    const pedidosTienda = pedidosMesBase.filter(o => o.shop_domain === store.domain);
-    let costoProductos = 0;
-    pedidosTienda.filter(o=>!["devuelto","cancelado","pendiente"].includes(o.fulfillment_status)).forEach(o=>{
-      try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ costoProductos+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(variantesMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{}
-    });
-    const enviosTiendaMRW = pedidosTienda.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status));
-    const devTienda = enviosTiendaMRW.filter(o=>o.fulfillment_status==="devuelto").length;
-    const mrw = (totalEnviosGlobales>0?totalMRW/totalEnviosGlobales:0)*(enviosTiendaMRW.length+devTienda);
-    const logistica = (totalPedidosGlobales>0?totalLogistica/totalPedidosGlobales:0)*enviosTiendaMRW.length;
-    const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-    const entregadosTiendaMet = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
-    const ivaTotal = entregadosTiendaMet.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
-    const totalGasto = (window.__gastosPorTienda && window.__gastosPorTienda[store.domain] != null)
+     const totalGasto = (window.__gastosPorTienda && window.__gastosPorTienda[store.domain] != null)
       ? window.__gastosPorTienda[store.domain]
       : 0;
 
