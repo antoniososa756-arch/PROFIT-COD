@@ -1276,7 +1276,6 @@ if (id === "pedidos") {
     // Cargar pedidos reales
     // Cargar pedidos reales
     fetchOrders();
-    syncAndRefreshOrders();
     checkMRWIntegration();
 
     // Cargar tiendas en filtro inline
@@ -4897,6 +4896,11 @@ let allOrders = [];
 async function fetchOrders() {
   const body = document.getElementById("ordersBody");
   if (!body) return;
+
+  // Mostrar pedidos en caché inmediatamente si existen
+  if (Array.isArray(allOrders) && allOrders.length > 0) {
+    renderOrders(allOrders);
+  }
 
   try {
     const res = await fetch(`${API_BASE}/api/orders`, {
