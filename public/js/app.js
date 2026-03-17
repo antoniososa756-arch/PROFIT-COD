@@ -2687,8 +2687,14 @@ async function loadMetricas() {
       return true;
     });
 
-    const shopMetricas = document.getElementById("met-bal-shop-filter-val")?.value || shop;
-    if (shopMetricas) list = list.filter(o => o.shop_domain === shopMetricas);
+    const shopMetricasRaw = document.getElementById("met-bal-shop-filter-val")?.value || shop;
+    if (shopMetricasRaw) {
+      try {
+        const dominios = JSON.parse(shopMetricasRaw);
+        if (Array.isArray(dominios)) list = list.filter(o => dominios.includes(o.shop_domain));
+        else list = list.filter(o => o.shop_domain === shopMetricasRaw);
+      } catch { list = list.filter(o => o.shop_domain === shopMetricasRaw); }
+    }
 
     const total      = list.length;
     const pendientes = list.filter(o => o.fulfillment_status === "pendiente").length;
@@ -3048,7 +3054,7 @@ function recalcMetricasBalance() {
   if (allCheck) allCheck.checked = filtradas.length === data.length;
 
   // Sincronizar filtro oculto y refrescar métricas
-  const shopSeleccionada = filtradas.length === 1 ? filtradas[0].domain : "";
+  const shopSeleccionada = filtradas.length === data.length ? "" : filtradas.map(d => d.domain);
   let hiddenInput = document.getElementById("met-bal-shop-filter-val");
   if (!hiddenInput) {
     hiddenInput = document.createElement("input");
@@ -3056,7 +3062,7 @@ function recalcMetricasBalance() {
     hiddenInput.id = "met-bal-shop-filter-val";
     document.body.appendChild(hiddenInput);
   }
-  hiddenInput.value = shopSeleccionada;
+  hiddenInput.value = Array.isArray(shopSeleccionada) ? JSON.stringify(shopSeleccionada) : (shopSeleccionada || "");
 
   // Cancelar petición anterior si aún estaba en curso
   if (window.__metricasUpdateId) clearTimeout(window.__metricasUpdateId);
@@ -3093,7 +3099,10 @@ function actualizarMetricasSinBalance() {
       return true;
     });
 
-    if (shopFiltro) list = list.filter(o => o.shop_domain === shopFiltro);
+    if (shopFiltro) {
+      const dominios = Array.isArray(shopFiltro) ? shopFiltro : [shopFiltro];
+      list = list.filter(o => dominios.includes(o.shop_domain));
+    }
 
     const total      = list.length;
     const pendientes = list.filter(o => o.fulfillment_status === "pendiente").length;
