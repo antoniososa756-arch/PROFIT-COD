@@ -2838,11 +2838,14 @@ async function loadMetricas() {
       el.setAttribute("stroke-dashoffset", -off);
     }
 
-    setArc("donut-entregado", pctEntregado, offset);
-    offset += pctEntregado;
-    setArc("donut-rojo",      pctRojo,      offset);
-    offset += pctRojo;
-    setArc("donut-pendiente", pctPendiente, offset);
+    const arcE = parseFloat(pctEntregado);
+    const arcR = parseFloat(pctRojo);
+    const arcP = parseFloat((100 - arcE - arcR).toFixed(2));
+    setArc("donut-entregado", arcE, offset);
+    offset += arcE;
+    setArc("donut-rojo",      arcR, offset);
+    offset += arcR;
+    setArc("donut-pendiente", arcP, offset);
 
   } catch(e) {
     console.error("Error cargando métricas:", e);
