@@ -48,6 +48,7 @@ app.use("/api/gastos-fijos", require("./routes/gastos-fijos.routes"));
 app.use("/api/impuestos", require("./routes/impuestos.routes"));
 app.use("/api/gastos-varios", require("./routes/gastos-varios.routes"));
 app.use("/api/nomina", nominaRoutes);
+app.use("/api/health", require("./routes/health.routes"));
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));
@@ -63,4 +64,7 @@ app.use((req, res) => {
 // START
 app.listen(PORT, () => {
   console.log(`OK http://localhost:${PORT}`);
+  // Arrancar sincronización automática en background
+  const { startCrons } = require("./cron");
+  startCrons();
 });

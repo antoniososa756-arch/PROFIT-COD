@@ -9,7 +9,7 @@ async function syncAllShopifyOrders() {
     let total = 0;
     for (const shop of shops) {
       try {
-        const since = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(); // últimas 2h
+        const since = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(); // últimas 72h
         let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&updated_at_min=${since}`;
         while (url) {
           const r = await fetch(url, { headers: { "X-Shopify-Access-Token": shop.access_token } });
@@ -136,7 +136,16 @@ function startCrons() {
   setTimeout(syncAllShopifyOrders, 30 * 1000);
   setTimeout(syncAllMRW, 60 * 1000);
 
-  console.log("✅ [CRON] Crons iniciados — Shopify cada 30min, MRW cada 20min");
+  console.log("✅ [CRON] Crons iniciados — Shopify cada 10min, MRW cada 5min");
+
+  // Keep-alive: ping cada 10 min para que Render no duerma el servidor
+  const APP_URL = process.env.APP_URL || "https://profit-cod.onrender.com";
+  setInterval(async () => {
+    try {
+      await fetch(`${APP_URL}/api/health`);
+      console.log("💓 [KEEP-ALIVE] ping ok");
+    } catch(e) { console.log("💓 [KEEP-ALIVE] ping error:", e.message); }
+  }, 10 * 60 * 1000);
 }
 
 module.exports = { startCrons };
