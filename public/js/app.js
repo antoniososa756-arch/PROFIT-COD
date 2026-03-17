@@ -521,7 +521,7 @@ function loadApp(section) {
           ${
             logo
               ? `<img src="${logo}"><div class="edit-logo" onclick="openLogoModal()">✎</div>`
-              : `<div class="logo-placeholder" onclick="openLogoModal()">LOGO</div>`
+              : `<div class="logo-placeholder" style="font-size:18px;font-weight:800;color:#16a34a;letter-spacing:1px;cursor:default;">PROFICOD</div>`
           }
         </div>
       </div>
