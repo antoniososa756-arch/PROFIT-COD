@@ -4717,12 +4717,8 @@ async function renderInformesBalance() {
   window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
 
-  // Leer TOTAL directo de gastos por tienda
-  window.__gastosPorTienda = {};
-  try {
-    const h = { Authorization: "Bearer " + getActiveToken() };
-    const numTiendas = stores.length || 1;
-    const [gf, gv, ge, nom, imp, st, vr, adsAll] = await Promise.all([
+    // Usar el mismo cálculo que Gastos por Tienda
+  await loadGastosVarios(parseInt(month), parseInt(year));
       cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h }),
       cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h }),
       cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h }),
