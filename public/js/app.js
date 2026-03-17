@@ -3108,9 +3108,19 @@ function actualizarMetricasSinBalance() {
       return true;
     });
 
-    if (shopFiltro) {
-      const dominios = Array.isArray(shopFiltro) ? shopFiltro : [shopFiltro];
-      list = list.filter(o => dominios.includes(o.shop_domain));
+    // Leer checkboxes directamente para filtro inmediato
+    const checkboxesAct = document.querySelectorAll("#metrics-balance-wrap input[type='checkbox'][value]");
+    let dominiosAct = [];
+    if (checkboxesAct.length > 0) {
+      dominiosAct = [...checkboxesAct].filter(c => c.checked).map(c => c.value);
+    } else if (shopFiltro) {
+      try {
+        const parsed = JSON.parse(shopFiltro);
+        dominiosAct = Array.isArray(parsed) ? parsed : [shopFiltro];
+      } catch { dominiosAct = [shopFiltro]; }
+    }
+    if (dominiosAct.length > 0 && dominiosAct.length < checkboxesAct.length) {
+      list = list.filter(o => dominiosAct.includes(o.shop_domain));
     }
 
     const total      = list.length;
