@@ -4716,12 +4716,8 @@ async function renderInformesBalance() {
   window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
 
-  // Forzar mes correcto en Gastos por Tienda antes de leer el dato
-  const gvMonthSel = document.getElementById("gv-month-sel");
-  const gvYearSel  = document.getElementById("gv-year-sel");
-  if (gvMonthSel) gvMonthSel.value = month;
-  if (gvYearSel)  gvYearSel.value  = year;
-  await loadGastosVarios();
+  // Calcular gastos por tienda para el mes correcto
+  await calcularGastosPorTienda(mes, month, year, stores);
 
   // ── Gastos Ads ────────────────────────────────────────────
   let adsSpends = {};
@@ -4938,6 +4934,108 @@ function toggleAllBalanceShops(checked) {
   recalcBalanceSuma();
 }
 window.toggleAllBalanceShops = toggleAllBalanceShops;
+
+async function calcularGastosPorTienda(mes, month, year, stores) {
+  const h = { Authorization: "Bearer " + getActiveToken() };
+  const numTiendas = stores.length || 1;
+
+  let adsSpends = {};
+  try {
+    const adsResults = await Promise.all(stores.map(store =>
+      cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: h })
+        .then(rows => ({ domain: store.domain, rows: rows || [] }))
+    ));
+    adsResults.forEach(({ domain, rows }) => {
+      let meta = 0, tiktok = 0;
+      rows.forEach(r => { meta += r.meta||0; tiktok += r.tiktok||0; });
+      adsSpends[domain] = { meta, tiktok };
+    });
+  } catch {}
+
+  let gastosFijos = [], gastosVarios = {}, gastosExtrasRaw = [], nominaData = { total: 0 }, impuestosData = [], stockData2 = [], varData2 = [];
+  try {
+    const [gf, gv, ge, nom, imp, st, vr] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/impuestos`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h })
+    ]);
+    gastosFijos = Array.isArray(gf) ? gf : [];
+    if (Array.isArray(gv)) gv.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; });
+    gastosExtrasRaw = Array.isArray(ge) ? ge : [];
+    nominaData = nom || { total: 0 };
+    impuestosData = Array.isArray(imp) ? imp : [];
+    stockData2 = Array.isArray(st) ? st : [];
+    varData2 = Array.isArray(vr) ? vr : [];
+  } catch {}
+
+  const gastosMRW = gastosFijos.filter(g => g.nombre === "MRW");
+  const gastosLogistica = gastosFijos.filter(g => g.nombre === "LOGÍSTICA");
+  const gastosOtrosFijos = gastosFijos.filter(g => !["MRW","LOGÍSTICA"].includes(g.nombre));
+  const totalMRW = gastosMRW.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const totalLogistica = gastosLogistica.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const fijoXTienda = totalOtrosFijos / numTiendas;
+
+  let ivaPorcentaje = 0.21;
+  if (impuestosData.length > 0) ivaPorcentaje = (parseFloat(impuestosData[0].porcentaje)||21) / 100;
+  const nominaXTienda = (parseFloat(nominaData.total)||0) / numTiendas;
+
+  const gastosExtras = {};
+  gastosExtrasRaw.forEach(r => {
+    if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = [];
+    gastosExtras[r.shop_domain].push(r);
+  });
+
+  const stockMap = {};
+  stockData2.forEach(s => { stockMap[s.product_id] = s.costo_compra||0; });
+  const variantesMap = {};
+  varData2.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta||1; });
+
+  const allOrdersCache = window.__allOrdersCache || [];
+  const estadosEnvioMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
+
+  const pedidosTodas = allOrdersCache.filter(o => {
+    if (!o.created_at) return false;
+    if (["cancelado","pendiente"].includes(o.fulfillment_status)) return false;
+    const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
+    return d.startsWith(mes);
+  });
+
+  const enviosGlobalesMRW = pedidosTodas.filter(o => estadosEnvioMRW.includes(o.fulfillment_status));
+  const devueltosTodas = enviosGlobalesMRW.filter(o => o.fulfillment_status === "devuelto").length;
+  const totalEnviosGlobales = enviosGlobalesMRW.length + devueltosTodas;
+  const totalPedidosGlobales = pedidosTodas.filter(o => estadosEnvioMRW.includes(o.fulfillment_status)).length;
+
+  if (!window.__gastosPorTienda) window.__gastosPorTienda = {};
+
+  stores.forEach(store => {
+    const ads = adsSpends[store.domain] || { meta:0, tiktok:0 };
+    const shopify = gastosVarios[store.domain] || 0;
+
+    const pedidosTienda = pedidosTodas.filter(o => o.shop_domain === store.domain);
+    let costoProductos = 0;
+    pedidosTienda.filter(o=>!["devuelto","cancelado","pendiente"].includes(o.fulfillment_status)).forEach(o=>{
+      try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ costoProductos+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(variantesMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{}
+    });
+
+    const enviosTiendaMRW = pedidosTienda.filter(o => estadosEnvioMRW.includes(o.fulfillment_status));
+    const devTienda = enviosTiendaMRW.filter(o => o.fulfillment_status === "devuelto").length;
+    const enviosTienda = enviosTiendaMRW.length + devTienda;
+    const mrwUnitario = totalEnviosGlobales > 0 ? totalMRW / totalEnviosGlobales : 0;
+    const mrw = mrwUnitario * enviosTienda;
+    const logisticaUnitaria = totalPedidosGlobales > 0 ? totalLogistica / totalPedidosGlobales : 0;
+    const logistica = logisticaUnitaria * enviosTiendaMRW.length;
+    const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+    const entregadosTienda = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
+    const ivaTotal = entregadosTienda.reduce((s,o) => s+(parseFloat(o.total_price)||0)*ivaPorcentaje, 0);
+
+    window.__gastosPorTienda[store.domain] = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
+  });
+}
 
 window.loadInformesIngresos  = loadInformesIngresos;window.renderInformesIngresos = renderInformesIngresos;
 window.loadInformesBalance   = loadInformesBalance;
