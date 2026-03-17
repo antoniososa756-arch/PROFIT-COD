@@ -4795,75 +4795,7 @@ async function renderInformesBalance() {
     });
   } catch(e) { console.error("Error calculando gastos:", e); }
 
-  // ── Gastos Ads ────────────────────────────────────────────
-  let adsSpends = {};
-  try {
-    const h = { Authorization: "Bearer " + getActiveToken() };
-    const adsRes = await Promise.all(stores.map(store =>
-      cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: h })
-        .then(rows => ({ domain: store.domain, rows: Array.isArray(rows) ? rows : [] }))
-    ));
-    adsRes.forEach(({ domain, rows }) => {
-      let meta = 0, tiktok = 0;
-      rows.forEach(r => { meta += r.meta||0; tiktok += r.tiktok||0; });
-      adsSpends[domain] = { meta, tiktok };
-    });
-  } catch {}
 
-  // ── Gastos Fijos ──────────────────────────────────────────
-  let gastosFijos = [];
-  try { gastosFijos = await cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }) || []; if (!Array.isArray(gastosFijos)) gastosFijos = []; } catch {}
-  const gastosMRW       = gastosFijos.filter(g => g.nombre === "MRW");
-  const gastosLogistica = gastosFijos.filter(g => g.nombre === "LOGÍSTICA");
-  const gastosOtrosFijos = gastosFijos.filter(g => !["MRW","LOGÍSTICA"].includes(g.nombre));
-  const totalMRW        = gastosMRW.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
-  const totalLogistica  = gastosLogistica.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
-  const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
-  const fijoXTienda     = totalOtrosFijos / numTiendas;
-
-  const h2 = { Authorization: "Bearer " + getActiveToken() };
-  let nominaXTienda = 0, ivaPorcentaje = 0.21, gastosVarios = {}, gastosExtras = {};
-  const stockMap = {}, variantesMap = {};
-  try {
-    const [nomData, impData, gvRows, geRows, stData, vrData] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: h2 }),
-      cachedFetch(`${API_BASE}/api/impuestos`, { headers: h2 }),
-      cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h2 }),
-      cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h2 }),
-      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: h2 }),
-      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h2 })
-    ]);
-    nominaXTienda = (parseFloat(nomData?.total) || 0) / numTiendas;
-    if (Array.isArray(impData) && impData.length > 0) ivaPorcentaje = (parseFloat(impData[0].porcentaje) || 21) / 100;
-    if (Array.isArray(gvRows)) gvRows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; });
-    if (Array.isArray(geRows)) geRows.forEach(r => { if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = []; gastosExtras[r.shop_domain].push(r); });
-    if (Array.isArray(stData)) stData.forEach(s => { stockMap[s.product_id] = s.costo_compra||0; });
-    if (Array.isArray(vrData)) vrData.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta||1; });
-  } catch {}
-
-  // ── Pedidos del mes ───────────────────────────────────────
-  const pedidosMesBase = orders.filter(o => {
-    if (!o.created_at) return false;
-    if (["cancelado","pendiente"].includes(o.fulfillment_status)) return false;
-    const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
-    return d.startsWith(mes);
-  });
-  const pedidosMesEntregados = pedidosMesBase.filter(o => o.fulfillment_status === "entregado");
-  const pedidosMesTarjeta = orders.filter(o => {
-    if (o.fulfillment_status === "cancelado") return false;
-    if (!o.created_at) return false;
-    const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
-    return d.startsWith(mes);
-  });
-
-  const estadosEnvioMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
-  const enviosGlobalesMRW = pedidosMesBase.filter(o => estadosEnvioMRW.includes(o.fulfillment_status));
-  const devueltosTodas = enviosGlobalesMRW.filter(o => o.fulfillment_status === "devuelto").length;
-  const totalEnviosGlobales = enviosGlobalesMRW.length + devueltosTodas;
-  const totalPedidosGlobales = pedidosMesBase.filter(o => estadosEnvioMRW.includes(o.fulfillment_status)).length;
-
-  // ── Calcular por tienda ───────────────────────────────────
-  const balanceData = stores.map(store => {
     const ads     = adsSpends[store.domain] || { meta:0, tiktok:0 };
     const shopify = gastosVarios[store.domain] || 0;
 
