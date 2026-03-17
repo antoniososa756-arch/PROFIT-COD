@@ -3500,7 +3500,7 @@ async function loadAdsTable() {
   const monthName = monthNames[parseInt(month)-1];
   const h = { Authorization: "Bearer " + getActiveToken() };
 
-  let orders = [], spends = {};
+      let orders = [], spends = {};
   try {
     const [allOrders, adsRows] = await Promise.all([
       cachedFetch(`${API_BASE}/api/orders`, { headers: h }),
@@ -3515,9 +3515,7 @@ async function loadAdsTable() {
              parseInt(m) === parseInt(month) &&
              parseInt(y) === parseInt(year);
     }) : [];
-  } catch {}
-
-  if (Array.isArray(adsRows)) adsRows.forEach(r => { spends[r.date] = { meta: r.meta||0, tiktok: r.tiktok||0 }; });
+    if (Array.isArray(adsRows)) adsRows.forEach(r => { spends[r.date] = { meta: r.meta||0, tiktok: r.tiktok||0 }; });
   } catch(e) { console.error(e); }
 
   let totalFact=0, totalMeta=0, totalTiktok=0, totalPedidos=0;
