@@ -723,6 +723,8 @@ const now = new Date();
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;justify-content:flex-end;">
                     <button onclick="filtroMetricasHoy()"
             id="btn-met-hoy"
+            <button onclick="filtroMetricasMes()"
+            id="btn-met-mes"
             style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
             onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
             onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
