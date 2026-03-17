@@ -2675,10 +2675,16 @@ async function loadMetricas() {
   const shop     = document.getElementById("metrics-shop")?.value       || "";
 
   try {
-    const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const orders = await res.json();
+    let orders;
+    if (Array.isArray(allOrders) && allOrders.length > 0) {
+      orders = allOrders;
+    } else {
+      const res = await fetch(`${API_BASE}/api/orders`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      });
+      orders = await res.json();
+      if (Array.isArray(orders)) allOrders = orders;
+    }
     let list = Array.isArray(orders) ? orders : [];
 
     list = list.filter(o => {
