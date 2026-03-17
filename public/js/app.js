@@ -505,11 +505,8 @@ function loadApp(section) {
 
   const savedLang = localStorage.getItem("lang") || "ES";
 
-  const logoLight = localStorage.getItem("logo_light");
-  const logoDark = localStorage.getItem("logo_dark");
-  const logo = document.body.classList.contains("dark")
-    ? (logoDark || logoLight)
-    : logoLight;
+  // logo eliminado
+  const logo = null;
 
   const notiList = getNotifications(d);
 
@@ -518,11 +515,7 @@ function loadApp(section) {
     <div class="sidebar" id="sidebar">
       <div class="logo-zone">
         <div class="logo-wrapper">
-          ${
-            logo
-              ? `<img src="${logo}"><div class="edit-logo" onclick="openLogoModal()">✎</div>`
-              : `<div class="logo-placeholder" style="font-size:18px;font-weight:800;color:#16a34a;letter-spacing:1px;cursor:default;">PROFICOD</div>`
-          }
+          <div style="font-size:18px;font-weight:800;color:#16a34a;letter-spacing:1px;cursor:default;">PROFICOD</div>
         </div>
       </div>
 
