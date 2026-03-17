@@ -4054,13 +4054,14 @@ window.saveAdsSpend  = saveAdsSpend;
 // =========================
 // GASTOS VARIOS
 // =========================
-async function loadGastosVarios() {
+async function loadGastosVarios(forzarMonth, forzarYear) {
   const content = document.getElementById("gv-content");
   const label   = document.getElementById("gv-mes-label");
-  if (!content) return;
 
-  const month = document.getElementById("gv-month-sel")?.value || (new Date().getMonth()+1);
-  const year  = document.getElementById("gv-year-sel")?.value  || new Date().getFullYear();
+  const month = forzarMonth || document.getElementById("gv-month-sel")?.value || (new Date().getMonth()+1);
+  const year  = forzarYear  || document.getElementById("gv-year-sel")?.value  || new Date().getFullYear();
+
+  if (!content && !forzarMonth) return;
   const mes   = `${year}-${String(month).padStart(2,"0")}`;
 
   const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
