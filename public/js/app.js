@@ -2761,9 +2761,9 @@ async function loadMetricas() {
 
     const enviados = list.filter(o => ["enviado","en_transito","franquicia","en_preparacion","entregado","devuelto","destruido"].includes(o.fulfillment_status)).length;
     const base     = enviados > 0 ? enviados : 1;
-    const pctEntregado = Math.round((entregados / base) * 100);
-    const pctRojo      = Math.round((rojos      / base) * 100);
-    const pctPendiente = Math.round((transito   / base) * 100);
+    const pctEntregado = ((entregados / base) * 100).toFixed(2);
+    const pctRojo      = ((rojos      / base) * 100).toFixed(2);
+    const pctPendiente = ((transito   / base) * 100).toFixed(2);
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set("stat-total",      total);
@@ -3178,9 +3178,9 @@ function actualizarMetricasSinBalance() {
     const rojos      = devueltos + destruidos;
     const enviados   = list.filter(o => ["enviado","en_transito","franquicia","en_preparacion","entregado","devuelto","destruido"].includes(o.fulfillment_status)).length;
     const base       = enviados > 0 ? enviados : 1;
-    const pctEntregado = Math.round((entregados / base) * 100);
-    const pctRojo      = Math.round((rojos      / base) * 100);
-    const pctPendiente = Math.round((transito   / base) * 100);
+    const pctEntregado = ((entregados / base) * 100).toFixed(2);
+    const pctRojo      = ((rojos      / base) * 100).toFixed(2);
+    const pctPendiente = ((transito   / base) * 100).toFixed(2);
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set("stat-total",      total);
