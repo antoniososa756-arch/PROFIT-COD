@@ -1443,11 +1443,7 @@ if (id === "gastos-ads") {
           style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
-        <button onclick="loadAdsTable()"
-          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-          Ver
-        </button>
-      </div>
+        </div>
       <div id="ads-table-wrap" style="overflow-x:auto;margin:0 auto;"></div>
     `;
   }
@@ -1461,6 +1457,9 @@ if (id === "gastos-ads") {
     sel.innerHTML = stores.map(s =>
       `<option value="${s.domain}">${escapeHtml(s.shop_name || s.domain)}</option>`
     ).join("");
+    document.getElementById("ads-shop-sel")?.addEventListener("change", loadAdsTable);
+    document.getElementById("ads-month-sel")?.addEventListener("change", loadAdsTable);
+    document.getElementById("ads-year-sel")?.addEventListener("change", loadAdsTable);
     loadAdsTable();
   }).catch(()=>{});
 
@@ -2153,8 +2152,7 @@ function switchFacturasTab(key) {
         <select id="ads-year-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
-        <button onclick="loadAdsTable()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
-      </div>
+              </div>
       <div id="ads-table-wrap" style="overflow-x:auto;"></div>
     `;
     fetch(`${API_BASE}/api/shopify/stores`, {
@@ -2163,6 +2161,9 @@ function switchFacturasTab(key) {
       const sel = document.getElementById("ads-shop-sel");
       if (!sel || !Array.isArray(stores)) return;
       sel.innerHTML = stores.map(s=>`<option value="${s.domain}">${escapeHtml(s.shop_name||s.domain)}</option>`).join("");
+      document.getElementById("ads-shop-sel")?.addEventListener("change", loadAdsTable);
+      document.getElementById("ads-month-sel")?.addEventListener("change", loadAdsTable);
+      document.getElementById("ads-year-sel")?.addEventListener("change", loadAdsTable);
       loadAdsTable();
     }).catch(()=>{});
     return;
