@@ -2242,12 +2242,11 @@ async function loadNominaData() {
   const mes   = `${year}-${String(month).padStart(2,"0")}`;
 
   try {
-    const [trabRes, pagosRes] = await Promise.all([
-      fetch(`${API_BASE}/api/nomina/trabajadores`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
-      fetch(`${API_BASE}/api/nomina/pagos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const [trabajadores, pagos] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/nomina/trabajadores`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/nomina/pagos?mes=${mes}`, { headers: h })
     ]);
-    const trabajadores = await trabRes.json();
-    const pagos = await pagosRes.json();
 
     if (!Array.isArray(trabajadores) || trabajadores.length === 0) {
       content.innerHTML = `<div style="padding:24px;color:#6b7280;font-size:14px;">No hay trabajadores. Pulsa <strong>+ Trabajador</strong> para añadir.</div>`;
@@ -2559,13 +2558,9 @@ async function fetchStores() {
   grid.innerHTML = "Cargando tiendas…";
 
   try {
-    const res = await fetch(`${API_BASE}/api/shopify/stores`, {
-      headers: {
-        Authorization: "Bearer " + getActiveToken(),
-      },
+    const stores = await cachedFetch(`${API_BASE}/api/shopify/stores`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
     });
-
-    const stores = await res.json();
 
     if (!Array.isArray(stores) || stores.length === 0) {
       grid.innerHTML = `
@@ -3522,7 +3517,7 @@ async function loadAdsTable() {
   } catch {}
 
   if (Array.isArray(adsRows)) adsRows.forEach(r => { spends[r.date] = { meta: r.meta||0, tiktok: r.tiktok||0 }; });
-  } catch {}
+  } catch(e) { console.error(e); }
 
   let totalFact=0, totalMeta=0, totalTiktok=0, totalPedidos=0;
 
@@ -3646,10 +3641,7 @@ async function loadGastosFijosData() {
 
   let totalPedidos = 0;
   try {
-    const r = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const all = await r.json();
+    const all = await cachedFetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + getActiveToken() } });
     if (Array.isArray(all)) {
       const pedidosMes = all.filter(o => {
         if (!o.created_at) return false;
@@ -3669,10 +3661,7 @@ async function loadGastosFijosData() {
       method: "POST",
       headers: { "Content-Type":"application/json", Authorization: "Bearer " + getActiveToken() }
     });
-    const r = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const data = await r.json();
+    const data = await cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
     items = Array.isArray(data) ? data : [];
   } catch {}
 
@@ -3704,9 +3693,7 @@ async function loadGastosFijosData() {
 
 let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   try {
-    preciosGlobales = await fetch(`${API_BASE}/api/shopify/precios-globales`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    }).then(r => r.json());
+    preciosGlobales = await cachedFetch(`${API_BASE}/api/shopify/precios-globales`, { headers: { Authorization: "Bearer " + getActiveToken() } }) || preciosGlobales;
   } catch {}
 
   // Precargar P.UNIT de MRW y LOGÍSTICA desde precios globales
@@ -3720,10 +3707,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
 
   let impuestos = [];
   try {
-    const r = await fetch(`${API_BASE}/api/impuestos`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const data = await r.json();
+    const data = await cachedFetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
     impuestos = Array.isArray(data) ? data : [];
   } catch {}
 
@@ -4075,20 +4059,16 @@ async function loadGastosVarios() {
 
   window.__showLoadingBar?.("Cargando gastos...");
 // Cargar pedidos al cache global
+  const _hGV = { Authorization: "Bearer " + getActiveToken() };
   try {
-    const ordersRes = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    window.__allOrdersCache = await ordersRes.json();
+    const _orders = await cachedFetch(`${API_BASE}/api/orders`, { headers: _hGV });
+    window.__allOrdersCache = Array.isArray(_orders) ? _orders : [];
   } catch {}
 
   // 1. Tiendas activas
   let stores = [];
   try {
-    const r = await fetch(`${API_BASE}/api/shopify/stores`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const all = await r.json();
+    const all = await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: _hGV });
     stores = Array.isArray(all) ? all.filter(s => s.active || s.status === "active" || s.is_active) : [];
     if (stores.length === 0) stores = Array.isArray(all) ? all : [];
   } catch {}
@@ -4711,9 +4691,17 @@ async function renderInformesBalance() {
 
   // ── Cargar datos ──────────────────────────────────────────
   let stores = [], orders = [], manuales = [];
-  try { stores = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(stores)) stores = []; } catch {}
-  try { orders = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(orders)) orders = []; } catch {}
-  try { manuales = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(manuales)) manuales = []; } catch {}
+  try {
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const [_s, _o, _m] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/orders`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: h })
+    ]);
+    stores = Array.isArray(_s) ? _s : [];
+    orders = Array.isArray(_o) ? _o : [];
+    manuales = Array.isArray(_m) ? _m : [];
+  } catch {}
 
   window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
@@ -4721,17 +4709,21 @@ async function renderInformesBalance() {
   // ── Gastos Ads ────────────────────────────────────────────
   let adsSpends = {};
   try {
-    for (const store of stores) {
-      const rows = await fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json());
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const adsRes = await Promise.all(stores.map(store =>
+      cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: h })
+        .then(rows => ({ domain: store.domain, rows: Array.isArray(rows) ? rows : [] }))
+    ));
+    adsRes.forEach(({ domain, rows }) => {
       let meta = 0, tiktok = 0;
-      if (Array.isArray(rows)) rows.forEach(r => { meta += r.meta||0; tiktok += r.tiktok||0; });
-      adsSpends[store.domain] = { meta, tiktok };
-    }
+      rows.forEach(r => { meta += r.meta||0; tiktok += r.tiktok||0; });
+      adsSpends[domain] = { meta, tiktok };
+    });
   } catch {}
 
   // ── Gastos Fijos ──────────────────────────────────────────
   let gastosFijos = [];
-  try { gastosFijos = await fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (!Array.isArray(gastosFijos)) gastosFijos = []; } catch {}
+  try { gastosFijos = await cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } }) || []; if (!Array.isArray(gastosFijos)) gastosFijos = []; } catch {}
   const gastosMRW       = gastosFijos.filter(g => g.nombre === "MRW");
   const gastosLogistica = gastosFijos.filter(g => g.nombre === "LOGÍSTICA");
   const gastosOtrosFijos = gastosFijos.filter(g => !["MRW","LOGÍSTICA"].includes(g.nombre));
@@ -4740,36 +4732,25 @@ async function renderInformesBalance() {
   const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
   const fijoXTienda     = totalOtrosFijos / numTiendas;
 
-  // Nómina del mes → dividir entre tiendas
-  let nominaXTienda = 0;
+  const h2 = { Authorization: "Bearer " + getActiveToken() };
+  let nominaXTienda = 0, ivaPorcentaje = 0.21, gastosVarios = {}, gastosExtras = {};
+  const stockMap = {}, variantesMap = {};
   try {
-    const nomRes = await fetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    const nomData = await nomRes.json();
-    nominaXTienda = (parseFloat(nomData.total) || 0) / numTiendas;
+    const [nomData, impData, gvRows, geRows, stData, vrData] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/impuestos`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h2 })
+    ]);
+    nominaXTienda = (parseFloat(nomData?.total) || 0) / numTiendas;
+    if (Array.isArray(impData) && impData.length > 0) ivaPorcentaje = (parseFloat(impData[0].porcentaje) || 21) / 100;
+    if (Array.isArray(gvRows)) gvRows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; });
+    if (Array.isArray(geRows)) geRows.forEach(r => { if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = []; gastosExtras[r.shop_domain].push(r); });
+    if (Array.isArray(stData)) stData.forEach(s => { stockMap[s.product_id] = s.costo_compra||0; });
+    if (Array.isArray(vrData)) vrData.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta||1; });
   } catch {}
-
-  // IVA desde base de datos
-  let ivaPorcentaje = 0.21;
-  try {
-    const impData = await cachedFetch(`${API_BASE}/api/impuestos`, { headers: h2 });
-    if (Array.isArray(impData) && impData.length > 0) {
-      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
-    }
-  } catch {}
-
-  // ── Gastos Varios (Shopify) ───────────────────────────────
-  let gastosVarios = {};
-  try { const rows = await cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h2 }); if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; }); } catch {}
-
-  // ── Gastos Extras por tienda ──────────────────────────────
-  let gastosExtras = {};
-  try { const rows = await cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h2 }); if (Array.isArray(rows)) rows.forEach(r => { if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = []; gastosExtras[r.shop_domain].push(r); }); } catch {}
-
-  // ── Stock y variantes ─────────────────────────────────────
-  const stockMap = {};
-  try { const d = await fetch(`${API_BASE}/api/shopify/stock`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (Array.isArray(d)) d.forEach(s => { stockMap[s.product_id] = s.costo_compra||0; }); } catch {}
-  const variantesMap = {};
-  try { const d = await fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r=>r.json()); if (Array.isArray(d)) d.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta||1; }); } catch {}
 
   // ── Pedidos del mes ───────────────────────────────────────
   const pedidosMesBase = orders.filter(o => {
@@ -5012,14 +4993,23 @@ async function refreshCacheBackground() {
   const token = getActiveToken();
   if (!token) return;
   const h = { Authorization: "Bearer " + token };
+  const now = new Date();
+  const mes = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
 
-  // Actualiza silenciosamente los datos más usados
   const urls = [
     `${API_BASE}/api/orders`,
     `${API_BASE}/api/shopify/stores`,
     `${API_BASE}/api/shopify/stock`,
     `${API_BASE}/api/shopify/variantes-config`,
     `${API_BASE}/api/shopify/products`,
+    `${API_BASE}/api/impuestos`,
+    `${API_BASE}/api/shopify/precios-globales`,
+    `${API_BASE}/api/gastos-fijos?mes=${mes}`,
+    `${API_BASE}/api/gastos-varios?mes=${mes}`,
+    `${API_BASE}/api/gastos-varios/extras?mes=${mes}`,
+    `${API_BASE}/api/nomina/total?mes=${mes}`,
+    `${API_BASE}/api/nomina/trabajadores`,
+    `${API_BASE}/api/orders/reembolso-estado`,
   ];
 
   // Actualiza en paralelo sin bloquear nada
