@@ -746,18 +746,15 @@ const now = new Date();
             Mes anterior
           </button>
           <input type="date" id="metrics-date-from" value="${savedFrom}"
+            onchange="aplicarFiltroMetricas()"
             style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
           <span style="color:#6b7280;font-size:13px;">—</span>
           <input type="date" id="metrics-date-to" value="${savedTo}"
+            onchange="aplicarFiltroMetricas()"
             style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
           <select id="metrics-shop" style="display:none;">
             <option value="">Todas las tiendas</option>
           </select>
-          <button onclick="aplicarFiltroMetricas()"
-            style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s;"
-            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-            Filtrar
-          </button>
         </div>
       </div>
 
