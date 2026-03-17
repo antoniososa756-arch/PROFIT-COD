@@ -4717,12 +4717,84 @@ async function renderInformesBalance() {
   window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
 
-  // Leer TOTAL directo de gastos por tienda
+    // Leer TOTAL directo de gastos por tienda
   window.__gastosPorTienda = {};
   try {
-    const h = { Authorization: "Bearer " + getActiveToken() };
-    const numTiendas = stores.length || 1;
-    const [gf, gv, ge, nom, imp, st, vr, adsAll] = await Promise.all([
+    const h2 = { Authorization: "Bearer " + getActiveToken() };
+    const numTiendasInf = stores.length || 1;
+    const [gf2, gv2, ge2, nom2, imp2, st2, vr2, adsAll2] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/impuestos`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h2 }),
+      Promise.all(stores.map(store =>
+        cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: h2 })
+          .then(rows => ({ domain: store.domain, rows: Array.isArray(rows) ? rows : [] }))
+      ))
+    ]);
+
+    const gastosMRW2 = (Array.isArray(gf2)?gf2:[]).filter(g=>g.nombre==="MRW");
+    const gastosLog2 = (Array.isArray(gf2)?gf2:[]).filter(g=>g.nombre==="LOGÍSTICA");
+    const gastosOtros2 = (Array.isArray(gf2)?gf2:[]).filter(g=>!["MRW","LOGÍSTICA"].includes(g.nombre));
+    const totalMRW2 = gastosMRW2.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+    const totalLog2 = gastosLog2.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+    const totalFijos2 = gastosOtros2.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+    const fijoXTienda2 = totalFijos2 / numTiendasInf;
+    const nominaXTienda2 = (parseFloat(nom2?.total)||0) / numTiendasInf;
+    let ivaPct2 = 0.21;
+    if (Array.isArray(imp2) && imp2.length > 0) ivaPct2 = (parseFloat(imp2[0].porcentaje)||21)/100;
+
+    const gastosVarMap2 = {};
+    if (Array.isArray(gv2)) gv2.forEach(r => { gastosVarMap2[r.shop_domain] = r.shopify||0; });
+    const extrasMap2 = {};
+    if (Array.isArray(ge2)) ge2.forEach(r => { if(!extrasMap2[r.shop_domain]) extrasMap2[r.shop_domain]=[]; extrasMap2[r.shop_domain].push(r); });
+    const stockMap2 = {};
+    if (Array.isArray(st2)) st2.forEach(s => { stockMap2[s.product_id] = s.costo_compra||0; });
+    const varMap2 = {};
+    if (Array.isArray(vr2)) vr2.forEach(v => { varMap2[v.variant_id] = v.unidades_por_venta||1; });
+
+    const adsMap2 = {};
+    adsAll2.forEach(({domain, rows}) => {
+      let meta=0, tiktok=0;
+      rows.forEach(r=>{ meta+=r.meta||0; tiktok+=r.tiktok||0; });
+      adsMap2[domain] = { meta, tiktok };
+    });
+
+    const pedMes2 = (window.__allOrdersCache||[]).filter(o => {
+      if(!o.created_at) return false;
+      if(["cancelado","pendiente"].includes(o.fulfillment_status)) return false;
+      const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
+      return d.startsWith(mes);
+    });
+
+    const estadosMRW2 = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
+    const envGlob2 = pedMes2.filter(o=>estadosMRW2.includes(o.fulfillment_status));
+    const devGlob2 = envGlob2.filter(o=>o.fulfillment_status==="devuelto").length;
+    const totalEnvGlob2 = envGlob2.length + devGlob2;
+    const totalPedGlob2 = pedMes2.filter(o=>estadosMRW2.includes(o.fulfillment_status)).length;
+
+    stores.forEach(store => {
+      const ads2 = adsMap2[store.domain] || {meta:0,tiktok:0};
+      const shopify2 = gastosVarMap2[store.domain] || 0;
+      const extras2 = (extrasMap2[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+      const pedTienda2 = pedMes2.filter(o=>o.shop_domain===store.domain);
+      let costoProductos2 = 0;
+      pedTienda2.filter(o=>!["devuelto","cancelado","pendiente"].includes(o.fulfillment_status)).forEach(o=>{
+        try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ costoProductos2+=(parseFloat(stockMap2[String(item.product_id)])||0)*(parseInt(varMap2[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{}
+      });
+      const envTienda2 = pedTienda2.filter(o=>estadosMRW2.includes(o.fulfillment_status));
+      const devTienda2 = envTienda2.filter(o=>o.fulfillment_status==="devuelto").length;
+      const enviosTienda2 = envTienda2.length + devTienda2;
+      const mrw2 = (totalEnvGlob2>0?totalMRW2/totalEnvGlob2:0)*enviosTienda2;
+      const logistica2 = (totalPedGlob2>0?totalLog2/totalPedGlob2:0)*envTienda2.length;
+      const entregados2 = pedTienda2.filter(o=>o.fulfillment_status==="entregado");
+      const iva2 = entregados2.reduce((s,o)=>s+(parseFloat(o.total_price)||0)*ivaPct2,0);
+      window.__gastosPorTienda[store.domain] = ads2.meta + ads2.tiktok + shopify2 + costoProductos2 + mrw2 + logistica2 + fijoXTienda2 + nominaXTienda2 + extras2 + iva2;
+    });
+  } catch(e) { console.error("Error calculando gastos:", e); }
       cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h }),
       cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h }),
       cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h }),
@@ -4811,8 +4883,8 @@ async function renderInformesBalance() {
   });
 
   const balanceData = stores.map(store => {
-    const ads     = adsSpends[store.domain] || { meta:0, tiktok:0 };
-    const shopify = gastosVarios[store.domain] || 0;
+    const ads     = { meta:0, tiktok:0 };
+    const shopify = 0;
 
     // INGRESOS
     const pedEnt   = pedidosMesEntregados.filter(o => o.shop_domain === store.domain);
