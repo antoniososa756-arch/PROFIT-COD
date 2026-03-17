@@ -718,7 +718,21 @@ const now = new Date();
         <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1;justify-content:flex-end;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;justify-content:flex-end;">
+          <button onclick="filtroMetricasHoy()"
+            id="btn-met-hoy"
+            style="padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
+            onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';"
+            onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';">
+            📅 Hoy
+          </button>
+          <button onclick="filtroMetricasMes()"
+            id="btn-met-mes"
+            style="padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
+            onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';"
+            onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';">
+            🗓️ Mes actual
+          </button>
           <input type="date" id="metrics-date-from" value="${fmt(firstDay)}"
             style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
           <span style="color:#6b7280;font-size:13px;">—</span>
@@ -732,7 +746,6 @@ const now = new Date();
             onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
             Filtrar
           </button>
-          
         </div>
       </div>
 
@@ -872,6 +885,27 @@ const now = new Date();
     </div>
     `;
   }
+function filtroMetricasHoy() {
+  const hoy = new Date().toISOString().split("T")[0];
+  const from = document.getElementById("metrics-date-from");
+  const to   = document.getElementById("metrics-date-to");
+  if (from) from.value = hoy;
+  if (to)   to.value   = hoy;
+  loadMetricas();
+}
+window.filtroMetricasHoy = filtroMetricasHoy;
+
+function filtroMetricasMes() {
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+  const today    = now.toISOString().split("T")[0];
+  const from = document.getElementById("metrics-date-from");
+  const to   = document.getElementById("metrics-date-to");
+  if (from) from.value = firstDay;
+  if (to)   to.value   = today;
+  loadMetricas();
+}
+window.filtroMetricasMes = filtroMetricasMes;
 
 function aplicarFiltroMetricas() {
   const from = document.getElementById("metrics-date-from")?.value;
