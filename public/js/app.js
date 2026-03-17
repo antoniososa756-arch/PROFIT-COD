@@ -3237,9 +3237,14 @@ function actualizarMetricasSinBalance() {
       el.setAttribute("stroke-dasharray", `${p} ${100 - p}`);
       el.setAttribute("stroke-dashoffset", String(-(o)));
     }
-    setArc("donut-entregado", pctEntregado, offset); offset += pctEntregado;
-    setArc("donut-rojo",      pctRojo,      offset); offset += pctRojo;
-    setArc("donut-pendiente", pctPendiente, offset);
+        const arcE2 = parseFloat(pctEntregado);
+    const arcR2 = parseFloat(pctRojo);
+    const arcP2 = parseFloat((100 - arcE2 - arcR2).toFixed(2));
+    setArc("donut-entregado", arcE2, offset);
+    offset += arcE2;
+    setArc("donut-rojo",      arcR2, offset);
+    offset += arcR2;
+    setArc("donut-pendiente", arcP2, offset);
 
     // Restaurar tarjetas
     if (grid) { grid.style.opacity = "1"; grid.style.pointerEvents = ""; }
