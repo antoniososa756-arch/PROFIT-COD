@@ -2687,13 +2687,22 @@ async function loadMetricas() {
       return true;
     });
 
-    const shopMetricasRaw = document.getElementById("met-bal-shop-filter-val")?.value || shop;
-    if (shopMetricasRaw) {
-      try {
-        const dominios = JSON.parse(shopMetricasRaw);
-        if (Array.isArray(dominios)) list = list.filter(o => dominios.includes(o.shop_domain));
-        else list = list.filter(o => o.shop_domain === shopMetricasRaw);
-      } catch { list = list.filter(o => o.shop_domain === shopMetricasRaw); }
+     // Leer checkboxes directamente (tienen prioridad), si no, usar el input oculto
+    const checkboxes = document.querySelectorAll("#metrics-balance-wrap input[type='checkbox'][value]");
+    let dominiosFiltro = [];
+    if (checkboxes.length > 0) {
+      dominiosFiltro = [...checkboxes].filter(c => c.checked).map(c => c.value);
+    } else {
+      const shopMetricasRaw = document.getElementById("met-bal-shop-filter-val")?.value || shop;
+      if (shopMetricasRaw) {
+        try {
+          const parsed = JSON.parse(shopMetricasRaw);
+          dominiosFiltro = Array.isArray(parsed) ? parsed : [shopMetricasRaw];
+        } catch { dominiosFiltro = [shopMetricasRaw]; }
+      }
+    }
+    if (dominiosFiltro.length > 0) {
+      list = list.filter(o => dominiosFiltro.includes(o.shop_domain));
     }
 
     const total      = list.length;
