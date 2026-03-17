@@ -4716,6 +4716,11 @@ async function renderInformesBalance() {
   window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
 
+  // Cargar gastos por tienda si no están disponibles
+  if (!window.__gastosPorTienda || Object.keys(window.__gastosPorTienda).length === 0) {
+    await loadGastosVarios();
+  }
+
   // ── Gastos Ads ────────────────────────────────────────────
   let adsSpends = {};
   try {
