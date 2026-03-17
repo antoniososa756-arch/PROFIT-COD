@@ -4717,8 +4717,11 @@ async function renderInformesBalance() {
   window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
 
-    // Usar el mismo cálculo que Gastos por Tienda
-  await loadGastosVarios(parseInt(month), parseInt(year));
+  // Usar cálculo idéntico a Gastos por Tienda
+  const mesNum = parseInt(month);
+  const yearNum = parseInt(year);
+  await loadGastosVarios(mesNum, yearNum);
+    const [gf, gv, ge, nom, imp, st, vr, adsAll] = await Promise.all([
       cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h }),
       cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h }),
       cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h }),
@@ -4789,7 +4792,7 @@ async function renderInformesBalance() {
       const iva = entregados.reduce((s,o)=>s+(parseFloat(o.total_price)||0)*ivaPct,0);
       window.__gastosPorTienda[store.domain] = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + nominaXTienda + extras + iva;
     });
-  } catch(e) { console.error("Error calculando gastos:", e); }
+ 
 
   // ── Calcular por tienda ───────────────────────────────────
   const pedidosMesBase = orders.filter(o => {
