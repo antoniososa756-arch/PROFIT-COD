@@ -4795,7 +4795,22 @@ async function renderInformesBalance() {
     });
   } catch(e) { console.error("Error calculando gastos:", e); }
 
+  // ── Calcular por tienda ───────────────────────────────────
+  const pedidosMesBase = orders.filter(o => {
+    if (!o.created_at) return false;
+    if (["cancelado","pendiente"].includes(o.fulfillment_status)) return false;
+    const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
+    return d.startsWith(mes);
+  });
+  const pedidosMesEntregados = pedidosMesBase.filter(o => o.fulfillment_status === "entregado");
+  const pedidosMesTarjeta = orders.filter(o => {
+    if (o.fulfillment_status === "cancelado") return false;
+    if (!o.created_at) return false;
+    const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
+    return d.startsWith(mes);
+  });
 
+  const balanceData = stores.map(store => {
     const ads     = adsSpends[store.domain] || { meta:0, tiktok:0 };
     const shopify = gastosVarios[store.domain] || 0;
 
