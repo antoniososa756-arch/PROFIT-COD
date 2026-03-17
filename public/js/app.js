@@ -2319,6 +2319,7 @@ async function saveNominaPago(input) {
       body: JSON.stringify({ trabajador_id, mes, valor })
     });
     window.__hideLoadingBar?.();
+    invalidateCache("nomina");
     input.style.borderColor = "#16a34a";
     setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
     await loadNominaData();
@@ -3902,6 +3903,7 @@ async function updateGastoFijoValor(input) {
     });
     const data = await r.json();
     window.__hideLoadingBar?.();
+    invalidateCache("gastos-fijos");
     if (!data.ok) console.error("Error guardando valor:", data);
   } catch(e) { window.__hideLoadingBar?.(); console.error(e); }
 }
@@ -3933,6 +3935,7 @@ async function addGastoFijo() {
     });
     const saved = await r.json();
     if (saved && saved.id) {
+      invalidateCache("gastos-fijos");
       await loadGastosFijosData();
     }
   } catch(e) { console.error(e); }
@@ -3944,6 +3947,7 @@ async function deleteGastoFijo(id) {
       method: "DELETE",
       headers: { Authorization:"Bearer "+getActiveToken() }
     });
+    invalidateCache("gastos-fijos");
     loadGastosFijosData();
   } catch(e) { console.error(e); }
 }
@@ -3957,6 +3961,7 @@ async function updateImpuesto(input) {
       headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
       body: JSON.stringify({ nombre:"IVA", porcentaje })
     });
+    invalidateCache("impuestos");
     input.blur();
     input.style.borderColor = "#16a34a";
     setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
@@ -3982,6 +3987,8 @@ async function updateGastoFijoPrecio(input) {
       body: JSON.stringify({ mes, precio_unit })
     });
     input.blur();
+    invalidateCache("gastos-fijos");
+    invalidateCache("precios-globales");
     input.style.borderColor = "#16a34a";
     setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
   } catch(e) { console.error(e); }
@@ -4014,6 +4021,8 @@ async function guardarPreciosGlobales() {
         precioInput.dispatchEvent(new Event("change"));
       }
     });
+    invalidateCache("precios-globales");
+    invalidateCache("gastos-fijos");
   } catch(e) { console.error(e); }
 }
 window.guardarPreciosGlobales = guardarPreciosGlobales;
@@ -4033,6 +4042,7 @@ async function saveAdsSpend(input) {
       },
       body: JSON.stringify({ shop, date, type, spend })
     });
+    invalidateCache("ads");
     loadAdsTable();
   } catch(e) {
     console.error("Error guardando gasto:", e);
@@ -4605,6 +4615,7 @@ async function guardarIngresoManual(input) {
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ shop_domain: shop, mes, columna: col, nombre, valor })
     });
+    invalidateCache("informes-ingresos");
 
     // Recalcular totales en pantalla sin recargar
     const wrap = input.closest("div[style*='border-radius:12px']");
@@ -4955,6 +4966,7 @@ async function copiarMesAnteriorGF() {
         });
       }
     }
+    invalidateCache("gastos-fijos");
     loadGastosFijosData();
   } catch(e) { console.error(e); }
 }
@@ -5759,6 +5771,7 @@ async function updateGastoExtraValor(input) {
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ nombre: nom, valor: parseFloat(input.value) || 0 })
     });
+    invalidateCache("gastos-varios");
     await loadGastosVarios();
   } catch(e) { console.error(e); }
 }
@@ -5769,6 +5782,7 @@ async function deleteGastoExtra(id) {
       method: "DELETE",
       headers: { Authorization: "Bearer " + getActiveToken() }
     });
+    invalidateCache("gastos-varios");
     await loadGastosVarios();
   } catch(e) { console.error(e); }
 }
@@ -6261,6 +6275,7 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
     }
 
     // Recargar solo el input de stock sin recargar toda la tabla
+    invalidateCache("stock");
     const inputStock = document.querySelector(`tr[data-pid="${productId}"] input[title="Stock actual"]`);
     if (inputStock) inputStock.style.borderColor = stockNum <= minimoNum ? "#dc2626" : "#e5e7eb";
   } catch(e) { console.error(e); }
@@ -6273,6 +6288,7 @@ async function guardarCostoCompra(shopDomain, productId, costo) {
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, costo_compra: parseFloat(costo)||0 })
     });
+    invalidateCache("stock");
   } catch(e) { console.error(e); }
 }
 window.guardarCostoCompra = guardarCostoCompra;
