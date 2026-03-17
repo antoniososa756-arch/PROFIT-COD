@@ -792,11 +792,14 @@ const now = new Date();
         </div>
 
         <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:8px;">
-          <div class="stat-label" style="font-weight:600;">Tasa de entrega</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="stat-label" style="font-weight:600;">Tasa de entrega</span>
+            <span id="donut-base" style="font-size:11px;color:#9ca3af;font-weight:400;"></span>
+          </div>
           <div style="display:flex;align-items:center;gap:16px;width:100%;">
             <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
               <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:80px;height:80px;">
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3.5"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="transparent" stroke-width="3.5"/>
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#16a34a" stroke-width="3.5"
                   stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#dc2626" stroke-width="3.5"
@@ -804,9 +807,8 @@ const now = new Date();
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.5"
                   stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
               </svg>
-              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
                 <span style="font-size:12px;font-weight:700;" id="donut-pct">0%</span>
-                <span style="font-size:9px;color:#9ca3af;font-weight:500;" id="donut-base"></span>
               </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;">
