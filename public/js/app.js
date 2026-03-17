@@ -4780,12 +4780,9 @@ async function renderInformesBalance() {
       </div>
     </div>
   `;
-  recalcBalanceSuma();
+    recalcBalanceSuma();
   window.__hideLoadingBar?.();
 }
-  try {
-    const h = { Authorization: "Bearer " + getActiveToken() };
-    const adsRes = await Promise.all(stores.map(store =>
       cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: h })
         .then(rows => ({ domain: store.domain, rows: Array.isArray(rows) ? rows : [] }))
     ));
