@@ -4782,8 +4782,7 @@ async function renderInformesBalance() {
   `;
   recalcBalanceSuma();
   window.__hideLoadingBar?.();
-} _m : [];
-  } catch {}
+}
 
   window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
