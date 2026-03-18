@@ -4715,13 +4715,12 @@ async function renderInformesBalance() {
     manuales = Array.isArray(_m) ? _m : [];
   } catch {}
 
-  window.__allOrdersCache = orders;
+    window.__allOrdersCache = orders;
   const numTiendas = stores.length || 1;
 
-  // Usar cálculo idéntico a Gastos por Tienda
-  const mesNum = parseInt(month);
-  const yearNum = parseInt(year);
-  await loadGastosVarios(mesNum, yearNum);
+  // Calcular gastos para el mes seleccionado sin llamar a loadGastosVarios
+  await calcularGastosPorTienda(mes, parseInt(month), parseInt(year), stores);
+
     const [gf, gv, ge, nom, imp, st, vr, adsAll] = await Promise.all([
       cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h }),
       cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h }),
