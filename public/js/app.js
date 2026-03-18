@@ -4700,6 +4700,9 @@ async function renderInformesBalance() {
   const MRW_COMISION = 0.67;
   const TARJETA_PCT  = 0.04;
 
+    // ── Recalcular gastos para el mes seleccionado ────────────
+  await loadGastosVarios(parseInt(month), parseInt(year));
+
   // ── Cargar datos ──────────────────────────────────────────
   let stores = [], orders = [], manuales = [];
   try {
