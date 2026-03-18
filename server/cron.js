@@ -23,8 +23,12 @@ async function syncAllShopifyOrders() {
             await db.run(
               `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-               ON CONFLICT(order_id) DO UPDATE SET
-                 fulfillment_status = EXCLUDED.fulfillment_status,
+                              ON CONFLICT(order_id) DO UPDATE SET
+                 fulfillment_status = CASE 
+                   WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','cancelado') 
+                   THEN orders.fulfillment_status 
+                   ELSE EXCLUDED.fulfillment_status 
+                 END,
                  financial_status   = EXCLUDED.financial_status,
                  tracking_number    = EXCLUDED.tracking_number,
                  total_price        = EXCLUDED.total_price,
