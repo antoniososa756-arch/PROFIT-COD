@@ -4695,16 +4695,14 @@ async function renderInformesBalance() {
   const mes   = `${year}-${String(month).padStart(2,"0")}`;
   const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const mesLabel = monthNames[parseInt(month)-1].toUpperCase() + " " + year;
-
   const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 });
   const MRW_COMISION = 0.67;
   const TARJETA_PCT  = 0.04;
+  const h = { Authorization: "Bearer " + getActiveToken() };
 
-      // ── Cargar datos ──────────────────────────────────────────
-
+  // ── 1. Cargar datos base ──────────────────────────────────
   let stores = [], orders = [], manuales = [];
   try {
-    const h = { Authorization: "Bearer " + getActiveToken() };
     const [_s, _o, _m] = await Promise.all([
       cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }),
       cachedFetch(`${API_BASE}/api/orders`, { headers: h }),
@@ -4713,128 +4711,74 @@ async function renderInformesBalance() {
     stores = Array.isArray(_s) ? _s : [];
     orders = Array.isArray(_o) ? _o : [];
     manuales = Array.isArray(_m) ? _m : [];
-  } catch {}
+  } catch(e) {
+    wrap.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando datos</div>`;
+    window.__hideLoadingBar?.();
+    return;
+  }
 
-    window.__allOrdersCache = orders;
-  const numTiendas = stores.length || 1;
-
-  // Calcular gastos para el mes seleccionado sin llamar a loadGastosVarios
+  // ── 2. Calcular gastos por tienda (función limpia sin DOM) ─
+  window.__allOrdersCache = orders;
+  window.__gastosPorTienda = {};
   await calcularGastosPorTienda(mes, parseInt(month), parseInt(year), stores);
 
-  const hBal = { Authorization: "Bearer " + getActiveToken() };
-    const [gf, gv, ge, nom, imp, st, vr, adsAll] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: hBal }),
-            cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: hBal }),
-      cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: hBal }),
-      cachedFetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: hBal }),
-      cachedFetch(`${API_BASE}/api/impuestos`, { headers: hBal }),
-      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: hBal }),
-      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: hBal }),
-      Promise.all(stores.map(store =>
-        cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: hBal })
-          .then(rows => ({ domain: store.domain, rows: Array.isArray(rows) ? rows : [] }))
-      ))
-    ]);
-
-    const gastosMRW = (Array.isArray(gf)?gf:[]).filter(g=>g.nombre==="MRW");
-    const gastosLog = (Array.isArray(gf)?gf:[]).filter(g=>g.nombre==="LOGÍSTICA");
-    const gastosOtros = (Array.isArray(gf)?gf:[]).filter(g=>!["MRW","LOGÍSTICA"].includes(g.nombre));
-    const totalMRW = gastosMRW.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-    const totalLog = gastosLog.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-    const totalFijos = gastosOtros.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-    const fijoXTienda = totalFijos / numTiendas;
-    const nominaXTienda = (parseFloat(nom?.total)||0) / numTiendas;
-    let ivaPct = 0.21;
-    if (Array.isArray(imp) && imp.length > 0) ivaPct = (parseFloat(imp[0].porcentaje)||21)/100;
-
-        const gastosVarMap = {};
-    if (Array.isArray(gv)) gv.forEach(r => { gastosVarMap[r.shop_domain] = r.shopify||0; });
-    const extrasMap = {};
-    if (Array.isArray(ge)) ge.forEach(r => { if(!extrasMap[r.shop_domain]) extrasMap[r.shop_domain]=[]; extrasMap[r.shop_domain].push(r); });
-    const stockMap = {};
-    if (Array.isArray(st)) st.forEach(s => { stockMap[s.product_id] = s.costo_compra||0; });
-    const varMap = {};
-    if (Array.isArray(vr)) vr.forEach(v => { varMap[v.variant_id] = v.unidades_por_venta||1; });
-
-    const adsMap = {};
-    adsAll.forEach(({domain, rows}) => {
-      let meta=0, tiktok=0;
-      rows.forEach(r=>{ meta+=r.meta||0; tiktok+=r.tiktok||0; });
-      adsMap[domain] = { meta, tiktok };
-    });
-
-    const pedMes = (window.__allOrdersCache||[]).filter(o => {
-      if(!o.created_at) return false;
-      if(["cancelado","pendiente"].includes(o.fulfillment_status)) return false;
-      const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
-      return d.startsWith(mes);
-    });
-
-    const estadosMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
-    const envGlob = pedMes.filter(o=>estadosMRW.includes(o.fulfillment_status));
-    const devGlob = envGlob.filter(o=>o.fulfillment_status==="devuelto").length;
-    const totalEnvGlob = envGlob.length + devGlob;
-    const totalPedGlob = pedMes.filter(o=>estadosMRW.includes(o.fulfillment_status)).length;
-
-    stores.forEach(store => {
-      const ads = adsMap[store.domain] || {meta:0,tiktok:0};
-      const shopify = gastosVarMap[store.domain] || 0;
-      const extras = (extrasMap[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-      const pedTienda = pedMes.filter(o=>o.shop_domain===store.domain);
-      let costoProductos = 0;
-      pedTienda.filter(o=>!["devuelto","cancelado","pendiente"].includes(o.fulfillment_status)).forEach(o=>{
-        try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ costoProductos+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(varMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{}
-      });
-      const envTienda = pedTienda.filter(o=>estadosMRW.includes(o.fulfillment_status));
-      const devTienda = envTienda.filter(o=>o.fulfillment_status==="devuelto").length;
-      const mrw = (totalEnvGlob>0?totalMRW/totalEnvGlob:0)*(envTienda.length+devTienda);
-      const logistica = (totalPedGlob>0?totalLog/totalPedGlob:0)*envTienda.length;
-      const entregados = pedTienda.filter(o=>o.fulfillment_status==="entregado");
-      const iva = entregados.reduce((s,o)=>s+(parseFloat(o.total_price)||0)*ivaPct,0);
-      window.__gastosPorTienda[store.domain] = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + nominaXTienda + extras + iva;
-    });
- 
-
-  // ── Calcular por tienda ───────────────────────────────────
-  const pedidosMesBase = orders.filter(o => {
+  // ── 3. Calcular ingresos por tienda (igual que pestaña Ingresos) ──
+  const pedidosEntregados = orders.filter(o => {
+    if (o.fulfillment_status !== "entregado") return false;
     if (!o.created_at) return false;
-    if (["cancelado","pendiente"].includes(o.fulfillment_status)) return false;
-    const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
-    return d.startsWith(mes);
+    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+    const [y, m] = d.split("-");
+    return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
   });
-  const pedidosMesEntregados = pedidosMesBase.filter(o => o.fulfillment_status === "entregado");
-  const pedidosMesTarjeta = orders.filter(o => {
+
+  const pedidosTarjeta = orders.filter(o => {
     if (o.fulfillment_status === "cancelado") return false;
     if (!o.created_at) return false;
-    const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
-    return d.startsWith(mes);
+    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+    const [y, m] = d.split("-");
+    return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
   });
 
+  // ── 4. Construir balanceData ──────────────────────────────
   const balanceData = stores.map(store => {
-        const ads     = { meta:0, tiktok:0 };
-    const shopify = 0;
+    const pedEnt = pedidosEntregados.filter(o => o.shop_domain === store.domain);
 
-    // INGRESOS
-    const pedEnt   = pedidosMesEntregados.filter(o => o.shop_domain === store.domain);
-    const pedCOD   = pedEnt.filter(o => { try { const raw = o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="pending"||fin==="cod"||fin==="pendiente"; } catch{return false;} });
-    const pedPagEnt = pedidosMesTarjeta.filter(o => o.shop_domain === store.domain && (()=>{ try{ const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"; }catch{return false;} })());
-    const tCOD  = pedCOD.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
-    const tPag  = pedPagEnt.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
-    const man1  = manuales.find(m=>m.shop_domain===store.domain&&m.columna===1)||{nombre:"",valor:0};
-    const man2  = manuales.find(m=>m.shop_domain===store.domain&&m.columna===2)||{nombre:"",valor:0};
-    const totalIngreso = (tCOD - pedCOD.length*MRW_COMISION) + (tPag - tPag*TARJETA_PCT) + (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
+    const pedCOD = pedEnt.filter(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "pending" || fin === "cod" || fin === "pendiente";
+      } catch { return false; }
+    });
 
-     const totalGasto = (window.__gastosPorTienda && window.__gastosPorTienda[store.domain] != null)
-      ? window.__gastosPorTienda[store.domain]
-      : 0;
+    const pedPag = pedidosTarjeta.filter(o => {
+      if (o.shop_domain !== store.domain) return false;
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+        return fin === "paid" || fin === "pagado";
+      } catch { return false; }
+    });
 
-    const resultado = totalIngreso - totalGasto;
-    return { domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado };
+    const tCOD = pedCOD.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+    const tPag = pedPag.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+    const man1 = manuales.find(m => m.shop_domain === store.domain && m.columna === 1) || { nombre:"", valor:0 };
+    const man2 = manuales.find(m => m.shop_domain === store.domain && m.columna === 2) || { nombre:"", valor:0 };
+
+    const totalIngreso = (tCOD - pedCOD.length * MRW_COMISION)
+                       + (tPag - tPag * TARJETA_PCT)
+                       + (parseFloat(man1.valor)||0)
+                       + (parseFloat(man2.valor)||0);
+
+    const totalGasto = window.__gastosPorTienda[store.domain] || 0;
+    const resultado  = totalIngreso - totalGasto;
+
+    return { domain: store.domain, name: store.shop_name || store.domain, totalIngreso, totalGasto, resultado };
   });
 
   window.__balanceData = balanceData;
 
-  // ── HTML por tienda ───────────────────────────────────────
+  // ── 5. Render HTML ────────────────────────────────────────
   const cols = balanceData.map(d => {
     const resColor = d.resultado >= 0 ? "#16a34a" : "#dc2626";
     const resBg    = d.resultado >= 0 ? "#f0fdf4" : "#fef2f2";
@@ -4864,7 +4808,6 @@ async function renderInformesBalance() {
       </div>`;
   }).join("");
 
-  // ── Checkboxes de tiendas ─────────────────────────────────
   const storeCheckboxes = balanceData.map(d =>
     `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
       <input type="checkbox" checked value="${d.domain}" onchange="recalcBalanceSuma()" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
@@ -4877,31 +4820,32 @@ async function renderInformesBalance() {
       📅 ${mesLabel}
     </div>
     <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;">
-    <div style="display:flex;gap:20px;align-items:flex-start;">
-      <div style="flex:1;min-width:0;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;" id="bal-cols">
-          ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
-        </div>
-        <div id="bal-sumatoria" style="margin-top:24px;padding:18px 22px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
-          <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Sumatoria seleccionada</div>
-          <div id="bal-suma-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;"></div>
-          <div style="border-top:2px solid #16a34a;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
-            <span id="bal-suma-total" style="font-weight:800;font-size:24px;"></span>
+      <div style="display:flex;gap:20px;align-items:flex-start;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;" id="bal-cols">
+            ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+          </div>
+          <div id="bal-sumatoria" style="margin-top:24px;padding:18px 22px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
+            <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Sumatoria seleccionada</div>
+            <div id="bal-suma-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;"></div>
+            <div style="border-top:2px solid #16a34a;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+              <span id="bal-suma-total" style="font-weight:800;font-size:24px;"></span>
+            </div>
           </div>
         </div>
+        <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:80px;">
+          <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
+            <input type="checkbox" id="bal-check-all" checked onchange="toggleAllBalanceShops(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+            Todas las tiendas
+          </label>
+          ${storeCheckboxes}
+        </div>
       </div>
-      <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:80px;">
-        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
-        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-          <input type="checkbox" id="bal-check-all" checked onchange="toggleAllBalanceShops(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
-          Todas las tiendas
-        </label>
-        ${storeCheckboxes}
-      </div>
-    </div>
     </div>
   `;
+
   recalcBalanceSuma();
   window.__hideLoadingBar?.();
 }
@@ -4937,6 +4881,31 @@ function recalcBalanceSuma() {
   if (allCheck) allCheck.checked = filtradas.length === data.length;
 }
 window.recalcBalanceSuma = recalcBalanceSuma;
+
+function recalcBalanceSuma() {
+  const data = window.__balanceData || [];
+  const checks = document.querySelectorAll("#inf-balance-wrap input[type='checkbox'][value]A");
+  const seleccionadas = new Set([...checks].filter(c => c.checked).map(c => c.value));
+  const filtradas = data.filter(d => seleccionadas.has(d.domain));
+  const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 });
+  document.querySelectorAll("#bal-cols > div[data-domain]").forEach(card => {
+    card.style.display = seleccionadas.has(card.dataset.domain) ? "" : "none";
+  });
+  const totalResultado = filtradas.reduce((s,d) => s + d.resultado, 0);
+  const filasEl = document.getElementById("bal-suma-filas");
+  const totalEl = document.getElementById("bal-suma-total");
+  if (filasEl) filasEl.innerHTML = filtradas.map(d =>
+    `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;">
+      <div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div>
+      <div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#16a34a;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
+      <div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div>
+      <div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#16a34a':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div>
+    </div>`
+  ).join("");
+  if (totalEl) { totalEl.textContent = fmt(totalResultado) + " €"; totalEl.style.color = totalResultado >= 0 ? "#16a34a" : "#dc2626"; }
+  const allCheck = document.getElementById("bal-check-all");
+  if (allCheck) allCheck.checked = filtradas.length === data.length;
+}
 
 function toggleAllBalanceShops(checked) {
   const checks = document.querySelectorAll("#inf-balance-wrap input[type='checkbox'][value]");
