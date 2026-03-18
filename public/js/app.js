@@ -6811,8 +6811,10 @@ async function sincronizarMRW() {
     const data = await res.json();
     clearInterval(pollingInterval);
     ocultarBarraProgresoMRW();
-    if (data.ok) {
+        if (data.ok) {
       showToast("✅ MRW sincronizado", `${data.updated} pedidos actualizados de ${data.total} consultados`, "#16a34a");
+      invalidateCache("orders");
+      allOrders = [];
       await fetchOrders();
     } else {
       showToast("❌ Error MRW", data.error || "Error desconocido", "#dc2626");
