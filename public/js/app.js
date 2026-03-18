@@ -4718,9 +4718,11 @@ async function renderInformesBalance() {
   }
 
   // ── 2. Calcular gastos por tienda (función limpia sin DOM) ─
-  window.__allOrdersCache = orders;
-  window.__gastosPorTienda = {};
-  await calcularGastosPorTienda(mes, parseInt(month), parseInt(year), stores);
+    window.__allOrdersCache = orders;
+  // Si Gastos por Tienda ya calculó este mes, reutilizar directamente
+  if (!window.__gastosPorTienda || Object.keys(window.__gastosPorTienda).length === 0) {
+    await loadGastosVarios(parseInt(month), parseInt(year));
+  }
 
   // ── 3. Calcular ingresos por tienda (igual que pestaña Ingresos) ──
   const pedidosEntregados = orders.filter(o => {
