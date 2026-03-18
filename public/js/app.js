@@ -5173,8 +5173,13 @@ async function fetchOrders() {
       },
     });
 
-    const orders = await res.json();
-  allOrders = Array.isArray(orders) ? orders : [];
+        const orders = await res.json();
+    const newOrders = Array.isArray(orders) ? orders : [];
+    // Solo actualizar si llegaron igual o más pedidos que los que ya tenemos
+    // Evita que una respuesta parcial o fallo de red baje el contador
+    if (newOrders.length >= allOrders.length || allOrders.length === 0) {
+      allOrders = newOrders;
+    }
 
     // Si venimos de una notificación, filtrar ese pedido
     if (window.__pendingSearchNoti) {
