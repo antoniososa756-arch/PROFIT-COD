@@ -4721,16 +4721,17 @@ async function renderInformesBalance() {
   // Calcular gastos para el mes seleccionado sin llamar a loadGastosVarios
   await calcularGastosPorTienda(mes, parseInt(month), parseInt(year), stores);
 
+  const hBal = { Authorization: "Bearer " + getActiveToken() };
     const [gf, gv, ge, nom, imp, st, vr, adsAll] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/impuestos`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: hBal }),
+            cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: hBal }),
+      cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: hBal }),
+      cachedFetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: hBal }),
+      cachedFetch(`${API_BASE}/api/impuestos`, { headers: hBal }),
+      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: hBal }),
+      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: hBal }),
       Promise.all(stores.map(store =>
-        cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: h })
+        cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: hBal })
           .then(rows => ({ domain: store.domain, rows: Array.isArray(rows) ? rows : [] }))
       ))
     ]);
