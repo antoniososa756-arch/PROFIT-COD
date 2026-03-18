@@ -1250,11 +1250,11 @@ if (id === "pedidos") {
 
             <!-- IZQUIERDA: filtros -->
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-              <input type="date" id="filter-date-from" value=""
+              <input type="date" id="filter-date-from" value="${new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]}"
                 onchange="applyFilters()"
                 style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
               <span style="color:#6b7280;font-size:13px;">—</span>
-              <input type="date" id="filter-date-to" value=""
+              <input type="date" id="filter-date-to" value="${new Date().toISOString().split('T')[0]}"
                 onchange="applyFilters()"
                 style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
               <select id="filter-shop-inline"
