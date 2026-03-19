@@ -258,9 +258,7 @@ router.post("/sync-orders", auth, async (req, res) => {
           `SELECT created_at FROM orders WHERE shop_id = $1 ORDER BY created_at DESC LIMIT 1`,
           [shop.id]
         );
-        const since = lastOrder?.created_at
-          ? new Date(new Date(lastOrder.created_at).getTime() - 60 * 60 * 1000).toISOString()
-          : "2026-02-01T00:00:00Z";
+        const since = "2024-01-01T00:00:00Z";
         let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=${since}`;
 
         while (url) {
