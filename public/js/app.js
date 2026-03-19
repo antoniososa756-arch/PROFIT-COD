@@ -2801,8 +2801,27 @@ async function loadMetricas() {
     set("stat-destruidos", destruidos);
 
     // Facturación, CPA y ROAS por rango de fechas y tienda
-    const facturacion = list.filter(o => o.fulfillment_status !== "cancelado")
-      .reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+    // Sumar TODOS los pedidos creados en el rango (incluyendo cancelados)
+const facturacion = (() => {
+  // 1. Sumar todos los pedidos creados en el rango
+  const ingresos = list.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+
+  // 2. Restar los pedidos cancelados CUYA FECHA DE CANCELACIÓN cae dentro del rango
+  const descuentosCancelados = allOrders.filter(o => {
+    if (o.fulfillment_status !== "cancelado") return false;
+    try {
+      const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+      const cancelledAt = raw?.cancelled_at;
+      if (!cancelledAt) return false;
+      const cancelDate = new Date(cancelledAt).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      if (dateFrom && cancelDate < dateFrom) return false;
+      if (dateTo && cancelDate > dateTo) return false;
+      return true;
+    } catch { return false; }
+  }).reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+
+  return ingresos - descuentosCancelados;
+})();
 
     let gastoAdsTotal = 0;
     try {
