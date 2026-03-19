@@ -258,7 +258,9 @@ router.post("/sync-orders", auth, async (req, res) => {
           `SELECT created_at FROM orders WHERE shop_id = $1 ORDER BY created_at DESC LIMIT 1`,
           [shop.id]
         );
-        const since = "2024-01-01T00:00:00Z";
+        const since = lastOrder?.created_at
+          ? new Date(new Date(lastOrder.created_at).getTime() - 60 * 60 * 1000).toISOString()
+          : "2026-02-01T00:00:00Z";
         let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=${since}`;
 
         while (url) {
@@ -516,6 +518,46 @@ async function syncRecuperacion() {
     console.error("Sync recuperación error:", e.message);
   }
 }
+
+router.post("/sync-cancelados", auth, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const shops = await db.all("SELECT id, shop_domain, access_token FROM shops WHERE user_id = $1 AND status = 'active'", [userId]);
+    if (!shops.length) return res.json({ ok: true, updated: 0 });
+
+    res.json({ ok: true, msg: "Sincronización de cancelados iniciada en segundo plano" });
+
+    let total = 0;
+    for (const shop of shops) {
+      try {
+        let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=cancelled&limit=250&created_at_min=2026-02-01T00:00:00Z`;
+        while (url) {
+          const r = await fetch(url, {
+            headers: { "X-Shopify-Access-Token": shop.access_token },
+          });
+          if (!r.ok) break;
+          const { orders } = await r.json();
+          for (const o of orders) {
+            const exists = await db.get("SELECT id FROM orders WHERE order_id = $1", [String(o.id)]);
+            if (exists) {
+              await db.run(
+                `UPDATE orders SET raw_json = $1, fulfillment_status = 'cancelado', updated_at = now()::text WHERE order_id = $2`,
+                [JSON.stringify(o), String(o.id)]
+              );
+              total++;
+            }
+          }
+          const linkHeader = r.headers.get("Link") || "";
+          const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+          url = nextMatch ? nextMatch[1] : null;
+        }
+      } catch(e) { console.error("Sync cancelados error:", shop.shop_domain, e.message); }
+    }
+    console.log(`Sync cancelados completado: ${total} pedidos actualizados`);
+  } catch(e) {
+    console.error("Error sync cancelados:", e.message);
+  }
+});
 
 // Ejecutar cada 24 horas, el día 1 se activa solo
 setInterval(syncRecuperacion, 24 * 60 * 60 * 1000);
