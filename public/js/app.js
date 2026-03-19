@@ -1292,9 +1292,7 @@ if (id === "pedidos") {
                 padding:7px 14px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 ✕ Desintegrar MRW
               </button>
-              <button id="btn-sync-cancelados" onclick="sincronizarCancelados()" style="padding:7px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-  🔄 Sync Cancelados
-</button>
+               
 <button class="btn-sync" onclick="syncAndRefreshOrders()">
                 <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Sincronizar
@@ -6869,21 +6867,4 @@ window.abrirModalMRW         = abrirModalMRW;
 window.guardarCredencialesMRW = guardarCredencialesMRW;
 window.sincronizarMRW        = sincronizarMRW;
 window.desintegrarMRW        = desintegrarMRW;
-async function sincronizarCancelados() {
-  const btn = document.getElementById("btn-sync-cancelados");
-  if (btn) { btn.disabled = true; btn.textContent = "⏳ Sincronizando..."; }
-  try {
-    const res = await fetch(`${API_BASE}/api/shopify/sync-cancelados`, {
-      method: "POST",
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const data = await res.json();
-    showToast("✅ Sync cancelados iniciado", data.msg || "Revisa la consola para el progreso", "#7c3aed");
-  } catch(e) {
-    showToast("❌ Error", "No se pudo sincronizar cancelados", "#dc2626");
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "🔄 Sync Cancelados"; }
-  }
-}
-window.sincronizarCancelados = sincronizarCancelados;
 window.checkMRWIntegration   = checkMRWIntegration;
