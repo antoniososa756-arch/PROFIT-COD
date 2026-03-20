@@ -6137,8 +6137,8 @@ window.filterReeByTab         = filterReeByTab;
 async function loadSidebarReembolsos() {
   try {
     const h = { Authorization: "Bearer " + getActiveToken() };
-    // Pedir solo 1 fila — solo necesitamos total y total_amount del servidor
-    const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=1&page=1`, { headers: h }).then(r => r.json());
+    // Pedir solo 1 fila — solo necesitamos total y total_amount de los pendientes
+    const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=1&page=1&estado=pendiente`, { headers: h }).then(r => r.json());
 
     const countEl = document.getElementById("sidebar-ree-count");
     const totalEl = document.getElementById("sidebar-ree-total");
