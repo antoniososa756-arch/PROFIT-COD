@@ -454,10 +454,26 @@ function escapeAttr(str) {
           ? `<div style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-bottom:8px;">
               ${list.map(n => {
                 const es7dias = n.id.startsWith("7dias__");
+                let fechaLabel = "";
+                if (n.date) {
+                  const d = new Date(n.date);
+                  const hoy = new Date();
+                  const mismodia = d.toDateString() === hoy.toDateString();
+                  const hora = d.toLocaleString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" });
+                  if (mismodia) {
+                    fechaLabel = `Hoy ${hora}`;
+                  } else {
+                    const dia = d.toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit" });
+                    fechaLabel = `${dia} ${hora}`;
+                  }
+                }
                 return `
                   <div class="notif-row" style="cursor:pointer;margin-bottom:0;">
                     <div onclick="irAPedidoDesdeNotif('${escapeAttr(n.id)}')" style="flex:1;">
-                      <strong>${escapeHtml(n.title)}</strong>
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <strong>${escapeHtml(n.title)}</strong>
+                        ${fechaLabel ? `<span style="font-size:10px;color:#9ca3af;white-space:nowrap;flex-shrink:0;">${escapeHtml(fechaLabel)}</span>` : ""}
+                      </div>
                       <span>${escapeHtml(n.text)}</span>
                     </div>
                     ${es7dias ? `
@@ -6182,13 +6198,18 @@ async function checkNotificaciones() {
 
       const estadoAnterior = estadosGuardados[id];
 
+      const ahoraISO = new Date().toISOString();
+      const ahoraMadrid = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const horaDetectada = ahoraMadrid; // "20/03/2026, 14:35"
+
       // 1. Entregado
       if (estado === "entregado" && estadoAnterior && estadoAnterior !== "entregado") {
         const notiId = `entregado_${id}`;
         if (!notisIds.has(notiId)) {
-          nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: `${nombre} — ${o.customer_name || ""}` });
+          const txt = `${nombre} — ${o.customer_name || ""} · Su pedido fue entregado a las ${horaDetectada}`;
+          nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, date: ahoraISO });
           notisIds.add(notiId);
-          showToast("✅ Pedido entregado", `${nombre} — ${o.customer_name || ""}`, "#16a34a");
+          showToast("✅ Pedido entregado", txt, "#16a34a");
         }
       }
 
@@ -6196,9 +6217,10 @@ async function checkNotificaciones() {
       if (estado === "franquicia" && estadoAnterior && estadoAnterior !== "franquicia") {
         const notiId = `franquicia_${id}`;
         if (!notisIds.has(notiId)) {
-          nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: `${nombre} — Llamar al cliente: ${o.customer_name || ""}` });
+          const txt = `${nombre} — ${o.customer_name || ""} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
+          nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, date: ahoraISO });
           notisIds.add(notiId);
-          showToast("🏪 Pedido en franquicia", `${nombre} — Llamar al cliente: ${o.customer_name || ""}`, "#f59e0b");
+          showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
         }
       }
 
@@ -6210,10 +6232,11 @@ async function checkNotificaciones() {
         if (diasTranscurridos >= 7) {
           const notiId = `7dias__${id}`;
           const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas") || "[]");
-        if (!notisIds.has(notiId) && !gestionados.includes(notiId)) {
-            nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: `${nombre} — ${o.customer_name || ""} (${estado})` });
+          if (!notisIds.has(notiId) && !gestionados.includes(notiId)) {
+            const txt = `${nombre} — ${o.customer_name || ""} (${estado})`;
+            nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: txt, date: ahoraISO });
             notisIds.add(notiId);
-            showToast(`⚠️ ${diasTranscurridos} días sin resolver`, `${nombre} — ${o.customer_name || ""} (${estado})`, "#f59e0b");
+            showToast(`⚠️ ${diasTranscurridos} días sin resolver`, txt, "#f59e0b");
           }
         }
       }
