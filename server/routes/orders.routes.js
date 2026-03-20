@@ -107,13 +107,14 @@ router.get("/reembolso-estado", auth, async (req, res) => {
 
 // GET /api/orders/reembolsos — pedidos entregados con pago pendiente (COD)
 router.get("/reembolsos", auth, async (req, res) => {
-  const userId = req.user.id;
-  const shop   = req.query.shop   || null;
-  const from   = req.query.from   || null;
-  const to     = req.query.to     || null;
-  const page   = Math.max(1, parseInt(req.query.page) || 1);
-  const limit  = Math.min(200, Math.max(1, parseInt(req.query.limit) || 100));
-  const offset = (page - 1) * limit;
+  const userId   = req.user.id;
+  const shop     = req.query.shop   || null;
+  const from     = req.query.from   || null;
+  const to       = req.query.to     || null;
+  const estado   = req.query.estado || null; // "cobrado" | "pendiente" | null (todos)
+  const page     = Math.max(1, parseInt(req.query.page) || 1);
+  const limit    = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 100));
+  const offset   = (page - 1) * limit;
 
   try {
     const conditions = [
@@ -128,22 +129,33 @@ router.get("/reembolsos", auth, async (req, res) => {
     if (from) { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
     if (to)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
 
+    // Filtro por estado de pago (JOIN con reembolsos_estado)
+    let estadoJoin = `LEFT JOIN reembolsos_estado re ON re.order_id = o.id::text AND re.user_id = $1`;
+    if (estado === "cobrado") {
+      conditions.push(`re.estado = 'cobrado'`);
+    } else if (estado === "pendiente") {
+      conditions.push(`(re.estado IS NULL OR re.estado != 'cobrado')`);
+    }
+
     const where = conditions.join(" AND ");
+    const baseQuery = `FROM orders o LEFT JOIN shops s ON s.id = o.shop_id ${estadoJoin} WHERE ${where}`;
+
     const [countRow, rows] = await Promise.all([
-      db.get(`SELECT COUNT(*) as total FROM orders o LEFT JOIN shops s ON s.id = o.shop_id WHERE ${where}`, params),
+      db.get(`SELECT COUNT(*) as total, COALESCE(SUM(o.total_price),0) as total_amount ${baseQuery}`, params),
       db.all(
         `SELECT o.id, o.order_number, o.created_at, o.tracking_number,
                 o.fulfillment_status, o.financial_status, o.customer_name,
-                o.total_price, o.currency, COALESCE(o.shop_domain, s.shop_domain) as shop_domain
-         FROM orders o LEFT JOIN shops s ON s.id = o.shop_id
-         WHERE ${where}
+                o.total_price, o.currency, COALESCE(o.shop_domain, s.shop_domain) as shop_domain,
+                re.estado as estado_pago
+         ${baseQuery}
          ORDER BY o.created_at DESC
          LIMIT $${i} OFFSET $${i+1}`,
         [...params, limit, offset]
       )
     ]);
 
-    res.json({ orders: rows || [], total: parseInt(countRow?.total || 0), page, pages: Math.ceil((countRow?.total||0)/limit) });
+    const total = parseInt(countRow?.total || 0);
+    res.json({ orders: rows || [], total, total_amount: parseFloat(countRow?.total_amount || 0), page, pages: Math.ceil(total/limit) });
   } catch(e) { console.error(e); res.status(500).json({ error: "Error" }); }
 });
 

@@ -6024,6 +6024,10 @@ async function fetchReembolsosFiltered() {
   if (reembolsosState.shop) params.set("shop", reembolsosState.shop);
   if (reembolsosState.from) params.set("from", reembolsosState.from);
   if (reembolsosState.to)   params.set("to",   reembolsosState.to);
+  // Pasar filtro de tab al servidor para que pagine correctamente
+  const tabFilter = window.__reeTabFilter || "";
+  if (tabFilter) params.set("estado", tabFilter);
+
   const body       = document.getElementById("reeBody");
   const pagination = document.getElementById("reePagination");
   const counter    = document.getElementById("ree-counter");
@@ -6034,27 +6038,19 @@ async function fetchReembolsosFiltered() {
     const page    = data.page   || 1;
     const pages   = data.pages  || 1;
 
-    const tabFilter = window.__reeTabFilter || "";
-    const filtered = orders.filter(o => {
-      if (!tabFilter) return true;
-      const estadoPago = (window.__reembolsosEstados || {})[o.id] || "pendiente";
-      if (tabFilter === "cobrado"   && estadoPago !== "cobrado")   return false;
-      if (tabFilter === "pendiente" && estadoPago !== "pendiente") return false;
-      return true;
-    });
+    if (counter) counter.textContent = total ? `Mostrando ${(page-1)*50+1}–${Math.min(page*50, total)} de ${total} reembolsos` : "";
 
-    if (counter) counter.textContent = filtered.length ? `Mostrando ${(page-1)*50+1}–${(page-1)*50+filtered.length} de ${total} reembolsos` : "";
-
-    if (!filtered.length) {
+    if (!orders.length) {
       if (body) body.innerHTML = `<div class="muted" style="padding:16px;">No hay reembolsos pendientes</div>`;
       if (pagination) pagination.innerHTML = "";
       return;
     }
 
     if (body) {
-      body.innerHTML = filtered.map((o, idx) => {
+      body.innerHTML = orders.map((o, idx) => {
         const numero     = (page-1)*50 + idx + 1;
-        const estadoPago = (window.__reembolsosEstados || {})[o.id] || "pendiente";
+        // El servidor devuelve estado_pago directamente
+        const estadoPago = o.estado_pago || (window.__reembolsosEstados || {})[o.id] || "pendiente";
         return `
         <div class="orders-row" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
           <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
@@ -6141,31 +6137,13 @@ window.filterReeByTab         = filterReeByTab;
 async function loadSidebarReembolsos() {
   try {
     const h = { Authorization: "Bearer " + getActiveToken() };
-    const [estadosData, reeData] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/orders/reembolso-estado`, { headers: h }),
-      fetch(`${API_BASE}/api/orders/reembolsos?limit=500&page=1`, { headers: h }).then(r => r.json())
-    ]);
-    const estadosMap = {};
-    if (Array.isArray(estadosData)) {
-      estadosData.forEach(e => {
-        estadosMap[e.order_id] = e.estado;
-        if (e.tracking_number) estadosMap["trk_" + e.tracking_number.trim().toUpperCase()] = e.estado;
-      });
-    }
-    const orders = reeData.orders || [];
-    const pendientes = orders.filter(o => {
-      const trackingKey = "trk_" + (o.tracking_number || "").trim().toUpperCase();
-      const estado = estadosMap[String(o.id)] || estadosMap[trackingKey] || (window.__reembolsosEstados || {})[String(o.id)] || "pendiente";
-      return estado !== "cobrado";
-    });
-
-    const count = pendientes.length;
-    const total = pendientes.reduce((s, o) => s + (parseFloat(o.total_price) || 0), 0);
+    // Pedir solo 1 fila — solo necesitamos total y total_amount del servidor
+    const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=1&page=1`, { headers: h }).then(r => r.json());
 
     const countEl = document.getElementById("sidebar-ree-count");
     const totalEl = document.getElementById("sidebar-ree-total");
-    if (countEl) countEl.textContent = count;
-    if (totalEl) totalEl.textContent = total.toFixed(2) + " €";
+    if (countEl) countEl.textContent = reeData.total || 0;
+    if (totalEl) totalEl.textContent = parseFloat(reeData.total_amount || 0).toFixed(2) + " €";
   } catch(e) {
     console.error("Error sidebar reembolsos:", e);
   }
