@@ -3532,21 +3532,22 @@ async function loadAdsTable() {
   const monthName = monthNames[parseInt(month)-1];
   const h = { Authorization: "Bearer " + getActiveToken() };
 
-      let orders = [], spends = {};
+      let orders = [], allShopOrders = [], spends = {};
   try {
     const [allOrders, adsRows] = await Promise.all([
       cachedFetch(`${API_BASE}/api/orders`, { headers: h }),
       cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(shop)}&month=${month}&year=${year}`, { headers: h })
     ]);
-    orders = Array.isArray(allOrders) ? allOrders.filter(o => {
-      if (!o.created_at) return false;
-      if (o.fulfillment_status === "cancelado") return false;
-      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-      const [y, m] = localDate.split("-");
-      return o.shop_domain === shop &&
-             parseInt(m) === parseInt(month) &&
-             parseInt(y) === parseInt(year);
-    }) : [];
+    if (Array.isArray(allOrders)) {
+      allShopOrders = allOrders.filter(o => o.shop_domain === shop);
+      orders = allShopOrders.filter(o => {
+        if (!o.created_at) return false;
+        if (o.fulfillment_status === "cancelado") return false;
+        const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+        const [y, m] = localDate.split("-");
+        return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
+      });
+    }
     if (Array.isArray(adsRows)) adsRows.forEach(r => { spends[r.date] = { meta: r.meta||0, tiktok: r.tiktok||0 }; });
   } catch(e) { console.error(e); }
 
@@ -3561,18 +3562,22 @@ async function loadAdsTable() {
       const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
       return localDate === dateStr;
     });
-    const facturacion = dayOrders.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0)
-  - (allOrders || []).filter(o => {
-    if (o.fulfillment_status !== "cancelado") return false;
-    if (o.shop_domain !== shop) return false;
-    try {
-      const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-      const cancelledAt = raw?.cancelled_at;
-      if (!cancelledAt) return false;
-      const cancelDate = new Date(cancelledAt).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-      return cancelDate === dateStr;
-    } catch { return false; }
-  }).reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const ingresosDelDia = allShopOrders.filter(o => {
+      if (!o.created_at) return false;
+      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      return localDate === dateStr;
+    }).reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const descuentoCancelados = allShopOrders.filter(o => {
+      if (o.fulfillment_status !== "cancelado") return false;
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        const cancelledAt = raw?.cancelled_at;
+        if (!cancelledAt) return false;
+        const cancelDate = new Date(cancelledAt).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+        return cancelDate === dateStr;
+      } catch { return false; }
+    }).reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const facturacion = ingresosDelDia - descuentoCancelados;
     const pedidos = dayOrders.length;
     const meta    = spends[dateStr]?.meta   || 0;
     const tiktok  = spends[dateStr]?.tiktok || 0;
