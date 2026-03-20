@@ -4457,11 +4457,13 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
     `;
   }).join("");
 
-  content.innerHTML = `
-    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
-      ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
-    </div>
-  `;
+  if (content) {
+    content.innerHTML = `
+      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
+        ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+      </div>
+    `;
+  }
   window.__hideLoadingBar?.();
 }
 
