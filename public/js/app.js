@@ -3252,11 +3252,15 @@ function actualizarMetricasSinBalance() {
     set("stat-devueltos",  devueltos);
     set("stat-destruidos", destruidos);
 
-    // Actualizar facturación al filtrar tienda
-    const facturacionSB = list.filter(o => o.fulfillment_status !== "cancelado")
-      .reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
-    const fmtEurSB = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 }) + " €";
-    set("stat-facturacion", fmtEurSB(facturacionSB));
+        // Actualizar facturación al filtrar tienda (descontando cancelados por fecha de cancelación)
+    const facturacionSB = (() => {
+      const ingresos = list.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+      const descuentosCancelados = list.filter(o => {
+        if (o.fulfillment_status !== "cancelado") return false;
+        return true;
+      }).reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+      return ingresos - descuentosCancelados;
+    })();
 
     set("donut-pct",       pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
