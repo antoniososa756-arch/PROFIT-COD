@@ -111,6 +111,7 @@ if (location.pathname.includes("login")) {
         id: data.user.id,
         name: data.user.email,
         role: data.user.role === "admin" ? "Administrador" : "Cliente",
+        avatar_url: data.user.avatar_url || null,
       };
 
       // 🎨 CLASE DE ROL EN EL BODY (ADMIN / CLIENTE)
@@ -632,7 +633,7 @@ function loadApp(section) {
                   <div class="user-name">${escapeHtml(currentUser.name)}</div>
                   <div class="user-role">${escapeHtml(currentUser.role)}</div>
                 </div>
-                <div class="user-avatar"></div>
+                <div class="user-avatar" id="header-avatar" style="${currentUser.avatar_url ? `background-image:url('${currentUser.avatar_url}');background-size:cover;background-position:center;` : ""}"></div>
 
                 <div class="dropdown" id="userDrop" style="right:0; width:260px;">
                   <div class="dropdown-title">${d.ui.accountTitle}</div>
@@ -2389,16 +2390,50 @@ function openUserSection(type) {
 
   if (!box) return;
 
+  const inp = (id, ph, type="text") => `<input id="${id}" type="${type}" placeholder="${ph}" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;">`;
+
   if (type === "profile") {
     title.textContent = "Perfil";
     subtitle.textContent = "Datos de la cuenta";
     crumb.textContent = "Perfil";
 
-    box.innerHTML = `
-      <div style="font-weight:600; margin-bottom:10px;">Perfil de usuario</div>
-      <div class="muted">Nombre: ${currentUser.name}</div>
-      <div class="muted">Rol: ${currentUser.role}</div>
-    `;
+    box.innerHTML = `<div style="max-width:480px;">
+      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px;">
+        <div style="position:relative;cursor:pointer;" onclick="document.getElementById('avatar-input').click()">
+          <div id="avatar-circle" style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,rgba(22,163,74,.35),rgba(22,163,74,.05));border:2px solid #e5e7eb;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+            <svg id="avatar-placeholder-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <img id="avatar-img" style="display:none;width:100%;height:100%;object-fit:cover;" />
+          </div>
+          <div style="position:absolute;bottom:2px;right:2px;background:#16a34a;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+        </div>
+        <input type="file" id="avatar-input" accept="image/*" style="display:none;" onchange="handleAvatarChange(event)">
+        <div style="margin-top:12px;font-weight:700;font-size:15px;">${escapeHtml(currentUser.name)}</div>
+        <span style="margin-top:4px;padding:3px 14px;background:#dcfce7;color:#16a34a;border-radius:20px;font-size:12px;font-weight:600;">${escapeHtml(currentUser.role)}</span>
+      </div>
+
+      <div style="border-top:1px solid #e5e7eb;padding-top:22px;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:14px;">Cambiar contraseña</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${inp("curr-pass","Contraseña actual","password")}
+          ${inp("new-pass","Nueva contraseña","password")}
+          ${inp("confirm-pass","Confirmar nueva contraseña","password")}
+        </div>
+        <div id="pass-msg" style="margin-top:8px;font-size:12px;min-height:16px;"></div>
+        <button onclick="changePassword()" style="margin-top:12px;padding:9px 22px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Actualizar contraseña</button>
+      </div>
+    </div>`;
+
+    // Cargar avatar guardado
+    fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+      .then(r => r.json()).then(data => {
+        if (data.user?.avatar_url) {
+          document.getElementById("avatar-img").src = data.user.avatar_url;
+          document.getElementById("avatar-img").style.display = "block";
+          document.getElementById("avatar-placeholder-icon").style.display = "none";
+        }
+      }).catch(() => {});
   }
 
   if (type === "settings") {
@@ -2406,13 +2441,158 @@ function openUserSection(type) {
     subtitle.textContent = "Configuración de la cuenta";
     crumb.textContent = "Ajustes";
 
-    box.innerHTML = `
-      <div style="font-weight:600; margin-bottom:10px;">Ajustes</div>
-      <div class="muted">Aquí irán las preferencias del usuario</div>
-    `;
+    box.innerHTML = `<div style="max-width:520px;">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Datos de facturación</div>
+      <div style="color:#6b7280;font-size:13px;margin-bottom:20px;">Información de tu empresa para la facturación</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        ${inp("bill-name","Nombre o razón social")}
+        ${inp("bill-nif","NIF / CIF")}
+        ${inp("bill-address","Dirección")}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          ${inp("bill-city","Ciudad")}
+          ${inp("bill-zip","Código postal")}
+        </div>
+        ${inp("bill-country","País")}
+      </div>
+      <div id="billing-msg" style="margin-top:10px;font-size:12px;min-height:16px;"></div>
+      <button onclick="saveBillingData()" style="margin-top:14px;padding:9px 22px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Actualizar datos de facturación</button>
+
+      <div style="border-top:1px solid #fee2e2;margin-top:36px;padding-top:24px;">
+        <div style="font-weight:700;font-size:14px;color:#dc2626;margin-bottom:6px;">Zona de peligro</div>
+        <div style="color:#6b7280;font-size:13px;margin-bottom:16px;">Al cancelar tu cuenta se eliminarán permanentemente todos tus datos y no podrás recuperarlos.</div>
+        <button onclick="showCancelAccount()" style="padding:9px 22px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancelar cuenta</button>
+      </div>
+    </div>`;
+
+    // Cargar datos de facturación guardados
+    fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+      .then(r => r.json()).then(data => {
+        const u = data.user || {};
+        const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+        set("bill-name",    u.billing_name);
+        set("bill-nif",     u.billing_nif);
+        set("bill-address", u.billing_address);
+        set("bill-city",    u.billing_city);
+        set("bill-zip",     u.billing_zip);
+        set("bill-country", u.billing_country);
+      }).catch(() => {});
   }
 
   closeAllDrops();
+}
+
+async function handleAvatarChange(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result;
+    // Mostrar preview
+    const img = document.getElementById("avatar-img");
+    const icon = document.getElementById("avatar-placeholder-icon");
+    if (img) { img.src = dataUrl; img.style.display = "block"; }
+    if (icon) icon.style.display = "none";
+    // Subir al servidor
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/avatar`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({ avatar_url: dataUrl })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || "Error al guardar la imagen"); }
+      else {
+        // Actualizar avatar en header
+        const headerAvatar = document.querySelector(".user-avatar");
+        if (headerAvatar) {
+          headerAvatar.style.backgroundImage = `url('${dataUrl}')`;
+          headerAvatar.style.backgroundSize = "cover";
+          headerAvatar.style.backgroundPosition = "center";
+        }
+      }
+    } catch { alert("Error al guardar la imagen"); }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function changePassword() {
+  const curr = document.getElementById("curr-pass")?.value || "";
+  const nuevo = document.getElementById("new-pass")?.value || "";
+  const confirm = document.getElementById("confirm-pass")?.value || "";
+  const msg = document.getElementById("pass-msg");
+  if (!curr || !nuevo || !confirm) { if (msg) { msg.style.color="#dc2626"; msg.textContent="Rellena todos los campos."; } return; }
+  if (nuevo !== confirm) { if (msg) { msg.style.color="#dc2626"; msg.textContent="Las contraseñas no coinciden."; } return; }
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/password`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ current_password: curr, new_password: nuevo })
+    });
+    const data = await res.json();
+    if (!res.ok) { if (msg) { msg.style.color="#dc2626"; msg.textContent=data.error||"Error al cambiar contraseña."; } }
+    else {
+      if (msg) { msg.style.color="#16a34a"; msg.textContent="Contraseña actualizada correctamente."; }
+      document.getElementById("curr-pass").value = "";
+      document.getElementById("new-pass").value = "";
+      document.getElementById("confirm-pass").value = "";
+    }
+  } catch { if (msg) { msg.style.color="#dc2626"; msg.textContent="Error de conexión."; } }
+}
+
+async function saveBillingData() {
+  const msg = document.getElementById("billing-msg");
+  const body = {
+    billing_name:    document.getElementById("bill-name")?.value    || null,
+    billing_nif:     document.getElementById("bill-nif")?.value     || null,
+    billing_address: document.getElementById("bill-address")?.value || null,
+    billing_city:    document.getElementById("bill-city")?.value    || null,
+    billing_zip:     document.getElementById("bill-zip")?.value     || null,
+    billing_country: document.getElementById("bill-country")?.value || null,
+  };
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/billing`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) { if (msg) { msg.style.color="#dc2626"; msg.textContent=data.error||"Error al guardar."; } }
+    else { if (msg) { msg.style.color="#16a34a"; msg.textContent="Datos de facturación actualizados."; } }
+  } catch { if (msg) { msg.style.color="#dc2626"; msg.textContent="Error de conexión."; } }
+}
+
+function showCancelAccount() {
+  const box = document.getElementById("cardBox");
+  if (!box) return;
+  box.innerHTML += `
+    <div id="cancel-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
+      <div style="background:var(--card);border-radius:14px;padding:32px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="font-weight:700;font-size:16px;color:#dc2626;margin-bottom:8px;">¿Cancelar tu cuenta?</div>
+        <div style="color:#6b7280;font-size:13px;margin-bottom:20px;">Esta acción es irreversible. Se eliminarán todos tus datos. Escribe tu contraseña para confirmar.</div>
+        <input type="password" id="cancel-pass" placeholder="Tu contraseña" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;margin-bottom:8px;">
+        <div id="cancel-msg" style="font-size:12px;color:#dc2626;min-height:16px;margin-bottom:14px;"></div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="confirmCancelAccount()" style="flex:1;padding:9px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Sí, cancelar mi cuenta</button>
+          <button onclick="document.getElementById('cancel-overlay').remove()" style="flex:1;padding:9px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Volver</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function confirmCancelAccount() {
+  const pass = document.getElementById("cancel-pass")?.value || "";
+  const msg = document.getElementById("cancel-msg");
+  if (!pass) { if (msg) msg.textContent = "Escribe tu contraseña."; return; }
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/account`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ password: pass })
+    });
+    const data = await res.json();
+    if (!res.ok) { if (msg) msg.textContent = data.error || "Error al cancelar la cuenta."; }
+    else { localStorage.clear(); location.href = "/login.html"; }
+  } catch { if (msg) msg.textContent = "Error de conexión."; }
 }
 
 // =========================
@@ -2427,6 +2607,11 @@ function logout() {
 // Exponer funciones
 window.openUserSection = openUserSection;
 window.logout = logout;
+window.handleAvatarChange = handleAvatarChange;
+window.changePassword = changePassword;
+window.saveBillingData = saveBillingData;
+window.showCancelAccount = showCancelAccount;
+window.confirmCancelAccount = confirmCancelAccount;
 
 // =========================
 // RESET PASSWORD (ADMIN)
@@ -2832,9 +3017,11 @@ const facturacion = (() => {
         mesesRangoAds.push({ m: curAds.getMonth()+1, y: curAds.getFullYear() });
         curAds.setMonth(curAds.getMonth() + 1);
       }
-      const storesAds = shopFiltroAds
-        ? [{ domain: shopFiltroAds }]
-        : await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).catch(()=>[]);
+      const storesAds = dominiosFiltro.length > 0
+        ? dominiosFiltro.map(d => ({ domain: d }))
+        : shopFiltroAds
+          ? [{ domain: shopFiltroAds }]
+          : await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).catch(()=>[]);
       const adsFetches = (Array.isArray(storesAds) ? storesAds : []).flatMap(store =>
         mesesRangoAds.map(({ m, y }) =>
           cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, {

@@ -242,6 +242,13 @@ await pool.query(`
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active INTEGER NOT NULL DEFAULT 1`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);
 await pool.query(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS tracking_number TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_name TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_nif TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_address TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_city TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_zip TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_country TEXT`);
 
   console.log("✅ PostgreSQL tablas inicializadas");
 }

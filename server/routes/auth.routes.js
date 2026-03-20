@@ -59,7 +59,67 @@ router.post("/login", async (req, res) => {
   }
 });
 
-router.get("/me", auth, (req, res) => res.json({ user: req.user }));
+router.get("/me", auth, async (req, res) => {
+  try {
+    const row = await db.get(
+      "SELECT id, email, role, avatar_url, billing_name, billing_nif, billing_address, billing_city, billing_zip, billing_country FROM users WHERE id = ?",
+      [req.user.id]
+    );
+    if (!row) return res.status(404).json({ error: "Usuario no encontrado" });
+    return res.json({ user: { ...req.user, ...row } });
+  } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
+});
+
+router.put("/avatar", auth, async (req, res) => {
+  const { avatar_url } = req.body || {};
+  if (typeof avatar_url !== "string") return res.status(400).json({ error: "Datos inválidos" });
+  if (avatar_url.length > 600000) return res.status(400).json({ error: "Imagen demasiado grande (máx 450KB)" });
+  try {
+    await db.run("UPDATE users SET avatar_url = ? WHERE id = ?", [avatar_url, req.user.id]);
+    return res.json({ ok: true });
+  } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
+});
+
+router.put("/password", auth, async (req, res) => {
+  const { current_password, new_password } = req.body || {};
+  if (typeof current_password !== "string" || typeof new_password !== "string")
+    return res.status(400).json({ error: "Datos inválidos" });
+  if (new_password.length < 6)
+    return res.status(400).json({ error: "La nueva contraseña debe tener mínimo 6 caracteres" });
+  try {
+    const row = await db.get("SELECT password_hash FROM users WHERE id = ?", [req.user.id]);
+    if (!row) return res.status(404).json({ error: "Usuario no encontrado" });
+    const ok = await bcrypt.compare(current_password, row.password_hash);
+    if (!ok) return res.status(401).json({ error: "Contraseña actual incorrecta" });
+    const hash = await bcrypt.hash(new_password, 12);
+    await db.run("UPDATE users SET password_hash = ? WHERE id = ?", [hash, req.user.id]);
+    return res.json({ ok: true });
+  } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
+});
+
+router.put("/billing", auth, async (req, res) => {
+  const { billing_name, billing_nif, billing_address, billing_city, billing_zip, billing_country } = req.body || {};
+  try {
+    await db.run(
+      "UPDATE users SET billing_name = ?, billing_nif = ?, billing_address = ?, billing_city = ?, billing_zip = ?, billing_country = ? WHERE id = ?",
+      [billing_name||null, billing_nif||null, billing_address||null, billing_city||null, billing_zip||null, billing_country||null, req.user.id]
+    );
+    return res.json({ ok: true });
+  } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
+});
+
+router.delete("/account", auth, async (req, res) => {
+  const { password } = req.body || {};
+  if (typeof password !== "string") return res.status(400).json({ error: "Debes confirmar con tu contraseña" });
+  try {
+    const row = await db.get("SELECT password_hash FROM users WHERE id = ?", [req.user.id]);
+    if (!row) return res.status(404).json({ error: "Usuario no encontrado" });
+    const ok = await bcrypt.compare(password, row.password_hash);
+    if (!ok) return res.status(401).json({ error: "Contraseña incorrecta" });
+    await db.run("DELETE FROM users WHERE id = ?", [req.user.id]);
+    return res.json({ ok: true });
+  } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
+});
 
 router.post("/create-user", auth, async (req, res) => {
   if (req.user.role !== "admin") return res.sendStatus(403);
