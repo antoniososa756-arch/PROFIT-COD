@@ -3561,7 +3561,18 @@ async function loadAdsTable() {
       const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
       return localDate === dateStr;
     });
-    const facturacion = dayOrders.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+    const facturacion = dayOrders.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0)
+  - (allOrders || []).filter(o => {
+    if (o.fulfillment_status !== "cancelado") return false;
+    if (o.shop_domain !== shop) return false;
+    try {
+      const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+      const cancelledAt = raw?.cancelled_at;
+      if (!cancelledAt) return false;
+      const cancelDate = new Date(cancelledAt).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
+      return cancelDate === dateStr;
+    } catch { return false; }
+  }).reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
     const pedidos = dayOrders.length;
     const meta    = spends[dateStr]?.meta   || 0;
     const tiktok  = spends[dateStr]?.tiktok || 0;
