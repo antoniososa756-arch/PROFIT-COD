@@ -2803,9 +2803,10 @@ const facturacion = (() => {
   // 1. Sumar todos los pedidos creados en el rango
   const ingresos = list.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
 
-  // 2. Restar los pedidos cancelados CUYA FECHA DE CANCELACIÓN cae dentro del rango
+  // 2. Restar los pedidos cancelados CUYA FECHA DE CANCELACIÓN cae dentro del rango (solo tiendas filtradas)
   const descuentosCancelados = allOrders.filter(o => {
     if (o.fulfillment_status !== "cancelado") return false;
+    if (dominiosFiltro.length > 0 && !dominiosFiltro.includes(o.shop_domain)) return false;
     try {
       const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
       const cancelledAt = raw?.cancelled_at;
