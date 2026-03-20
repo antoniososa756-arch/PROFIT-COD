@@ -3255,10 +3255,8 @@ function actualizarMetricasSinBalance() {
         // Actualizar facturación al filtrar tienda (descontando cancelados por fecha de cancelación)
     const facturacionSB = (() => {
       const ingresos = list.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
-      const descuentosCancelados = list.filter(o => {
-        if (o.fulfillment_status !== "cancelado") return false;
-        return true;
-      }).reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+      const descuentosCancelados = list.filter(o => o.fulfillment_status === "cancelado")
+        .reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
       return ingresos - descuentosCancelados;
     })();
 
