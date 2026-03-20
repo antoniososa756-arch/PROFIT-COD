@@ -134,14 +134,16 @@ router.get("/ads-table", auth, async (req, res) => {
     // Ingresos y pedidos agrupados por día de creación
     const ingresosRows = await db.all(
       `SELECT
-         (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date AS day,
+         TO_CHAR((o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS day,
          COALESCE(SUM(o.total_price), 0) AS ingresos,
          COUNT(*) FILTER (WHERE o.fulfillment_status != 'cancelado') AS pedidos
        FROM orders o
-       WHERE o.shop_id IN (SELECT id FROM shops WHERE user_id = $1 AND shop_domain = $2)
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+         AND COALESCE(o.shop_domain, s.shop_domain) = $2
          AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $3::date
          AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $4::date
-       GROUP BY (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date
+       GROUP BY TO_CHAR((o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD')
        ORDER BY day`,
       [userId, shop, from, to]
     );
@@ -149,19 +151,21 @@ router.get("/ads-table", auth, async (req, res) => {
     // Descuento cancelados agrupado por día de cancelación
     const cancelRows = await db.all(
       `SELECT
-         (o.cancelled_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date AS day,
+         TO_CHAR((o.cancelled_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS day,
          COALESCE(SUM(o.total_price), 0) AS descuento
        FROM orders o
-       WHERE o.shop_id IN (SELECT id FROM shops WHERE user_id = $1 AND shop_domain = $2)
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+         AND COALESCE(o.shop_domain, s.shop_domain) = $2
          AND o.fulfillment_status = 'cancelado'
          AND o.cancelled_at IS NOT NULL
          AND (o.cancelled_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $3::date
          AND (o.cancelled_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $4::date
-       GROUP BY (o.cancelled_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date`,
+       GROUP BY TO_CHAR((o.cancelled_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD')`,
       [userId, shop, from, to]
     );
 
-    // Indexar por fecha para lookup O(1)
+    // Indexar por fecha para lookup O(1) — r.day siempre es 'YYYY-MM-DD' gracias a TO_CHAR
     const ingresosMap = {};
     ingresosRows.forEach(r => { ingresosMap[r.day] = r; });
     const cancelMap = {};
