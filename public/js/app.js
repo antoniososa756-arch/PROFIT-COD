@@ -3008,7 +3008,6 @@ const facturacion = (() => {
 
     let gastoAdsTotal = 0;
     try {
-      const shopFiltroAds = document.getElementById("met-bal-shop-filter-val")?.value || shop;
       const dStart = dateFrom ? new Date(dateFrom + "T00:00:00") : new Date();
       const dEnd   = dateTo   ? new Date(dateTo   + "T00:00:00") : new Date();
       const mesesRangoAds = [];
@@ -3017,21 +3016,22 @@ const facturacion = (() => {
         mesesRangoAds.push({ m: curAds.getMonth()+1, y: curAds.getFullYear() });
         curAds.setMonth(curAds.getMonth() + 1);
       }
-      const storesAds = dominiosFiltro.length > 0
-        ? dominiosFiltro.map(d => ({ domain: d }))
-        : shopFiltroAds
-          ? [{ domain: shopFiltroAds }]
-          : await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).catch(()=>[]);
-      const adsFetches = (Array.isArray(storesAds) ? storesAds : []).flatMap(store =>
+      // Fetch TODAS las tiendas para poder re-filtrar en actualizarMetricasSinBalance
+      const allStoresAds = await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).catch(()=>[]);
+      const adsFetches = (Array.isArray(allStoresAds) ? allStoresAds : []).flatMap(store =>
         mesesRangoAds.map(({ m, y }) =>
           cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, {
             headers: { Authorization: "Bearer " + getActiveToken() }
-          }).then(rows => Array.isArray(rows) ? rows : []).catch(()=>[])
+          }).then(rows => Array.isArray(rows) ? rows.map(r => ({ ...r, shop_domain: store.domain })) : []).catch(()=>[])
         )
       );
       const allAdsRows = await Promise.all(adsFetches);
-      allAdsRows.flat().filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo))
-        .forEach(r => { gastoAdsTotal += (r.meta||0) + (r.tiktok||0); });
+      const flatAdsRows = allAdsRows.flat().filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo));
+      window.__metricasAdsRows = flatAdsRows; // Guardado para actualizarMetricasSinBalance
+      const filteredForCPA = dominiosFiltro.length > 0
+        ? flatAdsRows.filter(r => dominiosFiltro.includes(r.shop_domain))
+        : flatAdsRows;
+      filteredForCPA.forEach(r => { gastoAdsTotal += (r.meta||0) + (r.tiktok||0); });
     } catch {}
 
     const pedidosParaCPA = list.filter(o => o.fulfillment_status !== "cancelado").length;
@@ -3460,6 +3460,18 @@ function actualizarMetricasSinBalance() {
     })();
     const fmtEurSB = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 }) + " €";
     set("stat-facturacion", fmtEurSB(facturacionSB));
+
+    // CPA y ROAS: recalcular usando ads cacheados filtrados por tienda activa
+    const adsRowsAll = window.__metricasAdsRows || [];
+    const adsFiltered = (dominiosAct.length > 0 && dominiosAct.length < checkboxesAct.length)
+      ? adsRowsAll.filter(r => dominiosAct.includes(r.shop_domain))
+      : adsRowsAll;
+    const gastoAdsSB = adsFiltered.reduce((s,r) => s + (r.meta||0) + (r.tiktok||0), 0);
+    const pedidosSB  = list.filter(o => o.fulfillment_status !== "cancelado").length;
+    const cpaSB  = (gastoAdsSB > 0 && pedidosSB > 0) ? gastoAdsSB / pedidosSB : null;
+    const roasSB = (gastoAdsSB > 0) ? facturacionSB / gastoAdsSB : null;
+    set("stat-cpa",  cpaSB  != null ? fmtEurSB(cpaSB)  : "— €");
+    set("stat-roas", roasSB != null ? roasSB.toFixed(2) : "—");
 
     set("donut-pct",       pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
