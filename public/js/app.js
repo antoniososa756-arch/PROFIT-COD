@@ -4208,13 +4208,16 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
   window.__showLoadingBar?.("Cargando gastos...");
 // Cargar pedidos del mes al cache global (solo el mes seleccionado)
   const _hGV = { Authorization: "Bearer " + getActiveToken() };
-  try {
-    const _monthStr = String(month).padStart(2,"0");
-    const _mesFrom  = `${year}-${_monthStr}-01`;
-    const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
-    const _ordRes   = await fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}`, { headers: _hGV }).then(r => r.json());
-    window.__allOrdersCache = Array.isArray(_ordRes) ? _ordRes : (_ordRes?.orders || []);
-  } catch {}
+  if (!window.__allOrdersCache || window.__allOrdersCacheMes !== mes || window.__allOrdersCache.length === 0) {
+    try {
+      const _monthStr = String(month).padStart(2,"0");
+      const _mesFrom  = `${year}-${_monthStr}-01`;
+      const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
+      const _ordRes   = await fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}`, { headers: _hGV }).then(r => r.json());
+      window.__allOrdersCache = Array.isArray(_ordRes) ? _ordRes : (_ordRes?.orders || []);
+      window.__allOrdersCacheMes = mes;
+    } catch {}
+  }
 
   // 1. Tiendas activas
   let stores = [];
@@ -4851,12 +4854,12 @@ async function renderInformesBalance() {
     return;
   }
 
-  // ── 2. Calcular gastos por tienda (función limpia sin DOM) ─
+  // ── 2. Calcular gastos por tienda ─────────────────────────
+  // Siempre recalcular al cambiar de mes; pasar los pedidos ya cargados para evitar doble fetch
   window.__allOrdersCache = orders;
-  // Si Gastos por Tienda ya calculó este mes, reutilizar directamente
-  if (!window.__gastosPorTienda || Object.keys(window.__gastosPorTienda).length === 0) {
-    await loadGastosVarios(parseInt(month), parseInt(year));
-  }
+  window.__allOrdersCacheMes = `${year}-${String(month).padStart(2,"0")}`;
+  window.__gastosPorTienda = {};
+  await loadGastosVarios(parseInt(month), parseInt(year));
 
   // ── 3. Calcular ingresos por tienda (igual que pestaña Ingresos) ──
   const pedidosEntregados = orders.filter(o => o.fulfillment_status === "entregado");
@@ -5005,30 +5008,6 @@ function recalcBalanceSuma() {
 }
 window.recalcBalanceSuma = recalcBalanceSuma;
 
-function recalcBalanceSuma() {
-  const data = window.__balanceData || [];
-  const checks = document.querySelectorAll("#inf-balance-wrap input[type='checkbox'][value]A");
-  const seleccionadas = new Set([...checks].filter(c => c.checked).map(c => c.value));
-  const filtradas = data.filter(d => seleccionadas.has(d.domain));
-  const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 });
-  document.querySelectorAll("#bal-cols > div[data-domain]").forEach(card => {
-    card.style.display = seleccionadas.has(card.dataset.domain) ? "" : "none";
-  });
-  const totalResultado = filtradas.reduce((s,d) => s + d.resultado, 0);
-  const filasEl = document.getElementById("bal-suma-filas");
-  const totalEl = document.getElementById("bal-suma-total");
-  if (filasEl) filasEl.innerHTML = filtradas.map(d =>
-    `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;">
-      <div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div>
-      <div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#16a34a;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
-      <div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div>
-      <div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#16a34a':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div>
-    </div>`
-  ).join("");
-  if (totalEl) { totalEl.textContent = fmt(totalResultado) + " €"; totalEl.style.color = totalResultado >= 0 ? "#16a34a" : "#dc2626"; }
-  const allCheck = document.getElementById("bal-check-all");
-  if (allCheck) allCheck.checked = filtradas.length === data.length;
-}
 
 function toggleAllBalanceShops(checked) {
   const checks = document.querySelectorAll("#inf-balance-wrap input[type='checkbox'][value]");
