@@ -3043,7 +3043,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   try {
     const token = getActiveToken();
     const h = { Authorization: "Bearer " + token };
-    const _balParams = new URLSearchParams({ limit: 2000 });
+    const _balParams = new URLSearchParams();
     if (dateFrom) _balParams.set("from", dateFrom);
     if (dateTo)   _balParams.set("to",   dateTo);
     [stores, orders] = await Promise.all([
@@ -4196,7 +4196,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
     const _monthStr = String(month).padStart(2,"0");
     const _mesFrom  = `${year}-${_monthStr}-01`;
     const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
-    const _ordRes   = await fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}&limit=2000`, { headers: _hGV }).then(r => r.json());
+    const _ordRes   = await fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}`, { headers: _hGV }).then(r => r.json());
     window.__allOrdersCache = Array.isArray(_ordRes) ? _ordRes : (_ordRes?.orders || []);
   } catch {}
 
@@ -4583,7 +4583,7 @@ async function renderInformesIngresos() {
     const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
     const [_s, _o, _m] = await Promise.all([
       cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: _hInf }),
-      fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}&limit=2000`, { headers: _hInf }).then(r => r.json()),
+      fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}`, { headers: _hInf }).then(r => r.json()),
       cachedFetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: _hInf })
     ]);
     stores = Array.isArray(_s) ? _s : [];
@@ -4823,7 +4823,7 @@ async function renderInformesBalance() {
     const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
     const [_s, _o, _m] = await Promise.all([
       cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }),
-      fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}&limit=2000`, { headers: h }).then(r => r.json()),
+      fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}`, { headers: h }).then(r => r.json()),
       cachedFetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: h })
     ]);
     stores = Array.isArray(_s) ? _s : [];
@@ -5276,7 +5276,7 @@ async function fetchOrders() {
     const orderId = window.__pendingSearchNoti;
     window.__pendingSearchNoti = null;
     try {
-      const res = await fetch(`${API_BASE}/api/orders?q=${encodeURIComponent(orderId)}&limit=1`, {
+      const res = await fetch(`${API_BASE}/api/orders?q=${encodeURIComponent(orderId)}&page=1&limit=1`, {
         headers: { Authorization: "Bearer " + getActiveToken() }
       });
       const data = await res.json();
@@ -6179,7 +6179,7 @@ async function checkNotificaciones() {
   try {
     const ahora60 = new Date(); ahora60.setDate(ahora60.getDate() - 60);
     const desde60 = ahora60.toISOString().split("T")[0];
-    const res = await fetch(`${API_BASE}/api/orders?from=${desde60}&light=1&limit=1000`, {
+    const res = await fetch(`${API_BASE}/api/orders?from=${desde60}&light=1&page=1&limit=1000`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const raw = await res.json();

@@ -8,7 +8,7 @@ const router = express.Router();
 router.get("/", auth, async (req, res) => {
   const userId = req.user.id;
   const page   = Math.max(1, parseInt(req.query.page)  || 1);
-  const limit  = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+  const limit  = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 50));
   const offset = (page - 1) * limit;
   const shop   = req.query.shop   || null;
   const status = req.query.status || null;
@@ -17,9 +17,9 @@ router.get("/", auth, async (req, res) => {
   const q      = req.query.q      || null;
   const light  = req.query.light === "1";
 
-  // Cuando se pide sin paginación (compatibilidad con código viejo que no manda ?page)
-  const paginate = !!req.query.page || !!req.query.limit || !!req.query.shop ||
-                   !!req.query.status || !!req.query.from || !!req.query.to || !!req.query.q;
+  // Paginar solo cuando se pide explícitamente con ?page
+  // Los filtros (from, to, shop, status, q) funcionan en ambos modos
+  const paginate = !!req.query.page;
 
   try {
     const fields = light
