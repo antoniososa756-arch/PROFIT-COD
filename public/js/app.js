@@ -6097,7 +6097,8 @@ async function cambiarEstadoReembolso(orderId, estado) {
     if (!window.__reembolsosEstados) window.__reembolsosEstados = {};
     window.__reembolsosEstados[orderId] = estado;
   } catch(e) { console.error(e); }
-  renderReePage();
+  await fetchReembolsosFiltered();
+  loadSidebarReembolsos();
 }
 
 function clearReembolsosFilters() {
