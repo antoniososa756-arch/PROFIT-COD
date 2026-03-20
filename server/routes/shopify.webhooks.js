@@ -38,19 +38,19 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
       const status = mapStatus(o);
       const tracking = o.fulfillments?.[0]?.tracking_number || null;
       await db.run(
-        `INSERT INTO orders (shop_id, order_id, order_number, created_at, customer_name, total_price, currency, fulfillment_status, tracking_number, raw_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO orders (shop_id, order_id, order_number, created_at, customer_name, total_price, currency, fulfillment_status, tracking_number, cancelled_at, raw_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(order_id) DO NOTHING`,
         [shop.id, String(o.id), o.name, o.created_at,
           o.customer ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim() : "Cliente",
-          parseFloat(o.total_price || 0), o.currency, status, tracking, JSON.stringify(o)]
+          parseFloat(o.total_price || 0), o.currency, status, tracking, o.cancelled_at || null, JSON.stringify(o)]
       );
     } else if (topic === "orders/updated") {
       const status = mapStatus(o);
       const tracking = o.fulfillments?.[0]?.tracking_number || null;
       await db.run(
-        `UPDATE orders SET fulfillment_status = ?, tracking_number = ?, raw_json = ?, updated_at = now()::text WHERE order_id = ?`,
-        [status, tracking, JSON.stringify(o), String(o.id)]
+        `UPDATE orders SET fulfillment_status = ?, tracking_number = ?, cancelled_at = ?, raw_json = ?, updated_at = now()::text WHERE order_id = ?`,
+        [status, tracking, o.cancelled_at || null, JSON.stringify(o), String(o.id)]
       );
     } else if (topic === "fulfillments/create" || topic === "fulfillments/update") {
       const tracking = o.tracking_number || o.tracking_numbers?.[0] || null;

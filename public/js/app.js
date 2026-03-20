@@ -2916,64 +2916,44 @@ async function loadMetricas() {
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
   const fmt = d => d.toISOString().split("T")[0];
-  const savedFrom = localStorage.getItem("met_from") || fmt(firstDay);
-  const savedTo   = localStorage.getItem("met_to")   || fmt(now);
 
   const dateFrom = document.getElementById("metrics-date-from")?.value || fmt(firstDay);
   const dateTo   = document.getElementById("metrics-date-to")?.value   || fmt(now);
   const shop     = document.getElementById("metrics-shop")?.value       || "";
 
+  // Leer tiendas seleccionadas por checkbox
+  const checkboxes = document.querySelectorAll("#metrics-balance-wrap input[type='checkbox'][value]");
+  let dominiosFiltro = [];
+  if (checkboxes.length > 0) {
+    dominiosFiltro = [...checkboxes].filter(c => c.checked).map(c => c.value);
+  } else if (shop) {
+    try {
+      const parsed = JSON.parse(shop);
+      dominiosFiltro = Array.isArray(parsed) ? parsed : [shop];
+    } catch { dominiosFiltro = [shop]; }
+  }
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
   try {
-         let orders;
-    const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    orders = await res.json();
-    if (Array.isArray(orders)) allOrders = orders;
-    let list = Array.isArray(orders) ? orders : [];
+    const h = { Authorization: "Bearer " + getActiveToken() };
 
-    list = list.filter(o => {
-      if (!o.created_at) return true;
-      const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-      if (dateFrom && d < dateFrom) return false;
-      if (dateTo   && d > dateTo)   return false;
-      return true;
-    });
+    // Llamada al nuevo endpoint de stats — toda la lógica queda en el servidor
+    const statsParams = new URLSearchParams({ from: dateFrom, to: dateTo });
+    if (dominiosFiltro.length > 0) statsParams.set("shops", dominiosFiltro.join(","));
+    const statsRes = await fetch(`${API_BASE}/api/metrics/stats?${statsParams}`, { headers: h });
+    const stats = await statsRes.json();
 
-     // Leer checkboxes directamente (tienen prioridad), si no, usar el input oculto
-    const checkboxes = document.querySelectorAll("#metrics-balance-wrap input[type='checkbox'][value]");
-    let dominiosFiltro = [];
-    if (checkboxes.length > 0) {
-      dominiosFiltro = [...checkboxes].filter(c => c.checked).map(c => c.value);
-    } else {
-      const shopMetricasRaw = document.getElementById("met-bal-shop-filter-val")?.value || shop;
-      if (shopMetricasRaw) {
-        try {
-          const parsed = JSON.parse(shopMetricasRaw);
-          dominiosFiltro = Array.isArray(parsed) ? parsed : [shopMetricasRaw];
-        } catch { dominiosFiltro = [shopMetricasRaw]; }
-      }
-    }
-    if (dominiosFiltro.length > 0) {
-      list = list.filter(o => dominiosFiltro.includes(o.shop_domain));
-    }
-
-    const total      = list.length;
-    const pendientes = list.filter(o => o.fulfillment_status === "pendiente").length;
-    const transito   = list.filter(o => ["en_preparacion","enviado","en_transito","franquicia"].includes(o.fulfillment_status)).length;
-    const entregados = list.filter(o => o.fulfillment_status === "entregado").length;
-    const devueltos  = list.filter(o => o.fulfillment_status === "devuelto").length;
-    const destruidos = list.filter(o => o.fulfillment_status === "destruido").length;
+    const total      = stats.total      || 0;
+    const pendientes = stats.pendientes  || 0;
+    const transito   = stats.en_transito || 0;
+    const entregados = stats.entregados  || 0;
+    const devueltos  = stats.devueltos   || 0;
+    const destruidos = stats.destruidos  || 0;
+    const enviados   = stats.enviados    || 0;
     const rojos      = devueltos + destruidos;
+    const facturacion = parseFloat(stats.facturacion || 0);
 
-    const base = list.filter(o => !["pendiente","cancelado"].includes(o.fulfillment_status)).length;
-    const baseCalc = base > 0 ? base : 1;
-    const pctEntregado = ((entregados / baseCalc) * 100).toFixed(2);
-    const pctRojo      = ((rojos      / baseCalc) * 100).toFixed(2);
-    const pctPendiente = ((transito   / baseCalc) * 100).toFixed(2);
-    const enviados     = base;
-
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set("stat-total",      total);
     set("stat-enviados",   enviados);
     set("stat-pendientes", pendientes);
@@ -2982,30 +2962,7 @@ async function loadMetricas() {
     set("stat-devueltos",  devueltos);
     set("stat-destruidos", destruidos);
 
-    // Facturación, CPA y ROAS por rango de fechas y tienda
-    // Sumar TODOS los pedidos creados en el rango (incluyendo cancelados)
-const facturacion = (() => {
-  // 1. Sumar todos los pedidos creados en el rango
-  const ingresos = list.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
-
-  // 2. Restar los pedidos cancelados CUYA FECHA DE CANCELACIÓN cae dentro del rango (solo tiendas filtradas)
-  const descuentosCancelados = allOrders.filter(o => {
-    if (o.fulfillment_status !== "cancelado") return false;
-    if (dominiosFiltro.length > 0 && !dominiosFiltro.includes(o.shop_domain)) return false;
-    try {
-      const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-      const cancelledAt = raw?.cancelled_at;
-      if (!cancelledAt) return false;
-      const cancelDate = new Date(cancelledAt).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-      if (dateFrom && cancelDate < dateFrom) return false;
-      if (dateTo && cancelDate > dateTo) return false;
-      return true;
-    } catch { return false; }
-  }).reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
-
-  return ingresos - descuentosCancelados;
-})();
-
+    // Ads: pequeño fetch por mes (pocos KB)
     let gastoAdsTotal = 0;
     try {
       const dStart = dateFrom ? new Date(dateFrom + "T00:00:00") : new Date();
@@ -3016,25 +2973,23 @@ const facturacion = (() => {
         mesesRangoAds.push({ m: curAds.getMonth()+1, y: curAds.getFullYear() });
         curAds.setMonth(curAds.getMonth() + 1);
       }
-      // Fetch TODAS las tiendas para poder re-filtrar en actualizarMetricasSinBalance
-      const allStoresAds = await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).catch(()=>[]);
+      const allStoresAds = await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }).catch(()=>[]);
       const adsFetches = (Array.isArray(allStoresAds) ? allStoresAds : []).flatMap(store =>
         mesesRangoAds.map(({ m, y }) =>
-          cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, {
-            headers: { Authorization: "Bearer " + getActiveToken() }
-          }).then(rows => Array.isArray(rows) ? rows.map(r => ({ ...r, shop_domain: store.domain })) : []).catch(()=>[])
+          cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, { headers: h })
+            .then(rows => Array.isArray(rows) ? rows.map(r => ({ ...r, shop_domain: store.domain })) : []).catch(()=>[])
         )
       );
       const allAdsRows = await Promise.all(adsFetches);
       const flatAdsRows = allAdsRows.flat().filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo));
-      window.__metricasAdsRows = flatAdsRows; // Guardado para actualizarMetricasSinBalance
+      window.__metricasAdsRows = flatAdsRows;
       const filteredForCPA = dominiosFiltro.length > 0
         ? flatAdsRows.filter(r => dominiosFiltro.includes(r.shop_domain))
         : flatAdsRows;
       filteredForCPA.forEach(r => { gastoAdsTotal += (r.meta||0) + (r.tiktok||0); });
     } catch {}
 
-    const pedidosParaCPA = list.filter(o => o.fulfillment_status !== "cancelado").length;
+    const pedidosParaCPA = stats.pedidos_activos || 0;
     const cpa  = (gastoAdsTotal > 0 && pedidosParaCPA > 0) ? gastoAdsTotal / pedidosParaCPA : null;
     const roas = (gastoAdsTotal > 0) ? facturacion / gastoAdsTotal : null;
     const fmtEur = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 }) + " €";
@@ -3042,39 +2997,36 @@ const facturacion = (() => {
     set("stat-cpa",  cpa  != null ? fmtEur(cpa)  : "— €");
     set("stat-roas", roas != null ? roas.toFixed(2) : "—");
 
+    const baseCalc     = enviados > 0 ? enviados : 1;
+    const pctEntregado = ((entregados / baseCalc) * 100).toFixed(2);
+    const pctRojo      = ((rojos      / baseCalc) * 100).toFixed(2);
+    const pctPendiente = ((transito   / baseCalc) * 100).toFixed(2);
+
     set("donut-pct",       pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
     set("legend-rojo",      `Dev+Dest ${pctRojo}% (${rojos})`);
     set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})`);
     set("donut-base",       `Base: ${enviados} enviados`);
 
-    // Donut con 3 segmentos (offset acumulado)
-    const circumference = 100;
-    let offset = 0;
-
     function setArc(id, pct, off) {
       const el = document.getElementById(id);
       if (!el) return;
       const p = parseFloat(pct) || 0;
-      const o = parseFloat(off) || 0;
       el.setAttribute("stroke-dasharray", `${p} ${100 - p}`);
-      el.setAttribute("stroke-dashoffset", String(-(o)));
+      el.setAttribute("stroke-dashoffset", String(-(parseFloat(off)||0)));
     }
-
+    let offset = 0;
     const arcE = parseFloat(pctEntregado);
     const arcR = parseFloat(pctRojo);
     const arcP = parseFloat((100 - arcE - arcR).toFixed(2));
-    setArc("donut-entregado", arcE, offset);
-    offset += arcE;
-    setArc("donut-rojo",      arcR, offset);
-    offset += arcR;
+    setArc("donut-entregado", arcE, offset); offset += arcE;
+    setArc("donut-rojo",      arcR, offset); offset += arcR;
     setArc("donut-pendiente", arcP, offset);
 
   } catch(e) {
     console.error("Error cargando métricas:", e);
   }
 
-  // Cargar panel de balance por tienda
   await loadMetricasBalance(dateFrom, dateTo);
 }
 
@@ -3091,20 +3043,17 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   try {
     const token = getActiveToken();
     const h = { Authorization: "Bearer " + token };
+    const _balParams = new URLSearchParams({ limit: 2000 });
+    if (dateFrom) _balParams.set("from", dateFrom);
+    if (dateTo)   _balParams.set("to",   dateTo);
     [stores, orders] = await Promise.all([
       cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(d => Array.isArray(d) ? d : []),
-      cachedFetch(`${API_BASE}/api/orders`, { headers: h }).then(d => Array.isArray(d) ? d : [])
+      fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
   } catch {}
 
-  // Filtrar por rango de fechas
-  const ordersRango = orders.filter(o => {
-    if (!o.created_at) return false;
-    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-    if (dateFrom && d < dateFrom) return false;
-    if (dateTo && d > dateTo) return false;
-    return true;
-  });
+  // Orders already filtered server-side by dateFrom/dateTo
+  const ordersRango = orders;
 
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -3383,7 +3332,7 @@ function toggleAllMetricasBalance(checked) {
 window.toggleAllMetricasBalance = toggleAllMetricasBalance;
 window.loadMetricasBalance = loadMetricasBalance;
 
-function actualizarMetricasSinBalance() {
+async function actualizarMetricasSinBalance() {
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
   const fmtD = d => d.toISOString().split("T")[0];
@@ -3391,42 +3340,35 @@ function actualizarMetricasSinBalance() {
   const dateTo   = document.getElementById("metrics-date-to")?.value   || fmtD(now);
   const shopFiltro = document.getElementById("met-bal-shop-filter-val")?.value || "";
 
+  // Leer checkboxes para filtro de tiendas
+  const checkboxesAct = document.querySelectorAll("#metrics-balance-wrap input[type='checkbox'][value]");
+  let dominiosAct = [];
+  if (checkboxesAct.length > 0) {
+    dominiosAct = [...checkboxesAct].filter(c => c.checked).map(c => c.value);
+  } else if (shopFiltro) {
+    try {
+      const parsed = JSON.parse(shopFiltro);
+      dominiosAct = Array.isArray(parsed) ? parsed : [shopFiltro];
+    } catch { dominiosAct = [shopFiltro]; }
+  }
+  const shopsFiltered = dominiosAct.length > 0 && dominiosAct.length < checkboxesAct.length ? dominiosAct : [];
+
   try {
-    let list = Array.isArray(allOrders) ? [...allOrders] : [];
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const statsParams = new URLSearchParams({ from: dateFrom, to: dateTo });
+    if (shopsFiltered.length > 0) statsParams.set("shops", shopsFiltered.join(","));
+    const stats = await fetch(`${API_BASE}/api/metrics/stats?${statsParams}`, { headers: h }).then(r => r.json());
 
-    list = list.filter(o => {
-      if (!o.created_at) return true;
-      const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-      if (dateFrom && d < dateFrom) return false;
-      if (dateTo   && d > dateTo)   return false;
-      return true;
-    });
-
-    // Leer checkboxes directamente para filtro inmediato
-    const checkboxesAct = document.querySelectorAll("#metrics-balance-wrap input[type='checkbox'][value]");
-    let dominiosAct = [];
-    if (checkboxesAct.length > 0) {
-      dominiosAct = [...checkboxesAct].filter(c => c.checked).map(c => c.value);
-    } else if (shopFiltro) {
-      try {
-        const parsed = JSON.parse(shopFiltro);
-        dominiosAct = Array.isArray(parsed) ? parsed : [shopFiltro];
-      } catch { dominiosAct = [shopFiltro]; }
-    }
-    if (dominiosAct.length > 0 && dominiosAct.length < checkboxesAct.length) {
-      list = list.filter(o => dominiosAct.includes(o.shop_domain));
-    }
-
-    const total      = list.length;
-    const pendientes = list.filter(o => o.fulfillment_status === "pendiente").length;
-    const transito   = list.filter(o => ["en_preparacion","enviado","en_transito","franquicia"].includes(o.fulfillment_status)).length;
-    const entregados = list.filter(o => o.fulfillment_status === "entregado").length;
-    const devueltos  = list.filter(o => o.fulfillment_status === "devuelto").length;
-    const destruidos = list.filter(o => o.fulfillment_status === "destruido").length;
+    const total      = stats.total      || 0;
+    const pendientes = stats.pendientes  || 0;
+    const transito   = stats.en_transito || 0;
+    const entregados = stats.entregados  || 0;
+    const devueltos  = stats.devueltos   || 0;
+    const destruidos = stats.destruidos  || 0;
+    const enviados   = stats.enviados    || 0;
+    const facturacion = parseFloat(stats.facturacion || 0);
     const rojos      = devueltos + destruidos;
-    const base       = list.filter(o => !["pendiente","cancelado"].includes(o.fulfillment_status)).length;
-    const baseCalc   = base > 0 ? base : 1;
-    const enviados   = base;
+    const baseCalc   = enviados > 0 ? enviados : 1;
     const pctEntregado = ((entregados / baseCalc) * 100).toFixed(2);
     const pctRojo      = ((rojos      / baseCalc) * 100).toFixed(2);
     const pctPendiente = ((transito   / baseCalc) * 100).toFixed(2);
@@ -3440,56 +3382,36 @@ function actualizarMetricasSinBalance() {
     set("stat-devueltos",  devueltos);
     set("stat-destruidos", destruidos);
 
-                // Actualizar facturación al filtrar tienda (descontando cancelados por fecha de cancelación)
-    const facturacionSB = (() => {
-      const ingresos = list.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
-      const descuentosCancelados = allOrders.filter(o => {
-        if (o.fulfillment_status !== "cancelado") return false;
-        if (dominiosAct.length > 0 && dominiosAct.length < checkboxesAct.length && !dominiosAct.includes(o.shop_domain)) return false;
-        try {
-          const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-          const cancelledAt = raw?.cancelled_at;
-          if (!cancelledAt) return false;
-          const cancelDate = new Date(cancelledAt).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-          if (dateFrom && cancelDate < dateFrom) return false;
-          if (dateTo && cancelDate > dateTo) return false;
-          return true;
-        } catch { return false; }
-      }).reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
-      return ingresos - descuentosCancelados;
-    })();
     const fmtEurSB = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 }) + " €";
-    set("stat-facturacion", fmtEurSB(facturacionSB));
+    set("stat-facturacion", fmtEurSB(facturacion));
 
-    // CPA y ROAS: recalcular usando ads cacheados filtrados por tienda activa
+    // CPA y ROAS usando ads cacheados filtrados por tienda activa
     const adsRowsAll = window.__metricasAdsRows || [];
-    const adsFiltered = (dominiosAct.length > 0 && dominiosAct.length < checkboxesAct.length)
-      ? adsRowsAll.filter(r => dominiosAct.includes(r.shop_domain))
+    const adsFiltered = shopsFiltered.length > 0
+      ? adsRowsAll.filter(r => shopsFiltered.includes(r.shop_domain))
       : adsRowsAll;
-    const gastoAdsSB = adsFiltered.reduce((s,r) => s + (r.meta||0) + (r.tiktok||0), 0);
-    const pedidosSB  = list.filter(o => o.fulfillment_status !== "cancelado").length;
-    const cpaSB  = (gastoAdsSB > 0 && pedidosSB > 0) ? gastoAdsSB / pedidosSB : null;
-    const roasSB = (gastoAdsSB > 0) ? facturacionSB / gastoAdsSB : null;
-    set("stat-cpa",  cpaSB  != null ? fmtEurSB(cpaSB)  : "— €");
-    set("stat-roas", roasSB != null ? roasSB.toFixed(2) : "—");
+    const gastoAds = adsFiltered.reduce((s,r) => s + (r.meta||0) + (r.tiktok||0), 0);
+    const pedidosActivos = stats.pedidos_activos || 0;
+    const cpa  = (gastoAds > 0 && pedidosActivos > 0) ? gastoAds / pedidosActivos : null;
+    const roas = (gastoAds > 0) ? facturacion / gastoAds : null;
+    set("stat-cpa",  cpa  != null ? fmtEurSB(cpa)  : "— €");
+    set("stat-roas", roas != null ? roas.toFixed(2) : "—");
 
-    set("donut-pct",       pctEntregado + "%");
+    set("donut-pct",        pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
     set("legend-rojo",      `Dev+Dest ${pctRojo}% (${rojos})`);
     set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})`);
     set("donut-base",       `Base: ${enviados} enviados`);
 
-    const circumference = 100;
     let offset = 0;
     function setArc(id, pct, off) {
       const el = document.getElementById(id);
       if (!el) return;
       const p = parseFloat(pct) || 0;
-      const o = parseFloat(off) || 0;
       el.setAttribute("stroke-dasharray", `${p} ${100 - p}`);
-      el.setAttribute("stroke-dashoffset", String(-(o)));
+      el.setAttribute("stroke-dashoffset", String(-(parseFloat(off) || 0)));
     }
-        const arcE2 = parseFloat(pctEntregado);
+    const arcE2 = parseFloat(pctEntregado);
     const arcR2 = parseFloat(pctRojo);
     const arcP2 = parseFloat((100 - arcE2 - arcR2).toFixed(2));
     setArc("donut-entregado", arcE2, offset);
@@ -3497,12 +3419,8 @@ function actualizarMetricasSinBalance() {
     setArc("donut-rojo",      arcR2, offset);
     offset += arcR2;
     setArc("donut-pendiente", arcP2, offset);
-
-    // Restaurar tarjetas
-    if (grid) { grid.style.opacity = "1"; grid.style.pointerEvents = ""; }
   } catch(e) {
     console.error(e);
-    if (grid) { grid.style.opacity = "1"; grid.style.pointerEvents = ""; }
   }
 }
 window.actualizarMetricasSinBalance = actualizarMetricasSinBalance;
@@ -3732,22 +3650,13 @@ async function loadAdsTable() {
   const monthName = monthNames[parseInt(month)-1];
   const h = { Authorization: "Bearer " + getActiveToken() };
 
-      let orders = [], allShopOrders = [], spends = {};
+  let dailyData = {}, spends = {};
   try {
-    const [allOrders, adsRows] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/orders`, { headers: h }),
+    const [adsTableRows, adsRows] = await Promise.all([
+      fetch(`${API_BASE}/api/metrics/ads-table?shop=${encodeURIComponent(shop)}&month=${month}&year=${year}`, { headers: h }).then(r => r.json()),
       cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(shop)}&month=${month}&year=${year}`, { headers: h })
     ]);
-    if (Array.isArray(allOrders)) {
-      allShopOrders = allOrders.filter(o => o.shop_domain === shop);
-      orders = allShopOrders.filter(o => {
-        if (!o.created_at) return false;
-        if (o.fulfillment_status === "cancelado") return false;
-        const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-        const [y, m] = localDate.split("-");
-        return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
-      });
-    }
+    if (Array.isArray(adsTableRows)) adsTableRows.forEach(r => { dailyData[r.dateStr] = r; });
     if (Array.isArray(adsRows)) adsRows.forEach(r => { spends[r.date] = { meta: r.meta||0, tiktok: r.tiktok||0 }; });
   } catch(e) { console.error(e); }
 
@@ -3757,28 +3666,9 @@ async function loadAdsTable() {
     const day     = i+1;
     const dateStr = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     const label   = `${day} de ${monthName} de ${year}`;
-    const dayOrders = orders.filter(o => {
-      if (!o.created_at) return false;
-      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-      return localDate === dateStr;
-    });
-    const ingresosDelDia = allShopOrders.filter(o => {
-      if (!o.created_at) return false;
-      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-      return localDate === dateStr;
-    }).reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
-    const descuentoCancelados = allShopOrders.filter(o => {
-      if (o.fulfillment_status !== "cancelado") return false;
-      try {
-        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-        const cancelledAt = raw?.cancelled_at;
-        if (!cancelledAt) return false;
-        const cancelDate = new Date(cancelledAt).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-        return cancelDate === dateStr;
-      } catch { return false; }
-    }).reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
-    const facturacion = ingresosDelDia - descuentoCancelados;
-    const pedidos = dayOrders.length;
+    const srv      = dailyData[dateStr] || {};
+    const facturacion = parseFloat(srv.facturacion || 0);
+    const pedidos     = parseInt(srv.pedidos || 0);
     const meta    = spends[dateStr]?.meta   || 0;
     const tiktok  = spends[dateStr]?.tiktok || 0;
     const gasto   = meta + tiktok;
@@ -3887,18 +3777,14 @@ async function loadGastosFijosData() {
   window.__showLoadingBar?.("Cargando gastos fijos...");
 
   let totalPedidos = 0;
+  let devueltosMes = 0;
   try {
-    const all = await cachedFetch(`${API_BASE}/api/orders`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    if (Array.isArray(all)) {
-      const pedidosMes = all.filter(o => {
-        if (!o.created_at) return false;
-        if (o.fulfillment_status === "cancelado") return false;
-        const d = new Date(o.created_at);
-        return d.getMonth()+1 === parseInt(month) && d.getFullYear() === parseInt(year);
-      });
-      totalPedidos = pedidosMes.length;
-      window.__allOrdersCache = all; // cache global para el estimado
-    }
+    const monthStr = String(month).padStart(2, "0");
+    const mesFrom  = `${year}-${monthStr}-01`;
+    const mesTo    = `${year}-${monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
+    const statsGF  = await fetch(`${API_BASE}/api/metrics/stats?from=${mesFrom}&to=${mesTo}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    totalPedidos = statsGF.pedidos_activos || 0;
+    devueltosMes = statsGF.devueltos || 0;
   } catch {}
 
   let items = [];
@@ -3999,18 +3885,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
             const esFijo = item.fijo===1||item.fijo===true;
             let estimado = null;
             if (item.precio_unit != null && (item.nombre === "MRW" || item.nombre === "LOGÍSTICA")) {
-              // Calcular envíos totales del mes
-              let totalEnvios = 0;
-              try {
-                const mesOrders = (window.__allOrdersCache || []).filter(o => {
-                  if (!o.created_at) return false;
-                  if (o.fulfillment_status === "cancelado") return false;
-                  const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-                  return d.startsWith(mes);
-                });
-                const devueltos = mesOrders.filter(o => o.fulfillment_status === "devuelto").length;
-                totalEnvios = mesOrders.length + devueltos; // +1 extra por cada devuelto
-              } catch {}
+              const totalEnvios = totalPedidos + devueltosMes; // +1 por cada devuelto
               estimado = totalEnvios * (parseFloat(item.precio_unit) || 0);
             }
             return `
@@ -4315,11 +4190,14 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
   if (label) label.textContent = `📅 Trabajando en: ${monthNames[parseInt(month)-1].toUpperCase()} ${year}`;
 
   window.__showLoadingBar?.("Cargando gastos...");
-// Cargar pedidos al cache global
+// Cargar pedidos del mes al cache global (solo el mes seleccionado)
   const _hGV = { Authorization: "Bearer " + getActiveToken() };
   try {
-    const _orders = await cachedFetch(`${API_BASE}/api/orders`, { headers: _hGV });
-    window.__allOrdersCache = Array.isArray(_orders) ? _orders : [];
+    const _monthStr = String(month).padStart(2,"0");
+    const _mesFrom  = `${year}-${_monthStr}-01`;
+    const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
+    const _ordRes   = await fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}&limit=2000`, { headers: _hGV }).then(r => r.json());
+    window.__allOrdersCache = Array.isArray(_ordRes) ? _ordRes : (_ordRes?.orders || []);
   } catch {}
 
   // 1. Tiendas activas
@@ -4700,31 +4578,21 @@ async function renderInformesIngresos() {
   let stores = [], orders = [], manuales = [];
   const _hInf = { Authorization: "Bearer " + getActiveToken() };
   try {
+    const _monthStr = String(month).padStart(2,"0");
+    const _mesFrom  = `${year}-${_monthStr}-01`;
+    const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
     const [_s, _o, _m] = await Promise.all([
       cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: _hInf }),
-      cachedFetch(`${API_BASE}/api/orders`, { headers: _hInf }),
+      fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}&limit=2000`, { headers: _hInf }).then(r => r.json()),
       cachedFetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: _hInf })
     ]);
     stores = Array.isArray(_s) ? _s : [];
-    orders = Array.isArray(_o) ? _o : [];
+    orders = Array.isArray(_o) ? _o : (_o?.orders || []);
     manuales = Array.isArray(_m) ? _m : [];
   } catch {}
 
-  const pedidosMes = orders.filter(o => {
-    if (o.fulfillment_status !== "entregado") return false;
-    if (!o.created_at) return false;
-    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-    const [y, m] = d.split("-");
-    return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
-  });
-
-  const pedidosMesTarjeta = orders.filter(o => {
-    if (o.fulfillment_status === "cancelado") return false;
-    if (!o.created_at) return false;
-    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-    const [y, m] = d.split("-");
-    return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
-  });
+  const pedidosMes     = orders.filter(o => o.fulfillment_status === "entregado");
+  const pedidosMesTarjeta = orders.filter(o => o.fulfillment_status !== "cancelado");
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
   const inp = `padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;`;
@@ -4950,13 +4818,16 @@ async function renderInformesBalance() {
   // ── 1. Cargar datos base ──────────────────────────────────
   let stores = [], orders = [], manuales = [];
   try {
+    const _monthStr = String(month).padStart(2,"0");
+    const _mesFrom  = `${year}-${_monthStr}-01`;
+    const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
     const [_s, _o, _m] = await Promise.all([
       cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/orders`, { headers: h }),
+      fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}&limit=2000`, { headers: h }).then(r => r.json()),
       cachedFetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: h })
     ]);
     stores = Array.isArray(_s) ? _s : [];
-    orders = Array.isArray(_o) ? _o : [];
+    orders = Array.isArray(_o) ? _o : (_o?.orders || []);
     manuales = Array.isArray(_m) ? _m : [];
   } catch(e) {
     wrap.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando datos</div>`;
@@ -4965,28 +4836,15 @@ async function renderInformesBalance() {
   }
 
   // ── 2. Calcular gastos por tienda (función limpia sin DOM) ─
-    window.__allOrdersCache = orders;
+  window.__allOrdersCache = orders;
   // Si Gastos por Tienda ya calculó este mes, reutilizar directamente
   if (!window.__gastosPorTienda || Object.keys(window.__gastosPorTienda).length === 0) {
     await loadGastosVarios(parseInt(month), parseInt(year));
   }
 
   // ── 3. Calcular ingresos por tienda (igual que pestaña Ingresos) ──
-  const pedidosEntregados = orders.filter(o => {
-    if (o.fulfillment_status !== "entregado") return false;
-    if (!o.created_at) return false;
-    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-    const [y, m] = d.split("-");
-    return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
-  });
-
-  const pedidosTarjeta = orders.filter(o => {
-    if (o.fulfillment_status === "cancelado") return false;
-    if (!o.created_at) return false;
-    const d = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-    const [y, m] = d.split("-");
-    return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
-  });
+  const pedidosEntregados = orders.filter(o => o.fulfillment_status === "entregado");
+  const pedidosTarjeta    = orders.filter(o => o.fulfillment_status !== "cancelado");
 
   // ── 4. Construir balanceData ──────────────────────────────
   const balanceData = stores.map(store => {
@@ -5343,7 +5201,6 @@ async function refreshCacheBackground() {
   const mes = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
 
   const urls = [
-    `${API_BASE}/api/orders`,
     `${API_BASE}/api/shopify/stores`,
     `${API_BASE}/api/shopify/stock`,
     `${API_BASE}/api/shopify/variantes-config`,
@@ -5373,81 +5230,102 @@ async function refreshCacheBackground() {
 // (5 segundos antes de que expire el caché de 1 minuto)
 setInterval(refreshCacheBackground, 55000);
 
+// Estado de filtros de pedidos (server-side)
+let ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
+let ordersTotal = 0, ordersPages = 0;
+let __ordersFetchId = 0;
+
+async function fetchOrdersFiltered() {
+  const body = document.getElementById("ordersBody");
+  if (!body) return;
+
+  const fetchId = ++__ordersFetchId;
+  body.style.opacity = "0.5";
+
+  const params = new URLSearchParams({ page: ordersState.page, limit: 50 });
+  if (ordersState.q)        params.set("q",       ordersState.q);
+  if (ordersState.status)   params.set("status",   ordersState.status);
+  if (ordersState.shop)     params.set("shop",     ordersState.shop);
+  if (ordersState.dateFrom) params.set("from",     ordersState.dateFrom);
+  if (ordersState.dateTo)   params.set("to",       ordersState.dateTo);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders?${params}`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    if (fetchId !== __ordersFetchId) return; // respuesta obsoleta
+    const data = await res.json();
+    const orders = data.orders || [];
+    ordersTotal = data.total || 0;
+    ordersPages = data.pages || 1;
+    renderOrders(orders, ordersTotal, ordersState.page, ordersPages);
+  } catch (e) {
+    if (fetchId !== __ordersFetchId) return;
+    body.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando pedidos</div>`;
+  } finally {
+    body.style.opacity = "1";
+  }
+}
+
 async function fetchOrders() {
   const body = document.getElementById("ordersBody");
   if (!body) return;
 
-  // Mostrar pedidos en caché inmediatamente si existen
-  if (Array.isArray(allOrders) && allOrders.length > 0) {
-    renderOrders(allOrders);
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/api/orders`, {
-      headers: {
-        Authorization: "Bearer " + getActiveToken(),
-      },
-    });
-
-        const orders = await res.json();
-    const newOrders = Array.isArray(orders) ? orders : [];
-    // Solo actualizar si llegaron igual o más pedidos que los que ya tenemos
-    // Evita que una respuesta parcial o fallo de red baje el contador
-    if (newOrders.length >= allOrders.length || allOrders.length === 0) {
-      allOrders = newOrders;
-    }
-
-    // Si venimos de una notificación, filtrar ese pedido
-    if (window.__pendingSearchNoti) {
-      const orderId = window.__pendingSearchNoti;
-      window.__pendingSearchNoti = null;
-      const order = allOrders.find(o => String(o.id || o.order_id) === orderId);
+  // Si venimos de una notificación, buscar ese pedido directamente
+  if (window.__pendingSearchNoti) {
+    const orderId = window.__pendingSearchNoti;
+    window.__pendingSearchNoti = null;
+    try {
+      const res = await fetch(`${API_BASE}/api/orders?q=${encodeURIComponent(orderId)}&limit=1`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      });
+      const data = await res.json();
+      const order = (data.orders || [])[0];
       if (order) {
         const q = order.order_number || "";
         const searchEl = document.getElementById("search");
-        if (searchEl) { searchEl.value = q; doSearch(q); }
-        filterOrders(q);
+        if (searchEl) searchEl.value = q;
+        ordersState = { ...ordersState, q, page: 1 };
+        await fetchOrdersFiltered();
         return;
       }
-    }
-
-    renderOrders(allOrders);
-
-  } catch (e) {
-    if (body) body.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando pedidos</div>`;
+    } catch {}
   }
+
+  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
+  await fetchOrdersFiltered();
 }
 
-let currentOrdersPage = 1;
-const ORDERS_PER_PAGE = 20;
 let currentDisplayOrders = [];
 
-function renderOrders(orders) {
+function renderOrders(orders, total, page, pages) {
   currentDisplayOrders = orders;
-  currentOrdersPage = 1;
-  renderOrdersPage();
+  renderOrdersPage(orders, total || orders.length, page || 1, pages || 1);
 }
 
-function renderOrdersPage() {
+function renderOrdersPage(pageOrders, total, page, totalPages) {
+  if (!pageOrders) { pageOrders = currentDisplayOrders; }
+  if (!total)      { total = pageOrders.length; }
+  if (!page)       { page = ordersState.page || 1; }
+  if (!totalPages) { totalPages = ordersPages || 1; }
+
   const body = document.getElementById("ordersBody");
   const pagination = document.getElementById("ordersPagination");
   if (!body) return;
 
-  if (!currentDisplayOrders.length) {
+  if (!pageOrders.length) {
     body.innerHTML = `<div class="muted" style="padding:16px;">No hay pedidos todavía</div>`;
     if (pagination) pagination.innerHTML = "";
     return;
   }
 
-  const totalPages = Math.ceil(currentDisplayOrders.length / ORDERS_PER_PAGE);
-  const start = (currentOrdersPage - 1) * ORDERS_PER_PAGE;
-  const pageOrders = currentDisplayOrders.slice(start, start + ORDERS_PER_PAGE);
+  const ORDERS_PER_PAGE = 50;
+  const start = (page - 1) * ORDERS_PER_PAGE;
 
   const counter = document.getElementById("orders-counter");
   if (counter) {
-    const total = currentDisplayOrders.length;
     const desde = total === 0 ? 0 : start + 1;
-    const hasta = Math.min(start + ORDERS_PER_PAGE, total);
+    const hasta = Math.min(start + pageOrders.length, total);
     counter.textContent = `Mostrando ${desde}–${hasta} de ${total} pedidos`;
   }
 
@@ -5486,7 +5364,7 @@ function renderOrdersPage() {
 
 if (pagination) {
     if (totalPages < 1) { pagination.innerHTML = ""; return; }
-    const p = currentOrdersPage;
+    const p = page;
     const delta = 2;
     let pages = "";
 
@@ -5539,21 +5417,18 @@ if (pagination) {
 }
 
 function goToOrdersPage(page) {
-  currentOrdersPage = page;
-  renderOrdersPage();
+  ordersState = { ...ordersState, page };
+  fetchOrdersFiltered();
   const table = document.querySelector(".orders-table");
   if (table) table.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 window.goToOrdersPage = goToOrdersPage;
 
+let __filterOrdersTimer = null;
 function filterOrders(value) {
-  const q = (value || "").toLowerCase();
-  if (!q) return renderOrders(allOrders);
-  const filtered = allOrders.filter(o =>
-    (o.order_number || "").toLowerCase().includes(q) ||
-    (o.customer_name || "").toLowerCase().includes(q)
-  );
-  renderOrders(filtered);
+  ordersState = { ...ordersState, q: (value || "").trim(), page: 1 };
+  clearTimeout(__filterOrdersTimer);
+  __filterOrdersTimer = setTimeout(fetchOrdersFiltered, 300);
 }
 
 function statusClass(s) {
@@ -5983,33 +5858,18 @@ function applyFilters() {
     return;
   }
 
-  const filtered = allOrders.filter(o => {
-    if (status && o.fulfillment_status !== status) return false;
-    if (shop && o.shop_domain !== shop) return false;
-    if (dateFrom) {
-      if (!o.created_at) return false;
-      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-      if (localDate < dateFrom) return false;
-    }
-    if (dateTo) {
-      if (!o.created_at) return false;
-      const localDate = new Date(o.created_at).toLocaleString("sv-SE", { timeZone: "Europe/Madrid" }).split(" ")[0];
-      if (localDate > dateTo) return false;
-    }
-    return true;
-  });
-
-  renderOrders(filtered);
+  ordersState = { ...ordersState, status, shop, dateFrom, dateTo, page: 1 };
+  fetchOrdersFiltered();
 }
 
 function clearFilters() {
-  activeFilters = { status: "", shop: "", dateFrom: "", dateTo: "" };
-  renderOrders(allOrders);
+  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
+  fetchOrdersFiltered();
   toggleFilterPanel();
 }
 
 function clearFiltersInline() {
-  activeFilters = { status: "", shop: "", dateFrom: "", dateTo: "" };
+  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
   const df = document.getElementById("filter-date-from");
   const dt = document.getElementById("filter-date-to");
   const ss = document.getElementById("filter-status");
@@ -6018,22 +5878,21 @@ function clearFiltersInline() {
   if (dt) dt.value = "";
   if (ss) ss.value = "";
   if (sh) sh.value = "";
-  renderOrders(allOrders);
+  fetchOrdersFiltered();
 }
 window.clearFiltersInline = clearFiltersInline;
 
 function filterByTab(el, status) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
-  if (!status) return renderOrders(allOrders);
-  const filtered = allOrders.filter(o => o.fulfillment_status === status);
-  renderOrders(filtered);
+  ordersState = { ...ordersState, status: status || "", page: 1 };
+  fetchOrdersFiltered();
 }
 function filterByTabMulti(el, statuses) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
-  const filtered = allOrders.filter(o => statuses.includes(o.fulfillment_status));
-  renderOrders(filtered);
+  ordersState = { ...ordersState, status: statuses.join(","), page: 1 };
+  fetchOrdersFiltered();
 }
 window.filterByTab = filterByTab;
 window.filterByTabMulti = filterByTabMulti;
@@ -6134,128 +5993,107 @@ window.deleteGastoExtra       = deleteGastoExtra;
 // =========================
 // REEMBOLSOS
 // =========================
-let allReembolsos = [];
-let currentReePage = 1;
-const REE_PER_PAGE = 20;
-let currentReeDisplay = [];
+let reembolsosState = { shop: "", from: "", to: "", page: 1 };
 
 async function loadReembolsos() {
   try {
     const h = { Authorization: "Bearer " + getActiveToken() };
-    const [estadosData, orders] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/orders/reembolso-estado`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/orders`, { headers: h })
-    ]);
+    const estadosData = await cachedFetch(`${API_BASE}/api/orders/reembolso-estado`, { headers: h });
     window.__reembolsosEstados = {};
     if (Array.isArray(estadosData)) {
       estadosData.forEach(e => { window.__reembolsosEstados[e.order_id] = e.estado; });
     }
-    allReembolsos = Array.isArray(orders) ? orders.filter(o => {
-      if (o.fulfillment_status !== "entregado") return false;
-      try {
-        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-        const fin = (raw?.financial_status || raw?.payment_status || o.financial_status || o.payment_status || "").toLowerCase().trim();
-        return fin === "pending" || fin === "cod" || fin === "pendiente";
-      } catch { return false; }
-    }) : [];
-    renderReembolsos();
+  } catch(e) { /* ignore */ }
+  reembolsosState.page = 1;
+  await fetchReembolsosFiltered();
+}
+
+function renderReembolsos() {
+  reembolsosState = {
+    shop: document.getElementById("ree-shop")?.value || "",
+    from: document.getElementById("ree-date-from")?.value || "",
+    to:   document.getElementById("ree-date-to")?.value || "",
+    page: 1
+  };
+  fetchReembolsosFiltered();
+}
+
+async function fetchReembolsosFiltered() {
+  const h = { Authorization: "Bearer " + getActiveToken() };
+  const params = new URLSearchParams({ page: reembolsosState.page, limit: 50 });
+  if (reembolsosState.shop) params.set("shop", reembolsosState.shop);
+  if (reembolsosState.from) params.set("from", reembolsosState.from);
+  if (reembolsosState.to)   params.set("to",   reembolsosState.to);
+  const body       = document.getElementById("reeBody");
+  const pagination = document.getElementById("reePagination");
+  const counter    = document.getElementById("ree-counter");
+  try {
+    const data    = await fetch(`${API_BASE}/api/orders/reembolsos?${params}`, { headers: h }).then(r => r.json());
+    const orders  = data.orders || [];
+    const total   = data.total  || 0;
+    const page    = data.page   || 1;
+    const pages   = data.pages  || 1;
+
+    const tabFilter = window.__reeTabFilter || "";
+    const filtered = orders.filter(o => {
+      if (!tabFilter) return true;
+      const estadoPago = (window.__reembolsosEstados || {})[o.id] || "pendiente";
+      if (tabFilter === "cobrado"   && estadoPago !== "cobrado")   return false;
+      if (tabFilter === "pendiente" && estadoPago !== "pendiente") return false;
+      return true;
+    });
+
+    if (counter) counter.textContent = filtered.length ? `Mostrando ${(page-1)*50+1}–${(page-1)*50+filtered.length} de ${total} reembolsos` : "";
+
+    if (!filtered.length) {
+      if (body) body.innerHTML = `<div class="muted" style="padding:16px;">No hay reembolsos pendientes</div>`;
+      if (pagination) pagination.innerHTML = "";
+      return;
+    }
+
+    if (body) {
+      body.innerHTML = filtered.map((o, idx) => {
+        const numero     = (page-1)*50 + idx + 1;
+        const estadoPago = (window.__reembolsosEstados || {})[o.id] || "pendiente";
+        return `
+        <div class="orders-row" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
+          <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:500;font-size:12px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${escapeHtml(o.customer_name || "-")}</div>
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
+          <div style="display:flex;align-items:center;">
+            ${estadoPago === "cobrado"
+              ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:999px;font-size:12px;font-weight:600;color:#16a34a;">✅ Pagado</span>`
+              : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:999px;font-size:12px;font-weight:600;color:#92400e;">⏳ Pendiente</span>`
+            }
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    if (pagination) {
+      if (pages <= 1) { pagination.innerHTML = ""; return; }
+      const p = page;
+      const delta = 2;
+      let pagesHtml = "";
+      pagesHtml += `<button onclick="goToReePage(${Math.max(1,p-1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
+      let sp = Math.max(1,p-delta), ep = Math.min(pages,p+delta);
+      if (sp > 1) { pagesHtml += `<button onclick="goToReePage(1)" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`; if (sp>2) pagesHtml += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; }
+      for (let i=sp;i<=ep;i++) { const a=i===p; pagesHtml += `<button onclick="goToReePage(${i})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${a?"#16a34a":"#e5e7eb"};background:${a?"#16a34a":"var(--card)"};color:${a?"#fff":"var(--text)"};font-size:13px;font-weight:${a?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`; }
+      if (ep < pages) { if (ep<pages-1) pagesHtml += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; pagesHtml += `<button onclick="goToReePage(${pages})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${pages}</button>`; }
+      pagesHtml += `<button onclick="goToReePage(${Math.min(pages,p+1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:${p===pages?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===pages?"disabled":""}>›</button>`;
+      pagination.innerHTML = pagesHtml;
+    }
   } catch(e) {
-    const body = document.getElementById("reeBody");
     if (body) body.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando reembolsos</div>`;
   }
 }
 
-function renderReembolsos() {
-  const dateFrom = document.getElementById("ree-date-from")?.value || "";
-  const dateTo   = document.getElementById("ree-date-to")?.value || "";
-  const shop     = document.getElementById("ree-shop")?.value || "";
-  const tabFilter = window.__reeTabFilter || "";
-
-  let filtered = allReembolsos.filter(o => {
-    if (shop && o.shop_domain !== shop) return false;
-    if (dateFrom) {
-      const d = new Date(o.created_at); const from = new Date(dateFrom + "T00:00:00");
-      if (d < from) return false;
-    }
-    if (dateTo) {
-      const d = new Date(o.created_at); const to = new Date(dateTo + "T23:59:59");
-      if (d > to) return false;
-    }
-    if (tabFilter) {
-      const estadoPago = (window.__reembolsosEstados || {})[o.id] || "pendiente";
-      if (tabFilter === "cobrado" && estadoPago !== "cobrado") return false;
-      if (tabFilter === "pendiente" && estadoPago !== "pendiente") return false;
-    }
-    return true;
-  });
-
-  currentReeDisplay = filtered;
-  currentReePage = 1;
-  renderReePage();
-}
-
-function renderReePage() {
-  const body = document.getElementById("reeBody");
-  const pagination = document.getElementById("reePagination");
-  const counter = document.getElementById("ree-counter");
-  if (!body) return;
-
-  if (!currentReeDisplay.length) {
-    body.innerHTML = `<div class="muted" style="padding:16px;">No hay reembolsos pendientes</div>`;
-    if (pagination) pagination.innerHTML = "";
-    if (counter) counter.textContent = "";
-    return;
-  }
-
-  const totalPages = Math.ceil(currentReeDisplay.length / REE_PER_PAGE);
-  const start = (currentReePage - 1) * REE_PER_PAGE;
-  const pageOrders = currentReeDisplay.slice(start, start + REE_PER_PAGE);
-
-  if (counter) {
-    const total = currentReeDisplay.length;
-    counter.textContent = `Mostrando ${start + 1}–${Math.min(start + REE_PER_PAGE, total)} de ${total} reembolsos`;
-  }
-
-  body.innerHTML = pageOrders.map((o, idx) => {
-    const numero = start + idx + 1;
-    const estadoPago = (window.__reembolsosEstados || {})[o.id] || "pendiente";
-    const estadoColor = estadoPago === "cobrado" ? "#16a34a" : estadoPago === "no_cobrado" ? "#dc2626" : "#f59e0b";
-
-    return `
-    <div class="orders-row" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
-      <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:500;font-size:12px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${escapeHtml(o.customer_name || "-")}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
-      <div style="display:flex;align-items:center;">
-        ${estadoPago === "cobrado"
-          ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:999px;font-size:12px;font-weight:600;color:#16a34a;">✅ Pagado</span>`
-          : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:999px;font-size:12px;font-weight:600;color:#92400e;">⏳ Pendiente</span>`
-        }
-      </div>
-    </div>`;
-  }).join("");
-
-  if (pagination) {
-    if (totalPages < 1) { pagination.innerHTML = ""; return; }
-    const p = currentReePage;
-    const delta = 2;
-    let pages = "";
-    pages += `<button onclick="goToReePage(${Math.max(1,p-1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
-    let sp = Math.max(1,p-delta), ep = Math.min(totalPages,p+delta);
-    if (sp > 1) { pages += `<button onclick="goToReePage(1)" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`; if (sp>2) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; }
-    for (let i=sp;i<=ep;i++) { const a=i===p; pages += `<button onclick="goToReePage(${i})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${a?"#16a34a":"#e5e7eb"};background:${a?"#16a34a":"var(--card)"};color:${a?"#fff":"var(--text)"};font-size:13px;font-weight:${a?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`; }
-    if (ep < totalPages) { if (ep<totalPages-1) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; pages += `<button onclick="goToReePage(${totalPages})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${totalPages}</button>`; }
-    pages += `<button onclick="goToReePage(${Math.min(totalPages,p+1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:${p===totalPages?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===totalPages?"disabled":""}>›</button>`;
-    pagination.innerHTML = pages;
-  }
-}
-
 function goToReePage(page) {
-  currentReePage = page;
-  renderReePage();
+  reembolsosState = { ...reembolsosState, page };
+  fetchReembolsosFiltered();
 }
 
 async function cambiarEstadoReembolso(orderId, estado) {
@@ -6291,6 +6129,7 @@ function filterReeByTab(el, estado) {
 
 window.loadReembolsos         = loadReembolsos;
 window.renderReembolsos       = renderReembolsos;
+window.fetchReembolsosFiltered = fetchReembolsosFiltered;
 window.goToReePage            = goToReePage;
 window.cambiarEstadoReembolso = cambiarEstadoReembolso;
 window.clearReembolsosFilters = clearReembolsosFilters;
@@ -6302,9 +6141,9 @@ window.filterReeByTab         = filterReeByTab;
 async function loadSidebarReembolsos() {
   try {
     const h = { Authorization: "Bearer " + getActiveToken() };
-    const [estadosData, orders] = await Promise.all([
+    const [estadosData, reeData] = await Promise.all([
       cachedFetch(`${API_BASE}/api/orders/reembolso-estado`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/orders`, { headers: h })
+      fetch(`${API_BASE}/api/orders/reembolsos?limit=500&page=1`, { headers: h }).then(r => r.json())
     ]);
     const estadosMap = {};
     if (Array.isArray(estadosData)) {
@@ -6313,17 +6152,12 @@ async function loadSidebarReembolsos() {
         if (e.tracking_number) estadosMap["trk_" + e.tracking_number.trim().toUpperCase()] = e.estado;
       });
     }
-    const pendientes = Array.isArray(orders) ? orders.filter(o => {
-      if (o.fulfillment_status !== "entregado") return false;
-      try {
-        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-        const fin = (raw?.financial_status || raw?.payment_status || o.financial_status || o.payment_status || "").toLowerCase().trim();
-        if (!(fin === "pending" || fin === "cod" || fin === "pendiente")) return false;
-      } catch { return false; }
+    const orders = reeData.orders || [];
+    const pendientes = orders.filter(o => {
       const trackingKey = "trk_" + (o.tracking_number || "").trim().toUpperCase();
-const estado = estadosMap[String(o.id)] || estadosMap[trackingKey] || (window.__reembolsosEstados || {})[String(o.id)] || "pendiente";
+      const estado = estadosMap[String(o.id)] || estadosMap[trackingKey] || (window.__reembolsosEstados || {})[String(o.id)] || "pendiente";
       return estado !== "cobrado";
-    }) : [];
+    });
 
     const count = pendientes.length;
     const total = pendientes.reduce((s, o) => s + (parseFloat(o.total_price) || 0), 0);
@@ -6343,11 +6177,14 @@ window.loadSidebarReembolsos = loadSidebarReembolsos;
 // =========================
 async function checkNotificaciones() {
   try {
-    const res = await fetch(`${API_BASE}/api/orders`, {
+    const ahora60 = new Date(); ahora60.setDate(ahora60.getDate() - 60);
+    const desde60 = ahora60.toISOString().split("T")[0];
+    const res = await fetch(`${API_BASE}/api/orders?from=${desde60}&light=1&limit=1000`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     });
-    const orders = await res.json();
-    if (!Array.isArray(orders)) return;
+    const raw = await res.json();
+    const orders = Array.isArray(raw) ? raw : (raw?.orders || []);
+    if (!Array.isArray(orders) || !orders.length) return;
 
     const ahora = new Date();
     const sietesDias = 7 * 24 * 60 * 60 * 1000;
@@ -6541,9 +6378,14 @@ async function importarPagadosPDF(input) {
       return;
     }
 
+    // Cargar todos los reembolsos para cruzar con los tracking del PDF
+    const reeH = { Authorization: "Bearer " + getActiveToken() };
+    const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=500&page=1`, { headers: reeH }).then(r => r.json()).catch(() => ({ orders: [] }));
+    const todosReembolsos = reeData.orders || [];
+
     // Marcar como cobrados los pedidos que coincidan
     let actualizados = 0;
-    for (const o of allReembolsos) {
+    for (const o of todosReembolsos) {
       const tracking = (o.tracking_number || "").trim().toUpperCase();
       if (matches.some(m => m.toUpperCase() === tracking)) {
         await fetch(`${API_BASE}/api/orders/reembolso-estado`, {

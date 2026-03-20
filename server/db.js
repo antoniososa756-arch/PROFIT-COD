@@ -250,6 +250,27 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_city TEXT`)
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_zip TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_country TEXT`);
 
+  // Columna cancelled_at separada para queries rápidas sin parsear raw_json
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TEXT`);
+
+  // Poblar cancelled_at de registros existentes con raw_json ya guardado
+  try {
+    await pool.query(`
+      UPDATE orders
+      SET cancelled_at = raw_json::json->>'cancelled_at'
+      WHERE fulfillment_status = 'cancelado'
+        AND raw_json IS NOT NULL
+        AND cancelled_at IS NULL
+        AND raw_json::json->>'cancelled_at' IS NOT NULL
+    `);
+  } catch(e) { console.warn("Migration cancelled_at:", e.message); }
+
+  // Índices para queries rápidas con 50k+ pedidos
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_shop_created ON orders(shop_id, created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_status       ON orders(fulfillment_status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_cancelled_at ON orders(cancelled_at)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_shop_domain  ON orders(shop_domain)`);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 
