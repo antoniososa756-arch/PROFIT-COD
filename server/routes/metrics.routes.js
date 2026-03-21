@@ -47,7 +47,7 @@ router.get("/stats", auth, async (req, res) => {
 
     let shopCond = "";
     if (shops) {
-      shopCond = `AND o.shop_domain = ANY($${i++}::text[])`;
+      shopCond = `AND COALESCE(o.shop_domain, s.shop_domain) = ANY($${i++}::text[])`;
       params.push(shops);
     }
 
@@ -64,6 +64,7 @@ router.get("/stats", auth, async (req, res) => {
         COUNT(*) FILTER (WHERE o.fulfillment_status != 'cancelado') AS pedidos_activos,
         COALESCE(SUM(o.total_price), 0) AS ingresos_brutos
        FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
        WHERE o.shop_id IN (${shopSubquery})
          ${dateCondFrom} ${dateCondTo} ${shopCond}`,
       params
@@ -79,13 +80,14 @@ router.get("/stats", auth, async (req, res) => {
 
     let cancelShopCond = "";
     if (shops) {
-      cancelShopCond = `AND o.shop_domain = ANY($${j++}::text[])`;
+      cancelShopCond = `AND COALESCE(o.shop_domain, s.shop_domain) = ANY($${j++}::text[])`;
       cancelParams.push(shops);
     }
 
     const cancelRow = await db.get(
       `SELECT COALESCE(SUM(o.total_price), 0) AS descuento_cancelados
        FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
        WHERE o.shop_id IN (${shopSubquery})
          AND o.fulfillment_status = 'cancelado'
          AND o.cancelled_at IS NOT NULL
