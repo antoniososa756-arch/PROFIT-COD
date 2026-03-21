@@ -5481,12 +5481,16 @@ function editStoreName(storeId) {
   input.focus();
   input.select();
 
+  let saving = false;
   async function save() {
+    if (saving) return;
+    saving = true;
     const newName = input.value.trim().slice(0, 10);
+    invalidateCache("shopify/stores");
     if (!newName) { fetchStores(); return; }
 
     try {
-      const res = await fetch(`${API_BASE}/api/shopify/rename/${storeId}`, {
+      await fetch(`${API_BASE}/api/shopify/rename/${storeId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -5494,16 +5498,14 @@ function editStoreName(storeId) {
         },
         body: JSON.stringify({ name: newName }),
       });
-
-      if (res.ok) fetchStores();
-      else fetchStores();
-    } catch { fetchStores(); }
+    } catch {}
+    fetchStores();
   }
 
   input.addEventListener("blur", save);
   input.addEventListener("keydown", e => {
     if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-    if (e.key === "Escape") { fetchStores(); }
+    if (e.key === "Escape") { invalidateCache("shopify/stores"); fetchStores(); }
   });
 }
 
