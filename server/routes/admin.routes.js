@@ -59,6 +59,45 @@ router.patch("/users/:id/status", auth, admin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error DB" }); }
 });
 
-module.exports = router;
+// ── Configuración de pagos (Stripe + PayPal) ──────────────────
+router.get("/payment-config", auth, admin, async (req, res) => {
+  try {
+    const row = await db.get("SELECT stripe_public_key, stripe_secret_key, stripe_webhook_secret, paypal_client_id, paypal_secret, paypal_env FROM payment_config WHERE id = 1");
+    // Enmascarar claves secretas para la UI
+    const mask = v => v ? v.slice(0, 6) + "••••••••••••" : "";
+    res.json({
+      stripe_public_key:       row?.stripe_public_key       || "",
+      stripe_secret_key:       mask(row?.stripe_secret_key),
+      stripe_webhook_secret:   mask(row?.stripe_webhook_secret),
+      paypal_client_id:        row?.paypal_client_id        || "",
+      paypal_secret:           mask(row?.paypal_secret),
+      paypal_env:              row?.paypal_env              || "live",
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.put("/payment-config", auth, admin, async (req, res) => {
+  try {
+    const { stripe_public_key, stripe_secret_key, stripe_webhook_secret, paypal_client_id, paypal_secret, paypal_env } = req.body;
+    // Solo actualizar campos que no estén enmascarados (si contienen ••, se ignoran)
+    const current = await db.get("SELECT * FROM payment_config WHERE id = 1");
+    const val = (newVal, oldVal) => (newVal && !newVal.includes("••")) ? newVal : (oldVal || "");
+    await db.run(
+      `UPDATE payment_config SET
+        stripe_public_key = $1, stripe_secret_key = $2, stripe_webhook_secret = $3,
+        paypal_client_id = $4, paypal_secret = $5, paypal_env = $6, updated_at = now()::text
+       WHERE id = 1`,
+      [
+        val(stripe_public_key,     current?.stripe_public_key),
+        val(stripe_secret_key,     current?.stripe_secret_key),
+        val(stripe_webhook_secret, current?.stripe_webhook_secret),
+        val(paypal_client_id,      current?.paypal_client_id),
+        val(paypal_secret,         current?.paypal_secret),
+        paypal_env || current?.paypal_env || "live",
+      ]
+    );
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 
 module.exports = router;

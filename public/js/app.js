@@ -122,6 +122,15 @@ if (location.pathname.includes("login")) {
         data.user.role === "admin" ? "role-admin" : "role-client"
       );
 
+      // Cargar estado del plan para clientes
+      window.__userPlan = { plan: "free", status: "inactive", expires_at: null };
+      if (data.user.role !== "admin") {
+        fetch(`${API_BASE}/api/billing/plan`, { headers: { Authorization: "Bearer " + token } })
+          .then(r => r.json()).then(p => { window.__userPlan = p; }).catch(() => {});
+      } else {
+        window.__userPlan = { plan: "admin", status: "active", expires_at: null };
+      }
+
       // 🚀 Cargar app UNA sola vez
       loadApp(localStorage.getItem("section") || "metricas");
     })
@@ -597,6 +606,10 @@ function loadApp(section) {
             <div class="menu-item" data-id="gestion-clientes">
               👥 Gestión de clientes
             </div>
+
+            <div class="menu-item" data-id="pagos-config">
+              💳 Configuración de pagos
+            </div>
           `
           : ""
       }
@@ -756,6 +769,60 @@ function setSection(id) {
   if (t) t.textContent = title;
   if (s) s.textContent = d.ui.sectionPrefix + title;
   if (c) c.textContent = title;
+
+// =========================
+// BLOQUEO POR PLAN CADUCADO
+// Clientes sin plan activo ven pantalla de renovación en todas las secciones excepto "plan"
+// =========================
+if (id !== "plan" && currentUser.role !== "Administrador") {
+  const up = window.__userPlan || {};
+  const planOk = up.plan && up.plan !== "free"
+    && up.status === "active"
+    && (!up.expires_at || new Date(up.expires_at) > new Date());
+
+  if (!planOk) {
+    if (t) t.textContent = "Plan requerido";
+    if (s) s.textContent = "";
+    if (c) c.textContent = "Plan requerido";
+    if (box) {
+      box.className = "card";
+      box.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:20px;">
+          <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="#d1d5db" stroke-width="1.5">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <div>
+            <div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;">Renueva tu plan para ver la información de tus tiendas</div>
+            <div style="font-size:14px;color:#6b7280;max-width:420px;">Tu suscripción ha caducado o no tienes un plan activo. Activa un plan para acceder a métricas, pedidos, productos y toda la información de tus tiendas.</div>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+            <div style="border:2px solid #3b82f6;border-radius:12px;padding:16px 24px;min-width:160px;">
+              <div style="font-size:12px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Básico</div>
+              <div style="font-size:24px;font-weight:800;color:#111827;">9,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div>
+              <div style="font-size:12px;color:#6b7280;margin-top:4px;">1 tienda</div>
+            </div>
+            <div style="border:2px solid #8b5cf6;border-radius:12px;padding:16px 24px;min-width:160px;">
+              <div style="font-size:12px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Pro</div>
+              <div style="font-size:24px;font-weight:800;color:#111827;">19,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div>
+              <div style="font-size:12px;color:#6b7280;margin-top:4px;">Hasta 4 tiendas</div>
+            </div>
+            <div style="border:2px solid #f59e0b;border-radius:12px;padding:16px 24px;min-width:160px;">
+              <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Business</div>
+              <div style="font-size:24px;font-weight:800;color:#111827;">29,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div>
+              <div style="font-size:12px;color:#6b7280;margin-top:4px;">Hasta 10 tiendas</div>
+            </div>
+          </div>
+          <button onclick="setSection('plan')" style="padding:12px 32px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">
+            Ver planes y renovar
+          </button>
+        </div>`;
+    }
+    closeAllDrops();
+    closeSearchDrop();
+    return;
+  }
+}
 
 // =========================
 // SECCIÓN MÉTRICAS
@@ -1793,6 +1860,311 @@ if (id === "ayuda") {
     event.target.classList.add("active");
   };
 
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
+// =========================
+// SECCIÓN PAGOS CONFIG (solo admin)
+// =========================
+if (id === "pagos-config") {
+  if (currentUser.role !== "Administrador") { setSection("metricas"); return; }
+  if (t) t.textContent = "Configuración de pagos";
+  if (s) s.textContent = "Claves de Stripe y PayPal para cobrar a los clientes";
+  if (c) c.textContent = "Configuración de pagos";
+  box.className = "card";
+
+  const inp = (id, ph, type="text") =>
+    `<input id="${id}" type="${type}" placeholder="${ph}"
+      style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;
+             background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;">`;
+
+  box.innerHTML = `<div style="max-width:560px;">
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#92400e;">
+      ⚠️ Estas claves se usan para procesar los cobros de los clientes. Mantenlas confidenciales.
+    </div>
+
+    <div style="margin-bottom:28px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#635bff" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        <span style="font-weight:700;font-size:15px;color:#635bff;">Stripe</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Clave pública (pk_live_...)</label>
+          ${inp("cfg-stripe-pk","pk_live_...")}
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Clave secreta (sk_live_...)</label>
+          ${inp("cfg-stripe-sk","sk_live_...","password")}
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Webhook secret (whsec_...)</label>
+          ${inp("cfg-stripe-wh","whsec_...","password")}
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:28px;padding-top:20px;border-top:1px solid #f3f4f6;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#003087" stroke-width="2"><path d="M6.5 8h5a4 4 0 0 1 0 8H8l-1 5H5l2-13z"/><path d="M13 8h3a4 4 0 0 1 0 8h-1"/></svg>
+        <span style="font-weight:700;font-size:15px;color:#003087;">PayPal</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Client ID</label>
+          ${inp("cfg-pp-client","AXxx...")}
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Secret</label>
+          ${inp("cfg-pp-secret","EXxx...","password")}
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Entorno</label>
+          <select id="cfg-pp-env" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+            <option value="live">Producción (live)</option>
+            <option value="sandbox">Sandbox (pruebas)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="pagos-cfg-msg" style="font-size:13px;min-height:18px;margin-bottom:10px;"></div>
+    <button onclick="guardarPagosConfig()"
+      style="padding:10px 28px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+      Guardar configuración
+    </button>
+  </div>`;
+
+  // Cargar valores actuales (enmascarados)
+  fetch(`${API_BASE}/api/admin/payment-config`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+    .then(r => r.json()).then(d => {
+      document.getElementById("cfg-stripe-pk").value = d.stripe_public_key || "";
+      document.getElementById("cfg-stripe-sk").value = d.stripe_secret_key || "";
+      document.getElementById("cfg-stripe-wh").value = d.stripe_webhook_secret || "";
+      document.getElementById("cfg-pp-client").value = d.paypal_client_id || "";
+      document.getElementById("cfg-pp-secret").value = d.paypal_secret || "";
+      document.getElementById("cfg-pp-env").value    = d.paypal_env || "live";
+    }).catch(() => {});
+
+  window.guardarPagosConfig = async function() {
+    const msg = document.getElementById("pagos-cfg-msg");
+    msg.textContent = "Guardando...";
+    msg.style.color = "#6b7280";
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/payment-config`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({
+          stripe_public_key:     document.getElementById("cfg-stripe-pk").value.trim(),
+          stripe_secret_key:     document.getElementById("cfg-stripe-sk").value.trim(),
+          stripe_webhook_secret: document.getElementById("cfg-stripe-wh").value.trim(),
+          paypal_client_id:      document.getElementById("cfg-pp-client").value.trim(),
+          paypal_secret:         document.getElementById("cfg-pp-secret").value.trim(),
+          paypal_env:            document.getElementById("cfg-pp-env").value,
+        }),
+      });
+      const d = await res.json();
+      if (d.ok) { msg.textContent = "✅ Configuración guardada correctamente"; msg.style.color = "#16a34a"; }
+      else { msg.textContent = "❌ Error: " + (d.error || "desconocido"); msg.style.color = "#dc2626"; }
+    } catch(e) { msg.textContent = "❌ Error: " + e.message; msg.style.color = "#dc2626"; }
+  };
+
+  closeAllDrops(); closeSearchDrop();
+  return;
+}
+
+// =========================
+// SECCIÓN PLAN
+// =========================
+if (id === "plan") {
+  if (t) t.textContent = "Plan de facturación";
+  if (s) s.textContent = "Gestiona tu suscripción";
+  if (c) c.textContent = "Plan";
+
+  const isAdmin = currentUser.role === "Administrador";
+
+  box.className = "card";
+  box.innerHTML = `<div style="max-width:860px;">
+    ${isAdmin ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 18px;margin-bottom:24px;display:flex;align-items:center;gap:10px;">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span style="font-size:13px;color:#15803d;font-weight:600;">Cuenta de administrador — acceso ilimitado a todas las funciones.</span>
+    </div>` : ""}
+    <div id="plan-current-banner" style="margin-bottom:24px;"></div>
+    <h3 style="font-size:15px;font-weight:700;margin:0 0 18px;">Elige tu plan</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;" id="plan-cards">
+      ${["basic","pro","business"].map(p => {
+        const info = { basic:{name:"Básico",price:"9,99",stores:1,color:"#3b82f6",features:["1 tienda Shopify","Sincronización automática","Seguimiento MRW","Métricas e informes"]}, pro:{name:"Pro",price:"19,99",stores:4,color:"#8b5cf6",features:["Hasta 4 tiendas Shopify","Todo lo del plan Básico","Gestión de stock agrupado","Exportación de datos"]}, business:{name:"Business",price:"29,99",stores:10,color:"#f59e0b",features:["Hasta 10 tiendas Shopify","Todo lo del plan Pro","Soporte prioritario","Multi-usuario"]} }[p];
+        return `<div id="plan-card-${p}" style="border:2px solid #e5e7eb;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:0;position:relative;transition:border-color .2s;">
+          <div style="font-size:13px;font-weight:700;color:${info.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${info.name}</div>
+          <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px;">
+            <span style="font-size:30px;font-weight:800;color:#111827;">${info.price}€</span>
+            <span style="font-size:13px;color:#6b7280;">/mes</span>
+          </div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">${info.stores === 1 ? "1 tienda" : `Hasta ${info.stores} tiendas`}</div>
+          <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:7px;">
+            ${info.features.map(f => `<li style="display:flex;align-items:center;gap:7px;font-size:12px;color:#374151;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
+          </ul>
+          <div id="plan-actions-${p}" style="margin-top:auto;"></div>
+        </div>`;
+      }).join("")}
+    </div>
+    <div style="border-top:1px solid #f3f4f6;padding-top:16px;font-size:12px;color:#9ca3af;text-align:center;">
+      Los pagos se procesan de forma segura. Cada pago activa el plan por 30 días.
+    </div>
+  </div>`;
+
+  async function loadPlanUI() {
+    let currentPlan = "free", expiresAt = null;
+    try {
+      const r = await fetch(`${API_BASE}/api/billing/plan`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+      const d = await r.json();
+      currentPlan = d.plan || "free";
+      expiresAt   = d.expires_at;
+    } catch {}
+
+    // Banner plan actual
+    const banner = document.getElementById("plan-current-banner");
+    if (banner) {
+      const planNames = { free: "Sin plan activo", basic: "Básico", pro: "Pro", business: "Business" };
+      const planColors = { free: "#6b7280", basic: "#3b82f6", pro: "#8b5cf6", business: "#f59e0b" };
+      const expStr = expiresAt ? new Date(expiresAt).toLocaleDateString("es-ES") : null;
+      banner.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;">
+        <span style="font-size:13px;color:#374151;">Plan actual:</span>
+        <span style="font-weight:700;color:${planColors[currentPlan] || "#6b7280"};font-size:14px;">${planNames[currentPlan] || currentPlan}</span>
+        ${expStr ? `<span style="font-size:12px;color:#9ca3af;margin-left:4px;">· Renovar antes del ${expStr}</span>` : ""}
+      </div>`;
+    }
+
+    // Resaltar card del plan actual
+    document.querySelectorAll("[id^='plan-card-']").forEach(card => {
+      card.style.borderColor = "#e5e7eb";
+      card.style.boxShadow = "none";
+    });
+    const activeCard = document.getElementById("plan-card-" + currentPlan);
+    if (activeCard) {
+      const colors = { basic:"#3b82f6", pro:"#8b5cf6", business:"#f59e0b" };
+      activeCard.style.borderColor = colors[currentPlan] || "#16a34a";
+      activeCard.style.boxShadow = `0 0 0 3px ${colors[currentPlan] || "#16a34a"}22`;
+    }
+
+    // Botones por plan
+    const paypalClientId = "${typeof PAYPAL_CLIENT_ID !== 'undefined' ? PAYPAL_CLIENT_ID : ''}";
+    ["basic","pro","business"].forEach(p => {
+      const actDiv = document.getElementById("plan-actions-" + p);
+      if (!actDiv) return;
+      if (isAdmin) {
+        actDiv.innerHTML = `<div style="text-align:center;font-size:12px;color:#9ca3af;padding:8px 0;">Sin restricciones (admin)</div>`;
+        return;
+      }
+      const isCurrent = p === currentPlan;
+      actDiv.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${isCurrent ? `<div style="text-align:center;padding:9px;background:#f0fdf4;border-radius:8px;font-size:12px;font-weight:700;color:#16a34a;">✓ Plan actual</div>` : ""}
+          <button onclick="pagarStripe('${p}')" style="width:100%;padding:9px;background:#635bff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M2 9h20v11a2 2 0 01-2 2H4a2 2 0 01-2-2V9zm18-4H4a2 2 0 00-2 2v1h20V7a2 2 0 00-2-2z"/></svg>
+            ${isCurrent ? "Renovar con Stripe" : "Contratar con Stripe"}
+          </button>
+          <div id="paypal-btn-${p}" style="min-height:40px;"></div>
+        </div>`;
+    });
+
+    // Cargar PayPal SDK si hay client_id configurado
+    loadPayPalButtons(currentPlan);
+  }
+
+  async function loadPayPalButtons(currentPlan) {
+    // Obtener el client_id de PayPal del servidor
+    let ppClientId = "";
+    try {
+      const r = await fetch(`${API_BASE}/api/billing/paypal/client-id`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+      const d = await r.json();
+      ppClientId = d.client_id || "";
+    } catch {}
+
+    if (!ppClientId) {
+      ["basic","pro","business"].forEach(p => {
+        const div = document.getElementById("paypal-btn-" + p);
+        if (div) div.innerHTML = `<div style="text-align:center;font-size:11px;color:#d1d5db;padding:4px 0;">PayPal no configurado</div>`;
+      });
+      return;
+    }
+
+    // Cargar SDK PayPal dinámicamente
+    if (!document.getElementById("paypal-sdk")) {
+      const script = document.createElement("script");
+      script.id = "paypal-sdk";
+      script.src = `https://www.paypal.com/sdk/js?client-id=${ppClientId}&currency=EUR&intent=capture`;
+      document.head.appendChild(script);
+      await new Promise(res => { script.onload = res; script.onerror = res; });
+    }
+
+    if (!window.paypal) return;
+
+    ["basic","pro","business"].forEach(plan => {
+      const container = document.getElementById("paypal-btn-" + plan);
+      if (!container) return;
+      window.paypal.Buttons({
+        style: { layout: "horizontal", color: "gold", shape: "rect", label: "pay", height: 35 },
+        createOrder: async () => {
+          const r = await fetch(`${API_BASE}/api/billing/paypal/create-order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+            body: JSON.stringify({ plan }),
+          });
+          const d = await r.json();
+          if (!d.orderID) throw new Error(d.error || "Error PayPal");
+          return d.orderID;
+        },
+        onApprove: async (data) => {
+          const r = await fetch(`${API_BASE}/api/billing/paypal/capture`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+            body: JSON.stringify({ orderID: data.orderID, plan }),
+          });
+          const d = await r.json();
+          if (d.ok) {
+            showToast("✅ Pago completado", `Plan ${plan} activado correctamente`, "#16a34a");
+            loadPlanUI();
+          } else {
+            alert("Error al procesar el pago: " + (d.error || "desconocido"));
+          }
+        },
+        onError: (err) => { alert("Error PayPal: " + err); },
+      }).render("#paypal-btn-" + plan);
+    });
+  }
+
+  window.pagarStripe = async function(plan) {
+    try {
+      const r = await fetch(`${API_BASE}/api/billing/stripe/create-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({ plan }),
+      });
+      const d = await r.json();
+      if (d.url) {
+        window.location.href = d.url;
+      } else {
+        alert(d.error || "Error al iniciar el pago con Stripe");
+      }
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  };
+
+  // Manejar retorno de Stripe
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("payment") === "success") {
+    history.replaceState({}, "", "/");
+    showToast("✅ Pago completado", "Tu plan ha sido activado. Puede tardar unos segundos en reflejarse.", "#16a34a");
+  } else if (urlParams.get("payment") === "cancelled") {
+    history.replaceState({}, "", "/");
+    showToast("ℹ️ Pago cancelado", "No se realizó ningún cargo.", "#6b7280");
+  }
+
+  loadPlanUI();
   closeAllDrops();
   closeSearchDrop();
   return;

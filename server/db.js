@@ -285,6 +285,24 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_address TEX
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_city TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_zip TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_country TEXT`);
+await pool.query(`
+    CREATE TABLE IF NOT EXISTS payment_config (
+      id SERIAL PRIMARY KEY,
+      stripe_secret_key TEXT DEFAULT '',
+      stripe_webhook_secret TEXT DEFAULT '',
+      stripe_public_key TEXT DEFAULT '',
+      paypal_client_id TEXT DEFAULT '',
+      paypal_secret TEXT DEFAULT '',
+      paypal_env TEXT DEFAULT 'live',
+      updated_at TEXT DEFAULT now()::text
+    )
+  `);
+  // Asegurarse de que existe exactamente 1 fila de configuración
+  await pool.query(`INSERT INTO payment_config (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
+
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free'`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_status TEXT DEFAULT 'inactive'`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TEXT`);
 
   // Columna cancelled_at separada para queries rápidas sin parsear raw_json
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TEXT`);

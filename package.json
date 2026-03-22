@@ -9,6 +9,7 @@
     "node-fetch": "^3.3.2",
     "pg": "^8.20.0",
     "sqlite3": "^5.1.7",
+    "stripe": "^20.4.1",
     "xlsx": "^0.18.5"
   },
   "name": "app",
@@ -17,7 +18,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-"start": "node --max-old-space-size=400 server/index.js"
+    "start": "node --max-old-space-size=400 server/index.js"
   },
   "keywords": [],
   "author": "",

@@ -63,6 +63,20 @@ router.get("/callback", async (req, res) => {
     const shopData = await shopRes.json();
     const shopName = shopData.shop?.name || shop;
 
+    // Verificar límite de plan (solo para clientes, admin ilimitado)
+    const userRow = await db.get("SELECT role, plan FROM users WHERE id = $1", [userId]);
+    if (userRow?.role !== "admin") {
+      const planLimits = { free: 0, basic: 1, pro: 4, business: 10 };
+      const limit = planLimits[userRow?.plan || "free"] ?? 0;
+      const existingShops = await db.get(
+        "SELECT COUNT(*) as cnt FROM shops WHERE user_id = $1 AND status = 'active' AND shop_domain != $2",
+        [userId, shop]
+      );
+      if (parseInt(existingShops?.cnt || 0) >= limit) {
+        return res.redirect("/?shopify=error&msg=plan_limit");
+      }
+    }
+
     await db.run(
       `INSERT INTO shops (user_id, shop_domain, shop_name, access_token, app_secret, status, last_sync)
        VALUES ($1, $2, $3, $4, $5, 'active', now()::text)

@@ -24,6 +24,8 @@ const PORT = Number(process.env.PORT || 3001);
 
 // ⚠️ IMPORTANTE: webhooks usan RAW body (SIEMPRE ANTES DE json)
 app.use("/api/shopify/webhooks", shopifyWebhooks);
+// Stripe webhook necesita raw body también
+app.use("/api/billing/stripe/webhook", express.raw({ type: "application/json" }));
 
 // Middlewares normales
 app.use(cors());
@@ -35,20 +37,28 @@ app.use((req, res, next) => {
   next();
 });
 
-// API
-app.use("/api/auth", authRoutes);
+const auth      = require("./middlewares/auth");
+const planCheck = require("./middlewares/planCheck");
+
+// Rutas que NO requieren plan activo (auth, billing, admin, health)
+app.use("/api/auth",    authRoutes);
+app.use("/api/billing", require("./routes/billing.routes").router);
+app.use("/api/admin",   adminRoutes);
+app.use("/api/users",   userRoutes);
+app.use("/api/health",  require("./routes/health.routes"));
+
+// Shopify: connect y callback son redirects sin Auth header, se registran sin planCheck
 app.use("/api/shopify", shopifyRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/metrics", metricsRoutes);
-app.use("/api/orders", ordersRoutes);
-app.use("/api/tracking", require("./routes/tracking.routes"));
-app.use("/api/ads", require("./routes/ads.routes"));
-app.use("/api/gastos-fijos", require("./routes/gastos-fijos.routes"));
-app.use("/api/impuestos", require("./routes/impuestos.routes"));
-app.use("/api/gastos-varios", require("./routes/gastos-varios.routes"));
-app.use("/api/nomina", nominaRoutes);
-app.use("/api/health", require("./routes/health.routes"));
+
+// Rutas de datos — requieren plan activo (clientes)
+app.use("/api/metrics",      auth, planCheck, metricsRoutes);
+app.use("/api/orders",       auth, planCheck, ordersRoutes);
+app.use("/api/tracking",     auth, planCheck, require("./routes/tracking.routes"));
+app.use("/api/ads",          auth, planCheck, require("./routes/ads.routes"));
+app.use("/api/gastos-fijos", auth, planCheck, require("./routes/gastos-fijos.routes"));
+app.use("/api/impuestos",    auth, planCheck, require("./routes/impuestos.routes"));
+app.use("/api/gastos-varios",auth, planCheck, require("./routes/gastos-varios.routes"));
+app.use("/api/nomina",       auth, planCheck, nominaRoutes);
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));
