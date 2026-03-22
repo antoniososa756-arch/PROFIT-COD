@@ -532,7 +532,9 @@ function loadApp(section) {
     <div class="sidebar" id="sidebar">
       <div class="logo-zone">
         <div class="logo-wrapper">
-          <div style="font-size:18px;font-weight:800;color:#16a34a;letter-spacing:1px;cursor:default;">PROFICOD</div>
+          <div style="cursor:default;line-height:1;">
+            <span style="font-size:17px;font-weight:900;color:#16a34a;letter-spacing:-0.5px;font-family:'Segoe UI',system-ui,sans-serif;">PROFIT</span><span style="font-size:17px;font-weight:900;color:#111827;letter-spacing:-0.5px;font-family:'Segoe UI',system-ui,sans-serif;">COD</span>
+          </div>
         </div>
       </div>
 
@@ -1658,7 +1660,7 @@ if (id === "ayuda") {
   <div id="help-panel-tiendas" class="help-panel">
     <div class="help-section">
       <h2>🏪 ¿Qué es la sección Tiendas?</h2>
-      <p>Aquí gestionas todas las conexiones entre PROFICOD y tus tiendas de Shopify. Cada tienda conectada sincronizará automáticamente sus pedidos y productos.</p>
+      <p>Aquí gestionas todas las conexiones entre PROFITCOD y tus tiendas de Shopify. Cada tienda conectada sincronizará automáticamente sus pedidos y productos.</p>
     </div>
     <div class="help-section">
       <h2>➕ Conectar una nueva tienda</h2>
@@ -1668,7 +1670,7 @@ if (id === "ayuda") {
         <li><strong>Access Token:</strong> comienza por shpat_, encuéntralo en Shopify → Apps → Tu app → Credenciales API.</li>
         <li><strong>App Secret:</strong> también en la misma pantalla de credenciales de la app.</li>
       </ul>
-      <div class="help-tip">💡 PROFICOD nunca te pedirá la contraseña de tu cuenta de Shopify.</div>
+      <div class="help-tip">💡 PROFITCOD nunca te pedirá la contraseña de tu cuenta de Shopify.</div>
     </div>
     <div class="help-section">
       <h2>🔄 Sincronización automática</h2>
@@ -1712,7 +1714,7 @@ if (id === "ayuda") {
         <li><strong>Cancelado:</strong> el pedido fue anulado.</li>
       </ul>
       <h3>Importar pagados desde PDF de MRW:</h3>
-      <p>Si MRW te envía un PDF con los comprobantes de liquidación, súbelo al sistema. PROFICOD extrae automáticamente los números de seguimiento y marca esos pedidos como pagados.</p>
+      <p>Si MRW te envía un PDF con los comprobantes de liquidación, súbelo al sistema. PROFITCOD extrae automáticamente los números de seguimiento y marca esos pedidos como pagados.</p>
       <div class="help-tip">💡 Los pedidos cancelados y pendientes no se cuentan en el balance de Métricas.</div>
     </div>
   </div>
