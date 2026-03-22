@@ -2545,6 +2545,7 @@ async function handleAvatarChange(event) {
         headerAvatar.style.backgroundSize = "cover";
         headerAvatar.style.backgroundPosition = "center";
       }
+      showToast("Foto de perfil actualizada", "", "#16a34a");
     }
   } catch { alert("Error al guardar la imagen"); }
 }
@@ -6466,59 +6467,48 @@ async function abrirHistoricoStock(productId, productName, currentStock) {
     const rows = await fetch(`${API_BASE}/api/shopify/stock-history?product_id=${encodeURIComponent(productId)}`, { headers: h }).then(r => r.json());
     const body = document.getElementById("historico-stock-body");
     if (!body) return;
-    const totalSalida = rows.reduce((s,r) => s + parseInt(r.uds_salida||0), 0);
-    const totalDev    = rows.reduce((s,r) => s + parseInt(r.uds_devolucion||0), 0);
-    const netoTotal   = totalDev - totalSalida;
-    const stockActual = currentStock ?? "—";
-
     if (!Array.isArray(rows) || rows.length === 0) {
       body.innerHTML = `<div style="color:#9ca3af;text-align:center;padding:24px;">Sin movimientos registrados aún.<br><span style="font-size:12px;">Los movimientos se generan automáticamente al cargar esta sección.</span></div>`;
       return;
     }
+
+    // Calcular saldo acumulado: rows vienen DESC (más reciente primero)
+    // El saldo al final del día más reciente = stock actual
+    // Retrocedemos día a día
+    let saldo = currentStock ?? 0;
+    const rowsConSaldo = rows.map(r => {
+      const salida = parseInt(r.uds_salida || 0);
+      const dev    = parseInt(r.uds_devolucion || 0);
+      const neto   = dev - salida;
+      const saldoFin = saldo;         // saldo AL FINAL de este día
+      saldo = saldo - neto;           // saldo ANTES de este día (= al final del día anterior)
+      return { ...r, salida, dev, neto, saldoFin };
+    });
+
     body.innerHTML = `
-      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:120px;padding:10px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;text-align:center;">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Stock actual</div>
-          <div style="font-size:18px;font-weight:700;color:${stockActual<0?'#dc2626':'#111827'};">${stockActual}</div>
-        </div>
-        <div style="flex:1;min-width:120px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;text-align:center;">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Total salidas</div>
-          <div style="font-size:18px;font-weight:700;color:#dc2626;">-${totalSalida}</div>
-        </div>
-        <div style="flex:1;min-width:120px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;text-align:center;">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Total devoluciones</div>
-          <div style="font-size:18px;font-weight:700;color:#16a34a;">+${totalDev}</div>
-        </div>
-        <div style="flex:1;min-width:120px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;text-align:center;">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Neto movimientos</div>
-          <div style="font-size:18px;font-weight:700;color:${netoTotal>=0?'#16a34a':'#dc2626'};">${netoTotal>=0?'+':''}${netoTotal}</div>
-        </div>
-      </div>
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
           <tr style="background:#f9fafb;">
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Fecha</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Enviados</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Pedidos env.</th>
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Uds. salida</th>
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Devueltos</th>
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Uds. entrada</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">Neto día</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">Neto</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:#2563eb;background:#eff6ff;">Stock final día</th>
           </tr>
         </thead>
         <tbody>
-          ${rows.map(r => {
-            const salida = parseInt(r.uds_salida || 0);
-            const dev    = parseInt(r.uds_devolucion || 0);
-            const neto   = dev - salida;
-            return `<tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+          ${rowsConSaldo.map(r => `
+            <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
               <td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:500;">${r.fecha}</td>
               <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;">${r.pedidos_enviados || 0}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;font-weight:600;">-${salida}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;font-weight:600;">-${r.salida}</td>
               <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#16a34a;">${r.pedidos_devueltos || 0}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#16a34a;font-weight:600;">${dev > 0 ? '+'+dev : '0'}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:${neto>=0?'#16a34a':'#dc2626'};">${neto>=0?'+':''}${neto}</td>
-            </tr>`;
-          }).join("")}
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#16a34a;font-weight:600;">${r.dev > 0 ? '+'+r.dev : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:${r.neto>=0?'#16a34a':'#dc2626'};">${r.neto>=0?'+':''}${r.neto}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:${r.saldoFin<0?'#dc2626':r.saldoFin===0?'#f59e0b':'#2563eb'};">${r.saldoFin}</td>
+            </tr>`).join("")}
         </tbody>
       </table>`;
   } catch(e) {
