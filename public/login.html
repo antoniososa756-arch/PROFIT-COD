@@ -555,9 +555,13 @@ window.login = async function () {
   }
 };
 
-// Enter para hacer login
+// Enter para hacer login (no dispara si el foco está en el chat)
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") login();
+  if (e.key === "Enter" && document.activeElement?.id !== "guestMsgInput"
+      && document.activeElement?.id !== "guestNameInput"
+      && document.activeElement?.id !== "guestEmailInput") {
+    login();
+  }
 });
 
 // ── OLVIDÉ CONTRASEÑA ──
@@ -641,8 +645,8 @@ document.getElementById("forgotModal").addEventListener("click", function(e) {
   #guestChatPanel {
     position: fixed;
     bottom: 92px; right: 28px;
-    width: 340px;
-    max-height: 480px;
+    width: 360px;
+    height: 500px;
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.18);
@@ -905,19 +909,14 @@ document.getElementById("forgotModal").addEventListener("click", function(e) {
     const empty = document.getElementById("guestEmptyMsg");
     if (!msgs.length) { if (empty) empty.style.display = "block"; return; }
     if (empty) empty.style.display = "none";
-
-    let hasNew = false;
-    msgs.forEach(m => {
-      if (knownIds.has(m.id)) return;
-      knownIds.add(m.id);
-      hasNew = true;
-      const div = document.createElement("div");
-      div.className = "gchat-msg " + (m.sender === "guest" ? "from-me" : "from-admin");
+    // Re-render completo para evitar duplicados con mensajes optimistas
+    knownIds = new Set(msgs.map(m => m.id));
+    list.innerHTML = msgs.map(m => {
+      const cls = m.sender === "guest" ? "from-me" : "from-admin";
       const t = m.created_at ? new Date(m.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" }) : "";
-      div.innerHTML = `${escHtml(m.content)}<span class="gchat-time">${t}</span>`;
-      list.appendChild(div);
-    });
-    if (hasNew) list.scrollTop = list.scrollHeight;
+      return `<div class="gchat-msg ${cls}">${escHtml(m.content)}<span class="gchat-time">${t}</span></div>`;
+    }).join("");
+    list.scrollTop = list.scrollHeight;
   }
 
   function escHtml(s) {
@@ -929,25 +928,13 @@ document.getElementById("forgotModal").addEventListener("click", function(e) {
     const content = inp.value.trim();
     if (!content) return;
     inp.value = "";
-
-    // Mostrar inmediatamente en UI
-    const list = document.getElementById("guestMsgList");
-    const empty = document.getElementById("guestEmptyMsg");
-    if (empty) empty.style.display = "none";
-    const div = document.createElement("div");
-    div.className = "gchat-msg from-me";
-    const t = new Date().toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" });
-    div.innerHTML = `${escHtml(content)}<span class="gchat-time">${t}</span>`;
-    list.appendChild(div);
-    list.scrollTop = list.scrollHeight;
-
     try {
       await fetch(`${API_CHAT}/chat/guest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, guest_id: guestId, guest_name: guestName, guest_email: guestEmail })
       });
-      loadMessages(); // sincroniza IDs
+      loadMessages(); // renderiza desde servidor (evita duplicados)
     } catch(e) {}
   };
 
