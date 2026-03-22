@@ -3567,7 +3567,7 @@ async function loadProductos() {
                       <span style="font-size:10px;color:#9ca3af;">mín:</span>
                       <input type="number" min="0" value="${stockInfo.stock_minimo}"
                         style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
-                        onchange="guardarStockMinimo('${shop.shop_domain}','${pid}',${stockInfo.stock},this.value)"
+                        onchange="guardarStockMinimo('${shop.shop_domain}','${pid}',this.value)"
                         title="Stock mínimo para alerta">
                     </div>
                     ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
@@ -3651,7 +3651,7 @@ async function loadProductos() {
                         </div>
                         <div style="display:flex;align-items:center;gap:4px;">
                           <span style="font-size:10px;color:#9ca3af;">mín:</span>
-                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',${stockInfo.stock},this.value)">
+                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',this.value)">
                         </div>
                         ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
                         <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}',${stockInfo.stock})"
@@ -6582,12 +6582,12 @@ async function guardarCostoCompra(shopDomain, productId, costo) {
 }
 window.guardarCostoCompra = guardarCostoCompra;
 
-async function guardarStockMinimo(shopDomain, productId, stock, stockMinimo) {
+async function guardarStockMinimo(shopDomain, productId, stockMinimo) {
   try {
     await fetch(`${API_BASE}/api/shopify/stock`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, stock: parseInt(stock)||0, stock_minimo: parseInt(stockMinimo)||5 })
+      body: JSON.stringify({ shop_domain: shopDomain, product_id: productId, stock: null, stock_minimo: parseInt(stockMinimo)||5 })
     });
   } catch(e) { console.error(e); }
 }

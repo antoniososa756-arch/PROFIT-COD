@@ -349,8 +349,30 @@ router.get("/products", auth, async (req, res) => {
 
 router.get("/stock", auth, async (req, res) => {
   try {
+    // stock efectivo = base (entrada mercancía) + neto movimientos
     const rows = await db.all(
-      "SELECT shop_domain, product_id, stock, stock_minimo, costo_compra FROM productos_stock WHERE user_id = $1",
+      `WITH mov AS (
+         SELECT product_id,
+           SUM(CASE WHEN movement_type = 'salida' THEN -units ELSE units END) AS net
+         FROM stock_movements WHERE user_id = $1
+         GROUP BY product_id
+       )
+       -- Productos con fila en productos_stock
+       SELECT ps.shop_domain, ps.product_id, ps.stock_minimo, ps.costo_compra,
+              COALESCE(ps.stock, 0) + COALESCE(m.net, 0) AS stock
+       FROM productos_stock ps
+       LEFT JOIN mov m ON m.product_id = ps.product_id
+       WHERE ps.user_id = $1
+
+       UNION ALL
+
+       -- Productos SOLO en stock_movements (nunca tuvieron entrada manual)
+       SELECT sm.shop_domain, sm.product_id, 5 AS stock_minimo, 0 AS costo_compra,
+              SUM(CASE WHEN sm.movement_type = 'salida' THEN -sm.units ELSE sm.units END) AS stock
+       FROM stock_movements sm
+       WHERE sm.user_id = $1
+         AND sm.product_id NOT IN (SELECT product_id FROM productos_stock WHERE user_id = $1)
+       GROUP BY sm.shop_domain, sm.product_id`,
       [req.user.id]
     );
     res.json(rows);
@@ -467,13 +489,6 @@ router.post("/sync-stock-movements", auth, async (req, res) => {
             [userId, order.shop_domain || "", pid, order.order_id, order.order_number, movType, units, order.movement_date]
           );
           if (r.changes > 0) {
-            // New movement inserted — adjust stock
-            const delta = movType === "salida" ? -units : units;
-            await db.run(
-              `UPDATE productos_stock SET stock = stock + $1
-               WHERE user_id = $2 AND product_id = $3`,
-              [delta, userId, pid]
-            );
             applied++;
           }
         }
