@@ -1420,19 +1420,6 @@ if (id === "pedidos") {
                 style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
                 <option value="">Todas las tiendas</option>
               </select>
-              <select id="filter-status"
-                onchange="applyFilters()"
-                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-                <option value="">Todos los estados</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="entregado">Entregado</option>
-                <option value="en_transito">En tránsito</option>
-                <option value="devuelto">Devuelto</option>
-                <option value="destruido">Destruido</option>
-                <option value="franquicia">Franquicia</option>
-                <option value="enviado">Enviado</option>
-                <option value="cancelado">Cancelado</option>
-              </select>
               <button onclick="clearFiltersInline()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
             </div>
 
@@ -7076,10 +7063,10 @@ function selectFilterShop(domain) {
 }
 
 function applyFilters() {
-  const status   = document.getElementById("filter-status")?.value || "";
   const shop     = document.getElementById("filter-shop-inline")?.value || "";
   const dateFrom = document.getElementById("filter-date-from")?.value || "";
   const dateTo   = document.getElementById("filter-date-to")?.value || "";
+  const status   = ordersState.status || ""; // status is controlled by the tabs, not a dropdown
 
   if (dateFrom && dateTo && dateFrom > dateTo) {
     alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin");
@@ -7100,12 +7087,13 @@ function clearFiltersInline() {
   ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
   const df = document.getElementById("filter-date-from");
   const dt = document.getElementById("filter-date-to");
-  const ss = document.getElementById("filter-status");
   const sh = document.getElementById("filter-shop-inline");
   if (df) df.value = "";
   if (dt) dt.value = "";
-  if (ss) ss.value = "";
   if (sh) sh.value = "";
+  // Reset tabs: activate "Todos"
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelector(".tab")?.classList.add("active");
   fetchOrdersFiltered();
 }
 window.clearFiltersInline = clearFiltersInline;
