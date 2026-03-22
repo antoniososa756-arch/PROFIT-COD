@@ -7654,12 +7654,13 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
     // Retrocedemos día a día
     let saldo = currentStock ?? 0;
     const rowsConSaldo = rows.map(r => {
-      const salida = parseInt(r.uds_salida || 0);
-      const dev    = parseInt(r.uds_devolucion || 0);
-      const neto   = dev - salida;
-      const saldoFin = saldo;         // saldo AL FINAL de este día
-      saldo = saldo - neto;           // saldo ANTES de este día (= al final del día anterior)
-      return { ...r, salida, dev, neto, saldoFin };
+      const salida   = parseInt(r.uds_salida || 0);
+      const dev      = parseInt(r.uds_devolucion || 0);
+      const entrada  = parseInt(r.uds_entrada || 0);
+      const neto     = dev + entrada - salida;
+      const saldoFin = saldo;
+      saldo = saldo - neto;
+      return { ...r, salida, dev, entrada, neto, saldoFin };
     });
 
     body.innerHTML = `
@@ -7670,7 +7671,8 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Pedidos env.</th>
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Uds. salida</th>
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Devueltos</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Uds. entrada</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Uds. devolución</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#7c3aed;">Entrada mercancía</th>
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">Neto</th>
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:#2563eb;background:#eff6ff;">Stock final día</th>
           </tr>
@@ -7680,9 +7682,10 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
             <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
               <td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:500;">${r.fecha}</td>
               <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;">${r.pedidos_enviados || 0}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;font-weight:600;">-${r.salida}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;font-weight:600;">${r.salida > 0 ? '-'+r.salida : '0'}</td>
               <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#16a34a;">${r.pedidos_devueltos || 0}</td>
               <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#16a34a;font-weight:600;">${r.dev > 0 ? '+'+r.dev : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#7c3aed;font-weight:600;">${r.entrada > 0 ? '+'+r.entrada : '0'}</td>
               <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:${r.neto>=0?'#16a34a':'#dc2626'};">${r.neto>=0?'+':''}${r.neto}</td>
               <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:${r.saldoFin<0?'#dc2626':r.saldoFin===0?'#f59e0b':'#2563eb'};">${r.saldoFin}</td>
             </tr>`).join("")}

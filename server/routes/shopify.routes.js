@@ -560,40 +560,82 @@ router.get("/stock-history", auth, async (req, res) => {
   try {
     let rows;
     if (group_id) {
-      // Aggregate movements for all members of the group
       rows = await db.all(
         `SELECT
-           TO_CHAR(sm.movement_date, 'YYYY-MM-DD') AS fecha,
-           COUNT(*) FILTER (WHERE sm.movement_type = 'salida') AS pedidos_enviados,
-           COALESCE(SUM(sm.units) FILTER (WHERE sm.movement_type = 'salida'), 0) AS uds_salida,
-           COUNT(*) FILTER (WHERE sm.movement_type = 'devolucion') AS pedidos_devueltos,
-           COALESCE(SUM(sm.units) FILTER (WHERE sm.movement_type = 'devolucion'), 0) AS uds_devolucion
-         FROM stock_movements sm
-         JOIN product_group_members pgm ON pgm.product_id = sm.product_id AND pgm.user_id = sm.user_id
-         WHERE sm.user_id = $1 AND pgm.group_id = $2
-         GROUP BY sm.movement_date
-         ORDER BY sm.movement_date DESC
+           fecha,
+           COALESCE(SUM(pedidos_enviados),0)  AS pedidos_enviados,
+           COALESCE(SUM(uds_salida),0)         AS uds_salida,
+           COALESCE(SUM(pedidos_devueltos),0)  AS pedidos_devueltos,
+           COALESCE(SUM(uds_devolucion),0)     AS uds_devolucion,
+           COALESCE(SUM(uds_entrada),0)        AS uds_entrada
+         FROM (
+           -- Movimientos de pedidos (salidas y devoluciones)
+           SELECT
+             TO_CHAR(sm.movement_date, 'YYYY-MM-DD') AS fecha,
+             COUNT(*) FILTER (WHERE sm.movement_type = 'salida')     AS pedidos_enviados,
+             COALESCE(SUM(sm.units) FILTER (WHERE sm.movement_type = 'salida'), 0)     AS uds_salida,
+             COUNT(*) FILTER (WHERE sm.movement_type = 'devolucion') AS pedidos_devueltos,
+             COALESCE(SUM(sm.units) FILTER (WHERE sm.movement_type = 'devolucion'), 0) AS uds_devolucion,
+             0 AS uds_entrada
+           FROM stock_movements sm
+           JOIN product_group_members pgm ON pgm.product_id = sm.product_id AND pgm.user_id = sm.user_id
+           WHERE sm.user_id = $1 AND pgm.group_id = $2
+           GROUP BY sm.movement_date
+           UNION ALL
+           -- Entradas de mercancía
+           SELECT
+             TO_CHAR(em.created_at::timestamptz AT TIME ZONE 'Europe/Madrid', 'YYYY-MM-DD') AS fecha,
+             0, 0, 0, 0,
+             SUM(em.cantidad) AS uds_entrada
+           FROM entradas_mercancia em
+           JOIN product_group_members pgm ON pgm.product_id = em.product_id AND pgm.user_id = em.user_id
+           WHERE em.user_id = $1 AND pgm.group_id = $2
+           GROUP BY TO_CHAR(em.created_at::timestamptz AT TIME ZONE 'Europe/Madrid', 'YYYY-MM-DD')
+         ) combined
+         GROUP BY fecha
+         ORDER BY fecha DESC
          LIMIT 90`,
         [userId, parseInt(group_id)]
       );
     } else {
       rows = await db.all(
         `SELECT
-           TO_CHAR(movement_date, 'YYYY-MM-DD') AS fecha,
-           COUNT(*) FILTER (WHERE movement_type = 'salida') AS pedidos_enviados,
-           COALESCE(SUM(units) FILTER (WHERE movement_type = 'salida'), 0) AS uds_salida,
-           COUNT(*) FILTER (WHERE movement_type = 'devolucion') AS pedidos_devueltos,
-           COALESCE(SUM(units) FILTER (WHERE movement_type = 'devolucion'), 0) AS uds_devolucion
-         FROM stock_movements
-         WHERE user_id = $1 AND product_id = $2
-         GROUP BY movement_date
-         ORDER BY movement_date DESC
+           fecha,
+           COALESCE(SUM(pedidos_enviados),0)  AS pedidos_enviados,
+           COALESCE(SUM(uds_salida),0)         AS uds_salida,
+           COALESCE(SUM(pedidos_devueltos),0)  AS pedidos_devueltos,
+           COALESCE(SUM(uds_devolucion),0)     AS uds_devolucion,
+           COALESCE(SUM(uds_entrada),0)        AS uds_entrada
+         FROM (
+           -- Movimientos de pedidos
+           SELECT
+             TO_CHAR(movement_date, 'YYYY-MM-DD') AS fecha,
+             COUNT(*) FILTER (WHERE movement_type = 'salida')     AS pedidos_enviados,
+             COALESCE(SUM(units) FILTER (WHERE movement_type = 'salida'), 0)     AS uds_salida,
+             COUNT(*) FILTER (WHERE movement_type = 'devolucion') AS pedidos_devueltos,
+             COALESCE(SUM(units) FILTER (WHERE movement_type = 'devolucion'), 0) AS uds_devolucion,
+             0 AS uds_entrada
+           FROM stock_movements
+           WHERE user_id = $1 AND product_id = $2
+           GROUP BY movement_date
+           UNION ALL
+           -- Entradas de mercancía
+           SELECT
+             TO_CHAR(created_at::timestamptz AT TIME ZONE 'Europe/Madrid', 'YYYY-MM-DD') AS fecha,
+             0, 0, 0, 0,
+             SUM(cantidad) AS uds_entrada
+           FROM entradas_mercancia
+           WHERE user_id = $1 AND product_id = $2
+           GROUP BY TO_CHAR(created_at::timestamptz AT TIME ZONE 'Europe/Madrid', 'YYYY-MM-DD')
+         ) combined
+         GROUP BY fecha
+         ORDER BY fecha DESC
          LIMIT 90`,
         [userId, product_id]
       );
     }
     res.json(rows || []);
-  } catch(e) { res.status(500).json({ error: "Error historial" }); }
+  } catch(e) { console.error("stock-history:", e.message); res.status(500).json({ error: "Error historial" }); }
 });
 
 // ── Product Groups (stock compartido) ────────────────────────────────────────
