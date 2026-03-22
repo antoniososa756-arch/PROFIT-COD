@@ -116,17 +116,24 @@ async function syncAllMRW() {
             const allSit  = [...xml.matchAll(/<Situacion[^>]*>([^<]+)<\/Situacion>/gi)];
             const allEst  = [...xml.matchAll(/<Estado[^>]*>([^<]+)<\/Estado>/gi)];
             const matches = allDesc.length ? allDesc : allSit.length ? allSit : allEst;
-            const firstMatch = matches[0]; // PRIMERO = más reciente
+            const firstMatch = matches[0];
+            const lastMatch  = matches[matches.length - 1];
             const estadoActual = firstMatch ? firstMatch[1].toLowerCase() : null;
-            console.log(`[MRW] tracking=${pedido.tracking_number} → estado: "${estadoActual || "(tag no encontrado, usando xml completo)"}"`);
+            if (matches.length > 0) {
+              console.log(`[MRW] ${pedido.tracking_number} | total_eventos=${matches.length} | primero="${firstMatch[1]}" | ultimo="${lastMatch[1]}"`);
+            } else {
+              console.log(`[MRW] ${pedido.tracking_number} | sin tags <Descripcion>/<Situacion>/<Estado> en XML`);
+            }
 
             let newStatus = null;
-            const chk = estadoActual ?? xml.toLowerCase(); // usa xml completo solo si no encontró tag
+            const chk = estadoActual ?? xml.toLowerCase();
             if (chk.includes("entregado")) newStatus = "entregado";
-            else if (chk.includes("devuelto") || chk.includes("retorno")) newStatus = "devuelto";
+            else if (chk.includes("devuelto")) newStatus = "devuelto";
             else if (chk.includes("destruido")) newStatus = "destruido";
-            else if (chk.includes("franquicia")) newStatus = "franquicia"; // cualquier estado con franquicia
-            else if (estadoActual !== null) newStatus = "en_transito"; // cualquier otro estado extraído → en tránsito
+            // SOLO "Pendiente de recoger en Franquicia destino" es estado franquicia
+            else if (chk.includes("pendiente de recoger en franquicia")) newStatus = "franquicia";
+            // Todo lo demás (en tránsito, llegada a plataforma, concertada, destinatario ausente, etc.) → en tránsito
+            else if (estadoActual !== null) newStatus = "en_transito";
             else if (chk.includes("en reparto") || chk.includes("en tr") || chk.includes("transito") || chk.includes("pendiente")) newStatus = "en_transito";
 
             if (newStatus) {
