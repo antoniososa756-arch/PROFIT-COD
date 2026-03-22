@@ -2582,9 +2582,30 @@ function openUserSection(type) {
     fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: "Bearer " + getActiveToken() } })
       .then(r => r.json()).then(data => {
         if (data.user?.avatar_url) {
-          document.getElementById("avatar-img").src = data.user.avatar_url;
-          document.getElementById("avatar-img").style.display = "block";
-          document.getElementById("avatar-placeholder-icon").style.display = "none";
+          const tmpImg = new Image();
+          tmpImg.onload = () => {
+            // Re-renderizar con fondo blanco para corregir avatares guardados con fondo negro
+            const c = document.createElement("canvas");
+            c.width = 256; c.height = 256;
+            const cx = c.getContext("2d");
+            cx.fillStyle = "#ffffff";
+            cx.fillRect(0, 0, 256, 256);
+            cx.drawImage(tmpImg, 0, 0, 256, 256);
+            const fixedUrl = c.toDataURL("image/jpeg", 0.88);
+            const imgEl = document.getElementById("avatar-img");
+            if (imgEl) { imgEl.src = fixedUrl; imgEl.style.display = "block"; }
+            const icon = document.getElementById("avatar-placeholder-icon");
+            if (icon) icon.style.display = "none";
+            // Re-guardar si difiere (arregla avatares viejos con fondo negro)
+            if (fixedUrl !== data.user.avatar_url) {
+              fetch(`${API_BASE}/api/auth/avatar`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+                body: JSON.stringify({ avatar_url: fixedUrl })
+              }).catch(() => {});
+            }
+          };
+          tmpImg.src = data.user.avatar_url;
         }
       }).catch(() => {});
   }
