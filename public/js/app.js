@@ -543,6 +543,7 @@ function loadApp(section) {
 
   appEl.innerHTML = `
   <div class="layout">
+    <div id="sidebar-backdrop" onclick="closeSidebarMobile()"></div>
     <div class="sidebar" id="sidebar">
       <div class="logo-zone">
         <div class="logo-wrapper">
@@ -747,14 +748,23 @@ function loadApp(section) {
     renderNotifPanel(panel, notiList, d);
     updateNotifBadge(notiList.length);
 
+    // On tablet/mobile, start with sidebar hidden
+    if (window.innerWidth <= 1024) {
+      document.getElementById("sidebar")?.classList.add("hidden");
+    }
+
     document.querySelectorAll(".menu-item").forEach((el) => {
       el.onclick = () => {
+        if (window.innerWidth <= 1024) closeSidebarMobile();
         setSection(el.dataset.id);
       };
     });
 
     document.querySelectorAll(".menu-subitem").forEach((el) => {
-      el.onclick = () => setSection(el.dataset.id);
+      el.onclick = () => {
+        if (window.innerWidth <= 1024) closeSidebarMobile();
+        setSection(el.dataset.id);
+      };
     });
 
     setSection(section);
@@ -2208,6 +2218,20 @@ function toggleSidebar() {
   sb.classList.toggle("hidden");
   closeAllDrops();
   closeSearchDrop();
+
+  // Show/hide backdrop on tablet/mobile
+  if (window.innerWidth <= 1024) {
+    const bd = document.getElementById("sidebar-backdrop");
+    if (bd) bd.style.display = sb.classList.contains("hidden") ? "none" : "block";
+  }
+}
+
+function closeSidebarMobile() {
+  const sb = document.getElementById("sidebar");
+  if (!sb) return;
+  sb.classList.add("hidden");
+  const bd = document.getElementById("sidebar-backdrop");
+  if (bd) bd.style.display = "none";
 }
 
 function toggleLang() {
@@ -3242,6 +3266,7 @@ window.loadApp = loadApp;
 window.setSection = setSection;
 window.toggleTheme = toggleTheme;
 window.toggleSidebar = toggleSidebar;
+window.closeSidebarMobile = closeSidebarMobile;
 window.toggleLang = toggleLang;
 window.setLang = setLang;
 window.toggleNotif = toggleNotif;

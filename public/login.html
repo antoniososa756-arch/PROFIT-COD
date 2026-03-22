@@ -751,7 +751,7 @@ document.getElementById("forgotModal").addEventListener("click", function(e) {
 
   /* Input row */
   .gchat-input-row {
-    display: flex !important;
+    display: none;
     flex-direction: row !important;
     align-items: center;
     padding: 10px 12px;
@@ -794,8 +794,15 @@ document.getElementById("forgotModal").addEventListener("click", function(e) {
   }
   .gchat-input-row button:hover { background: #15803d; }
 
-  @media (max-width: 420px) {
-    #guestChatPanel { width: calc(100vw - 24px); right: 12px; }
+  @media (max-width: 600px) {
+    #guestChatPanel {
+      width: calc(100vw - 20px);
+      right: 10px;
+      left: 10px;
+      bottom: 80px;
+      height: calc(100vh - 110px);
+      max-height: 480px;
+    }
     #guestChatFab { bottom: 16px; right: 16px; }
   }
 </style>

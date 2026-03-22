@@ -1446,3 +1446,217 @@ body.dark select option {
   background: #1f2937;
   color: #ffffff;
 }
+
+/* =========================
+   RESPONSIVE – TABLET & MOBILE
+   ========================= */
+
+/* Backdrop for sidebar on mobile */
+#sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 190;
+}
+
+/* ── Tablet (≤1024px) ── */
+@media (max-width: 1024px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 200;
+    overflow-y: auto;
+  }
+
+  /* Sidebar hidden by default on tablet – JS adds .hidden on init */
+  .sidebar.hidden {
+    transform: translateX(-210px);
+  }
+
+  /* Give the main area full width since sidebar is overlay */
+  .layout {
+    overflow: visible;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .orders-table {
+    overflow-x: auto;
+    display: block;
+  }
+
+  .client-table {
+    overflow-x: auto;
+    display: block;
+  }
+
+  .filters {
+    flex-wrap: wrap;
+  }
+}
+
+/* ── Mobile (≤768px) ── */
+@media (max-width: 768px) {
+  .content {
+    padding: 14px 12px;
+  }
+
+  .card {
+    padding: 12px 10px;
+    border-radius: 12px;
+  }
+
+  .topbar {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  /* Hide search bar entirely on mobile */
+  .topbar-center {
+    display: none;
+  }
+
+  /* Reduce user info gap */
+  .topbar-right {
+    gap: 6px;
+  }
+
+  /* Hide user name/role text on small screens */
+  .user-info {
+    display: none;
+  }
+
+  /* Stack filters vertically on mobile */
+  .filters {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filters input,
+  .filters select,
+  .filters .btn-filter,
+  .filters .btn-sync {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Stats: 2 columns on mobile portrait */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  /* Orders and clients table: horizontal scroll */
+  .orders-table {
+    overflow-x: auto;
+    display: block;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .orders-row {
+    min-width: 580px;
+  }
+
+  .client-table {
+    overflow-x: auto;
+    display: block;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .client-row {
+    min-width: 600px;
+  }
+
+  /* Stores grid: single column */
+  .stores-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Form grid: single column */
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Modals: full width */
+  .modal {
+    width: 95vw;
+    padding: 16px;
+  }
+
+  /* Breadcrumbs: hide */
+  .breadcrumbs {
+    display: none;
+  }
+
+  /* Dropdown/Panel: full width aligned to right */
+  .panel {
+    width: calc(100vw - 20px);
+    right: -10px;
+  }
+
+  .dropdown {
+    width: calc(min(280px, 90vw));
+  }
+
+  /* Chat widget: full width on mobile */
+  #chat-panel {
+    width: calc(100vw - 16px) !important;
+    right: 8px !important;
+    left: 8px !important;
+    bottom: 76px !important;
+    height: calc(100vh - 100px) !important;
+    max-height: 520px !important;
+  }
+
+  #chat-fab {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+
+  /* Smaller heading on mobile */
+  .content h2 {
+    font-size: 16px;
+  }
+
+  /* Plan cards: stack vertically */
+  #plan-cards {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+}
+
+/* ── Small mobile (≤480px) ── */
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    min-height: 64px;
+  }
+
+  .topbar {
+    height: 52px;
+  }
+
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .user-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Order limit banner: wrap nicely */
+  #order-limit-banner {
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+  }
+}
