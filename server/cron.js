@@ -109,15 +109,21 @@ async function syncAllMRW() {
             });
             if (!res.ok) continue;
             const xml = await res.text();
+            console.log(`[MRW DEBUG] tracking=${pedido.tracking_number} xml=`, xml.slice(0, 800));
+
+            // Extraer solo el primer estado (el más reciente) del historial XML de MRW
+            const descMatch = xml.match(/<Descripcion[^>]*>([^<]+)<\/Descripcion>/i)
+                           || xml.match(/<Situacion[^>]*>([^<]+)<\/Situacion>/i)
+                           || xml.match(/<Estado[^>]*>([^<]+)<\/Estado>/i);
+            // Si no encontramos el tag específico, buscar en XML completo como fallback
+            const estadoActual = descMatch ? descMatch[1].toLowerCase() : xml.toLowerCase();
 
             let newStatus = null;
-            const xmlL = xml.toLowerCase();
-            if (xmlL.includes("entregado")) newStatus = "entregado";
-            else if (xmlL.includes("devuelto") || xmlL.includes("no entregado") || xmlL.includes("retorno")) newStatus = "devuelto";
-            else if (xmlL.includes("destruido")) newStatus = "destruido";
-            // "Franquicia" como estado de entrega concertada (distinto del campo <Franquicia> que siempre aparece)
-            else if (xmlL.includes("concertada en franquicia") || xmlL.includes("recoger en franquicia") || xmlL.includes("entrega en franquicia")) newStatus = "franquicia";
-            else if (xmlL.includes("en reparto") || xmlL.includes("en tr") || xmlL.includes("transito") || xmlL.includes("pendiente")) newStatus = "en_transito";
+            if (estadoActual.includes("entregado")) newStatus = "entregado";
+            else if (estadoActual.includes("devuelto") || estadoActual.includes("no entregado") || estadoActual.includes("retorno")) newStatus = "devuelto";
+            else if (estadoActual.includes("destruido")) newStatus = "destruido";
+            else if (estadoActual.includes("concertada en franquicia") || estadoActual.includes("recoger en franquicia") || estadoActual.includes("entrega en franquicia")) newStatus = "franquicia";
+            else if (estadoActual.includes("en reparto") || estadoActual.includes("en tr") || estadoActual.includes("transito") || estadoActual.includes("pendiente")) newStatus = "en_transito";
 
             if (newStatus) {
               await db.run(`UPDATE orders SET fulfillment_status = $1 WHERE id = $2`, [newStatus, pedido.id]);
