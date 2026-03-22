@@ -2903,6 +2903,26 @@ window.openAddTrabajador = openAddTrabajador;
   let chatPollTimer = null;
   let chatCurrentUser = null; // para admin: el usuario seleccionado
   let chatCurrentGuest = null;
+  let lastUnreadCount = 0;
+
+  function playNotifSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Dos tonos cortos tipo "ping"
+      [0, 0.18].forEach((delay, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = i === 0 ? 880 : 1100;
+        gain.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.25);
+      });
+    } catch {}
+  }
 
   function getChatToken() {
     // El chat siempre usa el token real del usuario, nunca el impersonado
@@ -2925,9 +2945,13 @@ window.openAddTrabajador = openAddTrabajador;
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
         <span id="chat-badge" style="
-          display:none;position:absolute;top:2px;right:2px;
-          background:#dc2626;color:#fff;border-radius:50%;width:18px;height:18px;
-          font-size:10px;font-weight:700;line-height:18px;text-align:center;">0</span>
+          display:none;position:absolute;top:-4px;right:-4px;
+          background:#dc2626;color:#fff;border-radius:50%;
+          min-width:20px;height:20px;padding:0 4px;
+          font-size:11px;font-weight:700;
+          align-items:center;justify-content:center;
+          box-shadow:0 0 0 2px #fff;
+          font-family:inherit;line-height:1;">0</span>
       </button>
 
       <div id="chat-panel" style="
@@ -3066,8 +3090,18 @@ window.openAddTrabajador = openAddTrabajador;
       const d = await r.json();
       const badge = document.getElementById("chat-badge");
       if (!badge) return;
-      if (d.count > 0) { badge.style.display = "flex"; badge.textContent = d.count > 9 ? "9+" : d.count; }
-      else { badge.style.display = "none"; }
+      const count = d.count || 0;
+      if (count > 0) {
+        badge.style.display = "flex";
+        badge.textContent = count > 9 ? "9+" : count;
+      } else {
+        badge.style.display = "none";
+      }
+      // Sonido solo cuando aumenta el número de no leídos (mensaje nuevo)
+      if (count > lastUnreadCount && lastUnreadCount >= 0) {
+        playNotifSound();
+      }
+      lastUnreadCount = count;
     } catch {}
   }
 

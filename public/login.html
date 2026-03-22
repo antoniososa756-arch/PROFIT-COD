@@ -950,6 +950,23 @@ document.getElementById("forgotModal").addEventListener("click", function(e) {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
+  function playNotifSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.18].forEach((delay, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = i === 0 ? 880 : 1100;
+        gain.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.25);
+      });
+    } catch {}
+  }
+
   // Badge de no leídos (pollea incluso con panel cerrado)
   async function checkUnread() {
     try {
@@ -957,11 +974,11 @@ document.getElementById("forgotModal").addEventListener("click", function(e) {
       const data = await res.json();
       if (!data.messages) return;
       const badge = document.getElementById("guestUnreadBadge");
-      // No leídos = mensajes del admin que llegaron después de los que ya conocemos
       const adminNew = data.messages.filter(m => m.sender === "admin" && !knownIds.has(m.id));
       if (adminNew.length && !isOpen) {
         badge.textContent = adminNew.length;
         badge.style.display = "flex";
+        playNotifSound();
       } else if (isOpen) {
         badge.style.display = "none";
         renderMessages(data.messages);
