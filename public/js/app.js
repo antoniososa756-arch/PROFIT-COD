@@ -2942,6 +2942,27 @@ window.openAddTrabajador = openAddTrabajador;
         </div>
 
         <div id="chat-conv-list" style="display:none;flex:1;overflow-y:auto;padding:8px;"></div>
+
+        <!-- Formulario de identificación (clientes sin display_name) -->
+        <div id="chat-info-form" style="display:none;flex:1;padding:20px;display:none;flex-direction:column;gap:14px;justify-content:center;">
+          <p style="font-size:13px;color:#6b7280;margin:0;">Antes de continuar, indícanos cómo contactarte:</p>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:12px;font-weight:600;color:#374151;">Nombre *</label>
+            <input id="chat-info-name" type="text" placeholder="Tu nombre completo"
+              style="padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:12px;font-weight:600;color:#374151;">Email</label>
+            <input id="chat-info-email" type="email"
+              style="padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;background:#f9fafb;color:#374151;outline:none;" readonly />
+          </div>
+          <div id="chat-info-error" style="font-size:12px;color:#dc2626;display:none;"></div>
+          <button onclick="window.__submitChatInfo()"
+            style="padding:10px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;">
+            Iniciar conversación
+          </button>
+        </div>
+
         <div id="chat-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;"></div>
 
         <div id="chat-input-area" style="border-top:1px solid #e5e7eb;padding:10px;display:flex;gap:8px;align-items:flex-end;">
@@ -3007,7 +3028,7 @@ window.openAddTrabajador = openAddTrabajador;
       }
 
       list.innerHTML = all.map(c => `
-        <div onclick="window.__selectChatConv('${c.type}','${c.type === "user" ? c.user_id : c.guest_id}')"
+        <div onclick="window.__selectChatConv('${c.type}','${c.type === "user" ? c.user_id : c.guest_id}',${JSON.stringify(c.label)})"
           style="padding:10px 12px;border-radius:10px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px;"
           onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
           <div>
@@ -3048,10 +3069,24 @@ window.openAddTrabajador = openAddTrabajador;
         loadConversations();
       } else {
         document.getElementById("chat-conv-list").style.display = "none";
-        document.getElementById("chat-msgs").style.display = "flex";
-        document.getElementById("chat-msgs").style.flexDirection = "column";
-        document.getElementById("chat-input-area").style.display = "flex";
-        loadMessages();
+        if (!currentUser?.display_name) {
+          // Mostrar formulario de identificación
+          const infoForm = document.getElementById("chat-info-form");
+          infoForm.style.display = "flex";
+          infoForm.style.flexDirection = "column";
+          document.getElementById("chat-msgs").style.display = "none";
+          document.getElementById("chat-input-area").style.display = "none";
+          // Pre-rellenar email de la cuenta
+          const emailEl = document.getElementById("chat-info-email");
+          if (emailEl) emailEl.value = currentUser?.email || "";
+          setTimeout(() => document.getElementById("chat-info-name")?.focus(), 100);
+        } else {
+          document.getElementById("chat-info-form").style.display = "none";
+          document.getElementById("chat-msgs").style.display = "flex";
+          document.getElementById("chat-msgs").style.flexDirection = "column";
+          document.getElementById("chat-input-area").style.display = "flex";
+          loadMessages();
+        }
       }
       clearInterval(chatPollTimer);
       chatPollTimer = setInterval(() => {
@@ -3064,15 +3099,16 @@ window.openAddTrabajador = openAddTrabajador;
     }
   };
 
-  window.__selectChatConv = function(type, id) {
+  window.__selectChatConv = function(type, id, label) {
     if (type === "user") { chatCurrentUser = id; chatCurrentGuest = null; }
     else { chatCurrentGuest = id; chatCurrentUser = null; }
     document.getElementById("chat-conv-list").style.display = "none";
     const msgs = document.getElementById("chat-msgs");
     msgs.style.display = "flex"; msgs.style.flexDirection = "column";
     document.getElementById("chat-input-area").style.display = "flex";
+    const displayName = label || (type === "user" ? "Usuario #" + id : "Visitante");
     document.getElementById("chat-panel-title").innerHTML =
-      `<span onclick="window.__backToConvList()" style="cursor:pointer;margin-right:8px;font-size:16px;">‹</span> ${type === "user" ? "Usuario #" + id : "Visitante " + id}`;
+      `<span onclick="window.__backToConvList()" style="cursor:pointer;margin-right:8px;font-size:16px;">‹</span> ${displayName}`;
     loadMessages();
   };
 
@@ -3101,6 +3137,35 @@ window.openAddTrabajador = openAddTrabajador;
       });
       loadMessages();
     } catch {}
+  };
+
+  window.__submitChatInfo = async function() {
+    const nameEl  = document.getElementById("chat-info-name");
+    const errEl   = document.getElementById("chat-info-error");
+    const name    = nameEl?.value?.trim();
+    if (!name) {
+      errEl.textContent = "El nombre es obligatorio";
+      errEl.style.display = "block";
+      return;
+    }
+    errEl.style.display = "none";
+    try {
+      const token = getChatToken();
+      await fetch(`${API_BASE}/api/auth/display-name`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ display_name: name }),
+      });
+      // Actualizar currentUser local para no volver a pedir el nombre
+      if (currentUser) currentUser.display_name = name;
+    } catch {}
+    // Pasar al chat
+    document.getElementById("chat-info-form").style.display = "none";
+    document.getElementById("chat-msgs").style.display = "flex";
+    document.getElementById("chat-msgs").style.flexDirection = "column";
+    document.getElementById("chat-input-area").style.display = "flex";
+    loadMessages();
+    setTimeout(() => document.getElementById("chat-input")?.focus(), 100);
   };
 
   // Iniciar widget y polling de unread
