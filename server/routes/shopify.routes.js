@@ -470,7 +470,7 @@ router.post("/sync-stock-movements", auth, async (req, res) => {
             // New movement inserted — adjust stock
             const delta = movType === "salida" ? -units : units;
             await db.run(
-              `UPDATE productos_stock SET stock = GREATEST(0, stock + $1)
+              `UPDATE productos_stock SET stock = stock + $1
                WHERE user_id = $2 AND product_id = $3`,
               [delta, userId, pid]
             );

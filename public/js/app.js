@@ -3539,7 +3539,7 @@ async function loadProductos() {
                 </td>
                 <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
                   <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                    <input type="number" min="0" value="${stockInfo.stock}"
+                    <input type="number" min="-9999" value="${stockInfo.stock}"
                       style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:13px;text-align:center;font-family:inherit;background:${stockBajo?'#fef2f2':'var(--card)'};color:var(--text);"
                       onchange="guardarStock('${shop.shop_domain}','${pid}',this.value,${stockInfo.stock_minimo})"
                       title="Stock actual">
@@ -3626,7 +3626,7 @@ async function loadProductos() {
                     </td>
                     <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
                       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                        <input type="number" min="0" value="${stockInfo.stock}" style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:13px;text-align:center;font-family:inherit;background:${stockBajo?'#fef2f2':'var(--card)'};color:var(--text);" onchange="guardarStock('${shopDom}','${pid2}',this.value,${stockInfo.stock_minimo})">
+                        <input type="number" min="-9999" value="${stockInfo.stock}" style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:13px;text-align:center;font-family:inherit;background:${stockBajo?'#fef2f2':'var(--card)'};color:var(--text);" onchange="guardarStock('${shopDom}','${pid2}',this.value,${stockInfo.stock_minimo})">
                         <div style="display:flex;align-items:center;gap:4px;">
                           <span style="font-size:10px;color:#9ca3af;">mín:</span>
                           <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',${stockInfo.stock},this.value)">
