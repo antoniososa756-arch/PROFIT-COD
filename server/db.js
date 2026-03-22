@@ -246,6 +246,25 @@ await pool.query(`
 await pool.query(`CREATE INDEX IF NOT EXISTS idx_stock_movements_user_product ON stock_movements(user_id, product_id)`);
 
 await pool.query(`
+    CREATE TABLE IF NOT EXISTS product_groups (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      UNIQUE(user_id, name)
+    )
+  `);
+await pool.query(`
+    CREATE TABLE IF NOT EXISTS product_group_members (
+      group_id INTEGER NOT NULL REFERENCES product_groups(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL,
+      product_id TEXT NOT NULL,
+      shop_domain TEXT NOT NULL,
+      PRIMARY KEY(group_id, product_id)
+    )
+  `);
+await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pgm_user_product ON product_group_members(user_id, product_id)`);
+
+await pool.query(`
     CREATE TABLE IF NOT EXISTS reembolsos_estado (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL,

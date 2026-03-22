@@ -3571,9 +3571,14 @@ async function loadProductos() {
                         title="Stock mínimo para alerta">
                     </div>
                     ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
-                    <button onclick="abrirHistoricoStock('${pid}','${escapeHtml(p.title)}',${stockInfo.stock})"
+                    <button onclick="abrirHistoricoStock('${pid}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
                       style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
                       Histórico
+                    </button>
+                    <button onclick="abrirVincularStock('${pid}','${escapeHtml(p.title)}','${shop.shop_domain}',${stockInfo.group_id||'null'},${stockInfo.group_name?`'${escapeHtml(stockInfo.group_name)}'`:'null'})"
+                      style="margin-top:2px;padding:2px 8px;background:${stockInfo.group_id?'#f0fdf4':'#fafafa'};border:1px solid ${stockInfo.group_id?'#86efac':'#e5e7eb'};border-radius:5px;font-size:10px;color:${stockInfo.group_id?'#16a34a':'#6b7280'};font-weight:600;cursor:pointer;font-family:inherit;"
+                      title="${stockInfo.group_name?'Grupo: '+escapeHtml(stockInfo.group_name):'Sin grupo'}">
+                      ${stockInfo.group_name ? '🔗 '+escapeHtml(stockInfo.group_name) : 'Vincular'}
                     </button>
                   </div>
                 </td>
@@ -3654,9 +3659,13 @@ async function loadProductos() {
                           <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',this.value)">
                         </div>
                         ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
-                        <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}',${stockInfo.stock})"
+                        <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
                           style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
                           Histórico
+                        </button>
+                        <button onclick="abrirVincularStock('${pid2}','${escapeHtml(p.title)}','${shopDom}',${stockInfo.group_id||'null'},${stockInfo.group_name?`'${escapeHtml(stockInfo.group_name)}'`:'null'})"
+                          style="margin-top:2px;padding:2px 8px;background:${stockInfo.group_id?'#f0fdf4':'#fafafa'};border:1px solid ${stockInfo.group_id?'#86efac':'#e5e7eb'};border-radius:5px;font-size:10px;color:${stockInfo.group_id?'#16a34a':'#6b7280'};font-weight:600;cursor:pointer;font-family:inherit;">
+                          ${stockInfo.group_name ? '🔗 '+escapeHtml(stockInfo.group_name) : 'Vincular'}
                         </button>
                       </div>
                     </td>
@@ -6442,7 +6451,7 @@ async function importarPagadosPDF(input) {
   loadSidebarReembolsos();
 }
 
-async function abrirHistoricoStock(productId, productName, currentStock) {
+async function abrirHistoricoStock(productId, productName, currentStock, groupId) {
   const h = { Authorization: "Bearer " + getActiveToken() };
   // Modal backdrop
   const existing = document.getElementById("historico-stock-modal");
@@ -6469,7 +6478,10 @@ async function abrirHistoricoStock(productId, productName, currentStock) {
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
 
   try {
-    const rows = await fetch(`${API_BASE}/api/shopify/stock-history?product_id=${encodeURIComponent(productId)}`, { headers: h }).then(r => r.json());
+    const historyUrl = groupId
+      ? `${API_BASE}/api/shopify/stock-history?group_id=${encodeURIComponent(groupId)}`
+      : `${API_BASE}/api/shopify/stock-history?product_id=${encodeURIComponent(productId)}`;
+    const rows = await fetch(historyUrl, { headers: h }).then(r => r.json());
     const body = document.getElementById("historico-stock-body");
     if (!body) return;
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -6522,6 +6534,131 @@ async function abrirHistoricoStock(productId, productName, currentStock) {
   }
 }
 window.abrirHistoricoStock = abrirHistoricoStock;
+
+async function abrirVincularStock(productId, productName, shopDomain, currentGroupId, currentGroupName) {
+  const h = { Authorization: "Bearer " + getActiveToken() };
+  const existing = document.getElementById("vincular-stock-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "vincular-stock-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;";
+  modal.innerHTML = `
+    <div style="background:var(--card);border-radius:12px;width:480px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-weight:700;font-size:15px;color:var(--text);">Vincular stock</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">${escapeHtml(productName)}</div>
+        </div>
+        <button onclick="document.getElementById('vincular-stock-modal').remove()"
+          style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1;">×</button>
+      </div>
+      <div id="vincular-stock-body" style="padding:16px;overflow-y:auto;flex:1;">
+        <div style="color:#9ca3af;text-align:center;padding:24px;">Cargando...</div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+
+  async function renderVincularBody() {
+    const body = document.getElementById("vincular-stock-body");
+    if (!body) return;
+
+    const groups = await fetch(`${API_BASE}/api/shopify/product-groups`, { headers: h }).then(r => r.json()).catch(() => []);
+
+    let html = "";
+
+    // Current group status
+    if (currentGroupId && currentGroupName) {
+      html += `
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:12px;color:#16a34a;font-weight:600;">En grupo</div>
+            <div style="font-size:14px;font-weight:700;color:#111827;">🔗 ${escapeHtml(currentGroupName)}</div>
+          </div>
+          <button id="btn-salir-grupo"
+            style="padding:5px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;">
+            Salir del grupo
+          </button>
+        </div>`;
+    }
+
+    // Create new group
+    html += `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Crear nuevo grupo</div>
+        <div style="display:flex;gap:8px;">
+          <input id="nuevo-grupo-nombre" type="text" placeholder="Nombre del grupo..."
+            style="flex:1;padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
+          <button id="btn-crear-grupo"
+            style="padding:7px 14px;background:#2563eb;border:none;border-radius:7px;font-size:13px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;">
+            Crear y vincular
+          </button>
+        </div>
+      </div>`;
+
+    // Join existing group
+    const otherGroups = groups.filter(g => g.id !== currentGroupId);
+    if (otherGroups.length > 0) {
+      html += `<div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;">Unirse a grupo existente</div>`;
+      html += `<div style="display:flex;flex-direction:column;gap:6px;">`;
+      for (const g of otherGroups) {
+        const memberCount = g.members?.length || 0;
+        html += `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#111827;">🔗 ${escapeHtml(g.name)}</div>
+              <div style="font-size:11px;color:#9ca3af;">${memberCount} producto${memberCount !== 1 ? 's' : ''}</div>
+            </div>
+            <button onclick="vincularAGrupo(${g.id},'${escapeHtml(g.name)}')"
+              style="padding:5px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
+              Unirse
+            </button>
+          </div>`;
+      }
+      html += `</div>`;
+    } else if (!currentGroupId) {
+      html += `<div style="color:#9ca3af;font-size:12px;text-align:center;padding:8px 0;">No hay grupos existentes. Crea uno nuevo.</div>`;
+    }
+
+    body.innerHTML = html;
+
+    // Wire up "salir" button
+    document.getElementById("btn-salir-grupo")?.addEventListener("click", async () => {
+      if (!currentGroupId) return;
+      await fetch(`${API_BASE}/api/shopify/product-groups/${currentGroupId}/members/${encodeURIComponent(productId)}`,
+        { method: "DELETE", headers: h });
+      modal.remove();
+      invalidateCache("shopify/stock");
+      loadProductos();
+    });
+
+    // Wire up "crear y vincular"
+    document.getElementById("btn-crear-grupo")?.addEventListener("click", async () => {
+      const nombre = document.getElementById("nuevo-grupo-nombre")?.value?.trim();
+      if (!nombre) return;
+      const grp = await fetch(`${API_BASE}/api/shopify/product-groups`,
+        { method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ name: nombre }) }).then(r => r.json());
+      if (!grp?.id) return;
+      await vincularAGrupo(grp.id, nombre);
+    });
+
+    // vincularAGrupo helper (scoped)
+    window.vincularAGrupo = async (groupId, groupName) => {
+      await fetch(`${API_BASE}/api/shopify/product-groups/${groupId}/members`,
+        { method: "POST", headers: { ...h, "Content-Type": "application/json" },
+          body: JSON.stringify({ product_id: productId, shop_domain: shopDomain }) });
+      currentGroupId = groupId;
+      currentGroupName = groupName;
+      modal.remove();
+      invalidateCache("shopify/stock");
+      loadProductos();
+    };
+  }
+
+  await renderVincularBody();
+}
+window.abrirVincularStock = abrirVincularStock;
 
 async function guardarStock(shopDomain, productId, stock, stockMinimo) {
   const stockNum = parseInt(stock)||0;

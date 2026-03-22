@@ -349,29 +349,68 @@ router.get("/products", auth, async (req, res) => {
 
 router.get("/stock", auth, async (req, res) => {
   try {
-    // stock efectivo = base (entrada mercancía) + neto movimientos
+    // stock efectivo = base + movimientos; si el producto está en un grupo se agregan todos los miembros
     const rows = await db.all(
-      `WITH mov AS (
-         SELECT product_id,
-           SUM(CASE WHEN movement_type = 'salida' THEN -units ELSE units END) AS net
-         FROM stock_movements WHERE user_id = $1
-         GROUP BY product_id
+      `WITH
+       -- Neto de movimientos por grupo
+       group_mov AS (
+         SELECT pgm.group_id,
+           SUM(CASE WHEN sm.movement_type='salida' THEN -sm.units ELSE sm.units END) AS net
+         FROM product_group_members pgm
+         JOIN stock_movements sm ON sm.product_id = pgm.product_id AND sm.user_id = pgm.user_id
+         WHERE pgm.user_id = $1
+         GROUP BY pgm.group_id
+       ),
+       -- Base de stock por grupo (suma de todos los miembros)
+       group_base AS (
+         SELECT pgm.group_id,
+           SUM(COALESCE(ps.stock, 0)) AS base
+         FROM product_group_members pgm
+         LEFT JOIN productos_stock ps ON ps.product_id = pgm.product_id AND ps.user_id = pgm.user_id
+         WHERE pgm.user_id = $1
+         GROUP BY pgm.group_id
+       ),
+       -- Movimientos individuales (no agrupados)
+       indiv_mov AS (
+         SELECT sm.product_id,
+           SUM(CASE WHEN sm.movement_type='salida' THEN -sm.units ELSE sm.units END) AS net
+         FROM stock_movements sm
+         WHERE sm.user_id = $1
+           AND sm.product_id NOT IN (SELECT product_id FROM product_group_members WHERE user_id = $1)
+         GROUP BY sm.product_id
        )
-       -- Productos con fila en productos_stock
+       -- Productos en grupo
        SELECT ps.shop_domain, ps.product_id, ps.stock_minimo, ps.costo_compra,
-              COALESCE(ps.stock, 0) + COALESCE(m.net, 0) AS stock
+              COALESCE(gb.base,0) + COALESCE(gm.net,0) AS stock,
+              pgm.group_id, pg.name AS group_name
        FROM productos_stock ps
-       LEFT JOIN mov m ON m.product_id = ps.product_id
+       JOIN product_group_members pgm ON pgm.product_id = ps.product_id AND pgm.user_id = $1
+       JOIN product_groups pg ON pg.id = pgm.group_id
+       LEFT JOIN group_base gb ON gb.group_id = pgm.group_id
+       LEFT JOIN group_mov gm ON gm.group_id = pgm.group_id
        WHERE ps.user_id = $1
 
        UNION ALL
 
-       -- Productos SOLO en stock_movements (nunca tuvieron entrada manual)
-       SELECT sm.shop_domain, sm.product_id, 5 AS stock_minimo, 0 AS costo_compra,
-              SUM(CASE WHEN sm.movement_type = 'salida' THEN -sm.units ELSE sm.units END) AS stock
+       -- Productos sin grupo, con fila en productos_stock
+       SELECT ps.shop_domain, ps.product_id, ps.stock_minimo, ps.costo_compra,
+              COALESCE(ps.stock,0) + COALESCE(im.net,0) AS stock,
+              NULL AS group_id, NULL AS group_name
+       FROM productos_stock ps
+       LEFT JOIN indiv_mov im ON im.product_id = ps.product_id
+       WHERE ps.user_id = $1
+         AND ps.product_id NOT IN (SELECT product_id FROM product_group_members WHERE user_id = $1)
+
+       UNION ALL
+
+       -- Productos solo en movimientos (sin productos_stock, sin grupo)
+       SELECT sm.shop_domain, sm.product_id, 5, 0,
+              SUM(CASE WHEN sm.movement_type='salida' THEN -sm.units ELSE sm.units END) AS stock,
+              NULL, NULL
        FROM stock_movements sm
        WHERE sm.user_id = $1
          AND sm.product_id NOT IN (SELECT product_id FROM productos_stock WHERE user_id = $1)
+         AND sm.product_id NOT IN (SELECT product_id FROM product_group_members WHERE user_id = $1)
        GROUP BY sm.shop_domain, sm.product_id`,
       [req.user.id]
     );
@@ -499,29 +538,145 @@ router.post("/sync-stock-movements", auth, async (req, res) => {
   } catch(e) { console.error("sync-stock-movements error:", e); res.status(500).json({ error: "Error sincronizando movimientos" }); }
 });
 
-// GET /api/shopify/stock-history?product_id=X
+// GET /api/shopify/stock-history?product_id=X  OR  ?group_id=Y
 router.get("/stock-history", auth, async (req, res) => {
   const userId = req.user.id;
-  const { product_id } = req.query;
-  if (!product_id) return res.status(400).json({ error: "Falta product_id" });
+  const { product_id, group_id } = req.query;
+  if (!product_id && !group_id) return res.status(400).json({ error: "Falta product_id o group_id" });
   try {
-    const rows = await db.all(
-      `SELECT
-         TO_CHAR(movement_date, 'YYYY-MM-DD') AS fecha,
-         COUNT(*) FILTER (WHERE movement_type = 'salida') AS pedidos_enviados,
-         COALESCE(SUM(units) FILTER (WHERE movement_type = 'salida'), 0) AS uds_salida,
-         COUNT(*) FILTER (WHERE movement_type = 'devolucion') AS pedidos_devueltos,
-         COALESCE(SUM(units) FILTER (WHERE movement_type = 'devolucion'), 0) AS uds_devolucion
-       FROM stock_movements
-       WHERE user_id = $1 AND product_id = $2
-       GROUP BY movement_date
-       ORDER BY movement_date DESC
-       LIMIT 90`,
-      [userId, product_id]
-    );
+    let rows;
+    if (group_id) {
+      // Aggregate movements for all members of the group
+      rows = await db.all(
+        `SELECT
+           TO_CHAR(sm.movement_date, 'YYYY-MM-DD') AS fecha,
+           COUNT(*) FILTER (WHERE sm.movement_type = 'salida') AS pedidos_enviados,
+           COALESCE(SUM(sm.units) FILTER (WHERE sm.movement_type = 'salida'), 0) AS uds_salida,
+           COUNT(*) FILTER (WHERE sm.movement_type = 'devolucion') AS pedidos_devueltos,
+           COALESCE(SUM(sm.units) FILTER (WHERE sm.movement_type = 'devolucion'), 0) AS uds_devolucion
+         FROM stock_movements sm
+         JOIN product_group_members pgm ON pgm.product_id = sm.product_id AND pgm.user_id = sm.user_id
+         WHERE sm.user_id = $1 AND pgm.group_id = $2
+         GROUP BY sm.movement_date
+         ORDER BY sm.movement_date DESC
+         LIMIT 90`,
+        [userId, parseInt(group_id)]
+      );
+    } else {
+      rows = await db.all(
+        `SELECT
+           TO_CHAR(movement_date, 'YYYY-MM-DD') AS fecha,
+           COUNT(*) FILTER (WHERE movement_type = 'salida') AS pedidos_enviados,
+           COALESCE(SUM(units) FILTER (WHERE movement_type = 'salida'), 0) AS uds_salida,
+           COUNT(*) FILTER (WHERE movement_type = 'devolucion') AS pedidos_devueltos,
+           COALESCE(SUM(units) FILTER (WHERE movement_type = 'devolucion'), 0) AS uds_devolucion
+         FROM stock_movements
+         WHERE user_id = $1 AND product_id = $2
+         GROUP BY movement_date
+         ORDER BY movement_date DESC
+         LIMIT 90`,
+        [userId, product_id]
+      );
+    }
     res.json(rows || []);
   } catch(e) { res.status(500).json({ error: "Error historial" }); }
 });
+
+// ── Product Groups (stock compartido) ────────────────────────────────────────
+
+// GET /api/shopify/product-groups
+router.get("/product-groups", auth, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const groups = await db.all(
+      `SELECT pg.id, pg.name,
+              json_agg(json_build_object('product_id', pgm.product_id, 'shop_domain', pgm.shop_domain) ORDER BY pgm.product_id) AS members
+       FROM product_groups pg
+       LEFT JOIN product_group_members pgm ON pgm.group_id = pg.id
+       WHERE pg.user_id = $1
+       GROUP BY pg.id, pg.name
+       ORDER BY pg.name`,
+      [userId]
+    );
+    // json_agg returns [null] when no members — clean that up
+    const clean = groups.map(g => ({
+      ...g,
+      members: (g.members || []).filter(m => m && m.product_id),
+    }));
+    res.json(clean);
+  } catch(e) { console.error("product-groups GET:", e); res.status(500).json({ error: "Error" }); }
+});
+
+// POST /api/shopify/product-groups  { name }
+router.post("/product-groups", auth, async (req, res) => {
+  const userId = req.user.id;
+  const { name } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: "Falta nombre" });
+  try {
+    const row = await db.get(
+      `INSERT INTO product_groups (user_id, name) VALUES ($1, $2)
+       ON CONFLICT(user_id, name) DO UPDATE SET name=EXCLUDED.name
+       RETURNING id, name`,
+      [userId, name.trim()]
+    );
+    res.json(row);
+  } catch(e) { console.error("product-groups POST:", e); res.status(500).json({ error: "Error creando grupo" }); }
+});
+
+// POST /api/shopify/product-groups/:id/members  { product_id, shop_domain }
+router.post("/product-groups/:id/members", auth, async (req, res) => {
+  const userId = req.user.id;
+  const groupId = parseInt(req.params.id);
+  const { product_id, shop_domain } = req.body;
+  if (!product_id || !shop_domain) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    // Verify group belongs to user
+    const grp = await db.get("SELECT id FROM product_groups WHERE id=$1 AND user_id=$2", [groupId, userId]);
+    if (!grp) return res.status(404).json({ error: "Grupo no encontrado" });
+
+    await db.run(
+      `INSERT INTO product_group_members (group_id, user_id, product_id, shop_domain)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT(user_id, product_id) DO UPDATE SET group_id=EXCLUDED.group_id, shop_domain=EXCLUDED.shop_domain`,
+      [groupId, userId, product_id, shop_domain]
+    );
+    res.json({ ok: true });
+  } catch(e) { console.error("product-groups members POST:", e); res.status(500).json({ error: "Error añadiendo miembro" }); }
+});
+
+// DELETE /api/shopify/product-groups/:id/members/:productId
+router.delete("/product-groups/:id/members/:productId", auth, async (req, res) => {
+  const userId = req.user.id;
+  const groupId = parseInt(req.params.id);
+  const productId = req.params.productId;
+  try {
+    await db.run(
+      `DELETE FROM product_group_members WHERE group_id=$1 AND user_id=$2 AND product_id=$3`,
+      [groupId, userId, productId]
+    );
+    // If group is now empty, delete it
+    const count = await db.get(
+      `SELECT COUNT(*) AS c FROM product_group_members WHERE group_id=$1`,
+      [groupId]
+    );
+    if (parseInt(count?.c || 0) === 0) {
+      await db.run("DELETE FROM product_groups WHERE id=$1 AND user_id=$2", [groupId, userId]);
+    }
+    res.json({ ok: true });
+  } catch(e) { console.error("product-groups members DELETE:", e); res.status(500).json({ error: "Error eliminando miembro" }); }
+});
+
+// DELETE /api/shopify/product-groups/:id  (delete entire group)
+router.delete("/product-groups/:id", auth, async (req, res) => {
+  const userId = req.user.id;
+  const groupId = parseInt(req.params.id);
+  try {
+    await db.run("DELETE FROM product_groups WHERE id=$1 AND user_id=$2", [groupId, userId]);
+    res.json({ ok: true });
+  } catch(e) { console.error("product-groups DELETE:", e); res.status(500).json({ error: "Error eliminando grupo" }); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 router.post("/entrada-mercancia", auth, async (req, res) => {
   const { shop_domain, product_id, product_name, cantidad, stock_anterior } = req.body;
