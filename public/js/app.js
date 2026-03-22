@@ -2500,35 +2500,53 @@ function openUserSection(type) {
 async function handleAvatarChange(event) {
   const file = event.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const dataUrl = e.target.result;
-    // Mostrar preview
-    const img = document.getElementById("avatar-img");
-    const icon = document.getElementById("avatar-placeholder-icon");
-    if (img) { img.src = dataUrl; img.style.display = "block"; }
-    if (icon) icon.style.display = "none";
-    // Subir al servidor
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/avatar`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-        body: JSON.stringify({ avatar_url: dataUrl })
-      });
-      const data = await res.json();
-      if (!res.ok) { alert(data.error || "Error al guardar la imagen"); }
-      else {
-        // Actualizar avatar en header
-        const headerAvatar = document.querySelector(".user-avatar");
-        if (headerAvatar) {
-          headerAvatar.style.backgroundImage = `url('${dataUrl}')`;
-          headerAvatar.style.backgroundSize = "cover";
-          headerAvatar.style.backgroundPosition = "center";
-        }
+
+  // Redimensionar y comprimir antes de subir
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 256;
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+        else        { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  // Mostrar preview
+  const imgEl = document.getElementById("avatar-img");
+  const icon  = document.getElementById("avatar-placeholder-icon");
+  if (imgEl) { imgEl.src = dataUrl; imgEl.style.display = "block"; }
+  if (icon) icon.style.display = "none";
+
+  // Subir al servidor
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/avatar`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ avatar_url: dataUrl })
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || "Error al guardar la imagen"); }
+    else {
+      const headerAvatar = document.querySelector(".user-avatar");
+      if (headerAvatar) {
+        headerAvatar.style.backgroundImage = `url('${dataUrl}')`;
+        headerAvatar.style.backgroundSize = "cover";
+        headerAvatar.style.backgroundPosition = "center";
       }
-    } catch { alert("Error al guardar la imagen"); }
-  };
-  reader.readAsDataURL(file);
+    }
+  } catch { alert("Error al guardar la imagen"); }
 }
 
 async function changePassword() {
