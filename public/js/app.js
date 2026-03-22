@@ -1455,7 +1455,6 @@ if (id === "pedidos") {
 
           <span class="tab active" onclick="filterByTab(this, '')">Todos</span>
           <span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
-          <span class="tab" onclick="filterByTab(this, 'en_preparacion')">En preparación</span>
           <span class="tab" onclick="filterByTab(this, 'enviado')">Enviado</span>
           <span class="tab" onclick="filterByTab(this, 'en_transito')">En tránsito</span>
           <span class="tab" onclick="filterByTab(this, 'entregado')">Entregado</span>
