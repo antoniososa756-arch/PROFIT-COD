@@ -532,8 +532,45 @@ function loadApp(section) {
     <div class="sidebar" id="sidebar">
       <div class="logo-zone">
         <div class="logo-wrapper">
-          <div style="cursor:default;line-height:1;">
-            <span style="font-size:17px;font-weight:900;color:#16a34a;letter-spacing:-0.5px;font-family:'Segoe UI',system-ui,sans-serif;">PROFIT</span><span style="font-size:17px;font-weight:900;color:#111827;letter-spacing:-0.5px;font-family:'Segoe UI',system-ui,sans-serif;">COD</span>
+          <div style="cursor:default;display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <!-- Laptop icon -->
+            <svg width="48" height="34" viewBox="0 0 48 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="lg-screen" x1="0" y1="0" x2="48" y2="34" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#059669"/>
+                  <stop offset="100%" stop-color="#10b981"/>
+                </linearGradient>
+              </defs>
+              <!-- Base -->
+              <rect x="1" y="28" width="46" height="4" rx="2" fill="#d1d5db"/>
+              <rect x="8" y="27" width="32" height="2" rx="1" fill="#e5e7eb"/>
+              <!-- Tapa/cuerpo -->
+              <rect x="5" y="3" width="38" height="26" rx="4" fill="#1e293b"/>
+              <rect x="7" y="5" width="34" height="22" rx="3" fill="#0f172a"/>
+              <!-- Pantalla -->
+              <rect x="8" y="6" width="32" height="20" rx="2" fill="url(#lg-screen)" opacity="0.15"/>
+              <!-- Barra top verde -->
+              <rect x="8" y="6" width="32" height="4" rx="2" fill="#10b981"/>
+              <!-- Dashboard mini lines -->
+              <rect x="10" y="13" width="12" height="1.5" rx="0.75" fill="#10b981" opacity="0.8"/>
+              <rect x="10" y="16" width="8" height="1.5" rx="0.75" fill="#334155"/>
+              <rect x="10" y="19" width="10" height="1.5" rx="0.75" fill="#334155"/>
+              <!-- Mini bar chart -->
+              <rect x="26" y="19" width="3" height="4" rx="1" fill="#10b981" opacity="0.5"/>
+              <rect x="30" y="16" width="3" height="7" rx="1" fill="#10b981" opacity="0.7"/>
+              <rect x="34" y="17" width="3" height="6" rx="1" fill="#10b981" opacity="0.9"/>
+            </svg>
+            <!-- Texto con gradiente -->
+            <svg width="110" height="22" viewBox="0 0 110 22" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="lg-text" x1="0" y1="0" x2="110" y2="0" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#059669"/>
+                  <stop offset="55%" stop-color="#10b981"/>
+                  <stop offset="100%" stop-color="#34d399"/>
+                </linearGradient>
+              </defs>
+              <text x="55" y="17" text-anchor="middle" font-family="'Segoe UI',system-ui,sans-serif" font-size="16" font-weight="800" letter-spacing="2" fill="url(#lg-text)">PROFITCOD</text>
+            </svg>
           </div>
         </div>
       </div>
