@@ -1935,7 +1935,8 @@ function doSearch(value) {
         label: `🛍️ ${o.order_number || "-"} — ${o.customer_name || "-"}`,
         section: "pedidos",
         type: "pedido",
-        orderNumber: o.order_number || ""
+        orderNumber: o.order_number || "",
+        status: o.fulfillment_status || ""
       }));
       const allResults = [...secciones, ...productos, ...pedidos];
       _renderSearchDrop(drop, allResults, false);
@@ -1953,11 +1954,36 @@ function _renderSearchDrop(drop, results, loading) {
     return;
   }
 
-  let html = results.map(r => `
-    <div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','${escapeAttr(r.orderNumber || "")}')">
+  const statusColors = {
+    pendiente:      { bg: "#fef9c3", color: "#92400e" },
+    en_preparacion: { bg: "#dbeafe", color: "#1e40af" },
+    enviado:        { bg: "#dbeafe", color: "#1e40af" },
+    en_transito:    { bg: "#ede9fe", color: "#5b21b6" },
+    franquicia:     { bg: "#ede9fe", color: "#5b21b6" },
+    entregado:      { bg: "#dcfce7", color: "#15803d" },
+    devuelto:       { bg: "#fee2e2", color: "#b91c1c" },
+    destruido:      { bg: "#f3f4f6", color: "#374151" },
+    cancelado:      { bg: "#fee2e2", color: "#b91c1c" },
+  };
+  const statusNames = {
+    pendiente: "Pendiente", en_preparacion: "En preparación", enviado: "Enviado",
+    en_transito: "En tránsito", franquicia: "Franquicia", entregado: "Entregado",
+    devuelto: "Devuelto", destruido: "Destruido", cancelado: "Cancelado",
+  };
+
+  let html = results.map(r => {
+    if (r.type === "pedido" && r.status) {
+      const sc = statusColors[r.status] || { bg: "#f3f4f6", color: "#374151" };
+      const sn = statusNames[r.status] || r.status;
+      return `<div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','${escapeAttr(r.orderNumber || "")}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span>${escapeHtml(r.label)}</span>
+        <span style="padding:2px 7px;border-radius:5px;font-size:11px;font-weight:600;background:${sc.bg};color:${sc.color};white-space:nowrap;flex-shrink:0;">${escapeHtml(sn)}</span>
+      </div>`;
+    }
+    return `<div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','${escapeAttr(r.orderNumber || "")}')">
       ${escapeHtml(r.label)}
-    </div>
-  `).join("");
+    </div>`;
+  }).join("");
 
   // "Ver todos" hint for multiple product matches
   const totalProductos = window.__searchProductosIds?.length || 0;
