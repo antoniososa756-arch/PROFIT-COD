@@ -960,19 +960,28 @@ document.getElementById("forgotModal").addEventListener("click", function(e) {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
+  let _audioCtx = null;
+  function getAudioCtx() {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return _audioCtx;
+  }
+  document.addEventListener("click", () => { try { getAudioCtx().resume(); } catch {} }, { passive: true });
+
   function playNotifSound() {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [0, 0.18].forEach((delay, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.value = i === 0 ? 880 : 1100;
-        gain.gain.setValueAtTime(0.35, ctx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25);
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.25);
+      const ctx = getAudioCtx();
+      ctx.resume().then(() => {
+        [0, 0.18].forEach((delay, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.type = "sine";
+          osc.frequency.value = i === 0 ? 880 : 1100;
+          gain.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25);
+          osc.start(ctx.currentTime + delay);
+          osc.stop(ctx.currentTime + delay + 0.25);
+        });
       });
     } catch {}
   }
