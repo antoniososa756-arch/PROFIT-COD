@@ -613,7 +613,7 @@ function loadApp(section) {
                   <circle cx="11" cy="11" r="7"></circle>
                   <path d="M20 20l-3.5-3.5"></path>
                 </svg>
-                <input id="search" placeholder="${d.ui.searchPH}" oninput="doSearch(this.value)" onfocus="doSearch(this.value)" />
+                <input id="search" placeholder="${d.ui.searchPH}" oninput="doSearch(this.value)" onfocus="doSearch(this.value)" onkeydown="doSearchKeydown(event)" />
                 <div class="search-results" id="searchDrop"></div>
               </div>
             </div>
@@ -1903,14 +1903,17 @@ function doSearch(value) {
    .map(s => ({ label: `📂 ${s.label}`, section: s.section, type: "seccion" }));
 
 // Productos reales
-  const productos = (window.__allProductos || []).filter(p =>
+  const productosAll = (window.__allProductos || []).filter(p =>
     (p.title || "").toLowerCase().includes(q)
-  ).slice(0, 5).map(p => ({
+  );
+  const productos = productosAll.slice(0, 6).map(p => ({
     label: `📦 ${p.title}`,
     section: "productos",
     type: "producto",
     orderNumber: String(p.id)
   }));
+  // Guardar todos los ids de la búsqueda actual para Enter
+  window.__searchProductosIds = productosAll.map(p => String(p.id));
 
   // Pedidos reales
   const pedidos = (allOrders || []).filter(o =>
@@ -1932,14 +1935,46 @@ function doSearch(value) {
     return;
   }
 
-  drop.innerHTML = results.map(r => `
+  let html = results.map(r => `
     <div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','${escapeAttr(r.orderNumber || "")}')">
       ${escapeHtml(r.label)}
     </div>
   `).join("");
 
+  // Hint "Ver todos" when there are multiple product matches
+  const totalProductos = window.__searchProductosIds?.length || 0;
+  if (totalProductos > 1) {
+    html += `<div class="search-item" onclick="goToSearchAllProductos()" style="border-top:1px solid #e5e7eb;color:#7c3aed;font-weight:600;font-size:12px;">
+      🔍 Ver los ${totalProductos} resultados · Enter
+    </div>`;
+  }
+
+  drop.innerHTML = html;
   drop.classList.add("open");
 }
+
+function doSearchKeydown(e) {
+  if (e.key !== "Enter") return;
+  const ids = window.__searchProductosIds || [];
+  if (ids.length === 0) return;
+  if (ids.length === 1) {
+    goToSearch("productos", ids[0]);
+  } else {
+    goToSearchAllProductos();
+  }
+}
+window.doSearchKeydown = doSearchKeydown;
+
+function goToSearchAllProductos() {
+  const ids = window.__searchProductosIds || [];
+  if (ids.length === 0) return;
+  closeSearchDrop();
+  const searchEl = document.getElementById("search");
+  if (searchEl) searchEl.value = "";
+  window.__pendingProductoIds = ids;
+  setSection("productos");
+}
+window.goToSearchAllProductos = goToSearchAllProductos;
 
 function closeSearchDrop() {
   const drop = document.getElementById("searchDrop");
@@ -3588,6 +3623,90 @@ async function loadProductos() {
         </table>
       </div>
     `).join("");
+
+ // Si venimos de búsqueda con múltiples resultados, mostrarlos todos
+    if (window.__pendingProductoIds?.length > 0) {
+      const pids = new Set(window.__pendingProductoIds);
+      window.__pendingProductoIds = null;
+      const filtrados = (window.__allProductos || []).filter(p => pids.has(String(p.id)));
+      if (filtrados.length > 0) {
+        // Group by shop
+        const byShop = {};
+        filtrados.forEach(p => {
+          const key = p.shop_domain;
+          if (!byShop[key]) byShop[key] = { shop_name: p.shop_name, shop_domain: p.shop_domain, products: [] };
+          byShop[key].products.push(p);
+        });
+        wrap.innerHTML = `
+          <div style="margin-bottom:12px;">
+            <button onclick="loadProductos()" style="padding:6px 14px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">← Volver a todos los productos</button>
+            <span style="margin-left:10px;font-size:13px;color:#6b7280;">${filtrados.length} resultado${filtrados.length!==1?'s':''} encontrado${filtrados.length!==1?'s':''}</span>
+          </div>
+          ${Object.values(byShop).map(shop => `
+          <div style="margin-bottom:28px;">
+            <h3 style="font-size:15px;font-weight:700;color:#16a34a;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">🏪 ${escapeHtml(shop.shop_name)}</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="background:#f9fafb;">
+                <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:60px;">Imagen</th>
+                <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
+                <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Variantes & SKU</th>
+                <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:120px;">Stock</th>
+              </tr></thead>
+              <tbody>
+                ${shop.products.map(p => {
+                  const pid2 = String(p.id);
+                  const stockInfo = stockMap[pid2] || { stock: 0, stock_minimo: 5 };
+                  const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
+                  return `<tr style="background:#fef9c3;" data-pid="${pid2}">
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
+                      ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;">` : `<div style="width:48px;height:48px;border-radius:6px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
+                    </td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
+                      <span class="producto-nombre">${escapeHtml(p.title)}</span>
+                      <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">Costo compra:</span>
+                        <input type="number" min="0" step="0.01" value="${stockInfo.costo_compra || ''}" placeholder="0.00"
+                          style="width:80px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
+                          onchange="guardarCostoCompra('${shop.shop_domain}','${pid2}',this.value)">
+                        <span style="font-size:11px;color:#9ca3af;">€</span>
+                      </div>
+                    </td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
+                      ${p.variants.map(v => {
+                        const vid = String(v.id);
+                        const uds = variantesMap[vid] || 1;
+                        return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;">
+                          <span style="font-size:12px;color:#374151;flex:1;">${escapeHtml(v.title)}</span>
+                          <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">uds/venta:</span>
+                          <input type="number" min="1" value="${uds}" style="width:52px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarVarianteConfig('${shop.shop_domain}','${vid}',this.value)">
+                        </div>`;
+                      }).join("")}
+                    </td>
+                    <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
+                      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <div style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:${stockBajo?'#fef2f2':'#f9fafb'};color:${stockBajo?'#dc2626':(stockInfo.stock<0?'#b45309':'#111827')};">
+                          ${stockInfo.stock}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:4px;">
+                          <span style="font-size:10px;color:#9ca3af;">mín:</span>
+                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shop.shop_domain}','${pid2}',this.value)">
+                        </div>
+                        ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
+                        <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
+                          style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
+                          Histórico
+                        </button>
+                        ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;font-size:10px;color:#16a34a;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
+                      </div>
+                    </td>
+                  </tr>`;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>`).join("")}`;
+        return;
+      }
+    }
 
  // Si venimos de notificación o búsqueda, mostrar solo ese producto
     if (window.__pendingProductoId) {
@@ -6554,153 +6673,193 @@ async function abrirVincularStock() {
   document.body.appendChild(modal);
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
 
-  // Fetch products (cached) and existing groups in parallel
   const [stockData, groups] = await Promise.all([
     fetch(`${API_BASE}/api/shopify/stock`, { headers: h }).then(r => r.json()).catch(() => []),
     fetch(`${API_BASE}/api/shopify/product-groups`, { headers: h }).then(r => r.json()).catch(() => []),
   ]);
 
-  // Build stockMap for group lookups
   const stockMap = {};
   if (Array.isArray(stockData)) stockData.forEach(s => { stockMap[s.product_id] = s; });
 
-  // All products from window cache
   const allProducts = window.__allProductos || [];
-
-  // selected product ids
   const selected = new Set();
+  let searchVal = "";
 
-  function render() {
-    const body = document.getElementById("vincular-stock-body");
-    if (!body) return;
-
-    const searchVal = document.getElementById("vincular-buscar")?.value?.toLowerCase() || "";
-
-    // Filter products by search
-    const filtered = allProducts.filter(p => {
-      const name = (p.title || "").toLowerCase();
-      const shop = (p.shop_domain || p.shop_name || "").toLowerCase();
-      return !searchVal || name.includes(searchVal) || shop.includes(searchVal);
-    });
-
+  function renderGroups() {
+    const el = document.getElementById("vincular-groups-panel");
+    if (!el) return;
     const selectedCount = selected.size;
-
-    body.innerHTML = `
-      <!-- Search + action bar -->
-      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
-        <input id="vincular-buscar" type="text" placeholder="Buscar producto..." value="${escapeHtml(searchVal)}"
-          style="flex:1;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);"
-          oninput="window.__vincularRender()">
-        <span style="font-size:12px;color:#6b7280;white-space:nowrap;">${selectedCount} seleccionado${selectedCount!==1?'s':''}</span>
-      </div>
-
-      <!-- Existing groups panel -->
-      ${groups.length > 0 ? `
-      <div style="margin-bottom:14px;">
-        <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Grupos actuales</div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          ${groups.map(g => {
-            const memberNames = (g.members||[]).map(m => {
-              const p = allProducts.find(x => String(x.id) === String(m.product_id));
-              return p ? escapeHtml(p.title) : m.product_id;
-            }).join(", ");
-            return `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;gap:8px;">
-              <div style="min-width:0;">
-                <div style="font-size:13px;font-weight:600;color:#7c3aed;">🔗 ${escapeHtml(g.name)}</div>
-                <div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:380px;" title="${escapeHtml(memberNames)}">${memberNames || 'Sin productos'}</div>
-              </div>
+    if (groups.length === 0) { el.innerHTML = ""; return; }
+    el.innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Grupos actuales</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        ${groups.map(g => {
+          const members = g.members || [];
+          return `
+          <div style="border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;overflow:hidden;">
+            <!-- Group header -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;gap:8px;border-bottom:${members.length>0?'1px solid #f3f4f6':'none'};">
+              <div style="font-size:13px;font-weight:700;color:#7c3aed;">🔗 ${escapeHtml(g.name)}</div>
               <div style="display:flex;gap:5px;flex-shrink:0;">
                 ${selectedCount > 0 ? `<button onclick="window.__vincularAddToGroup(${g.id},'${escapeHtml(g.name)}')"
                   style="padding:4px 10px;background:#7c3aed;border:none;border-radius:6px;font-size:12px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;">
-                  Añadir selección
+                  + Añadir (${selectedCount})
                 </button>` : ''}
                 <button onclick="window.__vincularDeleteGroup(${g.id})"
                   style="padding:4px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;">
-                  Eliminar
+                  Eliminar grupo
                 </button>
               </div>
-            </div>`;
-          }).join("")}
-        </div>
-      </div>` : ""}
-
-      <!-- Create new group from selection -->
-      <div style="margin-bottom:14px;padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;">
-        <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Crear nuevo grupo con la selección</div>
-        <div style="display:flex;gap:8px;">
-          <input id="nuevo-grupo-nombre" type="text" placeholder="Nombre del grupo..."
-            style="flex:1;padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
-          <button onclick="window.__vincularCrearGrupo()"
-            style="padding:7px 14px;background:#7c3aed;border:none;border-radius:7px;font-size:13px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">
-            Crear grupo ${selectedCount > 0 ? '('+selectedCount+')' : ''}
-          </button>
-        </div>
-      </div>
-
-      <!-- Product list -->
-      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Productos (${filtered.length})</div>
-      <div style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:6px;">
-        ${filtered.length === 0 ? '<div style="color:#9ca3af;text-align:center;padding:16px;font-size:13px;">Sin resultados</div>' :
-          filtered.map(p => {
-            const pid = String(p.id);
-            const si = stockMap[pid] || {};
-            const isSel = selected.has(pid);
-            return `
-            <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;background:${isSel?'#f5f3ff':'transparent'};border:1px solid ${isSel?'#c4b5fd':'transparent'};transition:background 0.1s;">
-              <input type="checkbox" data-pid="${pid}" data-shop="${escapeHtml(p.shop_domain||si.shop_domain||'')}" ${isSel?'checked':''} onchange="window.__vincularToggle(this)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.title)}</div>
-                <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name||p.shop_domain||'')}${si.group_name?` · <span style="color:#7c3aed;font-weight:600;">🔗 ${escapeHtml(si.group_name)}</span>`:''}</div>
-              </div>
-              <div style="font-size:13px;font-weight:700;color:${si.stock<0?'#dc2626':si.stock===0?'#f59e0b':'#16a34a'};flex-shrink:0;">${si.stock??'—'}</div>
-            </label>`;
-          }).join("")}
+            </div>
+            <!-- Members list -->
+            ${members.length === 0 ? '<div style="padding:8px 12px;font-size:11px;color:#9ca3af;">Sin productos</div>' :
+              members.map(m => {
+                const p = allProducts.find(x => String(x.id) === String(m.product_id));
+                const name = p ? p.title : m.product_id;
+                const si = stockMap[m.product_id] || {};
+                return `
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid #f3f4f6;">
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
+                    <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p?.shop_name||m.shop_domain||'')}</div>
+                  </div>
+                  <div style="font-size:12px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#374151'};flex-shrink:0;">Stock: ${si.stock??'—'}</div>
+                  <button onclick="window.__vincularRemoveMember(${g.id},'${escapeHtml(m.product_id)}')"
+                    title="Desvincular este producto del grupo"
+                    style="padding:3px 8px;background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;font-size:11px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">
+                    Desvincular
+                  </button>
+                </div>`;
+              }).join("")}
+          </div>`;
+        }).join("")}
       </div>`;
   }
 
-  window.__vincularRender = render;
+  function renderProductList() {
+    const el = document.getElementById("vincular-product-list");
+    const countEl = document.getElementById("vincular-product-count");
+    if (!el) return;
+
+    const filtered = allProducts.filter(p => {
+      if (!searchVal) return true;
+      return (p.title || "").toLowerCase().includes(searchVal) ||
+             (p.shop_domain || p.shop_name || "").toLowerCase().includes(searchVal);
+    });
+
+    if (countEl) countEl.textContent = `Productos (${filtered.length})`;
+
+    el.innerHTML = filtered.length === 0
+      ? '<div style="color:#9ca3af;text-align:center;padding:16px;font-size:13px;">Sin resultados</div>'
+      : filtered.map(p => {
+          const pid = String(p.id);
+          const si = stockMap[pid] || {};
+          const isSel = selected.has(pid);
+          return `
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;background:${isSel?'#f5f3ff':'transparent'};border:1px solid ${isSel?'#c4b5fd':'transparent'};">
+            <input type="checkbox" data-pid="${pid}" data-shop="${escapeHtml(p.shop_domain||si.shop_domain||'')}" ${isSel?'checked':''} onchange="window.__vincularToggle(this)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.title)}</div>
+              <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name||p.shop_domain||'')}${si.group_name?` · <span style="color:#7c3aed;font-weight:600;">🔗 ${escapeHtml(si.group_name)}</span>`:''}</div>
+            </div>
+            <div style="font-size:13px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#16a34a'};flex-shrink:0;">${si.stock??'—'}</div>
+          </label>`;
+        }).join("");
+  }
+
+  function renderSelectedCount() {
+    const el = document.getElementById("vincular-sel-count");
+    if (el) el.textContent = `${selected.size} seleccionado${selected.size!==1?'s':''}`;
+    const btnLabel = document.getElementById("vincular-btn-crear-label");
+    if (btnLabel) btnLabel.textContent = `Crear grupo${selected.size > 0 ? ' ('+selected.size+')' : ''}`;
+    renderGroups();
+  }
+
+  // Render static shell once
+  const body = document.getElementById("vincular-stock-body");
+  body.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+      <input id="vincular-buscar" type="text" placeholder="Buscar producto..."
+        style="flex:1;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
+      <span id="vincular-sel-count" style="font-size:12px;color:#6b7280;white-space:nowrap;">0 seleccionados</span>
+    </div>
+    <div id="vincular-groups-panel"></div>
+    <div style="margin-bottom:14px;padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;">
+      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Crear nuevo grupo con la selección</div>
+      <div style="display:flex;gap:8px;">
+        <input id="nuevo-grupo-nombre" type="text" placeholder="Nombre del grupo..."
+          style="flex:1;padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
+        <button onclick="window.__vincularCrearGrupo()"
+          style="padding:7px 14px;background:#7c3aed;border:none;border-radius:7px;font-size:13px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">
+          <span id="vincular-btn-crear-label">Crear grupo</span>
+        </button>
+      </div>
+    </div>
+    <div id="vincular-product-count" style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Productos (${allProducts.length})</div>
+    <div id="vincular-product-list" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:6px;"></div>`;
+
+  // Wire search input — only updates product list, never replaces the input itself
+  document.getElementById("vincular-buscar").addEventListener("input", e => {
+    searchVal = e.target.value.toLowerCase();
+    renderProductList();
+  });
 
   window.__vincularToggle = (checkbox) => {
     const pid = checkbox.dataset.pid;
     if (checkbox.checked) selected.add(pid);
     else selected.delete(pid);
-    render();
+    renderSelectedCount();
+    // Update just this row's highlight without re-rendering the list
+    const label = checkbox.closest("label");
+    if (label) {
+      label.style.background = checkbox.checked ? "#f5f3ff" : "transparent";
+      label.style.border = `1px solid ${checkbox.checked ? "#c4b5fd" : "transparent"}`;
+    }
   };
+
+  async function refreshData() {
+    const [updatedGroups, updatedStock] = await Promise.all([
+      fetch(`${API_BASE}/api/shopify/product-groups`, { headers: h }).then(r => r.json()).catch(() => []),
+      fetch(`${API_BASE}/api/shopify/stock`, { headers: h }).then(r => r.json()).catch(() => []),
+    ]);
+    groups.length = 0; updatedGroups.forEach(g => groups.push(g));
+    if (Array.isArray(updatedStock)) updatedStock.forEach(s => { stockMap[s.product_id] = s; });
+    invalidateCache("shopify/stock");
+    loadProductos();
+  }
 
   window.__vincularAddToGroup = async (groupId, groupName) => {
     if (selected.size === 0) { alert("Selecciona al menos un producto"); return; }
     const products = allProducts.filter(p => selected.has(String(p.id)));
     for (const p of products) {
       const pid = String(p.id);
-      const shopDomain = p.shop_domain || stockMap[pid]?.shop_domain || "";
       await fetch(`${API_BASE}/api/shopify/product-groups/${groupId}/members`,
         { method: "POST", headers: { ...h, "Content-Type": "application/json" },
-          body: JSON.stringify({ product_id: pid, shop_domain: shopDomain }) });
+          body: JSON.stringify({ product_id: pid, shop_domain: p.shop_domain || stockMap[pid]?.shop_domain || "" }) });
     }
     selected.clear();
-    // Refresh groups
-    const updatedGroups = await fetch(`${API_BASE}/api/shopify/product-groups`, { headers: h }).then(r => r.json()).catch(() => []);
-    groups.length = 0; updatedGroups.forEach(g => groups.push(g));
-    // Refresh stockMap
-    const updatedStock = await fetch(`${API_BASE}/api/shopify/stock`, { headers: h }).then(r => r.json()).catch(() => []);
-    if (Array.isArray(updatedStock)) updatedStock.forEach(s => { stockMap[s.product_id] = s; });
-    render();
+    await refreshData();
+    renderGroups();
+    renderProductList();
+    renderSelectedCount();
     showToast(`Productos añadidos al grupo "${groupName}"`, "", "#7c3aed");
-    invalidateCache("shopify/stock");
-    loadProductos();
+  };
+
+  window.__vincularRemoveMember = async (groupId, productId) => {
+    await fetch(`${API_BASE}/api/shopify/product-groups/${groupId}/members/${encodeURIComponent(productId)}`,
+      { method: "DELETE", headers: h });
+    await refreshData();
+    renderGroups();
+    renderProductList();
+    showToast("Producto desvinculado del grupo", "", "#374151");
   };
 
   window.__vincularDeleteGroup = async (groupId) => {
     if (!confirm("¿Eliminar este grupo? Los productos quedarán sin vincular.")) return;
     await fetch(`${API_BASE}/api/shopify/product-groups/${groupId}`, { method: "DELETE", headers: h });
-    const updatedGroups = await fetch(`${API_BASE}/api/shopify/product-groups`, { headers: h }).then(r => r.json()).catch(() => []);
-    groups.length = 0; updatedGroups.forEach(g => groups.push(g));
-    const updatedStock = await fetch(`${API_BASE}/api/shopify/stock`, { headers: h }).then(r => r.json()).catch(() => []);
-    if (Array.isArray(updatedStock)) updatedStock.forEach(s => { stockMap[s.product_id] = s; });
-    render();
-    invalidateCache("shopify/stock");
-    loadProductos();
+    await refreshData();
+    renderGroups();
+    renderProductList();
   };
 
   window.__vincularCrearGrupo = async () => {
@@ -6711,9 +6870,11 @@ async function abrirVincularStock() {
       { method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ name: nombre }) }).then(r => r.json());
     if (!grp?.id) return;
     await window.__vincularAddToGroup(grp.id, nombre);
+    document.getElementById("nuevo-grupo-nombre").value = "";
   };
 
-  render();
+  renderGroups();
+  renderProductList();
 }
 window.abrirVincularStock = abrirVincularStock;
 
