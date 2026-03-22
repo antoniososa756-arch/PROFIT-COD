@@ -3027,17 +3027,27 @@ window.openAddTrabajador = openAddTrabajador;
         return;
       }
 
-      list.innerHTML = all.map(c => `
-        <div onclick="window.__selectChatConv('${c.type}','${c.type === "user" ? c.user_id : c.guest_id}',${JSON.stringify(c.label)})"
-          style="padding:10px 12px;border-radius:10px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px;"
-          onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+      const frag = document.createDocumentFragment();
+      all.forEach(c => {
+        const convId = c.type === "user" ? c.user_id : c.guest_id;
+        const div = document.createElement("div");
+        div.style.cssText = "padding:10px 12px;border-radius:10px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px;";
+        div.addEventListener("mouseover", () => div.style.background = "#f9fafb");
+        div.addEventListener("mouseout",  () => div.style.background = "");
+        div.addEventListener("click",     () => window.__selectChatConv(c.type, convId, c.label));
+        const unread = parseInt(c.unread) > 0
+          ? `<span style="background:#dc2626;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${c.unread}</span>`
+          : "";
+        div.innerHTML = `
           <div>
             <div style="font-size:13px;font-weight:600;color:#111827;">${c.label}</div>
             <div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${c.last_content || ""}</div>
-          </div>
-          ${parseInt(c.unread) > 0 ? `<span style="background:#dc2626;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${c.unread}</span>` : ""}
-        </div>`).join("");
-    } catch {}
+          </div>${unread}`;
+        frag.appendChild(div);
+      });
+      list.innerHTML = "";
+      list.appendChild(frag);
+    } catch(e) { console.error("[Chat] loadConversations error:", e); }
   }
 
   async function checkUnread() {
