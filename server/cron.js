@@ -109,21 +109,25 @@ async function syncAllMRW() {
             });
             if (!res.ok) continue;
             const xml = await res.text();
-            console.log(`[MRW DEBUG] tracking=${pedido.tracking_number} xml=`, xml.slice(0, 800));
 
-            // Extraer solo el primer estado (el más reciente) del historial XML de MRW
-            const descMatch = xml.match(/<Descripcion[^>]*>([^<]+)<\/Descripcion>/i)
-                           || xml.match(/<Situacion[^>]*>([^<]+)<\/Situacion>/i)
-                           || xml.match(/<Estado[^>]*>([^<]+)<\/Estado>/i);
-            // Si no encontramos el tag específico, buscar en XML completo como fallback
-            const estadoActual = descMatch ? descMatch[1].toLowerCase() : xml.toLowerCase();
+            // MRW devuelve eventos de MÁS RECIENTE a más antiguo en el XML
+            // → el PRIMER tag <Descripcion> es el estado actual
+            const allDesc = [...xml.matchAll(/<Descripcion[^>]*>([^<]+)<\/Descripcion>/gi)];
+            const allSit  = [...xml.matchAll(/<Situacion[^>]*>([^<]+)<\/Situacion>/gi)];
+            const allEst  = [...xml.matchAll(/<Estado[^>]*>([^<]+)<\/Estado>/gi)];
+            const matches = allDesc.length ? allDesc : allSit.length ? allSit : allEst;
+            const firstMatch = matches[0]; // PRIMERO = más reciente
+            const estadoActual = firstMatch ? firstMatch[1].toLowerCase() : null;
+            console.log(`[MRW] tracking=${pedido.tracking_number} → estado: "${estadoActual || "(tag no encontrado, usando xml completo)"}"`);
 
             let newStatus = null;
-            if (estadoActual.includes("entregado")) newStatus = "entregado";
-            else if (estadoActual.includes("devuelto") || estadoActual.includes("no entregado") || estadoActual.includes("retorno")) newStatus = "devuelto";
-            else if (estadoActual.includes("destruido")) newStatus = "destruido";
-            else if (estadoActual.includes("concertada en franquicia") || estadoActual.includes("recoger en franquicia") || estadoActual.includes("entrega en franquicia")) newStatus = "franquicia";
-            else if (estadoActual.includes("en reparto") || estadoActual.includes("en tr") || estadoActual.includes("transito") || estadoActual.includes("pendiente")) newStatus = "en_transito";
+            const chk = estadoActual ?? xml.toLowerCase(); // usa xml completo solo si no encontró tag
+            if (chk.includes("entregado")) newStatus = "entregado";
+            else if (chk.includes("devuelto") || chk.includes("retorno")) newStatus = "devuelto";
+            else if (chk.includes("destruido")) newStatus = "destruido";
+            else if (chk.includes("franquicia")) newStatus = "franquicia"; // cualquier estado con franquicia
+            else if (estadoActual !== null) newStatus = "en_transito"; // cualquier otro estado extraído → en tránsito
+            else if (chk.includes("en reparto") || chk.includes("en tr") || chk.includes("transito") || chk.includes("pendiente")) newStatus = "en_transito";
 
             if (newStatus) {
               await db.run(`UPDATE orders SET fulfillment_status = $1 WHERE id = $2`, [newStatus, pedido.id]);
