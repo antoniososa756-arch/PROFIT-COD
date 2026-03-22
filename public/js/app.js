@@ -1880,6 +1880,8 @@ function ensureOutsideClose() {
 
 // SEARCH
 
+let __searchDebounceTimer = null;
+
 function doSearch(value) {
   const d = dict();
   const q = (value || "").trim().toLowerCase();
@@ -1889,6 +1891,7 @@ function doSearch(value) {
   if (!q) {
     drop.innerHTML = "";
     drop.classList.remove("open");
+    clearTimeout(__searchDebounceTimer);
     return;
   }
 
@@ -1902,34 +1905,49 @@ function doSearch(value) {
   ].filter(s => s.label.toLowerCase().includes(q))
    .map(s => ({ label: `📂 ${s.label}`, section: s.section, type: "seccion" }));
 
-// Productos reales
+  // Productos (local cache)
   const productosAll = (window.__allProductos || []).filter(p =>
     (p.title || "").toLowerCase().includes(q)
   );
-  const productos = productosAll.slice(0, 6).map(p => ({
+  const productos = productosAll.slice(0, 5).map(p => ({
     label: `📦 ${p.title}`,
     section: "productos",
     type: "producto",
     orderNumber: String(p.id)
   }));
-  // Guardar todos los ids de la búsqueda actual para Enter
   window.__searchProductosIds = productosAll.map(p => String(p.id));
 
-  // Pedidos reales
-  const pedidos = (allOrders || []).filter(o =>
-    (o.order_number || "").toLowerCase().includes(q) ||
-    (o.customer_name || "").toLowerCase().includes(q) ||
-    (o.tracking_number || "").toLowerCase().includes(q)
-  ).slice(0, 8).map(o => ({
-    label: `🛍️ ${o.order_number || "-"} — ${o.customer_name || "-"}`,
-    section: "pedidos",
-    type: "pedido",
-    orderNumber: o.order_number || ""
-  }));
+  // Render immediately with what we have (sections + products)
+  // Pedidos placeholder while API loads
+  const localResults = [...secciones, ...productos];
+  _renderSearchDrop(drop, localResults, true);
 
-  const results = [...secciones, ...productos, ...pedidos].slice(0, 12);
+  // Debounce API call for orders/tracking
+  clearTimeout(__searchDebounceTimer);
+  __searchDebounceTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/orders?q=${encodeURIComponent(q)}&limit=8&page=1`,
+        { headers: { Authorization: "Bearer " + getActiveToken() } }
+      );
+      const data = await res.json();
+      const pedidos = (data.orders || []).map(o => ({
+        label: `🛍️ ${o.order_number || "-"} — ${o.customer_name || "-"}`,
+        section: "pedidos",
+        type: "pedido",
+        orderNumber: o.order_number || ""
+      }));
+      const allResults = [...secciones, ...productos, ...pedidos];
+      _renderSearchDrop(drop, allResults, false);
+    } catch {}
+  }, 300);
 
-  if (results.length === 0) {
+}
+
+function _renderSearchDrop(drop, results, loading) {
+  const d = dict();
+  if (!drop) return;
+  if (results.length === 0 && !loading) {
     drop.innerHTML = `<div class="search-empty">${d.ui.notFound}</div>`;
     drop.classList.add("open");
     return;
@@ -1941,12 +1959,16 @@ function doSearch(value) {
     </div>
   `).join("");
 
-  // Hint "Ver todos" when there are multiple product matches
+  // "Ver todos" hint for multiple product matches
   const totalProductos = window.__searchProductosIds?.length || 0;
   if (totalProductos > 1) {
     html += `<div class="search-item" onclick="goToSearchAllProductos()" style="border-top:1px solid #e5e7eb;color:#7c3aed;font-weight:600;font-size:12px;">
-      🔍 Ver los ${totalProductos} resultados · Enter
+      🔍 Ver los ${totalProductos} resultados de productos · Enter
     </div>`;
+  }
+
+  if (loading) {
+    html += `<div class="search-item" style="color:#9ca3af;font-size:12px;pointer-events:none;">Buscando pedidos...</div>`;
   }
 
   drop.innerHTML = html;
