@@ -1455,10 +1455,13 @@ if (id === "pedidos") {
 
           <span class="tab active" onclick="filterByTab(this, '')">Todos</span>
           <span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
-          <span class="tab" onclick="filterByTab(this, 'entregado')">Entregado</span>
+          <span class="tab" onclick="filterByTab(this, 'en_preparacion')">En preparación</span>
+          <span class="tab" onclick="filterByTab(this, 'enviado')">Enviado</span>
           <span class="tab" onclick="filterByTab(this, 'en_transito')">En tránsito</span>
+          <span class="tab" onclick="filterByTab(this, 'entregado')">Entregado</span>
           <span class="tab" onclick="filterByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
           <span class="tab" onclick="filterByTab(this, 'franquicia')">Franquicia</span>
+          <span class="tab" onclick="filterByTab(this, 'cancelado')">Cancelado</span>
         </div>
 
         <div id="orders-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
