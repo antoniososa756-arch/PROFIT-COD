@@ -2801,13 +2801,12 @@ async function loadNomina() {
 
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
-      <select id="nom-month-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+      <select id="nom-month-sel" onchange="loadNominaData()" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
       </select>
-      <select id="nom-year-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+      <select id="nom-year-sel" onchange="loadNominaData()" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
       </select>
-      <button onclick="loadNominaData()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
       <button onclick="openAddTrabajador()" style="padding:7px 16px;background:#fff;color:#16a34a;border:1px solid #16a34a;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">+ Trabajador</button>
     </div>
     <div id="nomina-content">Cargando...</div>
