@@ -2079,8 +2079,15 @@ if (id === "plan") {
       activeCard.style.boxShadow = `0 0 0 3px ${colors[currentPlan] || "#16a34a"}22`;
     }
 
+    // Obtener client_id de PayPal para saber si está configurado
+    let ppClientId = "";
+    try {
+      const r = await fetch(`${API_BASE}/api/billing/paypal/client-id`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+      const d = await r.json();
+      ppClientId = d.client_id || "";
+    } catch {}
+
     // Botones por plan
-    const paypalClientId = "${typeof PAYPAL_CLIENT_ID !== 'undefined' ? PAYPAL_CLIENT_ID : ''}";
     ["basic","pro","business"].forEach(p => {
       const actDiv = document.getElementById("plan-actions-" + p);
       if (!actDiv) return;
@@ -2089,38 +2096,50 @@ if (id === "plan") {
         return;
       }
       const isCurrent = p === currentPlan;
+      // Dropdown de métodos de pago
       actDiv.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          ${isCurrent ? `<div style="text-align:center;padding:9px;background:#f0fdf4;border-radius:8px;font-size:12px;font-weight:700;color:#16a34a;">✓ Plan actual</div>` : ""}
-          <button onclick="pagarStripe('${p}')" style="width:100%;padding:9px;background:#635bff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M2 9h20v11a2 2 0 01-2 2H4a2 2 0 01-2-2V9zm18-4H4a2 2 0 00-2 2v1h20V7a2 2 0 00-2-2z"/></svg>
-            ${isCurrent ? "Renovar con Stripe" : "Contratar con Stripe"}
+        <div style="display:flex;flex-direction:column;gap:8px;position:relative;">
+          ${isCurrent ? `<div style="text-align:center;padding:7px;background:#f0fdf4;border-radius:8px;font-size:12px;font-weight:700;color:#16a34a;">✓ Plan actual</div>` : ""}
+          <button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
+            style="width:100%;padding:10px;background:#635bff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            ${isCurrent ? "Renovar" : "Suscribirse"}
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
-          <div id="paypal-btn-${p}" style="min-height:40px;"></div>
+          <div id="payment-menu-${p}" style="display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:100;">
+            <button onclick="pagarStripe('${p}')"
+              style="width:100%;padding:9px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;color:#111827;margin-bottom:6px;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#635bff" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+              Pago con tarjeta
+            </button>
+            <div id="paypal-btn-${p}" style="${ppClientId ? "" : "display:none;"}"></div>
+          </div>
         </div>`;
     });
 
-    // Cargar PayPal SDK si hay client_id configurado
-    loadPayPalButtons(currentPlan);
+    // Cerrar menú al hacer click fuera
+    document.addEventListener("click", function closePlanMenus(e) {
+      if (!e.target.closest("[id^='subscribe-btn-']") && !e.target.closest("[id^='payment-menu-']")) {
+        document.querySelectorAll("[id^='payment-menu-']").forEach(m => m.style.display = "none");
+      }
+    }, { passive: true });
+
+    // Cargar PayPal SDK si está configurado
+    if (ppClientId) {
+      loadPayPalButtons(ppClientId, currentPlan);
+    }
   }
 
-  async function loadPayPalButtons(currentPlan) {
-    // Obtener el client_id de PayPal del servidor
-    let ppClientId = "";
-    try {
-      const r = await fetch(`${API_BASE}/api/billing/paypal/client-id`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-      const d = await r.json();
-      ppClientId = d.client_id || "";
-    } catch {}
+  window.togglePaymentMenu = function(plan) {
+    const menu = document.getElementById("payment-menu-" + plan);
+    if (!menu) return;
+    // Cerrar otros
+    document.querySelectorAll("[id^='payment-menu-']").forEach(m => {
+      if (m.id !== "payment-menu-" + plan) m.style.display = "none";
+    });
+    menu.style.display = menu.style.display === "none" ? "block" : "none";
+  };
 
-    if (!ppClientId) {
-      ["basic","pro","business"].forEach(p => {
-        const div = document.getElementById("paypal-btn-" + p);
-        if (div) div.innerHTML = `<div style="text-align:center;font-size:11px;color:#d1d5db;padding:4px 0;">PayPal no configurado</div>`;
-      });
-      return;
-    }
-
+  async function loadPayPalButtons(ppClientId, currentPlan) {
     // Cargar SDK PayPal dinámicamente
     if (!document.getElementById("paypal-sdk")) {
       const script = document.createElement("script");
@@ -2136,7 +2155,7 @@ if (id === "plan") {
       const container = document.getElementById("paypal-btn-" + plan);
       if (!container) return;
       window.paypal.Buttons({
-        style: { layout: "horizontal", color: "gold", shape: "rect", label: "pay", height: 35 },
+        style: { layout: "vertical", color: "gold", shape: "rect", label: "pay", height: 35 },
         createOrder: async () => {
           const r = await fetch(`${API_BASE}/api/billing/paypal/create-order`, {
             method: "POST",
