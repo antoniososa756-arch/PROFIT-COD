@@ -230,6 +230,22 @@ await pool.query(`
 await pool.query(`ALTER TABLE productos_stock ADD COLUMN IF NOT EXISTS costo_compra NUMERIC(10,2) DEFAULT 0`);
 
 await pool.query(`
+    CREATE TABLE IF NOT EXISTS stock_movements (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      shop_domain TEXT NOT NULL,
+      product_id TEXT NOT NULL,
+      order_id TEXT NOT NULL,
+      order_number TEXT,
+      movement_type TEXT NOT NULL,
+      units INTEGER NOT NULL,
+      movement_date DATE NOT NULL,
+      UNIQUE(user_id, order_id, product_id, movement_type)
+    )
+  `);
+await pool.query(`CREATE INDEX IF NOT EXISTS idx_stock_movements_user_product ON stock_movements(user_id, product_id)`);
+
+await pool.query(`
     CREATE TABLE IF NOT EXISTS reembolsos_estado (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL,

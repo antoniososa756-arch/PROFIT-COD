@@ -3551,6 +3551,10 @@ async function loadProductos() {
                         title="Stock mínimo para alerta">
                     </div>
                     ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
+                    <button onclick="abrirHistoricoStock('${pid}','${escapeHtml(p.title)}')"
+                      style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
+                      Histórico
+                    </button>
                   </div>
                 </td>
               </tr>`;
@@ -3628,6 +3632,10 @@ async function loadProductos() {
                           <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',${stockInfo.stock},this.value)">
                         </div>
                         ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
+                        <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}')"
+                          style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
+                          Histórico
+                        </button>
                       </div>
                     </td>
                   </tr>`;
@@ -3644,6 +3652,15 @@ async function loadProductos() {
     wrap.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando productos</div>`;
   }
   window.__hideLoadingBar?.();
+
+  // Sincronizar movimientos de stock en segundo plano (mes actual)
+  fetch(`${API_BASE}/api/shopify/sync-stock-movements`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+    body: JSON.stringify({})
+  }).then(r => r.json()).then(d => {
+    if (d.applied > 0) loadProductos(); // recargar si hay cambios
+  }).catch(() => {});
 }
 window.loadProductos = loadProductos;
 
@@ -6399,6 +6416,75 @@ async function importarPagadosPDF(input) {
   renderReembolsos();
   loadSidebarReembolsos();
 }
+
+async function abrirHistoricoStock(productId, productName) {
+  const h = { Authorization: "Bearer " + getActiveToken() };
+  // Modal backdrop
+  const existing = document.getElementById("historico-stock-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "historico-stock-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;";
+  modal.innerHTML = `
+    <div style="background:var(--card);border-radius:12px;width:680px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-weight:700;font-size:15px;color:var(--text);">Histórico de stock</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">${escapeHtml(productName)}</div>
+        </div>
+        <button onclick="document.getElementById('historico-stock-modal').remove()"
+          style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1;">×</button>
+      </div>
+      <div id="historico-stock-body" style="padding:16px;overflow-y:auto;flex:1;">
+        <div style="color:#9ca3af;text-align:center;padding:24px;">Cargando...</div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+
+  try {
+    const rows = await fetch(`${API_BASE}/api/shopify/stock-history?product_id=${encodeURIComponent(productId)}`, { headers: h }).then(r => r.json());
+    const body = document.getElementById("historico-stock-body");
+    if (!body) return;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      body.innerHTML = `<div style="color:#9ca3af;text-align:center;padding:24px;">Sin movimientos registrados aún.<br><span style="font-size:12px;">Los movimientos se generan automáticamente al cargar esta sección.</span></div>`;
+      return;
+    }
+    body.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#f9fafb;">
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Fecha</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Enviados</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Uds. salida</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Devueltos</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Uds. entrada</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">Neto</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => {
+            const salida = parseInt(r.uds_salida || 0);
+            const dev    = parseInt(r.uds_devolucion || 0);
+            const neto   = dev - salida;
+            return `<tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:500;">${r.fecha}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;">${r.pedidos_enviados || 0}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;font-weight:600;">-${salida}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#16a34a;">${r.pedidos_devueltos || 0}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#16a34a;font-weight:600;">${dev > 0 ? '+'+dev : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:${neto>=0?'#16a34a':'#dc2626'};">${neto>=0?'+':''}${neto}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    const body = document.getElementById("historico-stock-body");
+    if (body) body.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando historial</div>`;
+  }
+}
+window.abrirHistoricoStock = abrirHistoricoStock;
 
 async function guardarStock(shopDomain, productId, stock, stockMinimo) {
   const stockNum = parseInt(stock)||0;

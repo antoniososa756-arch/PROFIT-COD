@@ -396,6 +396,118 @@ router.post("/variantes-config", auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: "Error" }); }
 });
 
+// POST /api/shopify/sync-stock-movements
+// Processes orders and logs stock movements (salida/devolucion), adjusting stock for new ones.
+// from: YYYY-MM-DD, defaults to first day of current month
+router.post("/sync-stock-movements", auth, async (req, res) => {
+  const userId = req.user.id;
+  const now = new Date();
+  const defaultFrom = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-01`;
+  const from = req.body.from || defaultFrom;
+
+  const SHIPPED = ['enviado','en_transito','entregado','franquicia','en_preparacion','destruido','devuelto'];
+
+  try {
+    // Build variant → uds_por_venta map
+    const varRows = await db.all(
+      "SELECT variant_id, unidades_por_venta FROM productos_variantes_config WHERE user_id = $1",
+      [userId]
+    );
+    const varMap = {};
+    varRows.forEach(v => { varMap[String(v.variant_id)] = parseInt(v.unidades_por_venta) || 1; });
+
+    // Get unprocessed orders (not yet in stock_movements) in shipped/returned states
+    const orders = await db.all(
+      `SELECT o.order_id, o.order_number, o.fulfillment_status,
+              (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date AS movement_date,
+              COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
+              o.raw_json
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+         AND o.fulfillment_status = ANY($2::text[])
+         AND o.raw_json IS NOT NULL
+         AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $3::date
+         AND NOT EXISTS (
+           SELECT 1 FROM stock_movements sm
+           WHERE sm.user_id = $1 AND sm.order_id = o.order_id
+             AND sm.movement_type = CASE WHEN o.fulfillment_status = 'devuelto' THEN 'devolucion' ELSE 'salida' END
+         )`,
+      [userId, SHIPPED, from]
+    );
+
+    let applied = 0;
+    for (const order of orders) {
+      let raw;
+      try { raw = typeof order.raw_json === "string" ? JSON.parse(order.raw_json) : order.raw_json; } catch { continue; }
+      if (!Array.isArray(raw?.line_items) || raw.line_items.length === 0) continue;
+
+      const isDevuelto = order.fulfillment_status === "devuelto";
+      // salida for all shipped (including devuelto which was physically sent)
+      // devolucion only for devuelto
+      const typesToProcess = isDevuelto ? ["salida", "devolucion"] : ["salida"];
+
+      // Group units by product
+      const productUnits = {};
+      for (const item of raw.line_items) {
+        const pid = String(item.product_id || "");
+        const vid = String(item.variant_id || "");
+        if (!pid || pid === "null") continue;
+        const uds = varMap[vid] || 1;
+        const qty = parseInt(item.quantity) || 1;
+        productUnits[pid] = (productUnits[pid] || 0) + uds * qty;
+      }
+
+      for (const [pid, units] of Object.entries(productUnits)) {
+        for (const movType of typesToProcess) {
+          const r = await db.run(
+            `INSERT INTO stock_movements (user_id, shop_domain, product_id, order_id, order_number, movement_type, units, movement_date)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT(user_id, order_id, product_id, movement_type) DO NOTHING`,
+            [userId, order.shop_domain || "", pid, order.order_id, order.order_number, movType, units, order.movement_date]
+          );
+          if (r.changes > 0) {
+            // New movement inserted — adjust stock
+            const delta = movType === "salida" ? -units : units;
+            await db.run(
+              `UPDATE productos_stock SET stock = GREATEST(0, stock + $1)
+               WHERE user_id = $2 AND product_id = $3`,
+              [delta, userId, pid]
+            );
+            applied++;
+          }
+        }
+      }
+    }
+
+    res.json({ ok: true, applied });
+  } catch(e) { console.error("sync-stock-movements error:", e); res.status(500).json({ error: "Error sincronizando movimientos" }); }
+});
+
+// GET /api/shopify/stock-history?product_id=X
+router.get("/stock-history", auth, async (req, res) => {
+  const userId = req.user.id;
+  const { product_id } = req.query;
+  if (!product_id) return res.status(400).json({ error: "Falta product_id" });
+  try {
+    const rows = await db.all(
+      `SELECT
+         TO_CHAR(movement_date, 'YYYY-MM-DD') AS fecha,
+         COUNT(*) FILTER (WHERE movement_type = 'salida') AS pedidos_enviados,
+         COALESCE(SUM(units) FILTER (WHERE movement_type = 'salida'), 0) AS uds_salida,
+         COUNT(*) FILTER (WHERE movement_type = 'devolucion') AS pedidos_devueltos,
+         COALESCE(SUM(units) FILTER (WHERE movement_type = 'devolucion'), 0) AS uds_devolucion
+       FROM stock_movements
+       WHERE user_id = $1 AND product_id = $2
+       GROUP BY movement_date
+       ORDER BY movement_date DESC
+       LIMIT 90`,
+      [userId, product_id]
+    );
+    res.json(rows || []);
+  } catch(e) { res.status(500).json({ error: "Error historial" }); }
+});
+
 router.post("/entrada-mercancia", auth, async (req, res) => {
   const { shop_domain, product_id, product_name, cantidad, stock_anterior } = req.body;
   const stock_nuevo = (parseInt(stock_anterior)||0) + (parseInt(cantidad)||0);
