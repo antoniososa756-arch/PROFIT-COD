@@ -2905,7 +2905,9 @@ window.openAddTrabajador = openAddTrabajador;
   let chatCurrentGuest = null;
 
   function getChatToken() {
-    return localStorage.getItem("impersonated_token") || localStorage.getItem("token") || "";
+    // El chat siempre usa el token real del usuario, nunca el impersonado
+    // (el endpoint de conversaciones requiere rol admin)
+    return localStorage.getItem("token") || "";
   }
 
   function buildChatWidget() {
@@ -3014,7 +3016,12 @@ window.openAddTrabajador = openAddTrabajador;
     try {
       const r = await fetch(`${API_BASE}/api/chat/conversations`, { headers: { Authorization: "Bearer " + token } });
       const d = await r.json();
-      if (!r.ok) { console.error("[Chat] conversations API error:", d); return; }
+      console.log("[Chat] conversations response:", r.status, d);
+      if (!r.ok) {
+        const list = document.getElementById("chat-conv-list");
+        if (list) list.innerHTML = `<div style="text-align:center;color:#dc2626;font-size:12px;padding:20px;">Error ${r.status}: ${d?.error || "desconocido"}</div>`;
+        return;
+      }
       const list = document.getElementById("chat-conv-list");
       if (!list) return;
 
