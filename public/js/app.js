@@ -3066,7 +3066,7 @@ window.openAddTrabajador = openAddTrabajador;
         div.style.cssText = "padding:10px 12px;border-radius:10px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px;";
         div.addEventListener("mouseover", () => div.style.background = "#f9fafb");
         div.addEventListener("mouseout",  () => div.style.background = "");
-        div.addEventListener("click",     () => window.__selectChatConv(c.type, convId, c.label));
+        div.addEventListener("click",     () => window.__selectChatConv(c.type, convId, c.label, c.email || c.guest_email || ""));
         const unread = parseInt(c.unread) > 0
           ? `<span style="background:#dc2626;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${c.unread}</span>`
           : "";
@@ -3151,7 +3151,7 @@ window.openAddTrabajador = openAddTrabajador;
     }
   };
 
-  window.__selectChatConv = function(type, id, label) {
+  window.__selectChatConv = function(type, id, label, email) {
     if (type === "user") { chatCurrentUser = id; chatCurrentGuest = null; }
     else { chatCurrentGuest = id; chatCurrentUser = null; }
     document.getElementById("chat-conv-list").style.display = "none";
@@ -3159,8 +3159,13 @@ window.openAddTrabajador = openAddTrabajador;
     msgs.style.display = "flex"; msgs.style.flexDirection = "column";
     document.getElementById("chat-input-area").style.display = "flex";
     const displayName = label || (type === "user" ? "Usuario #" + id : "Visitante");
+    const emailLine = email ? `<div style="font-size:11px;opacity:0.8;font-weight:400;">${email}</div>` : "";
     document.getElementById("chat-panel-title").innerHTML =
-      `<span onclick="window.__backToConvList()" style="cursor:pointer;margin-right:8px;font-size:16px;">‹</span> ${displayName}`;
+      `<span onclick="window.__backToConvList()" style="cursor:pointer;margin-right:8px;font-size:16px;line-height:1;">‹</span>
+       <div style="display:flex;flex-direction:column;line-height:1.3;">
+         <span style="font-size:14px;font-weight:700;">${displayName}</span>
+         ${emailLine}
+       </div>`;
     loadMessages();
   };
 
