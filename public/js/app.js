@@ -1223,6 +1223,10 @@ if (id === "productos") {
           style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
           🔄 Sincronizar productos
         </button>
+        <button onclick="abrirVincularStock()"
+          style="padding:7px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          🔗 Vincular stock
+        </button>
       </div>
     </div>
     <div id="productos-wrap"><div class="muted" style="padding:16px;">Cargando productos...</div></div>
@@ -3575,11 +3579,7 @@ async function loadProductos() {
                       style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
                       Histórico
                     </button>
-                    <button onclick="abrirVincularStock('${pid}','${escapeHtml(p.title)}','${shop.shop_domain}',${stockInfo.group_id||'null'},${stockInfo.group_name?`'${escapeHtml(stockInfo.group_name)}'`:'null'})"
-                      style="margin-top:2px;padding:2px 8px;background:${stockInfo.group_id?'#f0fdf4':'#fafafa'};border:1px solid ${stockInfo.group_id?'#86efac':'#e5e7eb'};border-radius:5px;font-size:10px;color:${stockInfo.group_id?'#16a34a':'#6b7280'};font-weight:600;cursor:pointer;font-family:inherit;"
-                      title="${stockInfo.group_name?'Grupo: '+escapeHtml(stockInfo.group_name):'Sin grupo'}">
-                      ${stockInfo.group_name ? '🔗 '+escapeHtml(stockInfo.group_name) : 'Vincular'}
-                    </button>
+                    ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;font-size:10px;color:#16a34a;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
                   </div>
                 </td>
               </tr>`;
@@ -3663,10 +3663,7 @@ async function loadProductos() {
                           style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
                           Histórico
                         </button>
-                        <button onclick="abrirVincularStock('${pid2}','${escapeHtml(p.title)}','${shopDom}',${stockInfo.group_id||'null'},${stockInfo.group_name?`'${escapeHtml(stockInfo.group_name)}'`:'null'})"
-                          style="margin-top:2px;padding:2px 8px;background:${stockInfo.group_id?'#f0fdf4':'#fafafa'};border:1px solid ${stockInfo.group_id?'#86efac':'#e5e7eb'};border-radius:5px;font-size:10px;color:${stockInfo.group_id?'#16a34a':'#6b7280'};font-weight:600;cursor:pointer;font-family:inherit;">
-                          ${stockInfo.group_name ? '🔗 '+escapeHtml(stockInfo.group_name) : 'Vincular'}
-                        </button>
+                        ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;font-size:10px;color:#16a34a;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
                       </div>
                     </td>
                   </tr>`;
@@ -6535,128 +6532,188 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
 }
 window.abrirHistoricoStock = abrirHistoricoStock;
 
-async function abrirVincularStock(productId, productName, shopDomain, currentGroupId, currentGroupName) {
+async function abrirVincularStock() {
   const h = { Authorization: "Bearer " + getActiveToken() };
   const existing = document.getElementById("vincular-stock-modal");
   if (existing) existing.remove();
 
   const modal = document.createElement("div");
   modal.id = "vincular-stock-modal";
-  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
   modal.innerHTML = `
-    <div style="background:var(--card);border-radius:12px;width:480px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-      <div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div style="font-weight:700;font-size:15px;color:var(--text);">Vincular stock</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:2px;">${escapeHtml(productName)}</div>
-        </div>
+    <div style="background:var(--card);border-radius:12px;width:720px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.35);">
+      <div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <div style="font-weight:700;font-size:15px;color:var(--text);">🔗 Vincular stock entre productos</div>
         <button onclick="document.getElementById('vincular-stock-modal').remove()"
           style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1;">×</button>
       </div>
       <div id="vincular-stock-body" style="padding:16px;overflow-y:auto;flex:1;">
-        <div style="color:#9ca3af;text-align:center;padding:24px;">Cargando...</div>
+        <div style="color:#9ca3af;text-align:center;padding:32px;">Cargando...</div>
       </div>
     </div>`;
   document.body.appendChild(modal);
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
 
-  async function renderVincularBody() {
+  // Fetch products (cached) and existing groups in parallel
+  const [stockData, groups] = await Promise.all([
+    fetch(`${API_BASE}/api/shopify/stock`, { headers: h }).then(r => r.json()).catch(() => []),
+    fetch(`${API_BASE}/api/shopify/product-groups`, { headers: h }).then(r => r.json()).catch(() => []),
+  ]);
+
+  // Build stockMap for group lookups
+  const stockMap = {};
+  if (Array.isArray(stockData)) stockData.forEach(s => { stockMap[s.product_id] = s; });
+
+  // All products from window cache
+  const allProducts = window.__allProductos || [];
+
+  // selected product ids
+  const selected = new Set();
+
+  function render() {
     const body = document.getElementById("vincular-stock-body");
     if (!body) return;
 
-    const groups = await fetch(`${API_BASE}/api/shopify/product-groups`, { headers: h }).then(r => r.json()).catch(() => []);
+    const searchVal = document.getElementById("vincular-buscar")?.value?.toLowerCase() || "";
 
-    let html = "";
+    // Filter products by search
+    const filtered = allProducts.filter(p => {
+      const name = (p.title || "").toLowerCase();
+      const shop = (p.shop_domain || p.shop_name || "").toLowerCase();
+      return !searchVal || name.includes(searchVal) || shop.includes(searchVal);
+    });
 
-    // Current group status
-    if (currentGroupId && currentGroupName) {
-      html += `
-        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <div style="font-size:12px;color:#16a34a;font-weight:600;">En grupo</div>
-            <div style="font-size:14px;font-weight:700;color:#111827;">🔗 ${escapeHtml(currentGroupName)}</div>
-          </div>
-          <button id="btn-salir-grupo"
-            style="padding:5px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;">
-            Salir del grupo
-          </button>
-        </div>`;
-    }
+    const selectedCount = selected.size;
 
-    // Create new group
-    html += `
-      <div style="margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Crear nuevo grupo</div>
+    body.innerHTML = `
+      <!-- Search + action bar -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+        <input id="vincular-buscar" type="text" placeholder="Buscar producto..." value="${escapeHtml(searchVal)}"
+          style="flex:1;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);"
+          oninput="window.__vincularRender()">
+        <span style="font-size:12px;color:#6b7280;white-space:nowrap;">${selectedCount} seleccionado${selectedCount!==1?'s':''}</span>
+      </div>
+
+      <!-- Existing groups panel -->
+      ${groups.length > 0 ? `
+      <div style="margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Grupos actuales</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          ${groups.map(g => {
+            const memberNames = (g.members||[]).map(m => {
+              const p = allProducts.find(x => String(x.id) === String(m.product_id));
+              return p ? escapeHtml(p.title) : m.product_id;
+            }).join(", ");
+            return `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;gap:8px;">
+              <div style="min-width:0;">
+                <div style="font-size:13px;font-weight:600;color:#7c3aed;">🔗 ${escapeHtml(g.name)}</div>
+                <div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:380px;" title="${escapeHtml(memberNames)}">${memberNames || 'Sin productos'}</div>
+              </div>
+              <div style="display:flex;gap:5px;flex-shrink:0;">
+                ${selectedCount > 0 ? `<button onclick="window.__vincularAddToGroup(${g.id},'${escapeHtml(g.name)}')"
+                  style="padding:4px 10px;background:#7c3aed;border:none;border-radius:6px;font-size:12px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;">
+                  Añadir selección
+                </button>` : ''}
+                <button onclick="window.__vincularDeleteGroup(${g.id})"
+                  style="padding:4px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;">
+                  Eliminar
+                </button>
+              </div>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>` : ""}
+
+      <!-- Create new group from selection -->
+      <div style="margin-bottom:14px;padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;">
+        <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Crear nuevo grupo con la selección</div>
         <div style="display:flex;gap:8px;">
           <input id="nuevo-grupo-nombre" type="text" placeholder="Nombre del grupo..."
             style="flex:1;padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
-          <button id="btn-crear-grupo"
-            style="padding:7px 14px;background:#2563eb;border:none;border-radius:7px;font-size:13px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;">
-            Crear y vincular
+          <button onclick="window.__vincularCrearGrupo()"
+            style="padding:7px 14px;background:#7c3aed;border:none;border-radius:7px;font-size:13px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">
+            Crear grupo ${selectedCount > 0 ? '('+selectedCount+')' : ''}
           </button>
         </div>
+      </div>
+
+      <!-- Product list -->
+      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Productos (${filtered.length})</div>
+      <div style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:6px;">
+        ${filtered.length === 0 ? '<div style="color:#9ca3af;text-align:center;padding:16px;font-size:13px;">Sin resultados</div>' :
+          filtered.map(p => {
+            const pid = String(p.id);
+            const si = stockMap[pid] || {};
+            const isSel = selected.has(pid);
+            return `
+            <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;background:${isSel?'#f5f3ff':'transparent'};border:1px solid ${isSel?'#c4b5fd':'transparent'};transition:background 0.1s;">
+              <input type="checkbox" data-pid="${pid}" data-shop="${escapeHtml(p.shop_domain||si.shop_domain||'')}" ${isSel?'checked':''} onchange="window.__vincularToggle(this)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.title)}</div>
+                <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name||p.shop_domain||'')}${si.group_name?` · <span style="color:#7c3aed;font-weight:600;">🔗 ${escapeHtml(si.group_name)}</span>`:''}</div>
+              </div>
+              <div style="font-size:13px;font-weight:700;color:${si.stock<0?'#dc2626':si.stock===0?'#f59e0b':'#16a34a'};flex-shrink:0;">${si.stock??'—'}</div>
+            </label>`;
+          }).join("")}
       </div>`;
-
-    // Join existing group
-    const otherGroups = groups.filter(g => g.id !== currentGroupId);
-    if (otherGroups.length > 0) {
-      html += `<div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;">Unirse a grupo existente</div>`;
-      html += `<div style="display:flex;flex-direction:column;gap:6px;">`;
-      for (const g of otherGroups) {
-        const memberCount = g.members?.length || 0;
-        html += `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;">
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#111827;">🔗 ${escapeHtml(g.name)}</div>
-              <div style="font-size:11px;color:#9ca3af;">${memberCount} producto${memberCount !== 1 ? 's' : ''}</div>
-            </div>
-            <button onclick="vincularAGrupo(${g.id},'${escapeHtml(g.name)}')"
-              style="padding:5px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
-              Unirse
-            </button>
-          </div>`;
-      }
-      html += `</div>`;
-    } else if (!currentGroupId) {
-      html += `<div style="color:#9ca3af;font-size:12px;text-align:center;padding:8px 0;">No hay grupos existentes. Crea uno nuevo.</div>`;
-    }
-
-    body.innerHTML = html;
-
-    // Wire up "salir" button
-    document.getElementById("btn-salir-grupo")?.addEventListener("click", async () => {
-      if (!currentGroupId) return;
-      await fetch(`${API_BASE}/api/shopify/product-groups/${currentGroupId}/members/${encodeURIComponent(productId)}`,
-        { method: "DELETE", headers: h });
-      modal.remove();
-      invalidateCache("shopify/stock");
-      loadProductos();
-    });
-
-    // Wire up "crear y vincular"
-    document.getElementById("btn-crear-grupo")?.addEventListener("click", async () => {
-      const nombre = document.getElementById("nuevo-grupo-nombre")?.value?.trim();
-      if (!nombre) return;
-      const grp = await fetch(`${API_BASE}/api/shopify/product-groups`,
-        { method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ name: nombre }) }).then(r => r.json());
-      if (!grp?.id) return;
-      await vincularAGrupo(grp.id, nombre);
-    });
-
-    // vincularAGrupo helper (scoped)
-    window.vincularAGrupo = async (groupId, groupName) => {
-      await fetch(`${API_BASE}/api/shopify/product-groups/${groupId}/members`,
-        { method: "POST", headers: { ...h, "Content-Type": "application/json" },
-          body: JSON.stringify({ product_id: productId, shop_domain: shopDomain }) });
-      currentGroupId = groupId;
-      currentGroupName = groupName;
-      modal.remove();
-      invalidateCache("shopify/stock");
-      loadProductos();
-    };
   }
 
-  await renderVincularBody();
+  window.__vincularRender = render;
+
+  window.__vincularToggle = (checkbox) => {
+    const pid = checkbox.dataset.pid;
+    if (checkbox.checked) selected.add(pid);
+    else selected.delete(pid);
+    render();
+  };
+
+  window.__vincularAddToGroup = async (groupId, groupName) => {
+    if (selected.size === 0) { alert("Selecciona al menos un producto"); return; }
+    const products = allProducts.filter(p => selected.has(String(p.id)));
+    for (const p of products) {
+      const pid = String(p.id);
+      const shopDomain = p.shop_domain || stockMap[pid]?.shop_domain || "";
+      await fetch(`${API_BASE}/api/shopify/product-groups/${groupId}/members`,
+        { method: "POST", headers: { ...h, "Content-Type": "application/json" },
+          body: JSON.stringify({ product_id: pid, shop_domain: shopDomain }) });
+    }
+    selected.clear();
+    // Refresh groups
+    const updatedGroups = await fetch(`${API_BASE}/api/shopify/product-groups`, { headers: h }).then(r => r.json()).catch(() => []);
+    groups.length = 0; updatedGroups.forEach(g => groups.push(g));
+    // Refresh stockMap
+    const updatedStock = await fetch(`${API_BASE}/api/shopify/stock`, { headers: h }).then(r => r.json()).catch(() => []);
+    if (Array.isArray(updatedStock)) updatedStock.forEach(s => { stockMap[s.product_id] = s; });
+    render();
+    showToast(`Productos añadidos al grupo "${groupName}"`, "", "#7c3aed");
+    invalidateCache("shopify/stock");
+    loadProductos();
+  };
+
+  window.__vincularDeleteGroup = async (groupId) => {
+    if (!confirm("¿Eliminar este grupo? Los productos quedarán sin vincular.")) return;
+    await fetch(`${API_BASE}/api/shopify/product-groups/${groupId}`, { method: "DELETE", headers: h });
+    const updatedGroups = await fetch(`${API_BASE}/api/shopify/product-groups`, { headers: h }).then(r => r.json()).catch(() => []);
+    groups.length = 0; updatedGroups.forEach(g => groups.push(g));
+    const updatedStock = await fetch(`${API_BASE}/api/shopify/stock`, { headers: h }).then(r => r.json()).catch(() => []);
+    if (Array.isArray(updatedStock)) updatedStock.forEach(s => { stockMap[s.product_id] = s; });
+    render();
+    invalidateCache("shopify/stock");
+    loadProductos();
+  };
+
+  window.__vincularCrearGrupo = async () => {
+    const nombre = document.getElementById("nuevo-grupo-nombre")?.value?.trim();
+    if (!nombre) { alert("Escribe un nombre para el grupo"); return; }
+    if (selected.size === 0) { alert("Selecciona al menos un producto"); return; }
+    const grp = await fetch(`${API_BASE}/api/shopify/product-groups`,
+      { method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ name: nombre }) }).then(r => r.json());
+    if (!grp?.id) return;
+    await window.__vincularAddToGroup(grp.id, nombre);
+  };
+
+  render();
 }
 window.abrirVincularStock = abrirVincularStock;
 
