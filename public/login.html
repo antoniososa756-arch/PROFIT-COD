@@ -609,5 +609,368 @@ document.getElementById("forgotModal").addEventListener("click", function(e) {
 });
 </script>
 
+<!-- ── CHAT WIDGET (anónimo) ── -->
+<style>
+  #guestChatFab {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(22,163,74,0.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9000;
+    transition: transform 0.2s, background 0.2s;
+  }
+  #guestChatFab:hover { background: #15803d; transform: scale(1.07); }
+  #guestChatFab .gchat-badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 11px; font-weight: 700;
+    width: 18px; height: 18px;
+    display: none; align-items: center; justify-content: center;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  #guestChatPanel {
+    position: fixed;
+    bottom: 92px; right: 28px;
+    width: 340px;
+    max-height: 480px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    display: none;
+    flex-direction: column;
+    z-index: 9001;
+    overflow: hidden;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  #guestChatPanel.open { display: flex; }
+
+  .gchat-header {
+    background: #16a34a;
+    color: #fff;
+    padding: 14px 16px;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .gchat-header span { font-size: 12px; font-weight: 500; opacity: 0.85; }
+  .gchat-header button {
+    background: none; border: none; color: #fff; font-size: 18px;
+    cursor: pointer; line-height: 1; padding: 0;
+  }
+
+  /* Formulario de info (primera vez) */
+  #guestInfoForm {
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  #guestInfoForm p {
+    font-size: 13px; color: #6b7280; margin: 0;
+  }
+  #guestInfoForm input {
+    padding: 10px 12px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+  }
+  #guestInfoForm input:focus { border-color: #16a34a; }
+  #guestInfoForm button {
+    padding: 10px;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  #guestInfoForm button:hover { background: #15803d; }
+
+  /* Mensajes */
+  #guestMsgList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #f9fafb;
+  }
+  .gchat-msg {
+    max-width: 82%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .gchat-msg.from-me {
+    background: #16a34a;
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .gchat-msg.from-admin {
+    background: #fff;
+    color: #111;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .gchat-msg .gchat-time {
+    font-size: 10px;
+    opacity: 0.6;
+    display: block;
+    margin-top: 3px;
+  }
+  .gchat-empty {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 13px;
+    margin: auto;
+    padding: 20px 0;
+  }
+
+  /* Input row */
+  .gchat-input-row {
+    display: flex;
+    padding: 10px 12px;
+    gap: 8px;
+    border-top: 1px solid #e5e7eb;
+    background: #fff;
+  }
+  .gchat-input-row input {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+  }
+  .gchat-input-row input:focus { border-color: #16a34a; }
+  .gchat-input-row button {
+    padding: 9px 14px;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .gchat-input-row button:hover { background: #15803d; }
+
+  @media (max-width: 420px) {
+    #guestChatPanel { width: calc(100vw - 24px); right: 12px; }
+    #guestChatFab { bottom: 16px; right: 16px; }
+  }
+</style>
+
+<!-- FAB -->
+<button id="guestChatFab" onclick="window.__guestToggle()" title="Contactar soporte">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+  <span class="gchat-badge" id="guestUnreadBadge"></span>
+</button>
+
+<!-- Panel -->
+<div id="guestChatPanel">
+  <div class="gchat-header">
+    <div>
+      <div>Soporte PROFITCOD</div>
+      <span>Estamos aquí para ayudarte</span>
+    </div>
+    <button onclick="window.__guestToggle()">✕</button>
+  </div>
+
+  <!-- Formulario info (primera vez) -->
+  <div id="guestInfoForm" style="display:none;">
+    <p>Antes de empezar, ¿cómo te llamamos?</p>
+    <input id="guestNameInput" type="text" placeholder="Tu nombre (opcional)" />
+    <input id="guestEmailInput" type="email" placeholder="Tu email (opcional)" />
+    <button onclick="window.__guestStartChat()">Iniciar conversación</button>
+  </div>
+
+  <!-- Lista de mensajes -->
+  <div id="guestMsgList" style="display:none;">
+    <div class="gchat-empty" id="guestEmptyMsg">Envía un mensaje para empezar</div>
+  </div>
+
+  <!-- Input -->
+  <div class="gchat-input-row" id="guestInputRow" style="display:none;">
+    <input id="guestMsgInput" type="text" placeholder="Escribe un mensaje..." />
+    <button onclick="window.__guestSend()">Enviar</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const API_CHAT = API; // usa el mismo API base del login
+  let guestId    = localStorage.getItem("profitcod_guest_id");
+  let guestName  = localStorage.getItem("profitcod_guest_name") || "";
+  let guestEmail = localStorage.getItem("profitcod_guest_email") || "";
+  let isOpen     = false;
+  let pollTimer  = null;
+  let knownIds   = new Set();
+
+  // Genera un guestId si no existe
+  if (!guestId) {
+    guestId = "g-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem("profitcod_guest_id", guestId);
+  }
+
+  const hasInfo = guestName || guestEmail || localStorage.getItem("profitcod_guest_started");
+
+  // Al abrir el panel: mostrar formulario de info o chat directo
+  window.__guestToggle = function() {
+    isOpen = !isOpen;
+    const panel = document.getElementById("guestChatPanel");
+    if (isOpen) {
+      panel.classList.add("open");
+      if (hasInfo || localStorage.getItem("profitcod_guest_started")) {
+        showChat();
+      } else {
+        document.getElementById("guestInfoForm").style.display = "flex";
+        document.getElementById("guestMsgList").style.display = "none";
+        document.getElementById("guestInputRow").style.display = "none";
+      }
+    } else {
+      panel.classList.remove("open");
+      stopPoll();
+    }
+  };
+
+  window.__guestStartChat = function() {
+    const nameEl  = document.getElementById("guestNameInput");
+    const emailEl = document.getElementById("guestEmailInput");
+    guestName  = nameEl.value.trim();
+    guestEmail = emailEl.value.trim();
+    localStorage.setItem("profitcod_guest_name",    guestName);
+    localStorage.setItem("profitcod_guest_email",   guestEmail);
+    localStorage.setItem("profitcod_guest_started", "1");
+    showChat();
+  };
+
+  function showChat() {
+    document.getElementById("guestInfoForm").style.display  = "none";
+    document.getElementById("guestMsgList").style.display   = "flex";
+    document.getElementById("guestInputRow").style.display  = "flex";
+    loadMessages();
+    startPoll();
+    // focus input
+    setTimeout(() => document.getElementById("guestMsgInput")?.focus(), 100);
+  }
+
+  async function loadMessages() {
+    try {
+      const res  = await fetch(`${API_CHAT}/chat/guest/${guestId}`);
+      const data = await res.json();
+      if (data.messages) renderMessages(data.messages);
+    } catch(e) {}
+  }
+
+  function renderMessages(msgs) {
+    const list = document.getElementById("guestMsgList");
+    const empty = document.getElementById("guestEmptyMsg");
+    if (!msgs.length) { if (empty) empty.style.display = "block"; return; }
+    if (empty) empty.style.display = "none";
+
+    let hasNew = false;
+    msgs.forEach(m => {
+      if (knownIds.has(m.id)) return;
+      knownIds.add(m.id);
+      hasNew = true;
+      const div = document.createElement("div");
+      div.className = "gchat-msg " + (m.sender === "guest" ? "from-me" : "from-admin");
+      const t = m.created_at ? new Date(m.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" }) : "";
+      div.innerHTML = `${escHtml(m.content)}<span class="gchat-time">${t}</span>`;
+      list.appendChild(div);
+    });
+    if (hasNew) list.scrollTop = list.scrollHeight;
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  window.__guestSend = async function() {
+    const inp = document.getElementById("guestMsgInput");
+    const content = inp.value.trim();
+    if (!content) return;
+    inp.value = "";
+
+    // Mostrar inmediatamente en UI
+    const list = document.getElementById("guestMsgList");
+    const empty = document.getElementById("guestEmptyMsg");
+    if (empty) empty.style.display = "none";
+    const div = document.createElement("div");
+    div.className = "gchat-msg from-me";
+    const t = new Date().toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" });
+    div.innerHTML = `${escHtml(content)}<span class="gchat-time">${t}</span>`;
+    list.appendChild(div);
+    list.scrollTop = list.scrollHeight;
+
+    try {
+      await fetch(`${API_CHAT}/chat/guest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, guest_id: guestId, guest_name: guestName, guest_email: guestEmail })
+      });
+      loadMessages(); // sincroniza IDs
+    } catch(e) {}
+  };
+
+  // Enter para enviar
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && isOpen && document.activeElement === document.getElementById("guestMsgInput")) {
+      window.__guestSend();
+    }
+  });
+
+  function startPoll() {
+    stopPoll();
+    pollTimer = setInterval(loadMessages, 6000);
+  }
+  function stopPoll() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  // Badge de no leídos (pollea incluso con panel cerrado)
+  async function checkUnread() {
+    try {
+      const res  = await fetch(`${API_CHAT}/chat/guest/${guestId}`);
+      const data = await res.json();
+      if (!data.messages) return;
+      const badge = document.getElementById("guestUnreadBadge");
+      // No leídos = mensajes del admin que llegaron después de los que ya conocemos
+      const adminNew = data.messages.filter(m => m.sender === "admin" && !knownIds.has(m.id));
+      if (adminNew.length && !isOpen) {
+        badge.textContent = adminNew.length;
+        badge.style.display = "flex";
+      } else if (isOpen) {
+        badge.style.display = "none";
+        renderMessages(data.messages);
+      }
+    } catch(e) {}
+  }
+  setInterval(checkUnread, 15000);
+})();
+</script>
+
 </body>
 </html>

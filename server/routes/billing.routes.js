@@ -4,9 +4,9 @@ const db = require("../db");
 const router = express.Router();
 
 const PLANS = {
-  basic:    { name: "Básico",   price: 9.99,  stores: 1  },
-  pro:      { name: "Pro",      price: 19.99, stores: 4  },
-  business: { name: "Business", price: 29.99, stores: 10 },
+  basic:    { name: "Básico",   price: 9.99,  stores: 1,  orders: 500   },
+  pro:      { name: "Pro",      price: 19.99, stores: 4,  orders: 5000  },
+  business: { name: "Business", price: 29.99, stores: 10, orders: 15000 },
 };
 
 // Obtener configuración de pagos desde DB (con fallback a env vars)
@@ -33,17 +33,34 @@ async function getPaymentConfig() {
   }
 }
 
-// GET /api/billing/plan — plan actual del usuario
+// GET /api/billing/plan — plan actual del usuario + uso mensual
 router.get("/plan", auth, async (req, res) => {
   try {
     const user = await db.get(
       "SELECT plan, plan_status, plan_expires_at FROM users WHERE id = $1",
       [req.user.id]
     );
+    const plan = user?.plan || "free";
+    const orderLimit = PLANS[plan]?.orders || null;
+
+    let monthlyOrders = 0;
+    if (orderLimit && req.user.role !== "admin") {
+      const month = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+      const countRow = await db.get(`
+        SELECT COUNT(*) as cnt
+        FROM orders o
+        JOIN shops s ON s.id = o.shop_id
+        WHERE s.user_id = $1 AND o.created_at LIKE $2
+      `, [req.user.id, month + "%"]);
+      monthlyOrders = parseInt(countRow?.cnt || 0);
+    }
+
     res.json({
-      plan:       user?.plan       || "free",
-      status:     user?.plan_status || "inactive",
-      expires_at: user?.plan_expires_at || null,
+      plan,
+      status:         user?.plan_status    || "inactive",
+      expires_at:     user?.plan_expires_at || null,
+      monthly_orders: monthlyOrders,
+      order_limit:    orderLimit,
     });
   } catch(e) {
     res.status(500).json({ error: e.message });

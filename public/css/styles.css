@@ -1010,50 +1010,7 @@ body.dark .sidebar .toggle span {
    ========================= */
 
 
-/* iconos del item activo */
-body.role-client .menu-item.active svg {
-  stroke: #ffffff !important;
-  fill: none !important;
-}
-
-
-/* switch modo nocturno */
-body.role-client .toggle .switch {
-  background: #0f172a !important;
-}
-
-/* bolita del switch */
-body.role-client .toggle .switch::after {
-  background: #ffffff !important;
-}
-
-/* logo placeholder */
-body.role-client .logo-placeholder {
-  border-color: #dc2626 !important;
-  color: #dc2626 !important;
-}
-
-
-/* confirmaciones / acciones peligrosas */
-body.role-client .btn-danger {
-  background: #dc2626 !important;
-}
-
-/* =========================
-   THEME CLIENTE (AZUL / ROJO)
-   ========================= */
-
-body.role-client {
-  --green: #0f172a;     /* azul marino principal */
-  --active: #0f172a;    /* item activo */
-  --danger: #dc2626;    /* rojo acciones */
-}
-
-/* Dark mode cliente */
-body.role-client.dark {
-  --green: #1e293b;
-  --active: #1e293b;
-}
+/* role-client usa los mismos colores que admin */
 
 /* =========================
    TIENDAS (SHOPIFY)

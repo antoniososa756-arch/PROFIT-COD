@@ -304,6 +304,23 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT '
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_status TEXT DEFAULT 'inactive'`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TEXT`);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      guest_id TEXT,
+      guest_name TEXT,
+      guest_email TEXT,
+      sender TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT DEFAULT now()::text,
+      read_by_admin INTEGER DEFAULT 0,
+      read_by_client INTEGER DEFAULT 0
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_user ON chat_messages(user_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_guest ON chat_messages(guest_id)`);
+
   // Columna cancelled_at separada para queries rápidas sin parsear raw_json
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TEXT`);
 

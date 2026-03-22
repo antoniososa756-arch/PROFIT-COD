@@ -126,7 +126,10 @@ if (location.pathname.includes("login")) {
       window.__userPlan = { plan: "free", status: "inactive", expires_at: null };
       if (data.user.role !== "admin") {
         fetch(`${API_BASE}/api/billing/plan`, { headers: { Authorization: "Bearer " + token } })
-          .then(r => r.json()).then(p => { window.__userPlan = p; }).catch(() => {});
+          .then(r => r.json()).then(p => {
+            window.__userPlan = p;
+            updateOrderLimitBanner();
+          }).catch(() => {});
       } else {
         window.__userPlan = { plan: "admin", status: "active", expires_at: null };
       }
@@ -717,6 +720,14 @@ function loadApp(section) {
             </div>
           </div>
 
+          <div id="order-limit-banner" style="display:none;background:#dc2626;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span id="order-limit-banner-text"></span>
+            </div>
+            <button onclick="setSection('plan')" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.5);color:#fff;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Actualizar plan</button>
+          </div>
+
           <div class="content">
             <h2 id="title"></h2>
             <div class="muted" id="subtitle"></div>
@@ -749,7 +760,29 @@ function loadApp(section) {
     setSection(section);
     ensureOutsideClose();
     loadSidebarReembolsos();
+    updateOrderLimitBanner();
 }
+
+function updateOrderLimitBanner() {
+  const banner = document.getElementById("order-limit-banner");
+  if (!banner) return;
+  const up = window.__userPlan || {};
+  if (up.order_limit && (up.monthly_orders || 0) > up.order_limit) {
+    const used  = (up.monthly_orders).toLocaleString("es-ES");
+    const limit = (up.order_limit).toLocaleString("es-ES");
+    // Calcular días restantes para fin de mes
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysLeft = lastDay - now.getDate();
+    const textEl = document.getElementById("order-limit-banner-text");
+    if (textEl) textEl.textContent =
+      `Renueva tu plan — en el mes actual has superado tu límite de pedidos (${used} de ${limit}). Se restablece en ${daysLeft} día${daysLeft === 1 ? "" : "s"}.`;
+    banner.style.display = "flex";
+  } else {
+    banner.style.display = "none";
+  }
+}
+window.updateOrderLimitBanner = updateOrderLimitBanner;
 
 function setSection(id) {
   const d = dict();
@@ -797,25 +830,11 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
             <div style="font-size:14px;color:#6b7280;max-width:420px;">Tu suscripción ha caducado o no tienes un plan activo. Activa un plan para acceder a métricas, pedidos, productos y toda la información de tus tiendas.</div>
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
-            <div style="border:2px solid #3b82f6;border-radius:12px;padding:16px 24px;min-width:160px;">
-              <div style="font-size:12px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Básico</div>
-              <div style="font-size:24px;font-weight:800;color:#111827;">9,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div>
-              <div style="font-size:12px;color:#6b7280;margin-top:4px;">1 tienda</div>
-            </div>
-            <div style="border:2px solid #8b5cf6;border-radius:12px;padding:16px 24px;min-width:160px;">
-              <div style="font-size:12px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Pro</div>
-              <div style="font-size:24px;font-weight:800;color:#111827;">19,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div>
-              <div style="font-size:12px;color:#6b7280;margin-top:4px;">Hasta 4 tiendas</div>
-            </div>
-            <div style="border:2px solid #f59e0b;border-radius:12px;padding:16px 24px;min-width:160px;">
-              <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Business</div>
-              <div style="font-size:24px;font-weight:800;color:#111827;">29,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div>
-              <div style="font-size:12px;color:#6b7280;margin-top:4px;">Hasta 10 tiendas</div>
-            </div>
+            <div style="border:2px solid #3b82f6;border-radius:12px;padding:16px 24px;min-width:160px;"><div style="font-size:12px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Básico</div><div style="font-size:24px;font-weight:800;color:#111827;">9,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div><div style="font-size:12px;color:#6b7280;margin-top:4px;">1 tienda · 500 pedidos/mes</div></div>
+            <div style="border:2px solid #8b5cf6;border-radius:12px;padding:16px 24px;min-width:160px;"><div style="font-size:12px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Pro</div><div style="font-size:24px;font-weight:800;color:#111827;">19,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div><div style="font-size:12px;color:#6b7280;margin-top:4px;">4 tiendas · 5.000 pedidos/mes</div></div>
+            <div style="border:2px solid #f59e0b;border-radius:12px;padding:16px 24px;min-width:160px;"><div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Business</div><div style="font-size:24px;font-weight:800;color:#111827;">29,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div><div style="font-size:12px;color:#6b7280;margin-top:4px;">10 tiendas · 15.000 pedidos/mes</div></div>
           </div>
-          <button onclick="setSection('plan')" style="padding:12px 32px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">
-            Ver planes y renovar
-          </button>
+          <button onclick="setSection('plan')" style="padding:12px 32px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">Ver planes y renovar</button>
         </div>`;
     }
     closeAllDrops();
@@ -1995,14 +2014,15 @@ if (id === "plan") {
     <h3 style="font-size:15px;font-weight:700;margin:0 0 18px;">Elige tu plan</h3>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;" id="plan-cards">
       ${["basic","pro","business"].map(p => {
-        const info = { basic:{name:"Básico",price:"9,99",stores:1,color:"#3b82f6",features:["1 tienda Shopify","Sincronización automática","Seguimiento MRW","Métricas e informes"]}, pro:{name:"Pro",price:"19,99",stores:4,color:"#8b5cf6",features:["Hasta 4 tiendas Shopify","Todo lo del plan Básico","Gestión de stock agrupado","Exportación de datos"]}, business:{name:"Business",price:"29,99",stores:10,color:"#f59e0b",features:["Hasta 10 tiendas Shopify","Todo lo del plan Pro","Soporte prioritario","Multi-usuario"]} }[p];
+        const info = { basic:{name:"Básico",price:"9,99",stores:1,orders:"500",color:"#3b82f6",features:["1 tienda Shopify","500 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"]}, pro:{name:"Pro",price:"19,99",stores:4,orders:"5.000",color:"#8b5cf6",features:["Hasta 4 tiendas Shopify","5.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"]}, business:{name:"Business",price:"29,99",stores:10,orders:"15.000",color:"#f59e0b",features:["Hasta 10 tiendas Shopify","15.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"]} }[p];
         return `<div id="plan-card-${p}" style="border:2px solid #e5e7eb;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:0;position:relative;transition:border-color .2s;">
           <div style="font-size:13px;font-weight:700;color:${info.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${info.name}</div>
           <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px;">
             <span style="font-size:30px;font-weight:800;color:#111827;">${info.price}€</span>
             <span style="font-size:13px;color:#6b7280;">/mes</span>
           </div>
-          <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">${info.stores === 1 ? "1 tienda" : `Hasta ${info.stores} tiendas`}</div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">${info.stores === 1 ? "1 tienda" : `Hasta ${info.stores} tiendas`}</div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">${info.orders} pedidos/mes</div>
           <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:7px;">
             ${info.features.map(f => `<li style="display:flex;align-items:center;gap:7px;font-size:12px;color:#374151;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
           </ul>
@@ -2874,6 +2894,226 @@ window.loadNominaData    = loadNominaData;
 window.saveNominaPago    = saveNominaPago;
 window.deleteTrabajador  = deleteTrabajador;
 window.openAddTrabajador = openAddTrabajador;
+
+// =========================
+// CHAT WIDGET
+// =========================
+(function initChat() {
+  let chatOpen = false;
+  let chatPollTimer = null;
+  let chatCurrentUser = null; // para admin: el usuario seleccionado
+  let chatCurrentGuest = null;
+
+  function getChatToken() {
+    return localStorage.getItem("impersonated_token") || localStorage.getItem("token") || "";
+  }
+
+  function buildChatWidget() {
+    if (document.getElementById("chat-widget")) return;
+
+    const widget = document.createElement("div");
+    widget.id = "chat-widget";
+    widget.innerHTML = `
+      <button id="chat-fab" onclick="window.__toggleChat()" title="Soporte" style="
+        position:fixed;bottom:24px;right:24px;z-index:9000;
+        width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
+        background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;
+        box-shadow:0 4px 16px rgba(0,0,0,.2);transition:transform .2s;">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span id="chat-badge" style="
+          display:none;position:absolute;top:2px;right:2px;
+          background:#dc2626;color:#fff;border-radius:50%;width:18px;height:18px;
+          font-size:10px;font-weight:700;line-height:18px;text-align:center;">0</span>
+      </button>
+
+      <div id="chat-panel" style="
+        display:none;position:fixed;bottom:88px;right:24px;z-index:9000;
+        width:340px;height:480px;background:#fff;border-radius:16px;
+        box-shadow:0 8px 32px rgba(0,0,0,.15);display:none;flex-direction:column;overflow:hidden;">
+
+        <div style="background:#16a34a;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span style="font-weight:700;font-size:14px;color:#fff;" id="chat-panel-title">Soporte ProfitCod</span>
+          </div>
+          <button onclick="window.__toggleChat()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:18px;line-height:1;">✕</button>
+        </div>
+
+        <div id="chat-conv-list" style="display:none;flex:1;overflow-y:auto;padding:8px;"></div>
+        <div id="chat-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;"></div>
+
+        <div id="chat-input-area" style="border-top:1px solid #e5e7eb;padding:10px;display:flex;gap:8px;align-items:flex-end;">
+          <textarea id="chat-input" rows="1" placeholder="Escribe un mensaje..."
+            style="flex:1;resize:none;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;max-height:80px;overflow-y:auto;"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.__sendChatMsg();}"></textarea>
+          <button onclick="window.__sendChatMsg()" style="padding:8px 14px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Enviar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(widget);
+  }
+
+  function renderMsg(m) {
+    const isMe = (currentUser?.role === "Administrador" && m.sender === "admin")
+              || (currentUser?.role !== "Administrador" && (m.sender === "client" || m.sender === "guest"));
+    const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" }) : "";
+    return `<div style="display:flex;flex-direction:column;align-items:${isMe ? "flex-end" : "flex-start"};">
+      <div style="max-width:80%;padding:8px 12px;border-radius:${isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px"};
+        background:${isMe ? "#16a34a" : "#f3f4f6"};color:${isMe ? "#fff" : "#111827"};font-size:13px;line-height:1.5;">
+        ${escapeHtml ? escapeHtml(m.content) : m.content}
+      </div>
+      <span style="font-size:10px;color:#9ca3af;margin-top:2px;">${time}</span>
+    </div>`;
+  }
+
+  async function loadMessages() {
+    const token = getChatToken();
+    if (!token) return;
+    try {
+      let url = `${API_BASE}/api/chat/messages`;
+      if (currentUser?.role === "Administrador" && chatCurrentUser) url += `?user_id=${chatCurrentUser}`;
+      else if (currentUser?.role === "Administrador" && chatCurrentGuest) url += `?guest_id=${chatCurrentGuest}`;
+
+      const r = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+      const d = await r.json();
+      const msgs = d.messages || [];
+      const box = document.getElementById("chat-msgs");
+      if (!box) return;
+      box.innerHTML = msgs.length
+        ? msgs.map(renderMsg).join("")
+        : `<div style="text-align:center;color:#9ca3af;font-size:13px;margin-top:40px;">Aún no hay mensajes.<br>¡Escríbenos para ayudarte!</div>`;
+      box.scrollTop = box.scrollHeight;
+    } catch {}
+  }
+
+  async function loadConversations() {
+    if (currentUser?.role !== "Administrador") return;
+    const token = getChatToken();
+    try {
+      const r = await fetch(`${API_BASE}/api/chat/conversations`, { headers: { Authorization: "Bearer " + token } });
+      const d = await r.json();
+      const list = document.getElementById("chat-conv-list");
+      if (!list) return;
+
+      const all = [
+        ...(d.users || []).map(u => ({ ...u, type: "user", label: u.display_name || u.email })),
+        ...(d.guests || []).map(g => ({ ...g, type: "guest", label: g.guest_name || g.guest_email || g.guest_id })),
+      ].sort((a, b) => (b.last_message || "").localeCompare(a.last_message || ""));
+
+      if (!all.length) {
+        list.innerHTML = `<div style="text-align:center;color:#9ca3af;font-size:13px;padding:30px 10px;">No hay conversaciones aún</div>`;
+        return;
+      }
+
+      list.innerHTML = all.map(c => `
+        <div onclick="window.__selectChatConv('${c.type}','${c.type === "user" ? c.user_id : c.guest_id}')"
+          style="padding:10px 12px;border-radius:10px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px;"
+          onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#111827;">${c.label}</div>
+            <div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${c.last_content || ""}</div>
+          </div>
+          ${parseInt(c.unread) > 0 ? `<span style="background:#dc2626;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${c.unread}</span>` : ""}
+        </div>`).join("");
+    } catch {}
+  }
+
+  async function checkUnread() {
+    const token = getChatToken();
+    if (!token) return;
+    try {
+      const r = await fetch(`${API_BASE}/api/chat/unread`, { headers: { Authorization: "Bearer " + token } });
+      const d = await r.json();
+      const badge = document.getElementById("chat-badge");
+      if (!badge) return;
+      if (d.count > 0) { badge.style.display = "flex"; badge.textContent = d.count > 9 ? "9+" : d.count; }
+      else { badge.style.display = "none"; }
+    } catch {}
+  }
+
+  window.__toggleChat = function() {
+    const panel = document.getElementById("chat-panel");
+    if (!panel) return;
+    chatOpen = !chatOpen;
+    panel.style.display = chatOpen ? "flex" : "none";
+    panel.style.flexDirection = "column";
+    if (chatOpen) {
+      if (currentUser?.role === "Administrador") {
+        // Admin: mostrar lista de conversaciones primero
+        document.getElementById("chat-conv-list").style.display = "block";
+        document.getElementById("chat-msgs").style.display = "none";
+        document.getElementById("chat-input-area").style.display = "none";
+        document.getElementById("chat-panel-title").textContent = "Conversaciones";
+        loadConversations();
+      } else {
+        document.getElementById("chat-conv-list").style.display = "none";
+        document.getElementById("chat-msgs").style.display = "flex";
+        document.getElementById("chat-msgs").style.flexDirection = "column";
+        document.getElementById("chat-input-area").style.display = "flex";
+        loadMessages();
+      }
+      clearInterval(chatPollTimer);
+      chatPollTimer = setInterval(() => {
+        if (currentUser?.role === "Administrador" && !chatCurrentUser && !chatCurrentGuest) loadConversations();
+        else loadMessages();
+        checkUnread();
+      }, 5000);
+    } else {
+      clearInterval(chatPollTimer);
+    }
+  };
+
+  window.__selectChatConv = function(type, id) {
+    if (type === "user") { chatCurrentUser = id; chatCurrentGuest = null; }
+    else { chatCurrentGuest = id; chatCurrentUser = null; }
+    document.getElementById("chat-conv-list").style.display = "none";
+    const msgs = document.getElementById("chat-msgs");
+    msgs.style.display = "flex"; msgs.style.flexDirection = "column";
+    document.getElementById("chat-input-area").style.display = "flex";
+    document.getElementById("chat-panel-title").innerHTML =
+      `<span onclick="window.__backToConvList()" style="cursor:pointer;margin-right:8px;font-size:16px;">‹</span> ${type === "user" ? "Usuario #" + id : "Visitante " + id}`;
+    loadMessages();
+  };
+
+  window.__backToConvList = function() {
+    chatCurrentUser = null; chatCurrentGuest = null;
+    document.getElementById("chat-conv-list").style.display = "block";
+    document.getElementById("chat-msgs").style.display = "none";
+    document.getElementById("chat-input-area").style.display = "none";
+    document.getElementById("chat-panel-title").textContent = "Conversaciones";
+    loadConversations();
+  };
+
+  window.__sendChatMsg = async function() {
+    const inp = document.getElementById("chat-input");
+    const content = inp?.value?.trim();
+    if (!content) return;
+    inp.value = "";
+    const token = getChatToken();
+    try {
+      const body = { content };
+      if (currentUser?.role === "Administrador" && chatCurrentUser) body.to_user_id = chatCurrentUser;
+      await fetch(`${API_BASE}/api/chat/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify(body),
+      });
+      loadMessages();
+    } catch {}
+  };
+
+  // Iniciar widget y polling de unread
+  function startChat() {
+    buildChatWidget();
+    checkUnread();
+    setInterval(checkUnread, 15000);
+  }
+
+  // Esperar a que el DOM esté listo
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startChat);
+  else startChat();
+})();
 
 // Exponer funciones usadas por onclick
 window.loadApp = loadApp;

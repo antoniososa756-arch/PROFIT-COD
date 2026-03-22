@@ -43,6 +43,7 @@ const planCheck = require("./middlewares/planCheck");
 // Rutas que NO requieren plan activo (auth, billing, admin, health)
 app.use("/api/auth",    authRoutes);
 app.use("/api/billing", require("./routes/billing.routes").router);
+app.use("/api/chat",   require("./routes/chat.routes"));
 app.use("/api/admin",   adminRoutes);
 app.use("/api/users",   userRoutes);
 app.use("/api/health",  require("./routes/health.routes"));
