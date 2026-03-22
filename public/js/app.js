@@ -2627,34 +2627,22 @@ async function handleAvatarChange(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  // Redimensionar y recortar en cuadrado 256×256 centrado
+  // Leer imagen y abrir editor de recorte
   const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const SIZE = 256;
-        const canvas = document.createElement("canvas");
-        canvas.width = SIZE; canvas.height = SIZE;
-        const ctx = canvas.getContext("2d");
-        // Recorte centrado: tomar el lado más corto como referencia
-        const side = Math.min(img.width, img.height);
-        const sx = (img.width - side) / 2;
-        const sy = (img.height - side) / 2;
-        ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
+    reader.onload = e => resolve(e.target.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 
+  // Abrir modal editor
+  const croppedUrl = await abrirEditorAvatar(dataUrl);
+  if (!croppedUrl) return; // cancelado
+
   // Mostrar preview
   const imgEl = document.getElementById("avatar-img");
   const icon  = document.getElementById("avatar-placeholder-icon");
-  if (imgEl) { imgEl.src = dataUrl; imgEl.style.display = "block"; }
+  if (imgEl) { imgEl.src = croppedUrl; imgEl.style.display = "block"; }
   if (icon) icon.style.display = "none";
 
   // Subir al servidor
@@ -2662,14 +2650,14 @@ async function handleAvatarChange(event) {
     const res = await fetch(`${API_BASE}/api/auth/avatar`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify({ avatar_url: dataUrl })
+      body: JSON.stringify({ avatar_url: croppedUrl })
     });
     const data = await res.json();
     if (!res.ok) { alert(data.error || "Error al guardar la imagen"); }
     else {
       const headerAvatar = document.querySelector(".user-avatar");
       if (headerAvatar) {
-        headerAvatar.style.backgroundImage = `url('${dataUrl}')`;
+        headerAvatar.style.backgroundImage = `url('${croppedUrl}')`;
         headerAvatar.style.backgroundSize = "cover";
         headerAvatar.style.backgroundPosition = "center";
       }
@@ -2677,6 +2665,125 @@ async function handleAvatarChange(event) {
     }
   } catch { alert("Error al guardar la imagen"); }
 }
+
+function abrirEditorAvatar(srcUrl) {
+  return new Promise(resolve => {
+    const existing = document.getElementById("avatar-editor-modal");
+    if (existing) existing.remove();
+
+    const PREVIEW = 240; // tamaño del círculo de preview
+    let scale = 1, offX = 0, offY = 0;
+    let dragging = false, startX = 0, startY = 0, startOffX = 0, startOffY = 0;
+    let imgW = 0, imgH = 0;
+
+    const modal = document.createElement("div");
+    modal.id = "avatar-editor-modal";
+    modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;";
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:28px 24px;width:320px;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 24px 64px rgba(0,0,0,0.4);">
+        <div style="font-size:15px;font-weight:700;color:#111827;align-self:flex-start;">Ajustar foto de perfil</div>
+        <!-- Círculo de preview con canvas -->
+        <div style="width:${PREVIEW}px;height:${PREVIEW}px;border-radius:50%;overflow:hidden;border:3px solid #16a34a;cursor:grab;flex-shrink:0;touch-action:none;">
+          <canvas id="avatar-crop-canvas" width="${PREVIEW}" height="${PREVIEW}" style="display:block;"></canvas>
+        </div>
+        <!-- Slider zoom -->
+        <div style="width:100%;display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;">
+            <span>Zoom</span><span id="avatar-zoom-label">1.0×</span>
+          </div>
+          <input id="avatar-zoom-slider" type="range" min="50" max="300" value="100"
+            style="width:100%;accent-color:#16a34a;cursor:pointer;">
+        </div>
+        <!-- Botones -->
+        <div style="display:flex;gap:10px;width:100%;">
+          <button id="avatar-cancel-btn" style="flex:1;padding:10px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+          <button id="avatar-save-btn" style="flex:1;padding:10px;background:#16a34a;border:none;border-radius:8px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;">Guardar foto</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const canvas = document.getElementById("avatar-crop-canvas");
+    const ctx = canvas.getContext("2d");
+    const slider = document.getElementById("avatar-zoom-slider");
+    const zoomLabel = document.getElementById("avatar-zoom-label");
+
+    const img = new Image();
+    img.onload = () => {
+      imgW = img.width; imgH = img.height;
+      // Escala inicial: la imagen llena el círculo por el lado más corto
+      const minSide = Math.min(imgW, imgH);
+      scale = PREVIEW / minSide;
+      offX = (PREVIEW - imgW * scale) / 2;
+      offY = (PREVIEW - imgH * scale) / 2;
+      slider.value = Math.round(scale * 100);
+      draw();
+    };
+    img.src = srcUrl;
+
+    function draw() {
+      ctx.clearRect(0, 0, PREVIEW, PREVIEW);
+      ctx.drawImage(img, offX, offY, imgW * scale, imgH * scale);
+    }
+
+    function clampOffset() {
+      const sw = imgW * scale, sh = imgH * scale;
+      if (sw >= PREVIEW) {
+        offX = Math.min(0, Math.max(PREVIEW - sw, offX));
+      } else {
+        offX = (PREVIEW - sw) / 2;
+      }
+      if (sh >= PREVIEW) {
+        offY = Math.min(0, Math.max(PREVIEW - sh, offY));
+      } else {
+        offY = (PREVIEW - sh) / 2;
+      }
+    }
+
+    slider.addEventListener("input", () => {
+      const newScale = parseInt(slider.value) / 100;
+      // Zoom centrado en el centro del preview
+      const cx = PREVIEW / 2, cy = PREVIEW / 2;
+      offX = cx - (cx - offX) * (newScale / scale);
+      offY = cy - (cy - offY) * (newScale / scale);
+      scale = newScale;
+      clampOffset();
+      zoomLabel.textContent = scale.toFixed(1) + "×";
+      draw();
+    });
+
+    // Drag
+    canvas.addEventListener("pointerdown", e => {
+      dragging = true; canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = "grabbing";
+      startX = e.clientX; startY = e.clientY;
+      startOffX = offX; startOffY = offY;
+    });
+    canvas.addEventListener("pointermove", e => {
+      if (!dragging) return;
+      offX = startOffX + (e.clientX - startX);
+      offY = startOffY + (e.clientY - startY);
+      clampOffset();
+      draw();
+    });
+    canvas.addEventListener("pointerup", () => { dragging = false; canvas.style.cursor = "grab"; });
+
+    document.getElementById("avatar-cancel-btn").addEventListener("click", () => {
+      modal.remove(); resolve(null);
+    });
+
+    document.getElementById("avatar-save-btn").addEventListener("click", () => {
+      // Renderizar a 256×256 para guardar
+      const out = document.createElement("canvas");
+      out.width = 256; out.height = 256;
+      const ratio = 256 / PREVIEW;
+      out.getContext("2d").drawImage(img, offX * ratio, offY * ratio, imgW * scale * ratio, imgH * scale * ratio);
+      const result = out.toDataURL("image/jpeg", 0.88);
+      modal.remove();
+      resolve(result);
+    });
+  });
+}
+window.abrirEditorAvatar = abrirEditorAvatar;
 
 async function changePassword() {
   const curr = document.getElementById("curr-pass")?.value || "";
