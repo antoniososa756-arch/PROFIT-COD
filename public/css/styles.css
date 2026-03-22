@@ -1460,7 +1460,7 @@ body.dark select option {
   z-index: 190;
 }
 
-/* ── Tablet (≤1024px) ── */
+/* ── Tablet (≤1024px): sidebar becomes overlay ── */
 @media (max-width: 1024px) {
   .sidebar {
     position: fixed;
@@ -1470,140 +1470,101 @@ body.dark select option {
     z-index: 200;
     overflow-y: auto;
   }
-
-  /* Sidebar hidden by default on tablet – JS adds .hidden on init */
-  .sidebar.hidden {
-    transform: translateX(-210px);
-  }
-
-  /* Give the main area full width since sidebar is overlay */
-  .layout {
-    overflow: visible;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .orders-table {
-    overflow-x: auto;
-    display: block;
-  }
-
-  .client-table {
-    overflow-x: auto;
-    display: block;
-  }
-
-  .filters {
-    flex-wrap: wrap;
-  }
+  .sidebar.hidden { transform: translateX(-210px); }
+  .layout { overflow: visible; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .filters { flex-wrap: wrap; gap: 8px; }
 }
 
 /* ── Mobile (≤768px) ── */
 @media (max-width: 768px) {
-  .content {
-    padding: 14px 12px;
-  }
+  /* Layout & spacing */
+  .content { padding: 12px 10px; }
+  .card { padding: 10px; border-radius: 12px; }
+  .content h2 { font-size: 15px; }
+  .breadcrumbs { display: none; }
 
-  .card {
-    padding: 12px 10px;
-    border-radius: 12px;
-  }
+  /* Topbar */
+  .topbar { padding: 0 10px; gap: 6px; height: 52px; }
+  .topbar-center { display: none; }
+  .topbar-right { gap: 4px; }
+  .user-info { display: none; }
+  .icon-btn { width: 32px; height: 32px; }
+  .user-avatar { width: 30px; height: 30px; }
 
-  .topbar {
-    padding: 0 10px;
-    gap: 8px;
-  }
-
-  /* Hide search bar entirely on mobile */
-  .topbar-center {
-    display: none;
-  }
-
-  /* Reduce user info gap */
-  .topbar-right {
+  /* Filters: compact wrap, small buttons */
+  .filters {
+    flex-wrap: wrap;
     gap: 6px;
   }
-
-  /* Hide user name/role text on small screens */
-  .user-info {
-    display: none;
-  }
-
-  /* Stack filters vertically on mobile */
-  .filters {
-    flex-direction: column;
-    gap: 8px;
-  }
-
   .filters input,
-  .filters select,
-  .filters .btn-filter,
-  .filters .btn-sync {
-    width: 100%;
-    box-sizing: border-box;
+  .filters select {
+    font-size: 12px;
+    padding: 5px 8px;
+    height: auto;
+    max-width: 140px;
   }
-
-  /* Stats: 2 columns on mobile portrait */
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+  .btn-filter,
+  .btn-sync {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    gap: 4px !important;
   }
+  .btn-filter svg,
+  .btn-sync svg { width: 13px !important; height: 13px !important; }
 
-  /* Orders and clients table: horizontal scroll */
-  .orders-table {
-    overflow-x: auto;
-    display: block;
-    -webkit-overflow-scrolling: touch;
-  }
+  /* Stats grid */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-card { min-height: 60px; padding: 10px; }
+  .stat-num { font-size: 15px; }
 
+  /* ── ORDERS TABLE: hide non-essential columns, fit on screen ── */
+  .orders-table { display: block; overflow: visible; }
   .orders-row {
-    min-width: 580px;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    font-size: 11px !important;
+    padding: 8px 4px !important;
+    gap: 2px !important;
+    min-width: 0 !important;
   }
+  /* Hide: #(1), payment(3), date(4), tracking(5), customer(7) */
+  .orders-row > div:nth-child(1),
+  .orders-row > div:nth-child(3),
+  .orders-row > div:nth-child(4),
+  .orders-row > div:nth-child(5),
+  .orders-row > div:nth-child(7) { display: none !important; }
+  /* Shown: order#(2), status(6), price+btn(8) */
 
-  .client-table {
-    overflow-x: auto;
-    display: block;
-    -webkit-overflow-scrolling: touch;
-  }
-
+  /* ── CLIENT TABLE: hide non-essential columns ── */
+  .client-table { display: block; overflow: visible; }
   .client-row {
-    min-width: 600px;
+    grid-template-columns: 1fr auto auto !important;
+    font-size: 12px !important;
+    padding: 8px 10px !important;
+    min-width: 0 !important;
   }
+  /* Hide: password(2), role(3), view eye(4) */
+  .client-row > div:nth-child(2),
+  .client-row > div:nth-child(3),
+  .client-row > div:nth-child(4) { display: none !important; }
 
-  /* Stores grid: single column */
-  .stores-grid {
-    grid-template-columns: 1fr;
-  }
+  /* Stores */
+  .stores-grid { grid-template-columns: 1fr; }
 
-  /* Form grid: single column */
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
+  /* Forms */
+  .form-grid { grid-template-columns: 1fr; }
 
-  /* Modals: full width */
-  .modal {
-    width: 95vw;
-    padding: 16px;
-  }
+  /* Modals */
+  .modal { width: 95vw; padding: 14px; }
 
-  /* Breadcrumbs: hide */
-  .breadcrumbs {
-    display: none;
-  }
+  /* Dropdowns */
+  .panel { width: calc(100vw - 20px); right: -10px; }
+  .dropdown { width: min(260px, 90vw); }
 
-  /* Dropdown/Panel: full width aligned to right */
-  .panel {
-    width: calc(100vw - 20px);
-    right: -10px;
-  }
+  /* Plan cards */
+  #plan-cards { flex-direction: column !important; gap: 10px !important; }
 
-  .dropdown {
-    width: calc(min(280px, 90vw));
-  }
-
-  /* Chat widget: full width on mobile */
+  /* Chat widget */
   #chat-panel {
     width: calc(100vw - 16px) !important;
     right: 8px !important;
@@ -1612,51 +1573,14 @@ body.dark select option {
     height: calc(100vh - 100px) !important;
     max-height: 520px !important;
   }
+  #chat-fab { bottom: 16px !important; right: 16px !important; }
 
-  #chat-fab {
-    bottom: 16px !important;
-    right: 16px !important;
-  }
-
-  /* Smaller heading on mobile */
-  .content h2 {
-    font-size: 16px;
-  }
-
-  /* Plan cards: stack vertically */
-  #plan-cards {
-    flex-direction: column !important;
-    gap: 12px !important;
-  }
+  /* Order limit banner */
+  #order-limit-banner { font-size: 12px !important; padding: 8px 12px !important; }
 }
 
 /* ── Small mobile (≤480px) ── */
 @media (max-width: 480px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stat-card {
-    min-height: 64px;
-  }
-
-  .topbar {
-    height: 52px;
-  }
-
-  .icon-btn {
-    width: 32px;
-    height: 32px;
-  }
-
-  .user-avatar {
-    width: 30px;
-    height: 30px;
-  }
-
-  /* Order limit banner: wrap nicely */
-  #order-limit-banner {
-    font-size: 12px !important;
-    padding: 8px 12px !important;
-  }
+  .stats-grid { grid-template-columns: 1fr; }
+  .content { padding: 10px 8px; }
 }
