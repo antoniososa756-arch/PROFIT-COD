@@ -172,4 +172,21 @@ router.post("/reembolso-estado", auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: "Error" }); }
 });
 
+// POST /api/orders/marcar-entregado  { order_id }
+router.post("/marcar-entregado", auth, async (req, res) => {
+  const { order_id } = req.body;
+  if (!order_id) return res.status(400).json({ error: "Falta order_id" });
+  try {
+    const result = await db.run(
+      `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
+       WHERE order_id = $1
+         AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+         AND fulfillment_status NOT IN ('entregado', 'cancelado')`,
+      [order_id, req.user.id]
+    );
+    if (!result.changes) return res.status(404).json({ error: "Pedido no encontrado o ya entregado" });
+    res.json({ ok: true });
+  } catch(e) { console.error("marcar-entregado:", e); res.status(500).json({ error: "Error" }); }
+});
+
 module.exports = router;

@@ -5570,7 +5570,15 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
+      <div style="display:flex;align-items:center;gap:6px;overflow:hidden;">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
+        ${o.fulfillment_status !== "entregado" && o.fulfillment_status !== "cancelado" ? `
+        <button onclick="marcarEntregado('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}')"
+          title="Marcar como entregado"
+          style="flex-shrink:0;padding:2px 6px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;font-size:11px;color:#16a34a;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;">
+          ✓
+        </button>` : ""}
+      </div>
     </div>`;
   }).join("");
 
@@ -5672,6 +5680,22 @@ function statusLabel(s) {
   };
   return map[s] || "Pendiente";
 }
+
+async function marcarEntregado(orderId, orderNumber) {
+  if (!confirm(`¿Estás seguro de que quieres marcar el pedido ${orderNumber} como entregado?\n\nEsta acción no se puede revertir.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/marcar-entregado`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getActiveToken(), "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: orderId })
+    });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || "Error al actualizar el pedido"); return; }
+    showToast(`Pedido ${orderNumber} marcado como entregado`, "", "#16a34a");
+    await fetchOrdersFiltered();
+  } catch(e) { alert("Error de conexión"); }
+}
+window.marcarEntregado = marcarEntregado;
 
 window.fetchOrders = fetchOrders;
 window.filterOrders = filterOrders;
