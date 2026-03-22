@@ -23,11 +23,11 @@ router.get("/", auth, async (req, res) => {
 
   try {
     const fields = light
-      ? `o.id, o.order_number, o.created_at, o.tracking_number,
+      ? `o.id, o.order_id, o.order_number, o.created_at, o.tracking_number,
          o.fulfillment_status, o.financial_status, o.customer_name,
          o.total_price, o.currency, o.cancelled_at,
          COALESCE(o.shop_domain, s.shop_domain) as shop_domain`
-      : `o.id, o.order_number, o.created_at, o.tracking_number,
+      : `o.id, o.order_id, o.order_number, o.created_at, o.tracking_number,
          o.fulfillment_status, o.financial_status, o.customer_name,
          o.total_price, o.currency, o.cancelled_at, o.raw_json,
          COALESCE(o.shop_domain, s.shop_domain) as shop_domain`;
@@ -172,17 +172,22 @@ router.post("/reembolso-estado", auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: "Error" }); }
 });
 
-// POST /api/orders/marcar-entregado  { order_id }
+// POST /api/orders/marcar-entregado  { order_id } or { id }
 router.post("/marcar-entregado", auth, async (req, res) => {
-  const { order_id } = req.body;
-  if (!order_id) return res.status(400).json({ error: "Falta order_id" });
+  const { order_id, id } = req.body;
+  if (!order_id && !id) return res.status(400).json({ error: "Falta order_id" });
   try {
     const result = await db.run(
-      `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
-       WHERE order_id = $1
-         AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-         AND fulfillment_status NOT IN ('entregado', 'cancelado')`,
-      [order_id, req.user.id]
+      order_id
+        ? `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
+           WHERE order_id = $1
+             AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+             AND fulfillment_status NOT IN ('entregado', 'cancelado')`
+        : `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
+           WHERE id = $1
+             AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+             AND fulfillment_status NOT IN ('entregado', 'cancelado')`,
+      [order_id || id, req.user.id]
     );
     if (!result.changes) return res.status(404).json({ error: "Pedido no encontrado o ya entregado" });
     res.json({ ok: true });
