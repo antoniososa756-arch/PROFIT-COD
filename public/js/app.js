@@ -3465,6 +3465,8 @@ async function loadProductos() {
   if (!wrap) return;
   window.__showLoadingBar?.("Cargando productos...");
 
+  invalidateCache("shopify/stock"); // stock siempre fresco (puede haber cambiado por sync)
+
   try {
     const token = getActiveToken();
     const h = { Authorization: "Bearer " + token };
@@ -3679,7 +3681,10 @@ async function loadProductos() {
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
     body: JSON.stringify({})
   }).then(r => r.json()).then(d => {
-    if (d.applied > 0) loadProductos(); // recargar si hay cambios
+    if (d.applied > 0) {
+      invalidateCache("shopify/stock"); // forzar recarga del stock actualizado
+      loadProductos();
+    }
   }).catch(() => {});
 }
 window.loadProductos = loadProductos;
