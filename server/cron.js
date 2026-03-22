@@ -111,11 +111,13 @@ async function syncAllMRW() {
             const xml = await res.text();
 
             let newStatus = null;
-            if (xml.includes("Entregado")) newStatus = "entregado";
-            else if (xml.includes("Devuelto") || xml.includes("No entregado")) newStatus = "devuelto";
-            else if (xml.includes("En reparto") || xml.includes("En tránsito") || xml.includes("transito")) newStatus = "en_transito";
-            else if (xml.includes("Destruido")) newStatus = "destruido";
-            else if (xml.includes("Franquicia")) newStatus = "franquicia";
+            const xmlL = xml.toLowerCase();
+            if (xmlL.includes("entregado")) newStatus = "entregado";
+            else if (xmlL.includes("devuelto") || xmlL.includes("no entregado") || xmlL.includes("retorno")) newStatus = "devuelto";
+            else if (xmlL.includes("destruido")) newStatus = "destruido";
+            // "Franquicia" como estado de entrega concertada (distinto del campo <Franquicia> que siempre aparece)
+            else if (xmlL.includes("concertada en franquicia") || xmlL.includes("recoger en franquicia") || xmlL.includes("entrega en franquicia")) newStatus = "franquicia";
+            else if (xmlL.includes("en reparto") || xmlL.includes("en tr") || xmlL.includes("transito") || xmlL.includes("pendiente")) newStatus = "en_transito";
 
             if (newStatus) {
               await db.run(`UPDATE orders SET fulfillment_status = $1 WHERE id = $2`, [newStatus, pedido.id]);
