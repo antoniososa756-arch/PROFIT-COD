@@ -109,7 +109,9 @@ if (location.pathname.includes("login")) {
     .then((data) => {
       currentUser = {
         id: data.user.id,
-        name: data.user.email,
+        name: data.user.display_name || data.user.email,
+        email: data.user.email,
+        display_name: data.user.display_name || "",
         role: data.user.role === "admin" ? "Administrador" : "Cliente",
         avatar_url: data.user.avatar_url || null,
       };
@@ -2542,7 +2544,7 @@ function openUserSection(type) {
     box.innerHTML = `<div style="max-width:480px;">
       <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px;">
         <div style="position:relative;cursor:pointer;" onclick="document.getElementById('avatar-input').click()">
-          <div id="avatar-circle" style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,rgba(22,163,74,.35),rgba(22,163,74,.05));border:2px solid #e5e7eb;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+          <div id="avatar-circle" style="width:96px;height:96px;border-radius:50%;background:#f3f4f6;border:2px solid #e5e7eb;overflow:hidden;display:flex;align-items:center;justify-content:center;">
             <svg id="avatar-placeholder-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <img id="avatar-img" style="display:none;width:100%;height:100%;object-fit:cover;" />
           </div>
@@ -2551,8 +2553,17 @@ function openUserSection(type) {
           </div>
         </div>
         <input type="file" id="avatar-input" accept="image/*" style="display:none;" onchange="handleAvatarChange(event)">
-        <div style="margin-top:12px;font-weight:700;font-size:15px;">${escapeHtml(currentUser.name)}</div>
-        <span style="margin-top:4px;padding:3px 14px;background:#dcfce7;color:#16a34a;border-radius:20px;font-size:12px;font-weight:600;">${escapeHtml(currentUser.role)}</span>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:6px;">
+          <input id="display-name-input" type="text"
+            value="${escapeHtml(currentUser.display_name)}"
+            placeholder="Tu nombre o empresa..."
+            style="border:none;border-bottom:2px solid #e5e7eb;padding:4px 6px;font-size:17px;font-weight:700;color:#111827;text-align:center;background:transparent;font-family:inherit;width:220px;outline:none;transition:border-color .2s;"
+            onfocus="this.style.borderBottomColor='#16a34a'"
+            onblur="this.style.borderBottomColor='#e5e7eb';guardarDisplayName(this.value)"
+            onkeydown="if(event.key==='Enter'){this.blur();}">
+        </div>
+        <div style="margin-top:4px;font-size:12px;color:#9ca3af;">${escapeHtml(currentUser.email)}</div>
+        <span style="margin-top:6px;padding:3px 14px;background:#dcfce7;color:#16a34a;border-radius:20px;font-size:12px;font-weight:600;">${escapeHtml(currentUser.role)}</span>
       </div>
 
       <div style="border-top:1px solid #e5e7eb;padding-top:22px;">
@@ -2721,7 +2732,8 @@ function abrirEditorAvatar(srcUrl) {
     img.src = srcUrl;
 
     function draw() {
-      ctx.clearRect(0, 0, PREVIEW, PREVIEW);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, PREVIEW, PREVIEW);
       ctx.drawImage(img, offX, offY, imgW * scale, imgH * scale);
     }
 
@@ -2776,7 +2788,10 @@ function abrirEditorAvatar(srcUrl) {
       const out = document.createElement("canvas");
       out.width = 256; out.height = 256;
       const ratio = 256 / PREVIEW;
-      out.getContext("2d").drawImage(img, offX * ratio, offY * ratio, imgW * scale * ratio, imgH * scale * ratio);
+      const outCtx = out.getContext("2d");
+      outCtx.fillStyle = "#ffffff";
+      outCtx.fillRect(0, 0, 256, 256);
+      outCtx.drawImage(img, offX * ratio, offY * ratio, imgW * scale * ratio, imgH * scale * ratio);
       const result = out.toDataURL("image/jpeg", 0.88);
       modal.remove();
       resolve(result);
@@ -2784,6 +2799,23 @@ function abrirEditorAvatar(srcUrl) {
   });
 }
 window.abrirEditorAvatar = abrirEditorAvatar;
+
+async function guardarDisplayName(value) {
+  const nombre = (value || "").trim();
+  try {
+    await fetch(`${API_BASE}/api/auth/display-name`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ display_name: nombre })
+    });
+    currentUser.display_name = nombre;
+    currentUser.name = nombre || currentUser.email;
+    // Actualizar nombre en el header
+    const nameEl = document.querySelector(".user-name");
+    if (nameEl) nameEl.textContent = currentUser.name;
+  } catch {}
+}
+window.guardarDisplayName = guardarDisplayName;
 
 async function changePassword() {
   const curr = document.getElementById("curr-pass")?.value || "";

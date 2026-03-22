@@ -62,11 +62,20 @@ router.post("/login", async (req, res) => {
 router.get("/me", auth, async (req, res) => {
   try {
     const row = await db.get(
-      "SELECT id, email, role, avatar_url, billing_name, billing_nif, billing_address, billing_city, billing_zip, billing_country FROM users WHERE id = ?",
+      "SELECT id, email, role, display_name, avatar_url, billing_name, billing_nif, billing_address, billing_city, billing_zip, billing_country FROM users WHERE id = ?",
       [req.user.id]
     );
     if (!row) return res.status(404).json({ error: "Usuario no encontrado" });
     return res.json({ user: { ...req.user, ...row } });
+  } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
+});
+
+router.put("/display-name", auth, async (req, res) => {
+  const { display_name } = req.body || {};
+  if (typeof display_name !== "string") return res.status(400).json({ error: "Datos inválidos" });
+  try {
+    await db.run("UPDATE users SET display_name = ? WHERE id = ?", [display_name.trim() || null, req.user.id]);
+    return res.json({ ok: true });
   } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
 });
 
