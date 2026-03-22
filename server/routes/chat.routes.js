@@ -112,30 +112,43 @@ router.get("/guest/:guestId", async (req, res) => {
 router.get("/conversations", optAuth, requireAuth, requireAdmin, async (req, res) => {
   try {
     // Conversaciones de usuarios registrados
-    const users = await db.all(`
-      SELECT u.id as user_id, u.email, u.display_name,
-             COUNT(*) FILTER (WHERE m.read_by_admin = 0 AND m.sender != 'admin') as unread,
-             MAX(m.created_at) as last_message,
-             (SELECT content FROM chat_messages WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) as last_content
+    const users = await db.query(`
+      SELECT
+        u.id         AS user_id,
+        u.email,
+        u.display_name,
+        SUM(CASE WHEN m.read_by_admin = 0 AND m.sender != 'admin' THEN 1 ELSE 0 END) AS unread,
+        MAX(m.created_at) AS last_message,
+        (SELECT cm.content FROM chat_messages cm
+         WHERE cm.user_id = u.id ORDER BY cm.created_at DESC LIMIT 1) AS last_content
       FROM chat_messages m
       JOIN users u ON u.id = m.user_id
       WHERE m.user_id IS NOT NULL
       GROUP BY u.id, u.email, u.display_name
       ORDER BY last_message DESC
-    `);
+    `).then(r => r.rows);
+
     // Conversaciones anónimas
-    const guests = await db.all(`
-      SELECT guest_id, guest_name, guest_email,
-             COUNT(*) FILTER (WHERE read_by_admin = 0 AND sender = 'guest') as unread,
-             MAX(created_at) as last_message,
-             (SELECT content FROM chat_messages WHERE guest_id = m.guest_id ORDER BY created_at DESC LIMIT 1) as last_content
+    const guests = await db.query(`
+      SELECT
+        guest_id,
+        MAX(guest_name)  AS guest_name,
+        MAX(guest_email) AS guest_email,
+        SUM(CASE WHEN read_by_admin = 0 AND sender = 'guest' THEN 1 ELSE 0 END) AS unread,
+        MAX(created_at)  AS last_message,
+        (SELECT c2.content FROM chat_messages c2
+         WHERE c2.guest_id = m.guest_id ORDER BY c2.created_at DESC LIMIT 1) AS last_content
       FROM chat_messages m
       WHERE guest_id IS NOT NULL
-      GROUP BY guest_id, guest_name, guest_email
+      GROUP BY guest_id
       ORDER BY last_message DESC
-    `);
+    `).then(r => r.rows);
+
     res.json({ users, guests });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) {
+    console.error("[chat/conversations] Error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── GET /api/chat/unread — badge de mensajes no leídos ──────────

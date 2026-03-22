@@ -3014,6 +3014,7 @@ window.openAddTrabajador = openAddTrabajador;
     try {
       const r = await fetch(`${API_BASE}/api/chat/conversations`, { headers: { Authorization: "Bearer " + token } });
       const d = await r.json();
+      if (!r.ok) { console.error("[Chat] conversations API error:", d); return; }
       const list = document.getElementById("chat-conv-list");
       if (!list) return;
 
