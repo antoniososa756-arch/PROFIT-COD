@@ -2627,19 +2627,21 @@ async function handleAvatarChange(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  // Redimensionar y comprimir antes de subir
+  // Redimensionar y recortar en cuadrado 256×256 centrado
   const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 256;
-        let w = img.width, h = img.height;
-        if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
-        else        { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+        const SIZE = 256;
         const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        canvas.width = SIZE; canvas.height = SIZE;
+        const ctx = canvas.getContext("2d");
+        // Recorte centrado: tomar el lado más corto como referencia
+        const side = Math.min(img.width, img.height);
+        const sx = (img.width - side) / 2;
+        const sy = (img.height - side) / 2;
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
         resolve(canvas.toDataURL("image/jpeg", 0.82));
       };
       img.onerror = reject;
