@@ -6685,6 +6685,8 @@ async function abrirVincularStock() {
   const selected = new Set();
   let searchVal = "";
 
+  let editingGroupId = null;
+
   function renderGroups() {
     const el = document.getElementById("vincular-groups-panel");
     if (!el) return;
@@ -6692,49 +6694,64 @@ async function abrirVincularStock() {
     if (groups.length === 0) { el.innerHTML = ""; return; }
     el.innerHTML = `
       <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Grupos actuales</div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
         ${groups.map(g => {
           const members = g.members || [];
+          const isEditing = editingGroupId === g.id;
           return `
-          <div style="border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;overflow:hidden;">
-            <!-- Group header -->
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;gap:8px;border-bottom:${members.length>0?'1px solid #f3f4f6':'none'};">
-              <div style="font-size:13px;font-weight:700;color:#7c3aed;">🔗 ${escapeHtml(g.name)}</div>
+          <div style="border:1px solid ${isEditing?'#c4b5fd':'#e5e7eb'};border-radius:8px;background:#f9fafb;overflow:hidden;">
+            <!-- Group header row -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;gap:8px;">
+              <div style="font-size:13px;font-weight:700;color:#7c3aed;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                🔗 ${escapeHtml(g.name)}
+                <span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:6px;">${members.length} producto${members.length!==1?'s':''}</span>
+              </div>
               <div style="display:flex;gap:5px;flex-shrink:0;">
                 ${selectedCount > 0 ? `<button onclick="window.__vincularAddToGroup(${g.id},'${escapeHtml(g.name)}')"
                   style="padding:4px 10px;background:#7c3aed;border:none;border-radius:6px;font-size:12px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;">
                   + Añadir (${selectedCount})
                 </button>` : ''}
+                <button onclick="window.__vincularToggleEdit(${g.id})"
+                  style="padding:4px 10px;background:${isEditing?'#ede9fe':'#f3f4f6'};border:1px solid ${isEditing?'#c4b5fd':'#e5e7eb'};border-radius:6px;font-size:12px;color:${isEditing?'#7c3aed':'#374151'};font-weight:600;cursor:pointer;font-family:inherit;">
+                  ${isEditing ? 'Cerrar' : 'Editar'}
+                </button>
                 <button onclick="window.__vincularDeleteGroup(${g.id})"
                   style="padding:4px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;">
-                  Eliminar grupo
+                  Eliminar
                 </button>
               </div>
             </div>
-            <!-- Members list -->
-            ${members.length === 0 ? '<div style="padding:8px 12px;font-size:11px;color:#9ca3af;">Sin productos</div>' :
-              members.map(m => {
-                const p = allProducts.find(x => String(x.id) === String(m.product_id));
-                const name = p ? p.title : m.product_id;
-                const si = stockMap[m.product_id] || {};
-                return `
-                <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid #f3f4f6;">
-                  <div style="flex:1;min-width:0;">
-                    <div style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
-                    <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p?.shop_name||m.shop_domain||'')}</div>
-                  </div>
-                  <div style="font-size:12px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#374151'};flex-shrink:0;">Stock: ${si.stock??'—'}</div>
-                  <button onclick="window.__vincularRemoveMember(${g.id},'${escapeHtml(m.product_id)}')"
-                    title="Desvincular este producto del grupo"
-                    style="padding:3px 8px;background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;font-size:11px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">
-                    Desvincular
-                  </button>
-                </div>`;
-              }).join("")}
+            <!-- Members list (visible only when editing) -->
+            ${isEditing ? `
+            <div style="border-top:1px solid #e5e7eb;">
+              ${members.length === 0 ? '<div style="padding:10px 12px;font-size:12px;color:#9ca3af;">Sin productos en este grupo</div>' :
+                members.map(m => {
+                  const p = allProducts.find(x => String(x.id) === String(m.product_id));
+                  const name = p ? p.title : m.product_id;
+                  const si = stockMap[m.product_id] || {};
+                  return `
+                  <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f3f4f6;">
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
+                      <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p?.shop_name||m.shop_domain||'')}</div>
+                    </div>
+                    <div style="font-size:12px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#374151'};flex-shrink:0;white-space:nowrap;">Stock: ${si.stock??'—'}</div>
+                    <button onclick="window.__vincularRemoveMember(${g.id},'${escapeHtml(m.product_id)}')"
+                      style="padding:3px 8px;background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;font-size:11px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">
+                      Desvincular
+                    </button>
+                  </div>`;
+                }).join("")}
+            </div>` : ''}
           </div>`;
         }).join("")}
       </div>`;
   }
+
+  window.__vincularToggleEdit = (groupId) => {
+    editingGroupId = editingGroupId === groupId ? null : groupId;
+    renderGroups();
+  };
 
   function renderProductList() {
     const el = document.getElementById("vincular-product-list");
