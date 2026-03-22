@@ -3557,10 +3557,9 @@ async function loadProductos() {
                 </td>
                 <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
                   <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                    <input type="number" min="-9999" value="${stockInfo.stock}"
-                      style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:13px;text-align:center;font-family:inherit;background:${stockBajo?'#fef2f2':'var(--card)'};color:var(--text);"
-                      onchange="guardarStock('${shop.shop_domain}','${pid}',this.value,${stockInfo.stock_minimo})"
-                      title="Stock actual">
+                    <div style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:${stockBajo?'#fef2f2':'#f9fafb'};color:${stockBajo?'#dc2626':(stockInfo.stock<0?'#b45309':'#111827')};">
+                      ${stockInfo.stock}
+                    </div>
                     <div style="display:flex;align-items:center;gap:4px;">
                       <span style="font-size:10px;color:#9ca3af;">mín:</span>
                       <input type="number" min="0" value="${stockInfo.stock_minimo}"
@@ -3569,7 +3568,7 @@ async function loadProductos() {
                         title="Stock mínimo para alerta">
                     </div>
                     ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
-                    <button onclick="abrirHistoricoStock('${pid}','${escapeHtml(p.title)}')"
+                    <button onclick="abrirHistoricoStock('${pid}','${escapeHtml(p.title)}',${stockInfo.stock})"
                       style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
                       Histórico
                     </button>
@@ -3644,13 +3643,15 @@ async function loadProductos() {
                     </td>
                     <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
                       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                        <input type="number" min="-9999" value="${stockInfo.stock}" style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:13px;text-align:center;font-family:inherit;background:${stockBajo?'#fef2f2':'var(--card)'};color:var(--text);" onchange="guardarStock('${shopDom}','${pid2}',this.value,${stockInfo.stock_minimo})">
+                        <div style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:${stockBajo?'#fef2f2':'#f9fafb'};color:${stockBajo?'#dc2626':(stockInfo.stock<0?'#b45309':'#111827')};">
+                          ${stockInfo.stock}
+                        </div>
                         <div style="display:flex;align-items:center;gap:4px;">
                           <span style="font-size:10px;color:#9ca3af;">mín:</span>
                           <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',${stockInfo.stock},this.value)">
                         </div>
                         ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
-                        <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}')"
+                        <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}',${stockInfo.stock})"
                           style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
                           Histórico
                         </button>
@@ -6435,7 +6436,7 @@ async function importarPagadosPDF(input) {
   loadSidebarReembolsos();
 }
 
-async function abrirHistoricoStock(productId, productName) {
+async function abrirHistoricoStock(productId, productName, currentStock) {
   const h = { Authorization: "Bearer " + getActiveToken() };
   // Modal backdrop
   const existing = document.getElementById("historico-stock-modal");
@@ -6465,11 +6466,34 @@ async function abrirHistoricoStock(productId, productName) {
     const rows = await fetch(`${API_BASE}/api/shopify/stock-history?product_id=${encodeURIComponent(productId)}`, { headers: h }).then(r => r.json());
     const body = document.getElementById("historico-stock-body");
     if (!body) return;
+    const totalSalida = rows.reduce((s,r) => s + parseInt(r.uds_salida||0), 0);
+    const totalDev    = rows.reduce((s,r) => s + parseInt(r.uds_devolucion||0), 0);
+    const netoTotal   = totalDev - totalSalida;
+    const stockActual = currentStock ?? "—";
+
     if (!Array.isArray(rows) || rows.length === 0) {
       body.innerHTML = `<div style="color:#9ca3af;text-align:center;padding:24px;">Sin movimientos registrados aún.<br><span style="font-size:12px;">Los movimientos se generan automáticamente al cargar esta sección.</span></div>`;
       return;
     }
     body.innerHTML = `
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:120px;padding:10px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;text-align:center;">
+          <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Stock actual</div>
+          <div style="font-size:18px;font-weight:700;color:${stockActual<0?'#dc2626':'#111827'};">${stockActual}</div>
+        </div>
+        <div style="flex:1;min-width:120px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;text-align:center;">
+          <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Total salidas</div>
+          <div style="font-size:18px;font-weight:700;color:#dc2626;">-${totalSalida}</div>
+        </div>
+        <div style="flex:1;min-width:120px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;text-align:center;">
+          <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Total devoluciones</div>
+          <div style="font-size:18px;font-weight:700;color:#16a34a;">+${totalDev}</div>
+        </div>
+        <div style="flex:1;min-width:120px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;text-align:center;">
+          <div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Neto movimientos</div>
+          <div style="font-size:18px;font-weight:700;color:${netoTotal>=0?'#16a34a':'#dc2626'};">${netoTotal>=0?'+':''}${netoTotal}</div>
+        </div>
+      </div>
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
           <tr style="background:#f9fafb;">
@@ -6478,7 +6502,7 @@ async function abrirHistoricoStock(productId, productName) {
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Uds. salida</th>
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Devueltos</th>
             <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Uds. entrada</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">Neto</th>
+            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">Neto día</th>
           </tr>
         </thead>
         <tbody>
