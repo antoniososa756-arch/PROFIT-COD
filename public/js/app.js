@@ -7277,10 +7277,11 @@ async function fetchReembolsosFiltered() {
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${escapeHtml(o.customer_name || "-")}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
-          <div style="display:flex;align-items:center;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             ${estadoPago === "cobrado"
               ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:999px;font-size:12px;font-weight:600;color:#16a34a;">✅ Pagado</span>`
-              : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:999px;font-size:12px;font-weight:600;color:#92400e;">⏳ Pendiente</span>`
+              : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:999px;font-size:12px;font-weight:600;color:#92400e;">⏳ Pendiente</span>
+                 <button onclick="confirmarPagadoReembolso(${o.id})" style="padding:3px 8px;font-size:11px;font-weight:600;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer;">Marcar pagado</button>`
             }
           </div>
         </div>`;
@@ -7308,6 +7309,11 @@ async function fetchReembolsosFiltered() {
 function goToReePage(page) {
   reembolsosState = { ...reembolsosState, page };
   fetchReembolsosFiltered();
+}
+
+function confirmarPagadoReembolso(orderId) {
+  if (!confirm("¿Marcar este reembolso como pagado?\n\nEsta acción no se puede revertir.")) return;
+  cambiarEstadoReembolso(orderId, "cobrado");
 }
 
 async function cambiarEstadoReembolso(orderId, estado) {
@@ -7346,7 +7352,8 @@ window.loadReembolsos         = loadReembolsos;
 window.renderReembolsos       = renderReembolsos;
 window.fetchReembolsosFiltered = fetchReembolsosFiltered;
 window.goToReePage            = goToReePage;
-window.cambiarEstadoReembolso = cambiarEstadoReembolso;
+window.cambiarEstadoReembolso  = cambiarEstadoReembolso;
+window.confirmarPagadoReembolso = confirmarPagadoReembolso;
 window.clearReembolsosFilters = clearReembolsosFilters;
 window.filterReeByTab         = filterReeByTab;
 
