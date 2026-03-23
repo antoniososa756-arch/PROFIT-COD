@@ -6588,6 +6588,11 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
           title="Marcar como entregado"
           style="flex-shrink:0;padding:2px 6px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;font-size:11px;color:#16a34a;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;">
           ✓
+        </button>
+        <button onclick="marcarCancelado('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'})"
+          title="Marcar como cancelado"
+          style="flex-shrink:0;padding:2px 6px;background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;font-size:11px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;">
+          ✕
         </button>` : ""}
       </div>
     </div>`;
@@ -6708,6 +6713,23 @@ async function marcarEntregado(orderId, orderNumber, internalId) {
   } catch(e) { alert("Error de conexión"); }
 }
 window.marcarEntregado = marcarEntregado;
+
+async function marcarCancelado(orderId, orderNumber, internalId) {
+  if (!confirm(`¿Estás seguro de que quieres marcar el pedido ${orderNumber} como cancelado?\n\nEsta acción no se puede revertir.`)) return;
+  try {
+    const body = orderId ? { order_id: orderId } : { id: internalId };
+    const res = await fetch(`${API_BASE}/api/orders/marcar-cancelado`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getActiveToken(), "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || "Error al actualizar el pedido"); return; }
+    showToast(`Pedido ${orderNumber} marcado como cancelado`, "", "#dc2626");
+    await fetchOrdersFiltered();
+  } catch(e) { alert("Error de conexión"); }
+}
+window.marcarCancelado = marcarCancelado;
 
 window.fetchOrders = fetchOrders;
 window.filterOrders = filterOrders;

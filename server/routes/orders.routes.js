@@ -194,4 +194,26 @@ router.post("/marcar-entregado", auth, async (req, res) => {
   } catch(e) { console.error("marcar-entregado:", e); res.status(500).json({ error: "Error" }); }
 });
 
+// POST /api/orders/marcar-cancelado  { order_id } or { id }
+router.post("/marcar-cancelado", auth, async (req, res) => {
+  const { order_id, id } = req.body;
+  if (!order_id && !id) return res.status(400).json({ error: "Falta order_id" });
+  try {
+    const result = await db.run(
+      order_id
+        ? `UPDATE orders SET fulfillment_status = 'cancelado', updated_at = now()::text
+           WHERE order_id = $1
+             AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+             AND fulfillment_status NOT IN ('entregado', 'cancelado')`
+        : `UPDATE orders SET fulfillment_status = 'cancelado', updated_at = now()::text
+           WHERE id = $1
+             AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+             AND fulfillment_status NOT IN ('entregado', 'cancelado')`,
+      [order_id || id, req.user.id]
+    );
+    if (!result.changes) return res.status(404).json({ error: "Pedido no encontrado o ya finalizado" });
+    res.json({ ok: true });
+  } catch(e) { console.error("marcar-cancelado:", e); res.status(500).json({ error: "Error" }); }
+});
+
 module.exports = router;
