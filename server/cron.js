@@ -60,6 +60,15 @@ function mapStatus(o) {
 }
 
 // ── Función: sincronizar MRW para todos los usuarios ────────────────────────
+function mapMRWStatus(texto) {
+  const t = (texto || "").toLowerCase();
+  if (t.includes("entregado")) return "entregado";
+  if (t.includes("devuelto")) return "devuelto";
+  if (t.includes("destruir") || t.includes("destruido")) return "destruido";
+  if (t.includes("pendiente de recoger en franquicia")) return "franquicia";
+  return "en_transito";
+}
+
 async function syncAllMRW() {
   console.log("⏰ [CRON] Iniciando sync MRW...");
   try {
@@ -68,79 +77,61 @@ async function syncAllMRW() {
 
     for (const creds of credsList) {
       try {
-        // Pedidos en tránsito de este usuario
-        const shops = await db.all(
-          `SELECT id FROM shops WHERE user_id = $1 AND status = 'active'`, [creds.user_id]
-        );
-        const shopIds = shops.map(s => s.id);
-        if (!shopIds.length) continue;
-
         const pedidos = await db.all(
-          `SELECT id, tracking_number FROM orders 
-           WHERE shop_id = ANY($1::int[]) 
-           AND fulfillment_status IN ('enviado','en_transito','en_preparacion','franquicia')
-           AND tracking_number IS NOT NULL`,
-          [shopIds]
+          `SELECT o.id, o.tracking_number, o.fulfillment_status
+           FROM orders o
+           JOIN shops s ON s.id = o.shop_id
+           WHERE s.user_id = $1
+             AND o.tracking_number IS NOT NULL
+             AND o.tracking_number != ''
+             AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
+           ORDER BY o.last_mrw_check ASC NULLS FIRST
+           LIMIT 170`,
+          [creds.user_id]
         );
+        if (!pedidos.length) continue;
 
         let updated = 0;
         for (const pedido of pedidos) {
           try {
-            const xmlBody = `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <GetEstadoEnvio xmlns="http://www.mrw.es/TrackingService/">
-      <request>
-        <Login>${creds.login}</Login>
-        <Password>${creds.password}</Password>
-        <Franquicia>${creds.franquicia || ""}</Franquicia>
-        <Abonado>${creds.abonado || ""}</Abonado>
-        <NumeroEnvio>${pedido.tracking_number}</NumeroEnvio>
-      </request>
-    </GetEstadoEnvio>
-  </soap:Body>
-</soap:Envelope>`;
+            await new Promise(r => setTimeout(r, 140));
+            const soapBody = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tem:GetEnvios>
+      <tem:login>${creds.login}</tem:login>
+      <tem:pass>${creds.pass}</tem:pass>
+      <tem:codigoIdioma>3082</tem:codigoIdioma>
+      <tem:tipoFiltro>0</tem:tipoFiltro>
+      <tem:valorFiltroDesde>${pedido.tracking_number}</tem:valorFiltroDesde>
+      <tem:valorFiltroHasta>${pedido.tracking_number}</tem:valorFiltroHasta>
+      <tem:fechaDesde></tem:fechaDesde>
+      <tem:fechaHasta></tem:fechaHasta>
+      <tem:tipoInformacion>0</tem:tipoInformacion>
+    </tem:GetEnvios>
+  </soapenv:Body>
+</soapenv:Envelope>`;
 
-            const res = await fetch("https://www.mrw.es/TrackingService/MRWGlobalService.svc", {
+            const res = await fetch("https://trackingservice.mrw.es/TrackingService.svc/TrackingServices", {
               method: "POST",
-              headers: { "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "http://www.mrw.es/TrackingService/IMRWGlobalService/GetEstadoEnvio" },
-              body: xmlBody,
+              headers: { "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "http://tempuri.org/ITrackingService/GetEnvios" },
+              body: soapBody,
               signal: AbortSignal.timeout(10000)
             });
-            if (!res.ok) continue;
             const xml = await res.text();
+            await db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [pedido.id]);
 
-            // MRW devuelve eventos de MÁS RECIENTE a más antiguo en el XML
-            // → el PRIMER tag <Descripcion> es el estado actual
-            const allDesc = [...xml.matchAll(/<Descripcion[^>]*>([^<]+)<\/Descripcion>/gi)];
-            const allSit  = [...xml.matchAll(/<Situacion[^>]*>([^<]+)<\/Situacion>/gi)];
-            const allEst  = [...xml.matchAll(/<Estado[^>]*>([^<]+)<\/Estado>/gi)];
-            const matches = allDesc.length ? allDesc : allSit.length ? allSit : allEst;
-            const firstMatch = matches[0];
-            const lastMatch  = matches[matches.length - 1];
-            const estadoActual = firstMatch ? firstMatch[1].toLowerCase() : null;
-            if (matches.length > 0) {
-              console.log(`[MRW] ${pedido.tracking_number} | total_eventos=${matches.length} | primero="${firstMatch[1]}" | ultimo="${lastMatch[1]}"`);
-            } else {
-              console.log(`[MRW] ${pedido.tracking_number} | sin tags <Descripcion>/<Situacion>/<Estado> en XML`);
-            }
+            const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
+            if (!estadoMatch) continue;
 
-            let newStatus = null;
-            const chk = estadoActual ?? xml.toLowerCase();
-            if (chk.includes("entregado")) newStatus = "entregado";
-            else if (chk.includes("devuelto")) newStatus = "devuelto";
-            else if (chk.includes("destruido")) newStatus = "destruido";
-            // SOLO "Pendiente de recoger en Franquicia destino" es estado franquicia
-            else if (chk.includes("pendiente de recoger en franquicia")) newStatus = "franquicia";
-            // Todo lo demás (en tránsito, llegada a plataforma, concertada, destinatario ausente, etc.) → en tránsito
-            else if (estadoActual !== null) newStatus = "en_transito";
-            else if (chk.includes("en reparto") || chk.includes("en tr") || chk.includes("transito") || chk.includes("pendiente")) newStatus = "en_transito";
-
-            if (newStatus) {
-              await db.run(`UPDATE orders SET fulfillment_status = $1 WHERE id = $2`, [newStatus, pedido.id]);
+            const nuevoStatus = mapMRWStatus(estadoMatch[1].trim());
+            console.log(`[MRW CRON] ${pedido.tracking_number} → ${nuevoStatus}`);
+            if (nuevoStatus !== pedido.fulfillment_status) {
+              await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
               updated++;
             }
-          } catch(e) { /* timeout individual, ignorar */ }
+          } catch(e) { console.error(`[CRON] MRW pedido ${pedido.tracking_number}:`, e.message); }
         }
         console.log(`✅ [CRON] MRW user ${creds.user_id}: ${updated} pedidos actualizados de ${pedidos.length}`);
       } catch(e) { console.error(`[CRON] MRW error user ${creds.user_id}:`, e.message); }
