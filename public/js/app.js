@@ -4902,15 +4902,11 @@ async function loadAdsTable() {
   const th   = (content, extra="") => `<th style="padding:11px 14px;border:1px solid #e5e7eb;font-weight:600;font-size:13px;${extra}">${content}</th>`;
 
   wrap.innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <button onclick="abrirPegarAds('meta')" style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1877f2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">📋 Pegar Meta desde Excel</button>
-      <button onclick="abrirPegarAds('tiktok')" style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:#111;color:#fff;border:2px solid #fe2c55;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">📋 Pegar TikTok desde Excel</button>
-    </div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
         <tr style="background:#f9fafb;">
           ${th("Día","text-align:left;color:#374151;")}
-          ${th("Gasto Meta","text-align:right;background:#e8f0fe;color:#1877f2;")}
+          ${th("Gasto Meta","text-align:right;background:#1877f2;color:#fff;")}
           ${th("Gasto TikTok","text-align:right;background:#111;color:#fff;")}
           ${th("Facturación","text-align:right;color:#374151;")}
           ${th("Cantidad Pedidos","text-align:right;color:#374151;")}
@@ -4931,8 +4927,8 @@ async function loadAdsTable() {
         ${rows.map(r => `
           <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
             ${td(r.label, "color:#374151;white-space:nowrap;")}
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;text-align:right;background:#f0f4ff;"><input type="number" min="0" step="0.01" value="${r.meta||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="meta" onchange="saveAdsSpend(this)" style="width:80px;padding:4px 8px;border:1px solid #93c5fd;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#fff;color:#1877f2;font-weight:600;"></td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;text-align:right;background:#1a1a1a;"><input type="number" min="0" step="0.01" value="${r.tiktok||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="tiktok" onchange="saveAdsSpend(this)" style="width:80px;padding:4px 8px;border:1px solid #fe2c55;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#111;color:#fff;font-weight:600;"></td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;text-align:right;background:#dbeafe;"><input type="number" min="0" step="0.01" value="${r.meta||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="meta" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #3b82f6;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#fff;color:#1d4ed8;font-weight:600;"></td>
+            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;text-align:right;background:#1a1a1a;"><input type="number" min="0" step="0.01" value="${r.tiktok||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="tiktok" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #fe2c55;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#111;color:#fff;font-weight:600;"></td>
             ${td(r.facturacion > 0 ? fmt(r.facturacion) : "-", "text-align:right;")}
             ${td(r.pedidos > 0 ? r.pedidos : "-", "text-align:right;")}
             ${td(fmt(r.cpa), "text-align:right;")}
@@ -5383,50 +5379,20 @@ async function saveAdsSpend(input) {
   }
 }
 
-function abrirPegarAds(tipo) {
-  const esMeta = tipo === "meta";
-  const titulo = esMeta ? "Pegar gastos Meta desde Excel" : "Pegar gastos TikTok desde Excel";
-  const color  = esMeta ? "#1877f2" : "#fe2c55";
-  const bg     = esMeta ? "#e8f0fe" : "#1a1a1a";
-  const txtCol = esMeta ? "#1877f2" : "#fff";
+async function pegarDesdeExcel(e, inputOrigen) {
+  const text = (e.clipboardData || window.clipboardData).getData("text");
+  // Si es un solo valor, comportamiento normal
+  const lines = text.trim().split(/\r?\n/).map(l => l.trim().split(/\t/)[0].replace(",", ".")).filter(l => l !== "");
+  if (lines.length <= 1) return;
 
-  const modal = document.createElement("div");
-  modal.id = "paste-ads-modal";
-  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
-  modal.innerHTML = `
-    <div style="background:#fff;border-radius:12px;padding:28px;width:340px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-      <h3 style="margin:0 0 6px;font-size:16px;color:#111;">${titulo}</h3>
-      <p style="margin:0 0 14px;font-size:13px;color:#6b7280;">Copia la columna de valores desde Excel (un valor por línea) y pégala aquí. Se asignarán en orden desde el día 1 del mes.</p>
-      <textarea id="paste-ads-input" rows="10" placeholder="Ejemplo:\n25.50\n30.00\n0\n45.80\n..."
-        style="width:100%;box-sizing:border-box;padding:10px;border:2px solid ${color};border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;outline:none;background:${bg};color:${txtCol};"></textarea>
-      <div style="display:flex;gap:8px;margin-top:14px;">
-        <button onclick="aplicarPegarAds('${tipo}')" style="flex:1;padding:10px;background:${color};color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Aplicar</button>
-        <button onclick="document.getElementById('paste-ads-modal').remove()" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Cancelar</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-  modal.querySelector("textarea").focus();
-}
+  e.preventDefault();
+  const tipo = inputOrigen.dataset.type;
+  const todosLosInputs = [...document.querySelectorAll(`input[data-type="${tipo}"]`)];
+  const idxOrigen = todosLosInputs.indexOf(inputOrigen);
 
-async function aplicarPegarAds(tipo) {
-  const textarea = document.getElementById("paste-ads-input");
-  if (!textarea) return;
-
-  const lines = textarea.value.trim().split(/\r?\n/)
-    .map(l => l.trim().replace(",", "."))
-    .filter(l => l !== "");
-
-  if (!lines.length) return;
-
-  const inputs = [...document.querySelectorAll(`input[data-type="${tipo}"]`)];
-  if (!inputs.length) { document.getElementById("paste-ads-modal")?.remove(); return; }
-
-  document.getElementById("paste-ads-modal")?.remove();
-
-  // Guardar en batch: un fetch por valor, en paralelo con límite
   const promises = [];
   lines.forEach((val, i) => {
-    const input = inputs[i];
+    const input = todosLosInputs[idxOrigen + i];
     if (!input) return;
     const num = parseFloat(val);
     if (isNaN(num)) return;
@@ -5445,10 +5411,9 @@ async function aplicarPegarAds(tipo) {
   loadAdsTable();
 }
 
-window.loadAdsTable  = loadAdsTable;
-window.saveAdsSpend  = saveAdsSpend;
-window.abrirPegarAds = abrirPegarAds;
-window.aplicarPegarAds = aplicarPegarAds;
+window.loadAdsTable    = loadAdsTable;
+window.saveAdsSpend    = saveAdsSpend;
+window.pegarDesdeExcel = pegarDesdeExcel;
 
 // =========================
 // GASTOS VARIOS
