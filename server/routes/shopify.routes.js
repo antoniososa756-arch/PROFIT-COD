@@ -83,7 +83,7 @@ router.get("/callback", async (req, res) => {
        ON CONFLICT(user_id, shop_domain) DO UPDATE SET
          access_token = EXCLUDED.access_token,
          app_secret = EXCLUDED.app_secret,
-         shop_name = EXCLUDED.shop_name,
+         shop_name = CASE WHEN shops.shop_name IS NULL OR shops.shop_name = '' THEN EXCLUDED.shop_name ELSE shops.shop_name END,
          status = 'active',
          last_sync = now()::text`,
       [userId, shop, shopName, accessToken, appSecret]
