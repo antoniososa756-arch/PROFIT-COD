@@ -6583,17 +6583,19 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
       <div style="display:flex;align-items:center;gap:6px;overflow:hidden;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
-        ${o.fulfillment_status !== "entregado" && o.fulfillment_status !== "cancelado" ? `
-        <button onclick="marcarEntregado('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'})"
-          title="Marcar como entregado"
-          style="flex-shrink:0;padding:2px 6px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;font-size:11px;color:#16a34a;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;">
-          ✓
-        </button>
-        <button onclick="marcarCancelado('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'})"
-          title="Marcar como cancelado"
-          style="flex-shrink:0;padding:2px 6px;background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;font-size:11px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;">
-          ✕
-        </button>` : ""}
+        ${o.fulfillment_status !== "entregado" && o.fulfillment_status !== "cancelado" && o.fulfillment_status !== "destruido" && o.fulfillment_status !== "devuelto" ? `
+        <div style="position:relative;flex-shrink:0;">
+          <button onclick="toggleEstadoMenu(event,'menu-estado-${o.id}')"
+            style="padding:2px 8px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:5px;font-size:11px;color:#374151;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;">
+            Estado ▾
+          </button>
+          <div id="menu-estado-${o.id}" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:140px;overflow:hidden;">
+            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'entregado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#16a34a;cursor:pointer;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">✓ Entregado</div>
+            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'devuelto')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#ea580c;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background=''">↩ Devuelto</div>
+            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'destruido')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#7c3aed;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">✕ Destruido</div>
+            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'cancelado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">✕ Cancelado</div>
+          </div>
+        </div>` : ""}
       </div>
     </div>`;
   }).join("");
@@ -6714,22 +6716,38 @@ async function marcarEntregado(orderId, orderNumber, internalId) {
 }
 window.marcarEntregado = marcarEntregado;
 
-async function marcarCancelado(orderId, orderNumber, internalId) {
-  if (!confirm(`¿Estás seguro de que quieres marcar el pedido ${orderNumber} como cancelado?\n\nEsta acción no se puede revertir.`)) return;
+function toggleEstadoMenu(e, menuId) {
+  e.stopPropagation();
+  // Cerrar cualquier otro menú abierto
+  document.querySelectorAll('[id^="menu-estado-"]').forEach(m => { if (m.id !== menuId) m.style.display = "none"; });
+  const menu = document.getElementById(menuId);
+  if (menu) menu.style.display = menu.style.display === "none" ? "block" : "none";
+}
+document.addEventListener("click", () => {
+  document.querySelectorAll('[id^="menu-estado-"]').forEach(m => m.style.display = "none");
+});
+
+const _estadoLabels = { entregado: "entregado", devuelto: "devuelto", destruido: "destruido", cancelado: "cancelado" };
+const _estadoColors = { entregado: "#16a34a", devuelto: "#ea580c", destruido: "#7c3aed", cancelado: "#dc2626" };
+
+async function cambiarEstadoPedido(orderId, orderNumber, internalId, estado) {
+  const label = _estadoLabels[estado] || estado;
+  if (!confirm(`¿Estás seguro de que quieres marcar el pedido ${orderNumber} como ${label}?\n\nEsta acción no se puede revertir.`)) return;
   try {
-    const body = orderId ? { order_id: orderId } : { id: internalId };
-    const res = await fetch(`${API_BASE}/api/orders/marcar-cancelado`, {
+    const body = { estado, ...(orderId ? { order_id: orderId } : { id: internalId }) };
+    const res = await fetch(`${API_BASE}/api/orders/marcar-estado`, {
       method: "POST",
       headers: { Authorization: "Bearer " + getActiveToken(), "Content-Type": "application/json" },
       body: JSON.stringify(body)
     });
     const data = await res.json();
     if (!data.ok) { alert(data.error || "Error al actualizar el pedido"); return; }
-    showToast(`Pedido ${orderNumber} marcado como cancelado`, "", "#dc2626");
+    showToast(`Pedido ${orderNumber} marcado como ${label}`, "", _estadoColors[estado] || "#374151");
     await fetchOrdersFiltered();
   } catch(e) { alert("Error de conexión"); }
 }
-window.marcarCancelado = marcarCancelado;
+window.toggleEstadoMenu    = toggleEstadoMenu;
+window.cambiarEstadoPedido = cambiarEstadoPedido;
 
 window.fetchOrders = fetchOrders;
 window.filterOrders = filterOrders;

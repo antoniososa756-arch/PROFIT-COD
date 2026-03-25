@@ -194,26 +194,24 @@ router.post("/marcar-entregado", auth, async (req, res) => {
   } catch(e) { console.error("marcar-entregado:", e); res.status(500).json({ error: "Error" }); }
 });
 
-// POST /api/orders/marcar-cancelado  { order_id } or { id }
-router.post("/marcar-cancelado", auth, async (req, res) => {
-  const { order_id, id } = req.body;
+// POST /api/orders/marcar-estado  { order_id|id, estado }
+const ESTADOS_FINALES = ["entregado", "cancelado", "destruido", "devuelto"];
+router.post("/marcar-estado", auth, async (req, res) => {
+  const { order_id, id, estado } = req.body;
   if (!order_id && !id) return res.status(400).json({ error: "Falta order_id" });
+  if (!ESTADOS_FINALES.includes(estado)) return res.status(400).json({ error: "Estado no válido" });
   try {
     const result = await db.run(
       order_id
-        ? `UPDATE orders SET fulfillment_status = 'cancelado', updated_at = now()::text
-           WHERE order_id = $1
-             AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-             AND fulfillment_status NOT IN ('entregado', 'cancelado')`
-        : `UPDATE orders SET fulfillment_status = 'cancelado', updated_at = now()::text
-           WHERE id = $1
-             AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-             AND fulfillment_status NOT IN ('entregado', 'cancelado')`,
-      [order_id || id, req.user.id]
+        ? `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text
+           WHERE order_id = $2 AND shop_id IN (SELECT id FROM shops WHERE user_id = $3)`
+        : `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text
+           WHERE id = $2 AND shop_id IN (SELECT id FROM shops WHERE user_id = $3)`,
+      [estado, order_id || id, req.user.id]
     );
-    if (!result.changes) return res.status(404).json({ error: "Pedido no encontrado o ya finalizado" });
+    if (!result.changes) return res.status(404).json({ error: "Pedido no encontrado" });
     res.json({ ok: true });
-  } catch(e) { console.error("marcar-cancelado:", e); res.status(500).json({ error: "Error" }); }
+  } catch(e) { console.error("marcar-estado:", e); res.status(500).json({ error: "Error" }); }
 });
 
 module.exports = router;
