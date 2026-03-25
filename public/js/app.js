@@ -1429,18 +1429,12 @@ if (id === "pedidos") {
                 style="padding:7px 14px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
                 🔗 Integrar MRW
               </button>
-              <button id="btn-mrw-sync" onclick="sincronizarMRW()" style="display:none;
-                padding:7px 14px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-                🔄 Sincronizar MRW
-              </button>
               <button id="btn-mrw-desintegrar" onclick="desintegrarMRW()" style="display:none;
                 padding:7px 14px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 ✕ Desintegrar MRW
               </button>
-               
-<button class="btn-sync" onclick="syncAndRefreshOrders()">
+<button class="btn-sync" onclick="syncAndRefreshOrders()" title="Sincronizar Shopify y MRW" style="min-width:unset;padding:7px 12px;">
                 <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Sincronizar
               </button>
               <label id="btn-importar-excel" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 📥 Importar Excel MRW
@@ -6581,12 +6575,12 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
-      <div style="display:flex;align-items:center;gap:6px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:6px;overflow:visible;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
         ${o.fulfillment_status !== "entregado" && o.fulfillment_status !== "cancelado" && o.fulfillment_status !== "destruido" && o.fulfillment_status !== "devuelto" ? `
         <div style="position:relative;flex-shrink:0;">
           <button onclick="toggleEstadoMenu(event,'menu-estado-${o.id}')"
-            style="padding:2px 8px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:5px;font-size:11px;color:#374151;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;">
+            style="padding:3px 9px;background:#4f46e5;border:none;border-radius:5px;font-size:11px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;white-space:nowrap;">
             Estado ▾
           </button>
           <div id="menu-estado-${o.id}" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:140px;overflow:hidden;">
@@ -6993,7 +6987,7 @@ async function syncAndRefreshOrders() {
     } catch(e) {}
     if (btn) { btn.textContent = `✓ ${data.synced || 0} pedidos`; }
     setTimeout(() => {
-      if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg> Sincronizar`; btn.disabled = false; btn.style.opacity = "1"; }
+      if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>`; btn.disabled = false; btn.style.opacity = "1"; }
     }, 2000);
   } catch (e) {
     window.__hideLoadingBar?.();
@@ -8376,17 +8370,14 @@ async function checkMRWIntegration() {
     });
     const data = await res.json();
     const btnIntegrar = document.getElementById("btn-mrw-integrar");
-    const btnSync = document.getElementById("btn-mrw-sync");
     const btnDesintegrar = document.getElementById("btn-mrw-desintegrar");
     const btnExcel = document.getElementById("btn-importar-excel");
     if (data.integrated) {
       if (btnIntegrar) btnIntegrar.style.display = "none";
-      if (btnSync) btnSync.style.display = "";
       if (btnDesintegrar) btnDesintegrar.style.display = "";
       if (btnExcel) btnExcel.style.display = "none";
     } else {
       if (btnIntegrar) btnIntegrar.style.display = "";
-      if (btnSync) btnSync.style.display = "none";
       if (btnDesintegrar) btnDesintegrar.style.display = "none";
       if (btnExcel) btnExcel.style.display = "";
     }
