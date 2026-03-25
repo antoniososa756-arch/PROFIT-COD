@@ -1429,14 +1429,14 @@ if (id === "pedidos") {
                 <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
               <button id="btn-mrw-integrar" onclick="abrirModalMRW()"
-                style="padding:7px 14px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                style="display:none;padding:7px 14px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;align-items:center;gap:6px;">
                 🔗 Integrar MRW
               </button>
               <button id="btn-mrw-desintegrar" onclick="desintegrarMRW()" style="display:none;
                 padding:7px 14px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 ✕ Desintegrar MRW
               </button>
-              <label id="btn-importar-excel" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+              <label id="btn-importar-excel" style="display:none;align-items:center;gap:6px;padding:7px 16px;background:#16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 📥 Importar Excel MRW
                 <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="syncExcelMRW(this)">
               </label>
@@ -8374,12 +8374,12 @@ async function checkMRWIntegration() {
     const btnExcel = document.getElementById("btn-importar-excel");
     if (data.integrated) {
       if (btnIntegrar) btnIntegrar.style.display = "none";
-      if (btnDesintegrar) btnDesintegrar.style.display = "";
+      if (btnDesintegrar) btnDesintegrar.style.display = "inline-flex";
       if (btnExcel) btnExcel.style.display = "none";
     } else {
-      if (btnIntegrar) btnIntegrar.style.display = "";
+      if (btnIntegrar) btnIntegrar.style.display = "inline-flex";
       if (btnDesintegrar) btnDesintegrar.style.display = "none";
-      if (btnExcel) btnExcel.style.display = "";
+      if (btnExcel) btnExcel.style.display = "inline-flex";
     }
   } catch(e) { console.error(e); }
 }
