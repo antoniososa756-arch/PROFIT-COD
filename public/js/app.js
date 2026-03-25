@@ -6579,9 +6579,9 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
         ${o.fulfillment_status !== "entregado" && o.fulfillment_status !== "cancelado" && o.fulfillment_status !== "destruido" && o.fulfillment_status !== "devuelto" ? `
         <div style="position:relative;flex-shrink:0;">
-          <button onclick="toggleEstadoMenu(event,'menu-estado-${o.id}')"
-            style="padding:3px 9px;background:#4f46e5;border:none;border-radius:5px;font-size:11px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;line-height:1.4;white-space:nowrap;">
-            Estado ▾
+          <button onclick="toggleEstadoMenu(event,'menu-estado-${o.id}')" title="Cambiar estado"
+            style="width:22px;height:22px;background:#4f46e5;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="white"><circle cx="2" cy="5" r="1.2"/><circle cx="5" cy="5" r="1.2"/><circle cx="8" cy="5" r="1.2"/></svg>
           </button>
           <div id="menu-estado-${o.id}" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:140px;overflow:hidden;">
             <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'entregado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#16a34a;cursor:pointer;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">✓ Entregado</div>
