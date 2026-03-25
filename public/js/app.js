@@ -6509,7 +6509,14 @@ async function fetchOrders() {
     } catch {}
   }
 
-  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
+  ordersState = {
+    q: "",
+    status: "",
+    shop: "",
+    dateFrom: document.getElementById("filter-date-from")?.value || "",
+    dateTo:   document.getElementById("filter-date-to")?.value   || "",
+    page: 1
+  };
   await fetchOrdersFiltered();
 }
 
@@ -6975,7 +6982,7 @@ async function syncAndRefreshOrders() {
     window.__hideLoadingBar?.();
     // Esperar 8 segundos para que el background sync termine antes de recargar
     setTimeout(async () => {
-      await fetchOrders();
+      await fetchOrdersFiltered();
       await checkNotificaciones();
     }, 8000);
     // Auto-sincronizar MRW si está integrado
@@ -8510,7 +8517,7 @@ async function sincronizarMRW() {
       showToast("✅ MRW sincronizado", `${data.updated} pedidos actualizados de ${data.total} consultados`, "#16a34a");
       invalidateCache("orders");
       allOrders = [];
-      await fetchOrders();
+      await fetchOrdersFiltered();
     } else {
       showToast("❌ Error MRW", data.error || "Error desconocido", "#dc2626");
     }
