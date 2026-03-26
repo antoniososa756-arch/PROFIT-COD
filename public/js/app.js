@@ -7985,7 +7985,7 @@ async function checkNotificaciones() {
     // Estados que guardamos para detectar cambios
     const estadosGuardados = JSON.parse(localStorage.getItem("orders_estados_" + (currentUser?.id || "anon")) || "{}");
     const nuevosEstados = {};
-    const notisActuales = JSON.parse(localStorage.getItem("notifications") || "[]");
+    const notisActuales = JSON.parse(localStorage.getItem("notifications_" + (currentUser?.id || "anon")) || "[]");
     const notisIds = new Set(notisActuales.map(n => n.id));
     const nuevasNotis = [...notisActuales];
 
@@ -8042,7 +8042,7 @@ async function checkNotificaciones() {
     }
 
     localStorage.setItem("orders_estados_" + (currentUser?.id || "anon"), JSON.stringify(nuevosEstados));
-    localStorage.setItem("notifications", JSON.stringify(nuevasNotis));
+    localStorage.setItem("notifications_" + (currentUser?.id || "anon"), JSON.stringify(nuevasNotis));
 
     const panel = document.getElementById("notifPanel");
     const d = dict();
