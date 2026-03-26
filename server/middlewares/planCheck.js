@@ -20,7 +20,7 @@ module.exports = async (req, res, next) => {
   const expiresAt = user.plan_expires_at ? new Date(user.plan_expires_at) : null;
   const expired   = expiresAt ? expiresAt < new Date() : true;
 
-  if (plan === "free" || status !== "active" || expired) {
+  if (plan === "free" || (status !== "active" && status !== "trial") || expired) {
     return res.status(402).json({ error: "PLAN_REQUERIDO", message: "Tu plan ha caducado. Renueva para continuar." });
   }
 
