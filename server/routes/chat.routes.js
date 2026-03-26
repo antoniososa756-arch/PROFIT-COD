@@ -66,17 +66,26 @@ router.post("/messages", optAuth, requireAuth, async (req, res) => {
   if (!content?.trim()) return res.status(400).json({ error: "Mensaje vacío" });
   try {
     const sender = req.user.role === "admin" ? "admin" : "client";
-    const userId = req.user.role === "admin"
-      ? (req.body.to_user_id || null)  // admin responde a un usuario
-      : req.user.id;
 
-    await db.run(
-      `INSERT INTO chat_messages (user_id, sender, content, created_at, read_by_admin, read_by_client)
-       VALUES ($1, $2, $3, now()::text, $4, $5)`,
-      [userId, sender, content.trim(),
-       sender === "admin" ? 1 : 0,   // admin ya leyó su propio msg
-       sender === "client" ? 1 : 0]  // cliente ya leyó su propio msg
-    );
+    if (req.user.role === "admin" && req.body.to_guest_id) {
+      // Admin responde a un guest anónimo
+      await db.run(
+        `INSERT INTO chat_messages (guest_id, sender, content, created_at, read_by_admin, read_by_client)
+         VALUES ($1, 'admin', $2, now()::text, 1, 0)`,
+        [req.body.to_guest_id, content.trim()]
+      );
+    } else {
+      const userId = req.user.role === "admin"
+        ? (req.body.to_user_id || null)
+        : req.user.id;
+      await db.run(
+        `INSERT INTO chat_messages (user_id, sender, content, created_at, read_by_admin, read_by_client)
+         VALUES ($1, $2, $3, now()::text, $4, $5)`,
+        [userId, sender, content.trim(),
+         sender === "admin" ? 1 : 0,
+         sender === "client" ? 1 : 0]
+      );
+    }
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

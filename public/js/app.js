@@ -3222,7 +3222,8 @@ window.openAddTrabajador = openAddTrabajador;
     const token = getChatToken();
     try {
       const body = { content };
-      if (currentUser?.role === "Administrador" && chatCurrentUser) body.to_user_id = chatCurrentUser;
+      if (currentUser?.role === "Administrador" && chatCurrentUser)  body.to_user_id  = chatCurrentUser;
+      if (currentUser?.role === "Administrador" && chatCurrentGuest) body.to_guest_id = chatCurrentGuest;
       await fetch(`${API_BASE}/api/chat/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
