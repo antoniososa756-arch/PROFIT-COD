@@ -180,6 +180,11 @@ const icons = {
       <rect x="14" y="14" width="7" height="7" rx="1"/>
     </svg>
   `,
+  rentabilidad: `
+    <svg viewBox="0 0 24 24">
+      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `,
   tiendas: `
     <svg viewBox="0 0 24 24">
       <path d="M3 9l1-4h16l1 4"/>
@@ -234,7 +239,8 @@ const I18N = {
   ES: {
     labels: {
       metricas: "Métricas",
-      tiendas: "Tiendas",
+      rentabilidad: "Rentabilidad",
+      tiendas: "Integraciones",
       productos: "Productos",
       pedidos: "Pedidos",
       facturas: "Gastos",
@@ -603,6 +609,7 @@ function loadApp(section) {
       </div>
 
       ${menuItem("metricas", labels)}
+      ${menuItem("rentabilidad", labels)}
       ${menuItem("tiendas", labels)}
       ${menuItem("productos", labels)}
       ${menuItem("pedidos", labels)}
@@ -1467,6 +1474,24 @@ if (id === "gestion-clientes") {
   return;
 
   }
+// =========================
+// SECCIÓN RENTABILIDAD
+// =========================
+if (id === "rentabilidad") {
+  if (t) t.textContent = "Rentabilidad";
+  if (s) s.textContent = "Análisis de rentabilidad por tienda";
+  if (c) c.textContent = "Rentabilidad";
+  box.className = "card";
+  box.innerHTML = `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">
+    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d1d5db" stroke-width="1.5" style="margin-bottom:16px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    <div style="font-size:18px;font-weight:700;color:#374151;margin-bottom:8px;">Rentabilidad</div>
+    <div>Próximamente — análisis detallado de márgenes y rentabilidad por tienda.</div>
+  </div>`;
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
 // =========================
 // SECCIÓN TIENDAS
 // =========================
