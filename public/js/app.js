@@ -7247,11 +7247,11 @@ async function syncAndRefreshOrders() {
     });
     const data = await res.json();
     window.__hideLoadingBar?.();
-    // Esperar 8 segundos para que el background sync termine antes de recargar
-    setTimeout(async () => {
-      await fetchOrdersFiltered();
-      await checkNotificaciones();
-    }, 8000);
+
+    // Sync ya completado en servidor — refrescar inmediatamente
+    await fetchOrdersFiltered();
+    await checkNotificaciones();
+
     // Auto-sincronizar MRW si está integrado
     try {
       const creds = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
@@ -7259,15 +7259,20 @@ async function syncAndRefreshOrders() {
       }).then(r => r.json());
       if (creds.integrated) await sincronizarMRW();
     } catch(e) {}
-    if (btn) { btn.textContent = `✓ ${data.synced || 0} pedidos`; }
+
+    const syncedCount = data.synced ?? 0;
+    if (btn) { btn.textContent = `✓ ${syncedCount} pedidos`; }
+    if (syncedCount === 0) {
+      showToast("ℹ️ Sincronizado", "No hay pedidos nuevos desde el 01/02/2026 en esta tienda.", "#6b7280");
+    }
     setTimeout(() => {
       if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>`; btn.disabled = false; btn.style.opacity = "1"; }
-    }, 2000);
+    }, 3000);
   } catch (e) {
     window.__hideLoadingBar?.();
     if (btn) { btn.textContent = "❌ Error"; btn.disabled = false; btn.style.opacity = "1"; }
     setTimeout(() => {
-      if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg> Sincronizar`; }
+      if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
     }, 2000);
   }
 }
