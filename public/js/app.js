@@ -446,22 +446,26 @@ function escapeAttr(str) {
      NOTIFICATIONS (LA CLAVE)
      - Se eliminan UNA A UNA al abrir
      ========================= */
+  function getNotifKey() {
+    return "notifications_" + (currentUser?.id || "anon");
+  }
+
   function getNotifications(d) {
     let list = null;
     try {
-      list = JSON.parse(localStorage.getItem("notifications") || "null");
+      list = JSON.parse(localStorage.getItem(getNotifKey()) || "null");
     } catch (e) {
       list = null;
     }
     if (!Array.isArray(list)) {
       list = [];
-      localStorage.setItem("notifications", JSON.stringify(list));
+      localStorage.setItem(getNotifKey(), JSON.stringify(list));
     }
     return list;
   }
 
   function setNotifications(list) {
-    localStorage.setItem("notifications", JSON.stringify(list || []));
+    localStorage.setItem(getNotifKey(), JSON.stringify(list || []));
   }
 
   function renderNotifPanel(panelEl, list, d) {
@@ -7747,7 +7751,7 @@ async function checkNotificaciones() {
     const sietesDias = 7 * 24 * 60 * 60 * 1000;
 
     // Estados que guardamos para detectar cambios
-    const estadosGuardados = JSON.parse(localStorage.getItem("orders_estados") || "{}");
+    const estadosGuardados = JSON.parse(localStorage.getItem("orders_estados_" + (currentUser?.id || "anon")) || "{}");
     const nuevosEstados = {};
     const notisActuales = JSON.parse(localStorage.getItem("notifications") || "[]");
     const notisIds = new Set(notisActuales.map(n => n.id));
@@ -7794,7 +7798,7 @@ async function checkNotificaciones() {
         const diasTranscurridos = Math.floor((ahora - fechaPedido) / (1000 * 60 * 60 * 24));
         if (diasTranscurridos >= 7) {
           const notiId = `7dias__${id}`;
-          const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas") || "[]");
+          const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas_" + (currentUser?.id || "anon")) || "[]");
           if (!notisIds.has(notiId) && !gestionados.includes(notiId)) {
             const txt = `${nombre} — ${o.customer_name || ""} (${estado})`;
             nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: txt, date: ahoraISO });
@@ -7805,7 +7809,7 @@ async function checkNotificaciones() {
       }
     }
 
-    localStorage.setItem("orders_estados", JSON.stringify(nuevosEstados));
+    localStorage.setItem("orders_estados_" + (currentUser?.id || "anon"), JSON.stringify(nuevosEstados));
     localStorage.setItem("notifications", JSON.stringify(nuevasNotis));
 
     const panel = document.getElementById("notifPanel");
@@ -7879,9 +7883,9 @@ function irAPedidoDesdeNotif(notiId) {
 function marcarGestionado(event, notiId) {
   event.stopPropagation();
   // Guardar en lista de gestionados para no volver a notificar
-  const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas") || "[]");
+  const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas_" + (currentUser?.id || "anon")) || "[]");
   if (!gestionados.includes(notiId)) gestionados.push(notiId);
-  localStorage.setItem("notis_gestionadas", JSON.stringify(gestionados));
+    localStorage.setItem("notis_gestionadas_" + (currentUser?.id || "anon"), JSON.stringify(gestionados));
 
   // Eliminar de la lista de notificaciones
   const list = JSON.parse(localStorage.getItem("notifications") || "[]");
