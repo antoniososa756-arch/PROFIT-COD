@@ -721,6 +721,13 @@ function loadApp(section) {
             </div>
           </div>
 
+          <div id="trial-countdown-banner" style="display:none;padding:9px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span>🎁</span>
+              <span id="trial-countdown-text"></span>
+            </div>
+            <button onclick="setSection('plan')" style="background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);color:inherit;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Ver planes</button>
+          </div>
           <div id="order-limit-banner" style="display:none;background:#dc2626;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div style="display:flex;align-items:center;gap:10px;">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -775,19 +782,44 @@ function loadApp(section) {
 
 function updateOrderLimitBanner() {
   const banner = document.getElementById("order-limit-banner");
-  if (!banner) return;
+  const trialBanner = document.getElementById("trial-countdown-banner");
   const up = window.__userPlan || {};
-  if (up.order_limit && (up.monthly_orders || 0) > up.order_limit) {
-    const used  = (up.monthly_orders).toLocaleString("es-ES");
-    const limit = (up.order_limit).toLocaleString("es-ES");
-    // Calcular días restantes para fin de mes
-    const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = lastDay - now.getDate();
+  const used  = up.monthly_orders || 0;
+  const limit = up.order_limit;
+  const now = new Date();
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = lastDay - now.getDate();
+
+  // ── Barra de trial ──────────────────────────────────────────
+  if (trialBanner) {
+    if (up.trial_active && up.trial_ends_at) {
+      const msLeft = new Date(up.trial_ends_at) - now;
+      const daysTrialLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+      const textEl = document.getElementById("trial-countdown-text");
+      if (textEl) textEl.textContent =
+        daysTrialLeft <= 1
+          ? `Período de prueba: ¡último día! Activa un plan para no perder el acceso.`
+          : `Período de prueba: ${daysTrialLeft} día${daysTrialLeft === 1 ? "" : "s"} restantes`;
+      // Verde si ≥3 días, naranja si ≤2
+      const bg = daysTrialLeft <= 2 ? "#f59e0b" : "#16a34a";
+      trialBanner.style.cssText = `display:flex;background:${bg};color:#fff;padding:9px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;`;
+    } else {
+      trialBanner.style.display = "none";
+    }
+  }
+
+  // ── Barra de límite de pedidos ───────────────────────────────
+  if (!banner) return;
+  if (up.is_blocked) {
+    banner.style.cssText = "display:flex;background:#dc2626;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
     const textEl = document.getElementById("order-limit-banner-text");
     if (textEl) textEl.textContent =
-      `Renueva tu plan — en el mes actual has superado tu límite de pedidos (${used} de ${limit}). Se restablece en ${daysLeft} día${daysLeft === 1 ? "" : "s"}.`;
-    banner.style.display = "flex";
+      `⛔ Límite de pedidos alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")}). La app está bloqueada. Cambia de plan o espera al inicio del mes (${daysLeft} día${daysLeft === 1 ? "" : "s"}).`;
+  } else if (limit && used >= limit * 0.85) {
+    banner.style.cssText = "display:flex;background:#f59e0b;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
+    const textEl = document.getElementById("order-limit-banner-text");
+    if (textEl) textEl.textContent =
+      `⚠️ Atención: has usado ${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos este mes (${Math.round(used/limit*100)}%). Quedan ${daysLeft} día${daysLeft===1?"":"s"}.`;
   } else {
     banner.style.display = "none";
   }
@@ -820,7 +852,7 @@ function setSection(id) {
 if (id !== "plan" && currentUser.role !== "Administrador") {
   const up = window.__userPlan || {};
   const planOk = up.plan && up.plan !== "free"
-    && up.status === "active"
+    && (up.status === "active" || up.status === "trial")
     && (!up.expires_at || new Date(up.expires_at) > new Date());
 
   if (!planOk) {
@@ -829,27 +861,78 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
     if (c) c.textContent = "Plan requerido";
     if (box) {
       box.className = "card";
+      const planCards = [
+        { key:"starter",  color:"#10b981", name:"Starter",  price:"9,99",  ppo:"0,09", limit:"100" },
+        { key:"growth",   color:"#3b82f6", name:"Growth",   price:"19,99", ppo:"0,07", limit:"500" },
+        { key:"pro",      color:"#8b5cf6", name:"Pro",      price:"29,99", ppo:"0,05", limit:"1.000" },
+        { key:"business", color:"#f59e0b", name:"Business", price:"39,99", ppo:"0,03", limit:"∞" },
+      ];
+      const trialExpired = up.had_trial && up.status !== "active";
+      const headline = trialExpired
+        ? "Tu período de prueba ha terminado"
+        : "Activa tu plan para acceder a tus tiendas";
+      const subline = trialExpired
+        ? "Los 7 días gratuitos han expirado. Elige un plan para seguir usando la app."
+        : "Tu suscripción ha caducado o no tienes un plan activo. Tiendas ilimitadas en todos los planes.";
       box.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:20px;">
-          <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="#d1d5db" stroke-width="1.5">
+          <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="${trialExpired ? "#f59e0b" : "#d1d5db"}" stroke-width="1.5">
             <rect x="3" y="11" width="18" height="11" rx="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
           <div>
-            <div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;">Renueva tu plan para ver la información de tus tiendas</div>
-            <div style="font-size:14px;color:#6b7280;max-width:420px;">Tu suscripción ha caducado o no tienes un plan activo. Activa un plan para acceder a métricas, pedidos, productos y toda la información de tus tiendas.</div>
+            <div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;">${headline}</div>
+            <div style="font-size:14px;color:#6b7280;max-width:460px;">${subline}</div>
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
-            <div style="border:2px solid #3b82f6;border-radius:12px;padding:16px 24px;min-width:160px;"><div style="font-size:12px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Básico</div><div style="font-size:24px;font-weight:800;color:#111827;">9,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div><div style="font-size:12px;color:#6b7280;margin-top:4px;">1 tienda · 500 pedidos/mes</div></div>
-            <div style="border:2px solid #8b5cf6;border-radius:12px;padding:16px 24px;min-width:160px;"><div style="font-size:12px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Pro</div><div style="font-size:24px;font-weight:800;color:#111827;">19,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div><div style="font-size:12px;color:#6b7280;margin-top:4px;">4 tiendas · 5.000 pedidos/mes</div></div>
-            <div style="border:2px solid #f59e0b;border-radius:12px;padding:16px 24px;min-width:160px;"><div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Business</div><div style="font-size:24px;font-weight:800;color:#111827;">29,99€<span style="font-size:13px;font-weight:400;color:#6b7280;">/mes</span></div><div style="font-size:12px;color:#6b7280;margin-top:4px;">10 tiendas · 15.000 pedidos/mes</div></div>
+            ${planCards.map(p => `
+              <div style="border:2px solid ${p.color};border-radius:12px;padding:16px 20px;min-width:140px;text-align:left;">
+                <div style="font-size:11px;font-weight:700;color:${p.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${p.name}</div>
+                <div style="font-size:22px;font-weight:800;color:#111827;">${p.price}€<span style="font-size:12px;font-weight:400;color:#6b7280;">/mes</span></div>
+                <div style="font-size:11px;color:#6b7280;margin-top:2px;">+ ${p.ppo}€/pedido</div>
+                <div style="font-size:11px;color:#6b7280;">hasta ${p.limit} pedidos/mes</div>
+              </div>`).join("")}
           </div>
-          <button onclick="setSection('plan')" style="padding:12px 32px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">Ver planes y renovar</button>
+          <button onclick="setSection('plan')" style="padding:12px 32px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">Ver planes y activar</button>
         </div>`;
     }
     closeAllDrops();
     closeSearchDrop();
     return;
+  }
+
+  // Bloqueo por límite de pedidos superado (plan activo pero excedido)
+  if (up.is_blocked) {
+    const now = new Date();
+    const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+    if (box) {
+      box.style.position = "relative";
+      // Eliminar overlay anterior si existe
+      document.getElementById("order-limit-overlay")?.remove();
+      const overlay = document.createElement("div");
+      overlay.id = "order-limit-overlay";
+      overlay.style.cssText = "position:absolute;inset:0;z-index:500;background:rgba(255,255,255,0.93);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;border-radius:inherit;text-align:center;padding:32px;";
+      overlay.innerHTML = `
+        <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="#dc2626" stroke-width="1.5">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <div>
+          <div style="font-size:18px;font-weight:800;color:#111827;margin-bottom:8px;">Has alcanzado el límite de pedidos</div>
+          <div style="font-size:14px;color:#6b7280;max-width:420px;">
+            Has usado <strong>${(up.monthly_orders||0).toLocaleString("es-ES")}</strong> pedidos este mes.
+            Tu plan <strong>${up.plan}</strong> permite <strong>${(up.order_limit||0).toLocaleString("es-ES")}</strong>.<br><br>
+            La sincronización en segundo plano sigue activa. Solo la visualización está bloqueada.
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;">
+          <button onclick="setSection('plan')" style="padding:11px 28px;background:#16a34a;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;">Cambiar de plan</button>
+          <span style="font-size:13px;color:#9ca3af;">o espera ${daysLeft} día${daysLeft===1?"":"s"} para que se reinicie</span>
+        </div>`;
+      box.appendChild(overlay);
+    }
+  } else {
+    document.getElementById("order-limit-overlay")?.remove();
   }
 }
 
@@ -1997,57 +2080,83 @@ if (id === "plan") {
 
   const isAdmin = currentUser.role === "Administrador";
 
+  const PLAN_DEFS = {
+    starter:  { name:"Starter",  price:"9,99",  ppo:"0,09", limit:"100",    color:"#10b981", features:["Tiendas ilimitadas","Hasta 100 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
+    growth:   { name:"Growth",   price:"19,99", ppo:"0,07", limit:"500",    color:"#3b82f6", features:["Tiendas ilimitadas","Hasta 500 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
+    pro:      { name:"Pro",      price:"29,99", ppo:"0,05", limit:"1.000",  color:"#8b5cf6", features:["Tiendas ilimitadas","Hasta 1.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
+    business: { name:"Business", price:"39,99", ppo:"0,03", limit:"∞",     color:"#f59e0b", features:["Tiendas ilimitadas","Pedidos ilimitados","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
+  };
+
   box.className = "card";
-  box.innerHTML = `<div style="max-width:860px;">
+  box.innerHTML = `<div style="max-width:960px;">
     ${isAdmin ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 18px;margin-bottom:24px;display:flex;align-items:center;gap:10px;">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       <span style="font-size:13px;color:#15803d;font-weight:600;">Cuenta de administrador — acceso ilimitado a todas las funciones.</span>
     </div>` : ""}
-    <div id="plan-current-banner" style="margin-bottom:24px;"></div>
-    <h3 style="font-size:15px;font-weight:700;margin:0 0 18px;">Elige tu plan</h3>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;" id="plan-cards">
-      ${["basic","pro","business"].map(p => {
-        const info = { basic:{name:"Básico",price:"9,99",stores:1,orders:"500",color:"#3b82f6",features:["1 tienda Shopify","500 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"]}, pro:{name:"Pro",price:"19,99",stores:4,orders:"5.000",color:"#8b5cf6",features:["Hasta 4 tiendas Shopify","5.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"]}, business:{name:"Business",price:"29,99",stores:10,orders:"15.000",color:"#f59e0b",features:["Hasta 10 tiendas Shopify","15.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"]} }[p];
-        return `<div id="plan-card-${p}" style="border:2px solid #e5e7eb;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:0;position:relative;transition:border-color .2s;">
-          <div style="font-size:13px;font-weight:700;color:${info.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${info.name}</div>
-          <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px;">
-            <span style="font-size:30px;font-weight:800;color:#111827;">${info.price}€</span>
-            <span style="font-size:13px;color:#6b7280;">/mes</span>
+    <div id="plan-current-banner" style="margin-bottom:20px;"></div>
+    <div id="plan-trial-banner" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 18px;margin-bottom:20px;font-size:13px;color:#15803d;font-weight:600;"></div>
+    <h3 style="font-size:15px;font-weight:700;margin:0 0 6px;">Elige tu plan</h3>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Tiendas ilimitadas en todos los planes. Precio base mensual + coste por pedido usado.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;" id="plan-cards">
+      ${Object.entries(PLAN_DEFS).map(([p, info]) => `
+        <div id="plan-card-${p}" style="border:2px solid #e5e7eb;border-radius:14px;padding:20px;display:flex;flex-direction:column;position:relative;transition:border-color .2s;">
+          <div style="font-size:12px;font-weight:700;color:${info.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${info.name}</div>
+          <div style="display:flex;align-items:baseline;gap:3px;margin-bottom:2px;">
+            <span style="font-size:26px;font-weight:800;color:#111827;">${info.price}€</span>
+            <span style="font-size:12px;color:#6b7280;">/mes</span>
           </div>
-          <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">${info.stores === 1 ? "1 tienda" : `Hasta ${info.stores} tiendas`}</div>
-          <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">${info.orders} pedidos/mes</div>
-          <ul style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:7px;">
-            ${info.features.map(f => `<li style="display:flex;align-items:center;gap:7px;font-size:12px;color:#374151;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
+          <div style="font-size:12px;color:${info.color};font-weight:600;margin-bottom:2px;">+ ${info.ppo}€ por pedido</div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">hasta ${info.limit} pedidos/mes</div>
+          <ul style="list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;flex:1;">
+            ${info.features.map(f => `<li style="display:flex;align-items:center;gap:6px;font-size:11px;color:#374151;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
           </ul>
           <div id="plan-actions-${p}" style="margin-top:auto;"></div>
-        </div>`;
-      }).join("")}
+        </div>`).join("")}
     </div>
-    <div style="border-top:1px solid #f3f4f6;padding-top:16px;font-size:12px;color:#9ca3af;text-align:center;">
-      Los pagos se procesan de forma segura. Cada pago activa el plan por 30 días.
+    <div id="plan-invoice-preview" style="display:none;"></div>
+    <div style="border-top:1px solid #f3f4f6;padding-top:14px;font-size:12px;color:#9ca3af;text-align:center;">
+      Los pagos se procesan de forma segura. Cada pago activa el plan por 30 días. 7 días gratis en tu primera suscripción.
     </div>
   </div>`;
 
   async function loadPlanUI() {
-    let currentPlan = "free", expiresAt = null;
+    let d = { plan: "free", status: "inactive", expires_at: null, trial_active: false, trial_ends_at: null, had_trial: false, monthly_orders: 0, order_limit: null, is_blocked: false, variable_cost: 0, estimated_total: null, days_left_month: 0 };
     try {
       const r = await fetch(`${API_BASE}/api/billing/plan`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-      const d = await r.json();
-      currentPlan = d.plan || "free";
-      expiresAt   = d.expires_at;
+      const j = await r.json();
+      if (!j.error) Object.assign(d, j);
     } catch {}
+
+    const currentPlan = d.plan || "free";
+    const expiresAt   = d.expires_at;
+
+    const planNames = { free: "Sin plan activo", starter: "Starter", growth: "Growth", pro: "Pro", business: "Business" };
+    const planColors = { free: "#6b7280", starter: "#10b981", growth: "#3b82f6", pro: "#8b5cf6", business: "#f59e0b" };
 
     // Banner plan actual
     const banner = document.getElementById("plan-current-banner");
     if (banner) {
-      const planNames = { free: "Sin plan activo", basic: "Básico", pro: "Pro", business: "Business" };
-      const planColors = { free: "#6b7280", basic: "#3b82f6", pro: "#8b5cf6", business: "#f59e0b" };
       const expStr = expiresAt ? new Date(expiresAt).toLocaleDateString("es-ES") : null;
-      banner.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;">
+      const statusLabel = d.status === "trial" ? " · <span style='color:#f59e0b;font-weight:700;'>Período de prueba</span>" : "";
+      banner.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;flex-wrap:wrap;">
         <span style="font-size:13px;color:#374151;">Plan actual:</span>
         <span style="font-weight:700;color:${planColors[currentPlan] || "#6b7280"};font-size:14px;">${planNames[currentPlan] || currentPlan}</span>
-        ${expStr ? `<span style="font-size:12px;color:#9ca3af;margin-left:4px;">· Renovar antes del ${expStr}</span>` : ""}
+        ${statusLabel}
+        ${expStr ? `<span style="font-size:12px;color:#9ca3af;margin-left:4px;">· Vence el ${expStr}</span>` : ""}
+        ${d.monthly_orders > 0 ? `<span style="font-size:12px;color:#6b7280;margin-left:auto;">${d.monthly_orders}${d.order_limit ? "/" + d.order_limit : ""} pedidos este mes</span>` : ""}
       </div>`;
+    }
+
+    // Banner de trial activo
+    const trialBanner = document.getElementById("plan-trial-banner");
+    if (trialBanner) {
+      if (d.trial_active && d.trial_ends_at) {
+        const trialEnd = new Date(d.trial_ends_at).toLocaleDateString("es-ES");
+        trialBanner.style.display = "block";
+        trialBanner.innerHTML = `🎉 Período de prueba activo — expira el <strong>${trialEnd}</strong>. Después necesitarás un plan de pago para seguir usando la app.`;
+      } else {
+        trialBanner.style.display = "none";
+      }
     }
 
     // Resaltar card del plan actual
@@ -2057,21 +2166,47 @@ if (id === "plan") {
     });
     const activeCard = document.getElementById("plan-card-" + currentPlan);
     if (activeCard) {
-      const colors = { basic:"#3b82f6", pro:"#8b5cf6", business:"#f59e0b" };
-      activeCard.style.borderColor = colors[currentPlan] || "#16a34a";
-      activeCard.style.boxShadow = `0 0 0 3px ${colors[currentPlan] || "#16a34a"}22`;
+      const col = planColors[currentPlan] || "#16a34a";
+      activeCard.style.borderColor = col;
+      activeCard.style.boxShadow = `0 0 0 3px ${col}22`;
+    }
+
+    // Preview de factura del mes
+    const invoiceDiv = document.getElementById("plan-invoice-preview");
+    if (invoiceDiv && currentPlan !== "free" && !isAdmin) {
+      try {
+        const r2 = await fetch(`${API_BASE}/api/billing/invoice-preview`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+        const inv = await r2.json();
+        if (inv.available) {
+          invoiceDiv.style.display = "block";
+          invoiceDiv.innerHTML = `
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-top:4px;">
+              <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;">Resumen del mes actual (${inv.cycle_start} → ${inv.cycle_end})</div>
+              <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
+                <div style="display:flex;justify-content:space-between;"><span style="color:#6b7280;">Cuota base:</span><span style="font-weight:600;">${inv.base_price.toFixed(2)}€</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#6b7280;">Pedidos usados:</span><span style="font-weight:600;">${inv.orders_used} × ${inv.price_per_order}€</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#6b7280;">Coste variable:</span><span style="font-weight:600;">${inv.variable_cost.toFixed(2)}€</span></div>
+                <div style="display:flex;justify-content:space-between;border-top:1px solid #e5e7eb;padding-top:6px;margin-top:2px;"><span style="font-weight:700;color:#111827;">Total estimado:</span><span style="font-weight:800;font-size:15px;color:#111827;">${inv.total.toFixed(2)}€</span></div>
+              </div>
+            </div>`;
+        } else {
+          invoiceDiv.style.display = "none";
+        }
+      } catch { invoiceDiv.style.display = "none"; }
+    } else if (invoiceDiv) {
+      invoiceDiv.style.display = "none";
     }
 
     // Obtener client_id de PayPal para saber si está configurado
     let ppClientId = "";
     try {
       const r = await fetch(`${API_BASE}/api/billing/paypal/client-id`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-      const d = await r.json();
-      ppClientId = d.client_id || "";
+      const pj = await r.json();
+      ppClientId = pj.client_id || "";
     } catch {}
 
     // Botones por plan
-    ["basic","pro","business"].forEach(p => {
+    ["starter","growth","pro","business"].forEach(p => {
       const actDiv = document.getElementById("plan-actions-" + p);
       if (!actDiv) return;
       if (isAdmin) {
@@ -2079,13 +2214,17 @@ if (id === "plan") {
         return;
       }
       const isCurrent = p === currentPlan;
-      // Dropdown de métodos de pago
+      const canTrial  = p === "starter" && !d.had_trial && d.status !== "active" && d.status !== "trial";
       actDiv.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:8px;position:relative;">
-          ${isCurrent ? `<div style="text-align:center;padding:7px;background:#f0fdf4;border-radius:8px;font-size:12px;font-weight:700;color:#16a34a;">✓ Plan actual</div>` : ""}
+          ${isCurrent ? `<div style="text-align:center;padding:7px;background:#f0fdf4;border-radius:8px;font-size:12px;font-weight:700;color:#16a34a;">✓ Plan actual${d.status === "trial" ? " (prueba)" : ""}</div>` : ""}
+          ${canTrial ? `<button onclick="startTrial('${p}')"
+            style="width:100%;padding:9px;background:#f0fdf4;color:#16a34a;border:1.5px solid #bbf7d0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
+            🎁 Probar gratis 7 días
+          </button>` : ""}
           <button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
             style="width:100%;padding:10px;background:#635bff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-            ${isCurrent ? "Renovar" : "Suscribirse"}
+            ${isCurrent && d.status === "active" ? "Renovar" : "Suscribirse"}
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div id="payment-menu-${p}" style="display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:100;">
@@ -2112,6 +2251,23 @@ if (id === "plan") {
     }
   }
 
+  window.startTrial = async function(plan) {
+    try {
+      const r = await fetch(`${API_BASE}/api/billing/start-trial`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({ plan }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        showToast("🎉 ¡Prueba activada!", `Tienes 7 días gratuitos con el plan ${plan}. Disfrútalo.`, "#16a34a");
+        loadPlanUI();
+      } else {
+        alert(d.error || "No se pudo activar el período de prueba");
+      }
+    } catch(e) { alert("Error: " + e.message); }
+  };
+
   window.togglePaymentMenu = function(plan) {
     const menu = document.getElementById("payment-menu-" + plan);
     if (!menu) return;
@@ -2134,7 +2290,7 @@ if (id === "plan") {
 
     if (!window.paypal) return;
 
-    ["basic","pro","business"].forEach(plan => {
+    ["starter","growth","pro","business"].forEach(plan => {
       const container = document.getElementById("paypal-btn-" + plan);
       if (!container) return;
       window.paypal.Buttons({

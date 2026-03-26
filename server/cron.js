@@ -152,6 +152,47 @@ function startCrons() {
 
   console.log("✅ [CRON] Crons iniciados — Shopify cada 10min, MRW cada 5min");
 
+  // ── Cierre de mes: comprobar cada hora si toca generar factura y resetear contadores ──
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getDate() !== 1 || now.getHours() !== 2) return; // Solo el día 1 a las 2:00
+    try {
+      const { PLANS } = require("./routes/billing.routes");
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const period = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, "0")}`;
+      const users = await db.all(
+        `SELECT id, plan, plan_status FROM users WHERE plan_status IN ('active','trial') AND plan != 'free'`
+      );
+      for (const user of users) {
+        try {
+          const planInfo = PLANS[user.plan];
+          if (!planInfo) continue;
+          const countRow = await db.get(
+            `SELECT COUNT(*) as cnt FROM orders o
+             JOIN shops s ON s.id = o.shop_id
+             WHERE s.user_id = $1 AND o.created_at LIKE $2`,
+            [user.id, period + "%"]
+          );
+          const ordersUsed = parseInt(countRow?.cnt || 0);
+          const variableCost = +(ordersUsed * planInfo.price_per_order).toFixed(2);
+          const total = +(planInfo.base_price + variableCost).toFixed(2);
+          await db.run(
+            `INSERT INTO billing_invoices (user_id, plan, period, base_price, orders_used, price_per_order, variable_cost, total)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (user_id, period) DO NOTHING`,
+            [user.id, user.plan, period, planInfo.base_price, ordersUsed, planInfo.price_per_order, variableCost, total]
+          );
+          // Resetear caché del mes anterior
+          await db.run(
+            `UPDATE users SET monthly_orders_cache = 0, monthly_orders_month = $1,
+             billing_cycle_start = $2 WHERE id = $3`,
+            [period.slice(0, 7), new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), user.id]
+          );
+          console.log(`[BILLING] Factura ${period} generada para user ${user.id}: ${total}€`);
+        } catch(e) { console.error(`[BILLING] Error user ${user.id}:`, e.message); }
+      }
+    } catch(e) { console.error("[BILLING] Error cierre de mes:", e.message); }
+  }, 60 * 60 * 1000); // cada hora
+
   // Keep-alive: ping cada 10 min para que Render no duerma el servidor
   const APP_URL = process.env.APP_URL || "https://profit-cod.onrender.com";
   setInterval(async () => {

@@ -303,6 +303,26 @@ await pool.query(`
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free'`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_status TEXT DEFAULT 'inactive'`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_started_at TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_cycle_start TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_cache INTEGER DEFAULT 0`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_month TEXT`);
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS billing_invoices (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    plan TEXT NOT NULL,
+    period TEXT NOT NULL,
+    base_price NUMERIC(10,2),
+    orders_used INTEGER,
+    price_per_order NUMERIC(10,4),
+    variable_cost NUMERIC(10,2),
+    total NUMERIC(10,2),
+    status TEXT DEFAULT 'pending',
+    created_at TEXT DEFAULT now()::text,
+    UNIQUE(user_id, period)
+  )
+`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS chat_messages (
