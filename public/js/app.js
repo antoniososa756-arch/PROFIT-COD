@@ -129,6 +129,14 @@ if (location.pathname.includes("login")) {
           .then(r => r.json()).then(p => {
             window.__userPlan = p;
             updateOrderLimitBanner();
+            // Si el plan es válido recargar la sección actual (puede estar bloqueada por timing)
+            const planOk = p.plan && p.plan !== "free"
+              && (p.status === "active" || p.status === "trial")
+              && (!p.expires_at || new Date(p.expires_at) > new Date());
+            if (planOk) {
+              const cur = localStorage.getItem("section") || "metricas";
+              if (cur !== "plan") setSection(cur);
+            }
           }).catch(() => {});
       } else {
         window.__userPlan = { plan: "admin", status: "active", expires_at: null };
@@ -645,6 +653,9 @@ function loadApp(section) {
           </span>
           <span style="font-size:13px;font-weight:700;color:#374151;" id="sidebar-ree-total">—</span>
         </div>
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid #f3f4f6;text-align:center;font-size:10px;color:#d1d5db;line-height:1.5;">
+        Powered by<br><span style="font-weight:700;color:#9ca3af;">FANOMI, LLC</span> · 2026
       </div>
     </div>
 
