@@ -33,7 +33,7 @@ router.get("/", auth, async (req, res) => {
          COALESCE(o.shop_domain, s.shop_domain) as shop_domain`;
 
     const conditions = [
-      `(SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)`
+      `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`
     ];
     const params = [userId];
     let i = 2;
