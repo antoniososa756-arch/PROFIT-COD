@@ -33,7 +33,7 @@ router.get("/", auth, async (req, res) => {
          COALESCE(o.shop_domain, s.shop_domain) as shop_domain`;
 
     const conditions = [
-      `o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)`
+      `(SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')`
     ];
     const params = [userId];
     let i = 2;
@@ -118,7 +118,7 @@ router.get("/reembolsos", auth, async (req, res) => {
 
   try {
     const conditions = [
-      `o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)`,
+      `(SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')`,
       `o.fulfillment_status = 'entregado'`,
       `o.financial_status IN ('pending','cod','pendiente')`
     ];
@@ -181,11 +181,11 @@ router.post("/marcar-entregado", auth, async (req, res) => {
       order_id
         ? `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
            WHERE order_id = $1
-             AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status = 'active')
              AND fulfillment_status NOT IN ('entregado', 'cancelado')`
         : `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
            WHERE id = $1
-             AND shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status = 'active')
              AND fulfillment_status NOT IN ('entregado', 'cancelado')`,
       [order_id || id, req.user.id]
     );
@@ -204,9 +204,9 @@ router.post("/marcar-estado", auth, async (req, res) => {
     const result = await db.run(
       order_id
         ? `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text
-           WHERE order_id = $2 AND shop_id IN (SELECT id FROM shops WHERE user_id = $3)`
+           WHERE order_id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status = 'active')`
         : `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text
-           WHERE id = $2 AND shop_id IN (SELECT id FROM shops WHERE user_id = $3)`,
+           WHERE id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status = 'active')`,
       [estado, order_id || id, req.user.id]
     );
     if (!result.changes) return res.status(404).json({ error: "Pedido no encontrado" });

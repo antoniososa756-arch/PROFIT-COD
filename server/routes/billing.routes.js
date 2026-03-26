@@ -53,8 +53,8 @@ async function getMonthlyOrders(userId) {
   const month = new Date().toISOString().slice(0, 7); // "YYYY-MM"
   const countRow = await db.get(`
     SELECT COUNT(*) as cnt FROM orders o
-    JOIN shops s ON s.id = o.shop_id
-    WHERE s.user_id = $1 AND o.created_at LIKE $2
+    WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')
+      AND o.created_at LIKE $2
   `, [userId, month + "%"]);
   return parseInt(countRow?.cnt || 0);
 }

@@ -178,8 +178,8 @@ function startCrons() {
           if (!planInfo) continue;
           const countRow = await db.get(
             `SELECT COUNT(*) as cnt FROM orders o
-             JOIN shops s ON s.id = o.shop_id
-             WHERE s.user_id = $1 AND o.created_at LIKE $2`,
+             WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')
+               AND o.created_at LIKE $2`,
             [user.id, period + "%"]
           );
           const ordersUsed = parseInt(countRow?.cnt || 0);
