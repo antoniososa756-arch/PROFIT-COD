@@ -1496,24 +1496,218 @@ if (id === "rentabilidad") {
 // SECCIÓN TIENDAS
 // =========================
 if (id === "tiendas") {
-  if (t) t.textContent = "Tiendas";
-  if (s) s.textContent = "Gestiona tus tiendas conectadas";
-  if (c) c.textContent = "Tiendas";
+  if (t) t.textContent = "Integraciones";
+  if (s) s.textContent = "Gestiona tus integraciones";
+  if (c) c.textContent = "Integraciones";
 
-  box.className = "card";  
-  if (box) {
-    box.innerHTML = `
-      <div style="display:flex; justify-content:flex-end; margin-bottom:20px;">
-        <button class="btn-primary" onclick="openShopifyConnect()">
-          + Conectar tienda Shopify
-        </button>
-      </div>
+  box.className = "";
+  box.removeAttribute("style");
+  box.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
+      <button id="int-tab-btn-tiendas" onclick="switchIntegracionesTab('tiendas')"
+        style="padding:8px 18px;border-radius:8px;border:1px solid #16a34a;font-size:13px;font-weight:600;cursor:pointer;background:#16a34a;color:#fff;">
+        Tiendas
+      </button>
+      <button id="int-tab-btn-agencia" onclick="switchIntegracionesTab('agencia')"
+        style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;">
+        Agencia de envío
+      </button>
+      <button id="int-tab-btn-reembolsos" onclick="switchIntegracionesTab('reembolsos')"
+        style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;">
+        Reembolsos
+      </button>
+    </div>
+    <div id="integraciones-content"></div>
+  `;
 
-      <div id="storesGrid" class="stores-grid"></div>
-    `;
-  }
+  window.switchIntegracionesTab = function(tab) {
+    ["tiendas","agencia","reembolsos"].forEach(k => {
+      const btn = document.getElementById("int-tab-btn-" + k);
+      if (!btn) return;
+      if (k === tab) {
+        btn.style.background = "#16a34a"; btn.style.color = "#fff"; btn.style.borderColor = "#16a34a";
+      } else {
+        btn.style.background = "#fff"; btn.style.color = "#374151"; btn.style.borderColor = "#e5e7eb";
+      }
+    });
 
-  fetchStores();
+    const content = document.getElementById("integraciones-content");
+    if (!content) return;
+
+    if (tab === "tiendas") {
+      content.innerHTML = `
+        <div class="card">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:20px;">
+            <button class="btn-primary" onclick="openShopifyConnect()">
+              + Conectar tienda Shopify
+            </button>
+          </div>
+          <div id="storesGrid" class="stores-grid"></div>
+        </div>
+      `;
+      fetchStores();
+    }
+
+    if (tab === "agencia") {
+      content.innerHTML = `
+        <div class="card" style="padding:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">🚚 Integración MRW</div>
+              <div style="font-size:13px;color:#6b7280;">Conecta tu cuenta MRW para sincronizar estados de envío automáticamente</div>
+            </div>
+            <div id="mrw-status-badge"></div>
+          </div>
+          <div id="mrw-config-wrap"></div>
+        </div>
+      `;
+      cargarConfigMRW();
+    }
+
+    if (tab === "reembolsos") {
+      content.innerHTML = `
+        <div class="card" style="padding:20px;">
+          <div class="orders-header">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+              <div class="tabs" style="margin-bottom:0;border-bottom:none;">
+                <span class="tab active" onclick="filterReeByTab(this,'')">Todos</span>
+                <span class="tab" onclick="filterReeByTab(this,'pendiente')">Pendiente</span>
+                <span class="tab" onclick="filterReeByTab(this,'cobrado')">Pagado</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <input type="date" id="ree-date-from" value="" onchange="renderReembolsos()"
+                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+                <span style="color:#6b7280;font-size:13px;">—</span>
+                <input type="date" id="ree-date-to" value="" onchange="renderReembolsos()"
+                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+                <select id="ree-shop" onchange="renderReembolsos()"
+                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+                  <option value="">Todas las tiendas</option>
+                </select>
+                <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
+                <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;color:#16a34a;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+                  ✅ Importar Pagados
+                  <input type="file" accept=".pdf" multiple style="display:none;" onchange="importarPagadosPDF(this)">
+                </label>
+              </div>
+            </div>
+            <div style="border-bottom:1px solid #e5e7eb;margin-bottom:12px;"></div>
+            <div id="ree-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
+            <div class="orders-table">
+              <div class="orders-row head" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
+                <div>#</div><div>Pedido</div><div>Nº seguimiento</div><div>Fecha</div><div>Cliente</div><div>Costo</div><div>Estado pago</div>
+              </div>
+              <div id="reeBody"><div class="muted" style="padding:16px;">Cargando...</div></div>
+            </div>
+            <div id="reePagination" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:18px 0 4px;flex-wrap:wrap;"></div>
+          </div>
+        </div>
+      `;
+      fetch(`${API_BASE}/api/shopify/stores`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      }).then(r => r.json()).then(stores => {
+        const sel = document.getElementById("ree-shop");
+        if (sel && Array.isArray(stores)) {
+          stores.forEach(s => {
+            const opt = document.createElement("option");
+            opt.value = s.domain;
+            opt.textContent = s.shop_name || s.domain;
+            sel.appendChild(opt);
+          });
+        }
+      }).catch(() => {});
+      loadReembolsos();
+    }
+  };
+
+  window.cargarConfigMRW = async function() {
+    const wrap = document.getElementById("mrw-config-wrap");
+    const badge = document.getElementById("mrw-status-badge");
+    if (!wrap) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      });
+      const data = await res.json();
+      if (data.integrated) {
+        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#dcfce7;color:#16a34a;border-radius:20px;font-size:13px;font-weight:700;">✓ Conectado</span>`;
+        wrap.innerHTML = `
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-weight:600;color:#15803d;margin-bottom:4px;">MRW integrado correctamente</div>
+              <div style="font-size:13px;color:#6b7280;">Login: <strong>${data.login || "—"}</strong>${data.franquicia ? " · Franquicia: <strong>" + data.franquicia + "</strong>" : ""}${data.abonado ? " · Abonado: <strong>" + data.abonado + "</strong>" : ""}</div>
+            </div>
+            <button onclick="desintegrarMRW();setTimeout(()=>switchIntegracionesTab('agencia'),500)" 
+              style="padding:8px 18px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+              ✕ Desconectar MRW
+            </button>
+          </div>
+          <div style="font-size:13px;color:#6b7280;">La sincronización automática de estados está activa. Los pedidos se actualizan cada 5 minutos.</div>
+        `;
+      } else {
+        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#f3f4f6;color:#6b7280;border-radius:20px;font-size:13px;font-weight:700;">No conectado</span>`;
+        const inp = `width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
+        wrap.innerHTML = `
+          <div style="max-width:480px;display:flex;flex-direction:column;gap:14px;">
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#1e40af;">
+              💡 Necesitas las credenciales SAGEC de MRW (Login y Contraseña del WebService TrackingServices)
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Login SAGEC *</label>
+              <input id="mrw-login-int" type="text" placeholder="Ej: CD01234Ejemplo" style="${inp}">
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
+              <input id="mrw-pass-int" type="password" placeholder="Contraseña" style="${inp}">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Franquicia</label>
+                <input id="mrw-franquicia-int" type="text" placeholder="Ej: 01234" style="${inp}">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Abonado</label>
+                <input id="mrw-abonado-int" type="text" placeholder="Ej: 603835" style="${inp}">
+              </div>
+            </div>
+            <div id="mrw-int-msg" style="font-size:13px;min-height:18px;"></div>
+            <button onclick="conectarMRWIntegraciones()" 
+              style="padding:10px 24px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;align-self:flex-start;">
+              🔗 Conectar MRW
+            </button>
+          </div>
+        `;
+      }
+    } catch(e) {
+      if (wrap) wrap.innerHTML = `<div style="color:#dc2626;">Error cargando configuración</div>`;
+    }
+  };
+
+  window.conectarMRWIntegraciones = async function() {
+    const login = document.getElementById("mrw-login-int")?.value.trim();
+    const pass  = document.getElementById("mrw-pass-int")?.value.trim();
+    const franquicia = document.getElementById("mrw-franquicia-int")?.value.trim();
+    const abonado    = document.getElementById("mrw-abonado-int")?.value.trim();
+    const msg = document.getElementById("mrw-int-msg");
+    if (!login || !pass) { if (msg) { msg.style.color="#dc2626"; msg.textContent="Login y contraseña son obligatorios"; } return; }
+    if (msg) { msg.style.color="#6b7280"; msg.textContent="Guardando..."; }
+    try {
+      const res = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({ login, pass, franquicia, abonado })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast("✅ MRW conectado", "La sincronización automática está activa", "#16a34a");
+        switchIntegracionesTab("agencia");
+      } else {
+        if (msg) { msg.style.color="#dc2626"; msg.textContent=data.error||"Error guardando"; }
+      }
+    } catch(e) { if (msg) { msg.style.color="#dc2626"; msg.textContent="Error de conexión"; } }
+  };
+
+  switchIntegracionesTab("tiendas");
 
   closeAllDrops();
   closeSearchDrop();
