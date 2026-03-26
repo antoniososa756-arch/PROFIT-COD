@@ -311,6 +311,15 @@ router.post("/sync-orders", auth, async (req, res) => {
         }
 
         await db.run("UPDATE shops SET last_sync = now()::text WHERE id = $1", [shop.id]);
+
+        // Reasignar pedidos del mismo dominio que pertenecen a otro shop_id
+        // (ocurre cuando la misma tienda Shopify está conectada en varias cuentas)
+        await db.run(
+          `UPDATE orders SET shop_id = $1, shop_domain = $2
+           WHERE COALESCE(shop_domain, (SELECT shop_domain FROM shops WHERE id = shop_id)) = $2
+             AND shop_id != $1`,
+          [shop.id, shop.shop_domain]
+        );
       } catch (e) { console.error("Sync error for shop", shop.shop_domain, e.message); }
     }
     console.log(`Sync completado: ${total} pedidos`);
