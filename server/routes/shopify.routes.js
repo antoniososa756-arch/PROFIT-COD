@@ -263,8 +263,6 @@ router.post("/sync-orders", auth, async (req, res) => {
     const shops = await db.all("SELECT id, shop_domain, access_token FROM shops WHERE user_id = $1 AND status = 'active'", [userId]);
     if (!shops.length) return res.json({ ok: true, synced: 0 });
 
-    res.json({ ok: true, synced: 0, msg: "Sincronización iniciada" });
-
     let total = 0;
     for (const shop of shops) {
       try {
@@ -312,11 +310,14 @@ router.post("/sync-orders", auth, async (req, res) => {
           url = nextMatch ? nextMatch[1] : null;
         }
 
+        await db.run("UPDATE shops SET last_sync = now()::text WHERE id = $1", [shop.id]);
       } catch (e) { console.error("Sync error for shop", shop.shop_domain, e.message); }
     }
     console.log(`Sync completado: ${total} pedidos`);
+    res.json({ ok: true, synced: total });
   } catch (e) {
-    console.error("Error sync background:", e.message);
+    console.error("Error sync:", e.message);
+    res.json({ ok: false, error: e.message });
   }
 });
 
