@@ -33,7 +33,7 @@ router.get("/", auth, async (req, res) => {
          COALESCE(o.shop_domain, s.shop_domain) as shop_domain`;
 
     const conditions = [
-      `(SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')`
+      `(SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)`
     ];
     const params = [userId];
     let i = 2;
@@ -118,7 +118,7 @@ router.get("/reembolsos", auth, async (req, res) => {
 
   try {
     const conditions = [
-      `(SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')`,
+      `(SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)`,
       `o.fulfillment_status = 'entregado'`,
       `o.financial_status IN ('pending','cod','pendiente')`
     ];
@@ -181,11 +181,11 @@ router.post("/marcar-entregado", auth, async (req, res) => {
       order_id
         ? `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
            WHERE order_id = $1
-             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status = 'active')
+             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2)
              AND fulfillment_status NOT IN ('entregado', 'cancelado')`
         : `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
            WHERE id = $1
-             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status = 'active')
+             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2)
              AND fulfillment_status NOT IN ('entregado', 'cancelado')`,
       [order_id || id, req.user.id]
     );

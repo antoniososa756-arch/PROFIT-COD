@@ -500,7 +500,7 @@ router.post("/sync-stock-movements", auth, async (req, res) => {
               o.raw_json
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')
+       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)
          AND o.fulfillment_status = ANY($2::text[])
          AND o.raw_json IS NOT NULL
          AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $3::date

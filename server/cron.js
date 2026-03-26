@@ -178,7 +178,7 @@ function startCrons() {
           if (!planInfo) continue;
           const countRow = await db.get(
             `SELECT COUNT(*) as cnt FROM orders o
-             WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')
+             WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)
                AND o.created_at LIKE $2`,
             [user.id, period + "%"]
           );

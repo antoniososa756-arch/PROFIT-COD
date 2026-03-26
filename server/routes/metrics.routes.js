@@ -141,7 +141,7 @@ router.get("/ads-table", auth, async (req, res) => {
          COUNT(*) FILTER (WHERE o.fulfillment_status != 'cancelado') AS pedidos
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')
+       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)
          AND COALESCE(o.shop_domain, s.shop_domain) = $2
          AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $3::date
          AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $4::date
@@ -157,7 +157,7 @@ router.get("/ads-table", auth, async (req, res) => {
          COALESCE(SUM(o.total_price), 0) AS descuento
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status = 'active')
+       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)
          AND COALESCE(o.shop_domain, s.shop_domain) = $2
          AND o.fulfillment_status = 'cancelado'
          AND o.cancelled_at IS NOT NULL

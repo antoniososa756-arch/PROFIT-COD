@@ -210,7 +210,7 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
       else if (estadoRaw.includes("recoger en franquicia") || estadoRaw.includes("franquicia destino") || estadoRaw.includes("concertada en franquicia") || estadoRaw.includes("entrega en franquicia") || estadoRaw.includes("pendiente de recoger")) status = "franquicia";
 
       const result = await req.db.run(
-        `UPDATE orders SET fulfillment_status = $1 WHERE tracking_number = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status = 'active')`,
+        `UPDATE orders SET fulfillment_status = $1 WHERE tracking_number = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3)`,
         [status, tracking, req.user.id]
       );
       if (result.rowCount > 0) updated++;
