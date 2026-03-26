@@ -846,6 +846,24 @@ function updateOrderLimitBanner() {
 }
 window.updateOrderLimitBanner = updateOrderLimitBanner;
 
+window.startTrialAndReload = async function() {
+  try {
+    const r = await fetch(`${API_BASE}/api/billing/start-trial`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ plan: "starter" }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      window.__userPlan = { ...window.__userPlan, plan: "starter", status: "trial", trial_active: true, trial_ends_at: d.trial_ends_at, had_trial: true };
+      showToast("🎉 ¡Prueba activada!", "Tienes 7 días gratuitos. Disfrútalo.", "#16a34a");
+      setSection(localStorage.getItem("section") || "metricas");
+    } else {
+      alert(d.error || "No se pudo activar el período de prueba");
+    }
+  } catch(e) { alert("Error: " + e.message); }
+};
+
 function setSection(id) {
   const d = dict();
   localStorage.setItem("section", id);
@@ -913,7 +931,10 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
                 <div style="font-size:11px;color:#6b7280;">hasta ${p.limit} pedidos/mes</div>
               </div>`).join("")}
           </div>
-          <button onclick="setSection('plan')" style="padding:12px 32px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">Ver planes y activar</button>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+            ${!up.had_trial ? `<button onclick="startTrialAndReload()" style="padding:12px 32px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">🎁 Probar gratis 7 días</button>` : ""}
+            <button onclick="setSection('plan')" style="padding:12px 32px;background:${up.had_trial ? "#16a34a" : "#f9fafb"};color:${up.had_trial ? "#fff" : "#374151"};border:1px solid #e5e7eb;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">Ver planes y activar</button>
+          </div>
         </div>`;
     }
     closeAllDrops();
