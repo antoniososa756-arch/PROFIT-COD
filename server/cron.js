@@ -161,7 +161,7 @@ function startCrons() {
       const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const period = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, "0")}`;
       const users = await db.all(
-        `SELECT id, plan, plan_status FROM users WHERE plan_status IN ('active','trial') AND plan != 'free'`
+        `SELECT id, plan, plan_status FROM users WHERE plan_status = 'active' AND plan != 'free'`
       );
       // Cargar config de Stripe para cobrar cargos variables
       let stripe = null;

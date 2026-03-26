@@ -301,8 +301,22 @@ router.post("/stripe/webhook", async (req, res) => {
         }
       }
 
+    } else if (event.type === "customer.subscription.updated") {
+      // Suscripción marcada para cancelar al final del período
+      const sub = event.data.object;
+      if (sub.cancel_at_period_end) {
+        const user = await db.get("SELECT id FROM users WHERE stripe_subscription_id = $1", [sub.id]);
+        if (user) {
+          const cancelDate = sub.current_period_end
+            ? new Date(sub.current_period_end * 1000).toLocaleDateString("es-ES")
+            : "";
+          console.log(`[STRIPE] Cancelación programada: user ${user.id}, acceso hasta ${cancelDate}`);
+          // Mantener plan activo — se desactivará cuando llegue customer.subscription.deleted
+        }
+      }
+
     } else if (event.type === "customer.subscription.deleted") {
-      // Suscripción cancelada
+      // Suscripción cancelada definitivamente (ya expiró el período)
       const sub = event.data.object;
       const user = await db.get("SELECT id FROM users WHERE stripe_subscription_id = $1", [sub.id]);
       if (user) {
