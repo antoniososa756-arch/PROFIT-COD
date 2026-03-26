@@ -906,8 +906,12 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
   const up = window.__userPlan || {};
 
   // Si el plan aún no ha cargado, mostrar spinner y esperar
-  if (!up.plan && up.plan !== "free") {
+  if (!up.plan) {
     if (box) { box.className = "card"; box.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:80px;"><div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#16a34a;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`; }
+    // Reintentar cuando el plan cargue
+    setTimeout(() => {
+      if (window.__userPlan?.plan) setSection(id);
+    }, 1500);
     return;
   }
 
