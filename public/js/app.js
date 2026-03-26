@@ -123,7 +123,7 @@ if (location.pathname.includes("login")) {
       );
 
       // Cargar estado del plan para clientes
-      window.__userPlan = { plan: "free", status: "inactive", expires_at: null };
+      window.__userPlan = {};
       if (data.user.role !== "admin") {
         fetch(`${API_BASE}/api/billing/plan`, { headers: { Authorization: "Bearer " + token } })
           .then(r => r.json()).then(p => {
