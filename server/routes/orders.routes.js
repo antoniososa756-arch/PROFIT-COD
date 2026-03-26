@@ -47,8 +47,8 @@ router.get("/", auth, async (req, res) => {
         conditions.push(`o.fulfillment_status = ANY($${i++}::text[])`); params.push(statuses);
       }
     }
-    if (from)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
-    if (to)     { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
+    if (from)   { conditions.push(`LEFT(o.created_at, 10) >= $${i++}`); params.push(from); }
+    if (to)     { conditions.push(`LEFT(o.created_at, 10) <= $${i++}`); params.push(to); }
     if (q) {
       conditions.push(`(o.order_number ILIKE $${i} OR o.customer_name ILIKE $${i} OR o.tracking_number ILIKE $${i})`);
       params.push(`%${q}%`); i++;
