@@ -89,6 +89,18 @@ router.get("/callback", async (req, res) => {
       [userId, shop, shopName, accessToken, appSecret]
     );
 
+    // Reasignar pedidos históricos del mismo dominio a esta cuenta
+    // (cuando la tienda se traslada de un usuario a otro)
+    const newShopRow = await db.get("SELECT id FROM shops WHERE user_id = $1 AND shop_domain = $2", [userId, shop]);
+    if (newShopRow) {
+      await db.run(
+        `UPDATE orders SET shop_id = $1, shop_domain = $2
+         WHERE COALESCE(shop_domain, (SELECT shop_domain FROM shops WHERE id = shop_id)) = $2
+           AND shop_id != $1`,
+        [newShopRow.id, shop]
+      );
+    }
+
     const webhookUrl = `${process.env.APP_URL}/api/shopify/webhooks/orders`;
     const topics = ["orders/create", "orders/updated", "fulfillments/create", "fulfillments/update"];
     for (const topic of topics) {
