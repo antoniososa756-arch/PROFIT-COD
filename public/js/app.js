@@ -905,15 +905,24 @@ function setSection(id) {
 if (id !== "plan" && currentUser.role !== "Administrador") {
   const up = window.__userPlan || {};
 
-  // Si el plan aún no ha cargado, mostrar spinner y esperar
-  if (!up.plan) {
-    if (box) { box.className = "card"; box.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:80px;"><div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#16a34a;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`; }
-    // Reintentar cuando el plan cargue
-    setTimeout(() => {
-      if (window.__userPlan?.plan) setSection(id);
-    }, 1500);
-    return;
-  }
+// Si el plan aún no ha cargado, mostrar spinner y esperar
+    if (!up.plan) {
+      if (box) { box.className = "card"; box.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:80px;"><div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#16a34a;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`; }
+      // Reintentar hasta 10 veces (5 segundos) esperando que cargue el plan
+      let retryCount = (window.__planRetryCount || 0) + 1;
+      window.__planRetryCount = retryCount;
+      if (retryCount <= 10) {
+        setTimeout(() => {
+          if (window.__userPlan?.plan) {
+            window.__planRetryCount = 0;
+            setSection(id);
+          } else if (retryCount < 10) {
+            setSection(id);
+          }
+        }, 500);
+      }
+      return;
+    }
 
   const planOk = up.plan && up.plan !== "free"
     && (up.status === "active" || up.status === "trial")
