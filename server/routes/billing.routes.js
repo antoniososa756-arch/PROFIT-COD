@@ -63,7 +63,7 @@ async function getMonthlyOrders(userId) {
 router.get("/plan", auth, async (req, res) => {
   try {
     const user = await db.get(
-      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start FROM users WHERE id = $1",
+      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start, subscription_cancel_at FROM users WHERE id = $1",
       [req.user.id]
     );
     const planKey = user?.plan || "free";
@@ -107,7 +107,8 @@ router.get("/plan", auth, async (req, res) => {
       base_price:       planInfo?.base_price       ?? null,
       price_per_order:  planInfo?.price_per_order  ?? null,
       variable_cost:    variableCost,
-      estimated_total:  planInfo ? +(planInfo.base_price + variableCost).toFixed(2) : null,
+      estimated_total:       planInfo ? +(planInfo.base_price + variableCost).toFixed(2) : null,
+      subscription_cancel_at: user?.subscription_cancel_at || null,
     });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -212,7 +213,12 @@ router.post("/stripe/create-session", auth, async (req, res) => {
       success_url: `${process.env.APP_URL}/?payment=success&plan=${plan}`,
       cancel_url:  `${process.env.APP_URL}/?payment=cancelled`,
       metadata: { userId: String(req.user.id), plan },
-      subscription_data: { metadata: { userId: String(req.user.id), plan } },
+      subscription_data: {
+        // Alinear ciclo al 1 de cada mes para que siempre renueve el día 1
+        billing_cycle_anchor: Math.floor(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).getTime() / 1000),
+        proration_behavior: "create_prorations",
+        metadata: { userId: String(req.user.id), plan },
+      },
     });
     res.json({ url: session.url });
   } catch(e) {
@@ -302,16 +308,19 @@ router.post("/stripe/webhook", async (req, res) => {
       }
 
     } else if (event.type === "customer.subscription.updated") {
-      // Suscripción marcada para cancelar al final del período
       const sub = event.data.object;
-      if (sub.cancel_at_period_end) {
-        const user = await db.get("SELECT id FROM users WHERE stripe_subscription_id = $1", [sub.id]);
-        if (user) {
-          const cancelDate = sub.current_period_end
-            ? new Date(sub.current_period_end * 1000).toLocaleDateString("es-ES")
-            : "";
-          console.log(`[STRIPE] Cancelación programada: user ${user.id}, acceso hasta ${cancelDate}`);
-          // Mantener plan activo — se desactivará cuando llegue customer.subscription.deleted
+      const user = await db.get("SELECT id FROM users WHERE stripe_subscription_id = $1", [sub.id]);
+      if (user) {
+        if (sub.cancel_at_period_end) {
+          // Guardar fecha de cancelación para mostrarla en la app
+          const cancelAt = sub.current_period_end
+            ? new Date(sub.current_period_end * 1000).toISOString()
+            : null;
+          await db.run(`UPDATE users SET subscription_cancel_at = $1 WHERE id = $2`, [cancelAt, user.id]);
+          console.log(`[STRIPE] Cancelación programada: user ${user.id}, acceso hasta ${cancelAt}`);
+        } else {
+          // Reactivó la suscripción (deshizo la cancelación)
+          await db.run(`UPDATE users SET subscription_cancel_at = NULL WHERE id = $1`, [user.id]);
         }
       }
 
@@ -321,7 +330,7 @@ router.post("/stripe/webhook", async (req, res) => {
       const user = await db.get("SELECT id FROM users WHERE stripe_subscription_id = $1", [sub.id]);
       if (user) {
         await db.run(
-          `UPDATE users SET plan_status = 'inactive', plan = 'free', stripe_subscription_id = NULL WHERE id = $1`,
+          `UPDATE users SET plan_status = 'inactive', plan = 'free', stripe_subscription_id = NULL, subscription_cancel_at = NULL WHERE id = $1`,
           [user.id]
         );
         console.log(`[STRIPE] Suscripción cancelada: user ${user.id}`);

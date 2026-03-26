@@ -812,7 +812,7 @@ function updateOrderLimitBanner() {
 
   // ── Barra de trial ──────────────────────────────────────────
   if (trialBanner) {
-    if (up.trial_active && up.trial_ends_at) {
+    if (up.trial_active && up.trial_ends_at && up.status !== "active") {
       const msLeft = new Date(up.trial_ends_at) - now;
       const daysTrialLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
       const textEl = document.getElementById("trial-countdown-text");
@@ -2143,7 +2143,8 @@ if (id === "plan") {
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       <span style="font-size:13px;color:#15803d;font-weight:600;">Cuenta de administrador — acceso ilimitado a todas las funciones.</span>
     </div>` : ""}
-    <div id="plan-current-banner" style="margin-bottom:20px;"></div>
+    <div id="plan-current-banner" style="margin-bottom:12px;"></div>
+    <div id="plan-cancel-banner" style="display:none;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 18px;margin-bottom:12px;font-size:13px;color:#92400e;font-weight:600;"></div>
     <div id="plan-trial-banner" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 18px;margin-bottom:20px;font-size:13px;color:#15803d;font-weight:600;"></div>
     <h3 style="font-size:15px;font-weight:700;margin:0 0 6px;">Elige tu plan</h3>
     <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Tiendas ilimitadas en todos los planes. Precio base mensual + coste por pedido usado.</p>
@@ -2187,7 +2188,7 @@ if (id === "plan") {
     const banner = document.getElementById("plan-current-banner");
     if (banner) {
       const expStr = expiresAt ? new Date(expiresAt).toLocaleDateString("es-ES") : null;
-      const statusLabel = d.status === "trial" ? " · <span style='color:#f59e0b;font-weight:700;'>Período de prueba</span>" : "";
+      const statusLabel = (d.status === "trial" && d.status !== "active") ? " · <span style='color:#f59e0b;font-weight:700;'>Período de prueba</span>" : "";
       banner.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;flex-wrap:wrap;">
         <span style="font-size:13px;color:#374151;">Plan actual:</span>
         <span style="font-weight:700;color:${planColors[currentPlan] || "#6b7280"};font-size:14px;">${planNames[currentPlan] || currentPlan}</span>
@@ -2197,10 +2198,22 @@ if (id === "plan") {
       </div>`;
     }
 
+    // Banner de cancelación programada
+    const cancelBanner = document.getElementById("plan-cancel-banner");
+    if (cancelBanner) {
+      if (d.subscription_cancel_at) {
+        const cancelDate = new Date(d.subscription_cancel_at).toLocaleDateString("es-ES");
+        cancelBanner.style.display = "block";
+        cancelBanner.innerHTML = `⚠️ Has cancelado tu suscripción. Tu cuenta seguirá activa hasta el <strong>${cancelDate}</strong>, después pasará al plan gratuito.`;
+      } else {
+        cancelBanner.style.display = "none";
+      }
+    }
+
     // Banner de trial activo
     const trialBanner = document.getElementById("plan-trial-banner");
     if (trialBanner) {
-      if (d.trial_active && d.trial_ends_at) {
+      if (d.trial_active && d.trial_ends_at && d.status !== "active") {
         const trialEnd = new Date(d.trial_ends_at).toLocaleDateString("es-ES");
         trialBanner.style.display = "block";
         trialBanner.innerHTML = `🎉 Período de prueba activo — expira el <strong>${trialEnd}</strong>. Después necesitarás un plan de pago para seguir usando la app.`;

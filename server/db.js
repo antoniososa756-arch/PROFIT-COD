@@ -305,8 +305,9 @@ await pool.query(`ALTER TABLE payment_config ADD COLUMN IF NOT EXISTS stripe_pri
 await pool.query(`ALTER TABLE payment_config ADD COLUMN IF NOT EXISTS stripe_price_growth   TEXT DEFAULT ''`);
 await pool.query(`ALTER TABLE payment_config ADD COLUMN IF NOT EXISTS stripe_price_pro      TEXT DEFAULT ''`);
 await pool.query(`ALTER TABLE payment_config ADD COLUMN IF NOT EXISTS stripe_price_business TEXT DEFAULT ''`);
-await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id     TEXT`);
-await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id      TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id  TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_cancel_at  TEXT`);
 
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free'`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_status TEXT DEFAULT 'inactive'`);
