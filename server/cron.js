@@ -163,6 +163,15 @@ function startCrons() {
       const users = await db.all(
         `SELECT id, plan, plan_status FROM users WHERE plan_status IN ('active','trial') AND plan != 'free'`
       );
+      // Cargar config de Stripe para cobrar cargos variables
+      let stripe = null;
+      try {
+        const { PLANS: _p } = require("./routes/billing.routes");
+        const cfgRow = await db.get("SELECT stripe_secret_key FROM payment_config WHERE id = 1");
+        const stripeKey = cfgRow?.stripe_secret_key || process.env.STRIPE_SECRET_KEY || "";
+        if (stripeKey) stripe = require("stripe")(stripeKey);
+      } catch(e) { console.error("[BILLING] No se pudo cargar Stripe:", e.message); }
+
       for (const user of users) {
         try {
           const planInfo = PLANS[user.plan];
@@ -176,11 +185,31 @@ function startCrons() {
           const ordersUsed = parseInt(countRow?.cnt || 0);
           const variableCost = +(ordersUsed * planInfo.price_per_order).toFixed(2);
           const total = +(planInfo.base_price + variableCost).toFixed(2);
+
+          // Guardar factura en DB
           await db.run(
             `INSERT INTO billing_invoices (user_id, plan, period, base_price, orders_used, price_per_order, variable_cost, total)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (user_id, period) DO NOTHING`,
             [user.id, user.plan, period, planInfo.base_price, ordersUsed, planInfo.price_per_order, variableCost, total]
           );
+
+          // Añadir cargo variable en Stripe si hay pedidos extra y el cliente tiene suscripción
+          if (stripe && variableCost > 0) {
+            const userRow = await db.get(
+              "SELECT stripe_customer_id, stripe_subscription_id FROM users WHERE id = $1", [user.id]
+            );
+            if (userRow?.stripe_customer_id && userRow?.stripe_subscription_id) {
+              await stripe.invoiceItems.create({
+                customer:     userRow.stripe_customer_id,
+                subscription: userRow.stripe_subscription_id,
+                amount:       Math.round(variableCost * 100), // céntimos
+                currency:     "eur",
+                description:  `Pedidos extra ${period}: ${ordersUsed} pedidos × ${planInfo.price_per_order}€`,
+              });
+              console.log(`[BILLING] Cargo variable Stripe: user ${user.id} — ${variableCost}€ (${ordersUsed} pedidos)`);
+            }
+          }
+
           // Resetear caché del mes anterior
           await db.run(
             `UPDATE users SET monthly_orders_cache = 0, monthly_orders_month = $1,

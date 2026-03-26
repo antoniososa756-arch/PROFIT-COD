@@ -62,13 +62,16 @@ router.patch("/users/:id/status", auth, admin, async (req, res) => {
 // ── Configuración de pagos (Stripe + PayPal) ──────────────────
 router.get("/payment-config", auth, admin, async (req, res) => {
   try {
-    const row = await db.get("SELECT stripe_public_key, stripe_secret_key, stripe_webhook_secret, paypal_client_id, paypal_secret, paypal_env FROM payment_config WHERE id = 1");
-    // Enmascarar claves secretas para la UI
+    const row = await db.get("SELECT * FROM payment_config WHERE id = 1");
     const mask = v => v ? v.slice(0, 6) + "••••••••••••" : "";
     res.json({
       stripe_public_key:       row?.stripe_public_key       || "",
       stripe_secret_key:       mask(row?.stripe_secret_key),
       stripe_webhook_secret:   mask(row?.stripe_webhook_secret),
+      stripe_price_starter:    row?.stripe_price_starter    || "",
+      stripe_price_growth:     row?.stripe_price_growth     || "",
+      stripe_price_pro:        row?.stripe_price_pro        || "",
+      stripe_price_business:   row?.stripe_price_business   || "",
       paypal_client_id:        row?.paypal_client_id        || "",
       paypal_secret:           mask(row?.paypal_secret),
       paypal_env:              row?.paypal_env              || "live",
@@ -78,19 +81,28 @@ router.get("/payment-config", auth, admin, async (req, res) => {
 
 router.put("/payment-config", auth, admin, async (req, res) => {
   try {
-    const { stripe_public_key, stripe_secret_key, stripe_webhook_secret, paypal_client_id, paypal_secret, paypal_env } = req.body;
-    // Solo actualizar campos que no estén enmascarados (si contienen ••, se ignoran)
+    const {
+      stripe_public_key, stripe_secret_key, stripe_webhook_secret,
+      stripe_price_starter, stripe_price_growth, stripe_price_pro, stripe_price_business,
+      paypal_client_id, paypal_secret, paypal_env
+    } = req.body;
     const current = await db.get("SELECT * FROM payment_config WHERE id = 1");
-    const val = (newVal, oldVal) => (newVal && !newVal.includes("••")) ? newVal : (oldVal || "");
+    const val  = (newVal, oldVal) => (newVal && !newVal.includes("••")) ? newVal : (oldVal || "");
+    const plain = (newVal, oldVal) => newVal || oldVal || "";
     await db.run(
       `UPDATE payment_config SET
         stripe_public_key = $1, stripe_secret_key = $2, stripe_webhook_secret = $3,
-        paypal_client_id = $4, paypal_secret = $5, paypal_env = $6, updated_at = now()::text
+        stripe_price_starter = $4, stripe_price_growth = $5, stripe_price_pro = $6, stripe_price_business = $7,
+        paypal_client_id = $8, paypal_secret = $9, paypal_env = $10, updated_at = now()::text
        WHERE id = 1`,
       [
         val(stripe_public_key,     current?.stripe_public_key),
         val(stripe_secret_key,     current?.stripe_secret_key),
         val(stripe_webhook_secret, current?.stripe_webhook_secret),
+        plain(stripe_price_starter,  current?.stripe_price_starter),
+        plain(stripe_price_growth,   current?.stripe_price_growth),
+        plain(stripe_price_pro,      current?.stripe_price_pro),
+        plain(stripe_price_business, current?.stripe_price_business),
         val(paypal_client_id,      current?.paypal_client_id),
         val(paypal_secret,         current?.paypal_secret),
         paypal_env || current?.paypal_env || "live",

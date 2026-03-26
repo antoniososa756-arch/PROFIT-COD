@@ -300,6 +300,14 @@ await pool.query(`
   // Asegurarse de que existe exactamente 1 fila de configuración
   await pool.query(`INSERT INTO payment_config (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
 
+// Columnas Stripe en payment_config y users
+await pool.query(`ALTER TABLE payment_config ADD COLUMN IF NOT EXISTS stripe_price_starter  TEXT DEFAULT ''`);
+await pool.query(`ALTER TABLE payment_config ADD COLUMN IF NOT EXISTS stripe_price_growth   TEXT DEFAULT ''`);
+await pool.query(`ALTER TABLE payment_config ADD COLUMN IF NOT EXISTS stripe_price_pro      TEXT DEFAULT ''`);
+await pool.query(`ALTER TABLE payment_config ADD COLUMN IF NOT EXISTS stripe_price_business TEXT DEFAULT ''`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id     TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT`);
+
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free'`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_status TEXT DEFAULT 'inactive'`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TEXT`);

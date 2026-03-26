@@ -676,6 +676,8 @@ function loadApp(section) {
               </div>
             </div>
 
+            <div id="topbar-plan-chip" onclick="setSection('plan')" style="display:none;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:#f9fafb;border:1px solid #e5e7eb;cursor:pointer;font-size:12px;font-weight:600;color:#374151;white-space:nowrap;flex-shrink:0;" title="Ver plan"></div>
+
             <div class="topbar-right" style="position:relative;">
 
               <div class="pill" id="langBtn" onclick="toggleLang()" title="Idioma">${savedLang} ▾</div>
@@ -789,6 +791,24 @@ function updateOrderLimitBanner() {
   const now = new Date();
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const daysLeft = lastDay - now.getDate();
+
+  // ── Chip de plan en topbar ───────────────────────────────────
+  const chip = document.getElementById("topbar-plan-chip");
+  if (chip && up.plan && up.plan !== "free" && up.plan !== "admin") {
+    const planColors = { starter:"#10b981", growth:"#3b82f6", pro:"#8b5cf6", business:"#f59e0b" };
+    const planNames  = { starter:"Starter", growth:"Growth", pro:"Pro", business:"Business" };
+    const col = planColors[up.plan] || "#6b7280";
+    const estimated = up.estimated_total != null ? `· ${Number(up.estimated_total).toFixed(2).replace(".",",")}€ est.` : "";
+    chip.style.display = "flex";
+    chip.style.borderColor = col + "44";
+    chip.innerHTML = `
+      <span style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0;"></span>
+      <span style="color:${col};">${planNames[up.plan] || up.plan}</span>
+      ${estimated ? `<span style="color:#9ca3af;font-weight:400;">${estimated}</span>` : ""}
+    `;
+  } else if (chip) {
+    chip.style.display = "none";
+  }
 
   // ── Barra de trial ──────────────────────────────────────────
   if (trialBanner) {
@@ -1999,6 +2019,28 @@ if (id === "pagos-config") {
           ${inp("cfg-stripe-wh","whsec_...","password")}
         </div>
       </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f3f4f6;">
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px;">Price IDs de suscripciones mensuales</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:#10b981;font-weight:700;width:72px;">Starter</span>
+            ${inp("cfg-stripe-price-starter","price_...")}
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:#3b82f6;font-weight:700;width:72px;">Growth</span>
+            ${inp("cfg-stripe-price-growth","price_...")}
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:#8b5cf6;font-weight:700;width:72px;">Pro</span>
+            ${inp("cfg-stripe-price-pro","price_...")}
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:#f59e0b;font-weight:700;width:72px;">Business</span>
+            ${inp("cfg-stripe-price-business","price_...")}
+          </div>
+        </div>
+      </div>
+    </div>
     </div>
 
     <div style="margin-bottom:28px;padding-top:20px;border-top:1px solid #f3f4f6;">
@@ -2035,12 +2077,16 @@ if (id === "pagos-config") {
   // Cargar valores actuales (enmascarados)
   fetch(`${API_BASE}/api/admin/payment-config`, { headers: { Authorization: "Bearer " + getActiveToken() } })
     .then(r => r.json()).then(d => {
-      document.getElementById("cfg-stripe-pk").value = d.stripe_public_key || "";
-      document.getElementById("cfg-stripe-sk").value = d.stripe_secret_key || "";
-      document.getElementById("cfg-stripe-wh").value = d.stripe_webhook_secret || "";
-      document.getElementById("cfg-pp-client").value = d.paypal_client_id || "";
-      document.getElementById("cfg-pp-secret").value = d.paypal_secret || "";
-      document.getElementById("cfg-pp-env").value    = d.paypal_env || "live";
+      document.getElementById("cfg-stripe-pk").value             = d.stripe_public_key       || "";
+      document.getElementById("cfg-stripe-sk").value             = d.stripe_secret_key       || "";
+      document.getElementById("cfg-stripe-wh").value             = d.stripe_webhook_secret   || "";
+      document.getElementById("cfg-stripe-price-starter").value  = d.stripe_price_starter    || "";
+      document.getElementById("cfg-stripe-price-growth").value   = d.stripe_price_growth     || "";
+      document.getElementById("cfg-stripe-price-pro").value      = d.stripe_price_pro        || "";
+      document.getElementById("cfg-stripe-price-business").value = d.stripe_price_business   || "";
+      document.getElementById("cfg-pp-client").value             = d.paypal_client_id        || "";
+      document.getElementById("cfg-pp-secret").value             = d.paypal_secret           || "";
+      document.getElementById("cfg-pp-env").value                = d.paypal_env              || "live";
     }).catch(() => {});
 
   window.guardarPagosConfig = async function() {
@@ -2052,12 +2098,16 @@ if (id === "pagos-config") {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
         body: JSON.stringify({
-          stripe_public_key:     document.getElementById("cfg-stripe-pk").value.trim(),
-          stripe_secret_key:     document.getElementById("cfg-stripe-sk").value.trim(),
-          stripe_webhook_secret: document.getElementById("cfg-stripe-wh").value.trim(),
-          paypal_client_id:      document.getElementById("cfg-pp-client").value.trim(),
-          paypal_secret:         document.getElementById("cfg-pp-secret").value.trim(),
-          paypal_env:            document.getElementById("cfg-pp-env").value,
+          stripe_public_key:      document.getElementById("cfg-stripe-pk").value.trim(),
+          stripe_secret_key:      document.getElementById("cfg-stripe-sk").value.trim(),
+          stripe_webhook_secret:  document.getElementById("cfg-stripe-wh").value.trim(),
+          stripe_price_starter:   document.getElementById("cfg-stripe-price-starter").value.trim(),
+          stripe_price_growth:    document.getElementById("cfg-stripe-price-growth").value.trim(),
+          stripe_price_pro:       document.getElementById("cfg-stripe-price-pro").value.trim(),
+          stripe_price_business:  document.getElementById("cfg-stripe-price-business").value.trim(),
+          paypal_client_id:       document.getElementById("cfg-pp-client").value.trim(),
+          paypal_secret:          document.getElementById("cfg-pp-secret").value.trim(),
+          paypal_env:             document.getElementById("cfg-pp-env").value,
         }),
       });
       const d = await res.json();
@@ -2222,9 +2272,13 @@ if (id === "plan") {
             style="width:100%;padding:9px;background:#f0fdf4;color:#16a34a;border:1.5px solid #bbf7d0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
             🎁 Probar gratis 7 días
           </button>` : ""}
+          ${isCurrent && d.status === "active" ? `<button onclick="gestionarSuscripcion()"
+            style="width:100%;padding:9px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+            ⚙️ Gestionar suscripción
+          </button>` : ""}
           <button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
             style="width:100%;padding:10px;background:#635bff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-            ${isCurrent && d.status === "active" ? "Renovar" : "Suscribirse"}
+            ${isCurrent && d.status === "active" ? "Cambiar plan" : "Suscribirse"}
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div id="payment-menu-${p}" style="display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:100;">
@@ -2250,6 +2304,17 @@ if (id === "plan") {
       loadPayPalButtons(ppClientId, currentPlan);
     }
   }
+
+  window.gestionarSuscripcion = async function() {
+    try {
+      const r = await fetch(`${API_BASE}/api/billing/stripe/portal`, {
+        headers: { Authorization: "Bearer " + getActiveToken() },
+      });
+      const d = await r.json();
+      if (d.url) window.location.href = d.url;
+      else alert(d.error || "No se pudo abrir el portal de Stripe");
+    } catch(e) { alert("Error: " + e.message); }
+  };
 
   window.startTrial = async function(plan) {
     try {
