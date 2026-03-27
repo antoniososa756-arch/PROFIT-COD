@@ -143,7 +143,24 @@ if (location.pathname.includes("login")) {
       }
 
       // 🚀 Cargar app UNA sola vez
-      loadApp(localStorage.getItem("section") || "metricas");
+      // Detectar retorno del flujo OAuth de Gmail
+      const _hash = window.location.hash;
+      if (_hash.includes("integraciones")) {
+        localStorage.setItem("section", "tiendas"); // iremos a integraciones
+        const _gmailStatus = new URLSearchParams(_hash.replace("#","?")).get("gmail");
+        loadApp("tiendas");
+        setTimeout(() => {
+          if (typeof window.switchIntegracionesTab === "function") {
+            window.switchIntegracionesTab("reembolsos");
+            if (_gmailStatus === "ok") {
+              setTimeout(() => { if (typeof window.cargarConfigGmail === "function") window.cargarConfigGmail(); }, 500);
+            }
+          }
+        }, 800);
+        history.replaceState(null, "", "/");
+      } else {
+        loadApp(localStorage.getItem("section") || "metricas");
+      }
     })
     .catch(() => {
       localStorage.removeItem("token");
