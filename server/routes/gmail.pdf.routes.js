@@ -1,7 +1,7 @@
 const express  = require("express");
 const router   = express.Router();
 const fetch    = (...a) => import("node-fetch").then(({ default: f }) => f(...a));
-const pdfParse = (...a) => import("pdf-parse").then(({ default: f }) => f(...a));
+const pdfParse = require("pdf-parse");
 
 const CLIENT_ID     = process.env.GMAIL_CLIENT_ID;
 const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;

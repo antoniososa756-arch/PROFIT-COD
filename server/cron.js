@@ -143,7 +143,7 @@ async function syncAllMRW() {
 async function syncAllGmailPDF() {
   console.log("⏰ [CRON] Iniciando sync Gmail PDF MRW...");
   const fetch = (...a) => import("node-fetch").then(({ default: f }) => f(...a));
-  const pdfParse = (...a) => import("pdf-parse").then(({ default: f }) => f(...a));
+  const pdfParse = require("pdf-parse");
 
   async function refreshToken(userId, refreshTok) {
     const CLIENT_ID     = process.env.GMAIL_CLIENT_ID;
