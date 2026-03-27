@@ -64,20 +64,13 @@ async function gmailFetch(db, userId, url, options = {}) {
 
 // ─── Extraer Nº Envío e Imp. a pagar del texto del PDF ───────────────────────
 function parsearPDFMRW(texto) {
-  const lineas = texto.split("\n");
   const registros = [];
-  // Patrón: número de envío MRW (04700Fxxxxxx o similar) seguido de importe
-  const reEnvio = /\b(04700[A-Z]\d{6,})\b/;
-  const reImporte = /(\d{1,3}(?:,\d{2}))\s*$/;
-
-  for (const linea of lineas) {
-    const matchEnvio = linea.match(reEnvio);
-    if (!matchEnvio) continue;
-    const nEnvio = matchEnvio[1];
-    // El importe a pagar es el último número de la línea
-    const matchImporte = linea.match(reImporte);
-    const importe = matchImporte ? parseFloat(matchImporte[1].replace(",", ".")) : null;
-    registros.push({ nEnvio, importe });
+  // Buscar todos los Nº Envío en el texto completo (sin word boundary, el número va pegado a texto)
+  // Formato: 04700 + letra + 6 dígitos, ej: 04700F640701
+  const reGlobal = /04700[A-Z]\d{6}/g;
+  let match;
+  while ((match = reGlobal.exec(texto)) !== null) {
+    registros.push({ nEnvio: match[0] });
   }
   return registros;
 }

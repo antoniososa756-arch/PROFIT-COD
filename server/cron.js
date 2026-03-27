@@ -188,17 +188,11 @@ async function syncAllGmailPDF() {
   }
 
   function parsearPDFMRW(texto) {
-    const lineas = texto.split("\n");
     const registros = [];
-    const reEnvio   = /\b(04700[A-Z]\d{6,})\b/;
-    const reImporte = /(\d{1,3}(?:,\d{2}))\s*$/;
-    for (const linea of lineas) {
-      const matchEnvio = linea.match(reEnvio);
-      if (!matchEnvio) continue;
-      const nEnvio = matchEnvio[1];
-      const matchImporte = linea.match(reImporte);
-      const importe = matchImporte ? parseFloat(matchImporte[1].replace(",", ".")) : null;
-      registros.push({ nEnvio, importe });
+    const reGlobal = /04700[A-Z]\d{6}/g;
+    let match;
+    while ((match = reGlobal.exec(texto)) !== null) {
+      registros.push({ nEnvio: match[0] });
     }
     return registros;
   }
