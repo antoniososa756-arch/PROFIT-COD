@@ -1214,7 +1214,6 @@ const now = new Date();
         </div>
 
     </div>
-      <div id="metrics-balance-wrap" style="margin-top:32px;"></div>
       </div>
     </div>
     `;
@@ -1481,12 +1480,124 @@ if (id === "rentabilidad") {
   if (t) t.textContent = "Rentabilidad";
   if (s) s.textContent = "Análisis de rentabilidad por tienda";
   if (c) c.textContent = "Rentabilidad";
-  box.className = "card";
-  box.innerHTML = `<div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">
-    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d1d5db" stroke-width="1.5" style="margin-bottom:16px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-    <div style="font-size:18px;font-weight:700;color:#374151;margin-bottom:8px;">Rentabilidad</div>
-    <div>Próximamente — análisis detallado de márgenes y rentabilidad por tienda.</div>
-  </div>`;
+
+  const nowR = new Date();
+  const firstDayR = new Date(nowR.getFullYear(), nowR.getMonth(), 1);
+  const fmtR = d => d.toISOString().split("T")[0];
+  const savedFromR = localStorage.getItem("rent_from") || fmtR(firstDayR);
+  const savedToR   = localStorage.getItem("rent_to")   || fmtR(nowR);
+
+  box.className = "card metricas-box";
+  box.innerHTML = `
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+          <h3 style="margin:0;font-size:15px;font-weight:600;">Balance por tienda</h3>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;justify-content:flex-end;">
+            <button onclick="filtroRentabilidadHoy()"
+              id="btn-rent-hoy"
+              style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
+              onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
+              onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="16" r="1.5" fill="#6b7280" stroke="none"/></svg>
+              Hoy
+            </button>
+            <button onclick="filtroRentabilidadMes()"
+              id="btn-rent-mes"
+              style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
+              onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
+              onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M7 15h4M7 19h2"/></svg>
+              Mes actual
+            </button>
+            <button onclick="filtroRentabilidadMesAnterior()"
+              id="btn-rent-mes-ant"
+              style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
+              onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
+              onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M7 15h2M7 19h2"/></svg>
+              Mes anterior
+            </button>
+            <input type="date" id="rent-date-from" value="${savedFromR}"
+              onchange="aplicarFiltroRentabilidad()"
+              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+            <span style="color:#6b7280;font-size:13px;">—</span>
+            <input type="date" id="rent-date-to" value="${savedToR}"
+              onchange="aplicarFiltroRentabilidad()"
+              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+          </div>
+        </div>
+        <div id="rent-balance-wrap"></div>
+      </div>
+    </div>
+  `;
+
+  function filtroRentabilidadHoy() {
+    const hoy = new Date().toISOString().split("T")[0];
+    const from = document.getElementById("rent-date-from");
+    const to   = document.getElementById("rent-date-to");
+    if (from) from.value = hoy;
+    if (to)   to.value   = hoy;
+    localStorage.setItem("rent_from", hoy);
+    localStorage.setItem("rent_to",   hoy);
+    loadRentabilidad();
+  }
+  window.filtroRentabilidadHoy = filtroRentabilidadHoy;
+
+  function filtroRentabilidadMes() {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+    const today    = now.toISOString().split("T")[0];
+    const from = document.getElementById("rent-date-from");
+    const to   = document.getElementById("rent-date-to");
+    if (from) from.value = firstDay;
+    if (to)   to.value   = today;
+    localStorage.setItem("rent_from", firstDay);
+    localStorage.setItem("rent_to",   today);
+    loadRentabilidad();
+  }
+  window.filtroRentabilidadMes = filtroRentabilidadMes;
+
+  function filtroRentabilidadMesAnterior() {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDay  = new Date(now.getFullYear(), now.getMonth(), 0);
+    const firstStr = firstDay.toISOString().split("T")[0];
+    const lastStr  = lastDay.toISOString().split("T")[0];
+    const from = document.getElementById("rent-date-from");
+    const to   = document.getElementById("rent-date-to");
+    if (from) from.value = firstStr;
+    if (to)   to.value   = lastStr;
+    localStorage.setItem("rent_from", firstStr);
+    localStorage.setItem("rent_to",   lastStr);
+    loadRentabilidad();
+  }
+  window.filtroRentabilidadMesAnterior = filtroRentabilidadMesAnterior;
+
+  function aplicarFiltroRentabilidad() {
+    const from = document.getElementById("rent-date-from")?.value;
+    const to   = document.getElementById("rent-date-to")?.value;
+    if (from && to && from > to) {
+      alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin");
+      return;
+    }
+    if (from) localStorage.setItem("rent_from", from);
+    if (to)   localStorage.setItem("rent_to",   to);
+    loadRentabilidad();
+  }
+  window.aplicarFiltroRentabilidad = aplicarFiltroRentabilidad;
+
+  async function loadRentabilidad() {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const fmt = d => d.toISOString().split("T")[0];
+    const dateFrom = document.getElementById("rent-date-from")?.value || fmt(firstDay);
+    const dateTo   = document.getElementById("rent-date-to")?.value   || fmt(now);
+    await loadRentabilidadBalance(dateFrom, dateTo);
+  }
+  window.loadRentabilidad = loadRentabilidad;
+
+  loadRentabilidad();
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -4631,7 +4742,6 @@ async function loadMetricas() {
     console.error("Error cargando métricas:", e);
   }
 
-  await loadMetricasBalance(dateFrom, dateTo);
 }
 
 async function loadMetricasBalance(dateFrom, dateTo) {
@@ -4935,6 +5045,279 @@ function toggleAllMetricasBalance(checked) {
 }
 window.toggleAllMetricasBalance = toggleAllMetricasBalance;
 window.loadMetricasBalance = loadMetricasBalance;
+
+// =========================
+// RENTABILIDAD BALANCE
+// =========================
+async function loadRentabilidadBalance(dateFrom, dateTo) {
+  const wrap = document.getElementById("rent-balance-wrap");
+  if (!wrap) return;
+  window.__showLoadingBar?.("Cargando rentabilidad...");
+
+  const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const MRW_COMISION = 0.67;
+  const TARJETA_PCT  = 0.04;
+
+  let stores = [], orders = [], manuales = [];
+  try {
+    const token = getActiveToken();
+    const h = { Authorization: "Bearer " + token };
+    const _balParams = new URLSearchParams();
+    if (dateFrom) _balParams.set("from", dateFrom);
+    if (dateTo)   _balParams.set("to",   dateTo);
+    [stores, orders] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(d => Array.isArray(d) ? d : []),
+      fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
+    ]);
+  } catch {}
+
+  const ordersRango = orders;
+
+  const now = new Date();
+  const mesActual = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  const mesFrom = dateFrom ? dateFrom.slice(0,7) : mesActual;
+
+  try {
+    const r = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    manuales = await r.json();
+    if (!Array.isArray(manuales)) manuales = [];
+  } catch {}
+
+  const numTiendas = stores.length || 1;
+
+  const mesesRango = [];
+  const dStart = dateFrom ? new Date(dateFrom + "T00:00:00") : new Date();
+  const dEnd   = dateTo   ? new Date(dateTo   + "T00:00:00") : new Date();
+  let cur = new Date(dStart.getFullYear(), dStart.getMonth(), 1);
+  while (cur <= dEnd) {
+    mesesRango.push(`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,"0")}`);
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  if (mesesRango.length === 0) mesesRango.push(mesFrom);
+
+  let totalOtrosFijos = 0;
+  let gastosVarios = {};
+  const token2 = getActiveToken();
+  const h2 = { Authorization: "Bearer " + token2 };
+  await Promise.all(mesesRango.map(async mes => {
+    try {
+      const gf = await cachedFetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h2 });
+      if (Array.isArray(gf)) {
+        totalOtrosFijos += gf.filter(g=>!["MRW","LOGÍSTICA"].includes(g.nombre)).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+      }
+    } catch {}
+    try {
+      const rows = await cachedFetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h2 });
+      if (Array.isArray(rows)) rows.forEach(r => { gastosVarios[r.shop_domain] = (gastosVarios[r.shop_domain]||0) + (r.shopify||0); });
+    } catch {}
+  }));
+  const fijoXTienda = totalOtrosFijos / numTiendas;
+
+  let gastosExtrasRent = {};
+  await Promise.all(mesesRango.map(async mes => {
+    try {
+      const rows = await cachedFetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h2 });
+      if (Array.isArray(rows)) rows.forEach(r => {
+        if (!gastosExtrasRent[r.shop_domain]) gastosExtrasRent[r.shop_domain] = [];
+        gastosExtrasRent[r.shop_domain].push(r);
+      });
+    } catch {}
+  }));
+
+  let nominaXTienda = 0;
+  try {
+    const nominaTotales = await Promise.all(mesesRango.map(mes =>
+      cachedFetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: h2 }).catch(()=>({total:0}))
+    ));
+    nominaTotales.forEach(n => { nominaXTienda += (parseFloat(n.total) || 0) / numTiendas; });
+  } catch {}
+
+  let ivaPorcentaje = 0.21;
+  try {
+    const impData = await cachedFetch(`${API_BASE}/api/impuestos`, { headers: h2 });
+    if (Array.isArray(impData) && impData.length > 0) {
+      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
+    }
+  } catch {}
+
+  let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
+  try { preciosGlobales = await cachedFetch(`${API_BASE}/api/shopify/precios-globales`, { headers: h2 }) || preciosGlobales; } catch {}
+
+  let adsSpends = {};
+  try {
+    const token = getActiveToken();
+    const adsResults = await Promise.all(
+      mesesRango.flatMap(mes => {
+        const m = parseInt(mes.split("-")[1]);
+        const y = parseInt(mes.split("-")[0]);
+        return stores.map(store =>
+          cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, {
+            headers: { Authorization: "Bearer " + token }
+          }).then(rows => ({ domain: store.domain, rows: Array.isArray(rows) ? rows : [] }))
+           .catch(() => ({ domain: store.domain, rows: [] }))
+        );
+      })
+    );
+    for (const { domain, rows } of adsResults) {
+      if (!adsSpends[domain]) adsSpends[domain] = { meta:0, tiktok:0 };
+      rows.filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo))
+        .forEach(r => { adsSpends[domain].meta += r.meta||0; adsSpends[domain].tiktok += r.tiktok||0; });
+    }
+  } catch {}
+
+  const stockMap = {};
+  const variantesMap = {};
+  try {
+    const [_st, _vr] = await Promise.all([
+      cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: h2 }),
+      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h2 })
+    ]);
+    if (Array.isArray(_st)) _st.forEach(s => { stockMap[s.product_id] = s.costo_compra||0; });
+    if (Array.isArray(_vr)) _vr.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta||1; });
+  } catch {}
+
+  const estadosEnvioMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
+  const pedidosBase = ordersRango.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status));
+  const pedidosTarjeta = ordersRango.filter(o => o.fulfillment_status !== "cancelado");
+
+  const balanceData = stores.map(store => {
+    const ads = adsSpends[store.domain] || { meta:0, tiktok:0 };
+    const shopify = gastosVarios[store.domain] || 0;
+
+    const pedEnt = ordersRango.filter(o => o.shop_domain === store.domain && o.fulfillment_status === "entregado");
+    const pedCOD = pedEnt.filter(o => { try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="pending"||fin==="cod"||fin==="pendiente"; } catch{return false;} });
+    const pedPag = pedidosTarjeta.filter(o => o.shop_domain === store.domain && (()=>{ try{ const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"; }catch{return false;} })());
+    const tCOD = pedCOD.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
+    const tPag = pedPag.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
+    const man1 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===1)||{valor:0};
+    const man2 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===2)||{valor:0};
+    const totalIngreso = (tCOD - pedCOD.length*MRW_COMISION) + (tPag - tPag*TARJETA_PCT) + (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
+
+    const pedTienda = pedidosBase.filter(o => o.shop_domain === store.domain);
+    let costoProductos = 0;
+    pedTienda.filter(o=>!["devuelto","cancelado","pendiente"].includes(o.fulfillment_status)).forEach(o=>{
+      try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ costoProductos+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(variantesMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{}
+    });
+    const envTienda = pedTienda.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status));
+    const devTienda = envTienda.filter(o=>o.fulfillment_status==="devuelto").length;
+    const precioMRW      = preciosGlobales.precio_mrw      || 0;
+    const precioLogistica = preciosGlobales.precio_logistica || 0;
+    const mrw      = precioMRW      * (envTienda.length + devTienda);
+    const logistica = precioLogistica * envTienda.length;
+    const ivaTotal = pedEnt.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
+    const extrasTotal = (gastosExtrasRent[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
+    const resultado = totalIngreso - totalGasto;
+    return {
+      domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado, ivaTotal, ivaPorcentaje,
+      numCOD: pedCOD.length, brutoCOD: tCOD, descCOD: pedCOD.length*MRW_COMISION, netoCOD: tCOD - pedCOD.length*MRW_COMISION,
+      numTarjeta: pedPag.length, brutoTarjeta: tPag, descTarjeta: tPag*TARJETA_PCT, netoTarjeta: tPag - tPag*TARJETA_PCT,
+      man1nom: man1.nombre||"", man1val: parseFloat(man1.valor)||0,
+      man2nom: man2.nombre||"", man2val: parseFloat(man2.valor)||0,
+      meta: ads.meta, tiktok: ads.tiktok, costoProductos, mrw, logistica, shopify,
+      fijoXTienda, nominaXTienda, totalOtrosFijos, numTiendas,
+      precioMRW, precioLog: precioLogistica,
+      enviosMRW: envTienda.length, devMRW: devTienda,
+      extras: gastosExtrasRent[store.domain] || []
+    };
+  });
+
+  window.__rentabilidadBalanceData = balanceData;
+
+  const cols = balanceData.map(d => {
+    const resColor = d.resultado >= 0 ? "#16a34a" : "#dc2626";
+    const resBg    = d.resultado >= 0 ? "#f0fdf4" : "#fef2f2";
+    const resBorder= d.resultado >= 0 ? "#bbf7d0" : "#fecaca";
+    return `
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;" data-domain="${d.domain}">
+        <div style="background:#16a34a;padding:10px 14px;">
+          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
+          <div style="font-size:11px;color:#bbf7d0;">${d.domain}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tbody>
+            <tr style="background:#f0fdf4;"><td colspan="2" style="padding:8px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📥 Ingresos</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">COD<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numCOD} pedidos — ${fmt(d.brutoCOD)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión MRW (${d.numCOD}×0.67€) = −${fmt(d.descCOD)}€</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;font-weight:600;">${fmt(d.netoCOD)} €</td></tr>
+            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">TARJETA<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numTarjeta} pedidos — ${fmt(d.brutoTarjeta)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(d.descTarjeta)}€</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;font-weight:600;">${fmt(d.netoTarjeta)} €</td></tr>
+            ${d.man1val > 0 ? `<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">${escapeHtml(d.man1nom||"Extra 1")}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${fmt(d.man1val)} €</td></tr>` : ""}
+            ${d.man2val > 0 ? `<tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">${escapeHtml(d.man2nom||"Extra 2")}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${fmt(d.man2val)} €</td></tr>` : ""}
+            <tr style="background:#f0fdf4;"><td style="padding:8px 14px;border:1px solid #bbf7d0;font-weight:700;color:#16a34a;">Total Ingresos</td><td style="padding:8px 14px;border:1px solid #bbf7d0;text-align:right;font-weight:700;color:#16a34a;">${fmt(d.totalIngreso)} €</td></tr>
+            <tr style="background:#fef2f2;"><td colspan="2" style="padding:8px 14px;border:1px solid #e5e7eb;font-weight:700;color:#dc2626;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📤 Gastos</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gasto Meta</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.meta)} €</td></tr>
+            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gasto TikTok</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.tiktok)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Productos<div style="font-size:10px;color:#9ca3af;">costo × uds × qty</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.costoProductos)} €</td></tr>
+            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">MRW<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.mrw)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Logística<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.logistica)} €</td></tr>
+            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gastos Fijos<div style="font-size:10px;color:#9ca3af;">${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.fijoXTienda)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Nómina<div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.nominaXTienda)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Shopify</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.shopify)} €</td></tr>
+            ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>`<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">${escapeHtml(g.nombre||'Concepto extra')}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(g.valor)} €</td></tr>`).join("")}
+            <tr style="background:#fefce8;"><td style="padding:8px 14px;border:1px solid #fef08a;color:#854d0e;font-weight:600;">IVA (${(d.ivaPorcentaje*100).toFixed(0)}%)<div style="font-size:10px;color:#a16207;">${d.numCOD + d.numTarjeta} pedidos entregados × ${(d.ivaPorcentaje*100).toFixed(0)}%</div></td><td style="padding:8px 14px;border:1px solid #fef08a;text-align:right;color:#854d0e;font-weight:600;">${fmt(d.ivaTotal)} €</td></tr>
+            <tr style="background:#fef2f2;"><td style="padding:8px 14px;border:1px solid #fecaca;font-weight:700;color:#dc2626;">Total Gastos</td><td style="padding:8px 14px;border:1px solid #fecaca;text-align:right;font-weight:700;color:#dc2626;">− ${fmt(d.totalGasto)} €</td></tr>
+            <tr style="background:${resBg};"><td style="padding:12px 14px;border:1px solid ${resBorder};font-weight:700;color:${resColor};font-size:14px;">RESULTADO</td><td style="padding:12px 14px;border:1px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:16px;">${fmt(d.resultado)} €</td></tr>
+          </tbody>
+        </table>
+      </div>`;
+  }).join("");
+
+  const storeCheckboxes = balanceData.map(d =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
+      <input type="checkbox" checked value="${d.domain}" onchange="recalcRentabilidadBalance()" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+      ${escapeHtml(d.name)}
+    </label>`
+  ).join("");
+
+  wrap.innerHTML = `
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Esto es un estimado basado en el rango de fecha seleccionado y los precios Unt de MRW y Logística, tu balance final por mes lo puedes ver en Ingresos - Balance Final)</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;" id="rent-bal-cols">${cols}</div>
+        <div id="rent-bal-sumatoria" style="margin-top:20px;padding:16px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
+          <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Sumatoria seleccionada</div>
+          <div id="rent-bal-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
+          <div style="border-top:2px solid #16a34a;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+            <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
+          </div>
+        </div>
+      </div>
+      <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
+          <input type="checkbox" id="rent-bal-check-all" checked onchange="toggleAllRentabilidadBalance(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          Todas las tiendas
+        </label>
+        ${storeCheckboxes}
+      </div>
+    </div>
+  `;
+  recalcRentabilidadBalance();
+  window.__hideLoadingBar?.();
+}
+window.loadRentabilidadBalance = loadRentabilidadBalance;
+
+function recalcRentabilidadBalance() {
+  const data = window.__rentabilidadBalanceData || [];
+  const checks = document.querySelectorAll("#rent-balance-wrap input[type='checkbox'][value]");
+  const sel = new Set([...checks].filter(c=>c.checked).map(c=>c.value));
+  const filtradas = data.filter(d=>sel.has(d.domain));
+  const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.querySelectorAll("#rent-bal-cols > div[data-domain]").forEach(card => { card.style.display = sel.has(card.dataset.domain) ? "" : "none"; });
+  const total = filtradas.reduce((s,d)=>s+d.resultado,0);
+  const filasEl = document.getElementById("rent-bal-filas");
+  const totalEl = document.getElementById("rent-bal-total");
+  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#16a34a;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#16a34a':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
+  if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total>=0?"#16a34a":"#dc2626"; }
+  const allCheck = document.getElementById("rent-bal-check-all");
+  if (allCheck) allCheck.checked = filtradas.length === data.length;
+}
+window.recalcRentabilidadBalance = recalcRentabilidadBalance;
+
+function toggleAllRentabilidadBalance(checked) {
+  document.querySelectorAll("#rent-balance-wrap input[type='checkbox'][value]").forEach(c=>c.checked=checked);
+  recalcRentabilidadBalance();
+}
+window.toggleAllRentabilidadBalance = toggleAllRentabilidadBalance;
 
 async function actualizarMetricasSinBalance() {
   const now = new Date();
