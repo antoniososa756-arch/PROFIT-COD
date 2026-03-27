@@ -139,6 +139,147 @@ async function syncAllMRW() {
   } catch(e) { console.error("[CRON] Error sync MRW:", e.message); }
 }
 
+// ── Función: sincronizar PDFs de MRW via Gmail para todos los usuarios ───────
+async function syncAllGmailPDF() {
+  console.log("⏰ [CRON] Iniciando sync Gmail PDF MRW...");
+  const fetch = (...a) => import("node-fetch").then(({ default: f }) => f(...a));
+  const pdfParse = require("pdf-parse");
+
+  async function refreshToken(userId, refreshTok) {
+    const CLIENT_ID     = process.env.GMAIL_CLIENT_ID;
+    const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id:     CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        refresh_token: refreshTok,
+        grant_type:    "refresh_token",
+      }),
+    });
+    const data = await res.json();
+    if (!data.access_token) throw new Error("No se pudo refrescar token Gmail");
+    await db.run(
+      "UPDATE gmail_config SET access_token = ? WHERE user_id = ?",
+      [data.access_token, userId]
+    );
+    return data.access_token;
+  }
+
+  async function gmailFetch(userId, url, options = {}) {
+    const row = await db.get(
+      "SELECT access_token, refresh_token FROM gmail_config WHERE user_id = ?",
+      [userId]
+    );
+    let token = row.access_token;
+    let res = await fetch(url, {
+      ...options,
+      headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+    });
+    if (res.status === 401) {
+      token = await refreshToken(userId, row.refresh_token);
+      res = await fetch(url, {
+        ...options,
+        headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+      });
+    }
+    return res;
+  }
+
+  function parsearPDFMRW(texto) {
+    const lineas = texto.split("\n");
+    const registros = [];
+    const reEnvio   = /\b(04700[A-Z]\d{6,})\b/;
+    const reImporte = /(\d{1,3}(?:,\d{2}))\s*$/;
+    for (const linea of lineas) {
+      const matchEnvio = linea.match(reEnvio);
+      if (!matchEnvio) continue;
+      const nEnvio = matchEnvio[1];
+      const matchImporte = linea.match(reImporte);
+      const importe = matchImporte ? parseFloat(matchImporte[1].replace(",", ".")) : null;
+      registros.push({ nEnvio, importe });
+    }
+    return registros;
+  }
+
+  try {
+    const usuarios = await db.all(
+      "SELECT user_id FROM gmail_config WHERE connected = 1"
+    );
+    if (!usuarios.length) {
+      console.log("[CRON] Sin usuarios con Gmail conectado");
+      return;
+    }
+
+    for (const { user_id } of usuarios) {
+      try {
+        const query = encodeURIComponent(
+          'from:onlinefact@mrw.es subject:"Factura de Reembolsos" has:attachment filename:pdf newer_than:7d'
+        );
+        const listRes = await gmailFetch(
+          user_id,
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=20`
+        );
+        const listData = await listRes.json();
+        const messages = listData.messages || [];
+        if (!messages.length) {
+          console.log(`[CRON] Gmail user ${user_id}: sin emails nuevos MRW`);
+          continue;
+        }
+
+        let totalMarcados = 0;
+        for (const msg of messages) {
+          try {
+            const msgRes = await gmailFetch(
+              user_id,
+              `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`
+            );
+            const msgData = await msgRes.json();
+            const partes = msgData.payload?.parts || [];
+            const pdfs = partes.filter(p =>
+              p.mimeType === "application/pdf" || p.filename?.toLowerCase().endsWith(".pdf")
+            );
+
+            for (const parte of pdfs) {
+              const attachId = parte.body?.attachmentId;
+              if (!attachId) continue;
+              const attRes = await gmailFetch(
+                user_id,
+                `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}/attachments/${attachId}`
+              );
+              const attData = await attRes.json();
+              const pdfBuffer = Buffer.from(attData.data, "base64url");
+              const parsed = await pdfParse(pdfBuffer);
+              const registros = parsearPDFMRW(parsed.text);
+
+              for (const { nEnvio } of registros) {
+                if (!nEnvio) continue;
+                // Buscar el pedido por tracking_number dentro de las tiendas del usuario
+                const order = await db.get(
+                  `SELECT o.id FROM orders o
+                   JOIN shops s ON s.id = o.shop_id
+                   WHERE o.tracking_number = ? AND s.user_id = ?`,
+                  [nEnvio, user_id]
+                );
+                if (!order) continue;
+                await db.run(
+                  `INSERT INTO reembolsos_estado (user_id, order_id, estado)
+                   VALUES (?, ?, 'cobrado')
+                   ON CONFLICT (user_id, order_id) DO UPDATE SET estado = 'cobrado'`,
+                  [user_id, String(order.id)]
+                );
+                totalMarcados++;
+              }
+            }
+          } catch(e) { console.error(`[CRON] Gmail msg ${msg.id} user ${user_id}:`, e.message); }
+        }
+        console.log(`✅ [CRON] Gmail PDF user ${user_id}: ${totalMarcados} reembolsos marcados cobrados`);
+      } catch(e) { console.error(`[CRON] Gmail PDF error user ${user_id}:`, e.message); }
+    }
+  } catch(e) { console.error("[CRON] Error sync Gmail PDF:", e.message); }
+}
+
 // ── Arrancar los crons ───────────────────────────────────────────────────────
 function startCrons() {
   // Sync Shopify cada 10 minutos
@@ -221,6 +362,16 @@ function startCrons() {
       }
     } catch(e) { console.error("[BILLING] Error cierre de mes:", e.message); }
   }, 60 * 60 * 1000); // cada hora
+
+  // Sync Gmail PDF MRW: cada hora comprobamos si son las 3am para ejecutar
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getHours() !== 3) return; // Solo a las 3:00am
+    await syncAllGmailPDF();
+  }, 60 * 60 * 1000); // cada hora
+
+  // También ejecutar una vez al arrancar (después de 90s)
+  setTimeout(syncAllGmailPDF, 90 * 1000);
 
   // Keep-alive: ping cada 10 min para que Render no duerma el servidor
   const APP_URL = process.env.APP_URL || "https://profit-cod.onrender.com";
