@@ -147,6 +147,8 @@ router.post("/sync-pdf", async (req, res) => {
 
           // 5. Parsear el PDF
           const parsed = await pdfParse(pdfBuffer);
+          // Debug: loguear muestra del texto para ajustar regex
+          console.log(`[PDF DEBUG] Muestra texto (primeros 800 chars):\n${parsed.text.slice(0, 800)}`);
           const registros = parsearPDFMRW(parsed.text);
           totalEnvios += registros.length;
 
@@ -184,6 +186,7 @@ router.post("/sync-pdf", async (req, res) => {
       enviosEncontrados: totalEnvios,
       procesados: totalMarcados,
       errores,
+      _debug: "Ver logs de Render para muestra del texto PDF",
     });
 
   } catch (e) {
