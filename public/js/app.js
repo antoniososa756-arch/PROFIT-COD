@@ -1705,57 +1705,140 @@ if (id === "tiendas") {
 
     if (tab === "reembolsos") {
       content.innerHTML = `
-        <div class="card" style="padding:20px;">
-          <div class="orders-header">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
-              <div class="tabs" style="margin-bottom:0;border-bottom:none;">
-                <span class="tab active" onclick="filterReeByTab(this,'')">Todos</span>
-                <span class="tab" onclick="filterReeByTab(this,'pendiente')">Pendiente</span>
-                <span class="tab" onclick="filterReeByTab(this,'cobrado')">Pagado</span>
+        <div style="display:flex;flex-direction:column;gap:20px;">
+
+          <!-- BLOQUE 1: Email de recepción de PDFs -->
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+              <div style="width:40px;height:40px;background:#f0fdf4;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
               </div>
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <input type="date" id="ree-date-from" value="" onchange="renderReembolsos()"
-                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-                <span style="color:#6b7280;font-size:13px;">—</span>
-                <input type="date" id="ree-date-to" value="" onchange="renderReembolsos()"
-                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-                <select id="ree-shop" onchange="renderReembolsos()"
-                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
-                  <option value="">Todas las tiendas</option>
-                </select>
-                <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
-                <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;color:#16a34a;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
-                  ✅ Importar Pagados
-                  <input type="file" accept=".pdf" multiple style="display:none;" onchange="importarPagadosPDF(this)">
-                </label>
+              <div>
+                <div style="font-size:15px;font-weight:700;color:#111827;">Correo de recepción de PDFs MRW</div>
+                <div style="font-size:13px;color:#6b7280;margin-top:2px;">Correo donde MRW te envía los PDFs de liquidación de reembolsos COD</div>
               </div>
             </div>
-            <div style="border-bottom:1px solid #e5e7eb;margin-bottom:12px;"></div>
-            <div id="ree-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
-            <div class="orders-table">
-              <div class="orders-row head" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
-                <div>#</div><div>Pedido</div><div>Nº seguimiento</div><div>Fecha</div><div>Cliente</div><div>Costo</div><div>Estado pago</div>
-              </div>
-              <div id="reeBody"><div class="muted" style="padding:16px;">Cargando...</div></div>
+            <div style="border-top:1px solid #f3f4f6;margin:16px 0;"></div>
+            <div style="max-width:480px;">
+              <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Email *</label>
+              <input type="email" id="pdf-email-input" placeholder="ejemplo@tuempresa.com"
+                style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"
+                oninput="this.style.borderColor='#e5e7eb'"/>
+              <div style="font-size:12px;color:#9ca3af;margin-top:6px;">Este es el correo que MRW usa para enviarte los resúmenes de pagos en PDF.</div>
+              <button onclick="guardarEmailPDFReembolsos()"
+                style="margin-top:14px;padding:9px 20px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+                Guardar correo
+              </button>
+              <span id="pdf-email-msg" style="margin-left:12px;font-size:13px;"></span>
             </div>
-            <div id="reePagination" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:18px 0 4px;flex-wrap:wrap;"></div>
           </div>
+
+          <!-- BLOQUE 2: Guía paso a paso -->
+          <div class="card" style="padding:24px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+              <div style="width:40px;height:40px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div>
+                <div style="font-size:15px;font-weight:700;color:#111827;">Cómo conectar Gmail para extracción automática de PDFs</div>
+                <div style="font-size:13px;color:#6b7280;margin-top:2px;">Sigue estos pasos para autorizar el acceso a tu correo y extraer los PDFs de MRW automáticamente</div>
+              </div>
+            </div>
+            <div style="border-top:1px solid #f3f4f6;margin:16px 0;"></div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;">
+
+              <!-- Paso 1 -->
+              <div style="display:flex;gap:14px;align-items:flex-start;">
+                <div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">1</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px;">Ir a Google Cloud Console</div>
+                  <div style="font-size:13px;color:#6b7280;line-height:1.6;">Entra en <span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;color:#374151;">console.cloud.google.com</span> con la cuenta de Google del correo donde recibes los PDFs de MRW.</div>
+                </div>
+              </div>
+
+              <!-- Paso 2 -->
+              <div style="display:flex;gap:14px;align-items:flex-start;">
+                <div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">2</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px;">Crear un proyecto nuevo</div>
+                  <div style="font-size:13px;color:#6b7280;line-height:1.6;">Haz clic en <strong>Seleccionar proyecto → Nuevo proyecto</strong>. Ponle un nombre (ej: <em>ProfitCOD MRW</em>) y haz clic en <strong>Crear</strong>.</div>
+                </div>
+              </div>
+
+              <!-- Paso 3 -->
+              <div style="display:flex;gap:14px;align-items:flex-start;">
+                <div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">3</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px;">Habilitar la Gmail API</div>
+                  <div style="font-size:13px;color:#6b7280;line-height:1.6;">Ve a <strong>APIs y servicios → Biblioteca</strong>. Busca <span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;color:#374151;">Gmail API</span> y haz clic en <strong>Habilitar</strong>.</div>
+                </div>
+              </div>
+
+              <!-- Paso 4 -->
+              <div style="display:flex;gap:14px;align-items:flex-start;">
+                <div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">4</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px;">Configurar pantalla de consentimiento OAuth</div>
+                  <div style="font-size:13px;color:#6b7280;line-height:1.6;">Ve a <strong>APIs y servicios → Pantalla de consentimiento OAuth</strong>. Selecciona tipo <strong>Externo</strong>. Completa nombre de la app, correo de soporte y correo del desarrollador. Guarda y continúa hasta el final.</div>
+                </div>
+              </div>
+
+              <!-- Paso 5 -->
+              <div style="display:flex;gap:14px;align-items:flex-start;">
+                <div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">5</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px;">Crear credenciales OAuth 2.0</div>
+                  <div style="font-size:13px;color:#6b7280;line-height:1.6;">Ve a <strong>APIs y servicios → Credenciales → Crear credenciales → ID de cliente OAuth 2.0</strong>. Selecciona tipo <strong>Aplicación web</strong>. En <em>Orígenes autorizados</em> añade la URL de tu app. En <em>URIs de redireccionamiento</em> añade: <span style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;color:#374151;word-break:break-all;">https://profit-cod.onrender.com/api/gmail/callback</span></div>
+                </div>
+              </div>
+
+              <!-- Paso 6 -->
+              <div style="display:flex;gap:14px;align-items:flex-start;">
+                <div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">6</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px;">Copiar Client ID y Client Secret</div>
+                  <div style="font-size:13px;color:#6b7280;line-height:1.6;">Google te mostrará el <strong>Client ID</strong> y <strong>Client Secret</strong>. Cópialos y pégalos en los campos de abajo.</div>
+                </div>
+              </div>
+
+              <!-- Paso 7 -->
+              <div style="display:flex;gap:14px;align-items:flex-start;">
+                <div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">7</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px;">Añadir usuario de prueba</div>
+                  <div style="font-size:13px;color:#6b7280;line-height:1.6;">En <strong>Pantalla de consentimiento → Usuarios de prueba</strong>, añade el correo donde recibes los PDFs de MRW. Esto es necesario mientras la app no esté verificada por Google.</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="border-top:1px solid #f3f4f6;margin:20px 0 16px;"></div>
+
+            <!-- Campos Client ID / Secret -->
+            <div style="max-width:480px;display:flex;flex-direction:column;gap:12px;">
+              <div>
+                <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Client ID</label>
+                <input type="text" id="gmail-client-id" placeholder="xxxx.apps.googleusercontent.com"
+                  style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:monospace;color:var(--text);background:var(--card);box-sizing:border-box;"/>
+              </div>
+              <div>
+                <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Client Secret</label>
+                <input type="password" id="gmail-client-secret" placeholder="••••••••••••••••"
+                  style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:monospace;color:var(--text);background:var(--card);box-sizing:border-box;"/>
+              </div>
+              <div>
+                <button onclick="guardarGmailCredenciales()"
+                  style="padding:9px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+                  Guardar y autorizar acceso
+                </button>
+                <span id="gmail-cred-msg" style="margin-left:12px;font-size:13px;"></span>
+              </div>
+            </div>
+          </div>
+
         </div>
       `;
-      fetch(`${API_BASE}/api/shopify/stores`, {
-        headers: { Authorization: "Bearer " + getActiveToken() }
-      }).then(r => r.json()).then(stores => {
-        const sel = document.getElementById("ree-shop");
-        if (sel && Array.isArray(stores)) {
-          stores.forEach(s => {
-            const opt = document.createElement("option");
-            opt.value = s.domain;
-            opt.textContent = s.shop_name || s.domain;
-            sel.appendChild(opt);
-          });
-        }
-      }).catch(() => {});
-      loadReembolsos();
+      cargarConfigGmail();
     }
   };
 
@@ -1844,6 +1927,55 @@ if (id === "tiendas") {
         if (msg) { msg.style.color="#dc2626"; msg.textContent=data.error||"Error guardando"; }
       }
     } catch(e) { if (msg) { msg.style.color="#dc2626"; msg.textContent="Error de conexión"; } }
+  };
+
+  // Gmail config functions
+  async function cargarConfigGmail() {
+    try {
+      const data = await cachedFetch(`${API_BASE}/api/gmail/config`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+      if (data?.email) {
+        const inp = document.getElementById("pdf-email-input");
+        if (inp) inp.value = data.email;
+      }
+      if (data?.client_id) {
+        const ci = document.getElementById("gmail-client-id");
+        if (ci) ci.value = data.client_id;
+      }
+    } catch {}
+  }
+  window.cargarConfigGmail = cargarConfigGmail;
+
+  window.guardarEmailPDFReembolsos = async function() {
+    const email = document.getElementById("pdf-email-input")?.value?.trim();
+    const msg = document.getElementById("pdf-email-msg");
+    if (!email) { if (msg) { msg.textContent = "❌ Escribe un correo válido"; msg.style.color = "#dc2626"; } return; }
+    try {
+      const res = await fetch(`${API_BASE}/api/gmail/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({ email })
+      });
+      if (res.ok) { if (msg) { msg.textContent = "✓ Guardado"; msg.style.color = "#16a34a"; setTimeout(() => { if (msg) msg.textContent = ""; }, 3000); } }
+      else { if (msg) { msg.textContent = "❌ Error al guardar"; msg.style.color = "#dc2626"; } }
+    } catch { if (msg) { msg.textContent = "❌ Error de conexión"; msg.style.color = "#dc2626"; } }
+  };
+
+  window.guardarGmailCredenciales = async function() {
+    const clientId     = document.getElementById("gmail-client-id")?.value?.trim();
+    const clientSecret = document.getElementById("gmail-client-secret")?.value?.trim();
+    const msg = document.getElementById("gmail-cred-msg");
+    if (!clientId || !clientSecret) { if (msg) { msg.textContent = "❌ Completa Client ID y Client Secret"; msg.style.color = "#dc2626"; } return; }
+    try {
+      const res = await fetch(`${API_BASE}/api/gmail/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({ client_id: clientId, client_secret: clientSecret })
+      });
+      if (res.ok) {
+        if (msg) { msg.textContent = "✓ Guardado. Redirigiendo para autorizar..."; msg.style.color = "#16a34a"; }
+        setTimeout(() => { window.location.href = `${API_BASE}/api/gmail/auth?token=${getActiveToken()}`; }, 1200);
+      } else { if (msg) { msg.textContent = "❌ Error al guardar"; msg.style.color = "#dc2626"; } }
+    } catch { if (msg) { msg.textContent = "❌ Error de conexión"; msg.style.color = "#dc2626"; } }
   };
 
   switchIntegracionesTab("tiendas");
