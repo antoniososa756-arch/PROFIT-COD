@@ -51,10 +51,7 @@ app.use("/api/health",  require("./routes/health.routes"));
 // Shopify: connect y callback son redirects sin Auth header, se registran sin planCheck
 app.use("/api/shopify", shopifyRoutes);
 
-// Gmail OAuth: auth y callback son redirects del navegador (sin Auth header)
-const gmailRoutes = require("./routes/gmail.routes");
-app.get("/api/gmail/auth",     (req, res, next) => { req.db = db; next(); }, gmailRoutes);
-app.get("/api/gmail/callback", (req, res, next) => { req.db = db; next(); }, gmailRoutes);
+
 
 // Rutas de datos — requieren plan activo (clientes)
 app.use("/api/metrics",      auth, planCheck, metricsRoutes);
@@ -65,8 +62,14 @@ app.use("/api/gastos-fijos", auth, planCheck, require("./routes/gastos-fijos.rou
 app.use("/api/impuestos",    auth, planCheck, require("./routes/impuestos.routes"));
 app.use("/api/gastos-varios",auth, planCheck, require("./routes/gastos-varios.routes"));
 app.use("/api/nomina",       auth, planCheck, nominaRoutes);
-app.use("/api/gmail",        auth, planCheck, gmailRoutes);
-app.use("/api/gmail",        auth, planCheck, require("./routes/gmail.pdf.routes"));
+// Gmail: /auth y /callback son redirects del navegador, no llevan Auth header
+// El resto sí requiere auth — lo gestionamos con un middleware condicional
+const gmailRoutes = require("./routes/gmail.routes");
+app.use("/api/gmail", (req, res, next) => {
+  req.db = db;
+  if (req.path === "/auth" || req.path === "/callback") return next();
+  return auth(req, res, () => planCheck(req, res, next));
+}, gmailRoutes, require("./routes/gmail.pdf.routes"));
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));
