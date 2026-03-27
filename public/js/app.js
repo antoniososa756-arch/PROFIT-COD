@@ -2560,19 +2560,49 @@ if (id === "pagos-config") {
     </button>
   </div>`;
 
-  // Cargar valores actuales (enmascarados)
+  // Cargar valores actuales y bloquear campos con valor
   fetch(`${API_BASE}/api/admin/payment-config`, { headers: { Authorization: "Bearer " + getActiveToken() } })
     .then(r => r.json()).then(d => {
-      document.getElementById("cfg-stripe-pk").value             = d.stripe_public_key       || "";
-      document.getElementById("cfg-stripe-sk").value             = d.stripe_secret_key       || "";
-      document.getElementById("cfg-stripe-wh").value             = d.stripe_webhook_secret   || "";
-      document.getElementById("cfg-stripe-price-starter").value  = d.stripe_price_starter    || "";
-      document.getElementById("cfg-stripe-price-growth").value   = d.stripe_price_growth     || "";
-      document.getElementById("cfg-stripe-price-pro").value      = d.stripe_price_pro        || "";
-      document.getElementById("cfg-stripe-price-business").value = d.stripe_price_business   || "";
-      document.getElementById("cfg-pp-client").value             = d.paypal_client_id        || "";
-      document.getElementById("cfg-pp-secret").value             = d.paypal_secret           || "";
-      document.getElementById("cfg-pp-env").value                = d.paypal_env              || "live";
+      const campos = {
+        "cfg-stripe-pk":           d.stripe_public_key       || "",
+        "cfg-stripe-sk":           d.stripe_secret_key       || "",
+        "cfg-stripe-wh":           d.stripe_webhook_secret   || "",
+        "cfg-stripe-price-starter":d.stripe_price_starter    || "",
+        "cfg-stripe-price-growth": d.stripe_price_growth     || "",
+        "cfg-stripe-price-pro":    d.stripe_price_pro        || "",
+        "cfg-stripe-price-business":d.stripe_price_business  || "",
+        "cfg-pp-client":           d.paypal_client_id        || "",
+        "cfg-pp-secret":           d.paypal_secret           || "",
+      };
+      let alguno = false;
+      for (const [id, val] of Object.entries(campos)) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.value = val;
+        if (val) { el.readOnly = true; el.style.background = "#f9fafb"; el.style.color = "#6b7280"; alguno = true; }
+      }
+      document.getElementById("cfg-pp-env").value = d.paypal_env || "live";
+      if (alguno) {
+        document.getElementById("cfg-pp-env").disabled = true;
+        document.getElementById("cfg-pp-env").style.background = "#f9fafb";
+        document.getElementById("cfg-pp-env").style.color = "#6b7280";
+        // Mostrar botón Editar
+        const btnEdit = document.createElement("button");
+        btnEdit.textContent = "✏️ Editar configuración";
+        btnEdit.style.cssText = "padding:10px 20px;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-left:10px;";
+        btnEdit.onclick = () => {
+          for (const id of Object.keys(campos)) {
+            const el = document.getElementById(id);
+            if (!el) continue;
+            el.readOnly = false; el.style.background = ""; el.style.color = "";
+          }
+          document.getElementById("cfg-pp-env").disabled = false;
+          document.getElementById("cfg-pp-env").style.background = "";
+          document.getElementById("cfg-pp-env").style.color = "";
+          btnEdit.remove();
+        };
+        document.querySelector("#pagos-cfg-msg").after(btnEdit);
+      }
     }).catch(() => {});
 
   window.guardarPagosConfig = async function() {
