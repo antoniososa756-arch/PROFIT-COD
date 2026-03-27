@@ -89,13 +89,13 @@ router.post("/sync-pdf", async (req, res) => {
   const db = req.db;
 
   try {
-    // 1. Buscar emails de MRW con PDF adjunto (últimos 30 días)
+    // 1. Buscar emails de MRW con PDF adjunto (desde 2025-01-01)
     const query = encodeURIComponent(
-      'from:onlinefact@mrw.es subject:"Factura de Reembolsos" has:attachment filename:pdf'
+      'from:onlinefact@mrw.es subject:"Factura de Reembolsos" has:attachment filename:pdf after:2025/1/1'
     );
     const listRes = await gmailFetch(
       db, userId,
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=20`
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`
     );
     const listData = await listRes.json();
     const messages = listData.messages || [];

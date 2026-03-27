@@ -215,11 +215,11 @@ async function syncAllGmailPDF() {
     for (const { user_id } of usuarios) {
       try {
         const query = encodeURIComponent(
-          'from:onlinefact@mrw.es subject:"Factura de Reembolsos" has:attachment filename:pdf newer_than:7d'
+          'from:onlinefact@mrw.es subject:"Factura de Reembolsos" has:attachment filename:pdf newer_than:40d'
         );
         const listRes = await gmailFetch(
           user_id,
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=20`
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=50`
         );
         const listData = await listRes.json();
         const messages = listData.messages || [];
