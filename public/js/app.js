@@ -8475,6 +8475,9 @@ async function loadSidebarReembolsos() {
 }
 window.loadSidebarReembolsos = loadSidebarReembolsos;
 
+// Refrescar sidebar cada 5 minutos automáticamente
+setInterval(loadSidebarReembolsos, 5 * 60 * 1000);
+
 // =========================
 // NOTIFICACIONES REALES
 // =========================
