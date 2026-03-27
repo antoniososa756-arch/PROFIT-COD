@@ -101,10 +101,12 @@ router.post("/sync-pdf", async (req, res) => {
     const messages = listData.messages || [];
 
     if (messages.length === 0) {
-      return res.json({ ok: true, procesados: 0, mensaje: "No se encontraron emails de MRW" });
+      return res.json({ ok: true, procesados: 0, emailsLeidos: 0, pdfsProcesados: 0, enviosEncontrados: 0 });
     }
 
     let totalMarcados = 0;
+    let totalPDFs = 0;
+    let totalEnvios = 0;
     const errores = [];
 
     for (const msg of messages) {
@@ -116,9 +118,16 @@ router.post("/sync-pdf", async (req, res) => {
         );
         const msgData = await msgRes.json();
 
-        // 3. Encontrar adjuntos PDF
-        const partes = msgData.payload?.parts || [];
-        const pdfs = partes.filter(p =>
+        // 3. Encontrar adjuntos PDF (buscar también en partes anidadas)
+        const todasPartes = [];
+        function recogerPartes(parts) {
+          for (const p of parts || []) {
+            todasPartes.push(p);
+            if (p.parts) recogerPartes(p.parts);
+          }
+        }
+        recogerPartes(msgData.payload?.parts || []);
+        const pdfs = todasPartes.filter(p =>
           p.mimeType === "application/pdf" ||
           p.filename?.toLowerCase().endsWith(".pdf")
         );
@@ -126,6 +135,7 @@ router.post("/sync-pdf", async (req, res) => {
         for (const parte of pdfs) {
           const attachId = parte.body?.attachmentId;
           if (!attachId) continue;
+          totalPDFs++;
 
           // 4. Descargar el PDF
           const attRes = await gmailFetch(
@@ -138,26 +148,26 @@ router.post("/sync-pdf", async (req, res) => {
           // 5. Parsear el PDF
           const parsed = await pdfParse(pdfBuffer);
           const registros = parsearPDFMRW(parsed.text);
+          totalEnvios += registros.length;
 
           // 6. Marcar cada pedido como cobrado en la BD
-          for (const { nEnvio, importe } of registros) {
+          for (const { nEnvio } of registros) {
             if (!nEnvio) continue;
-            // Buscar el pedido por tracking number
+            // Buscar el pedido por tracking_number (orders no tiene user_id directo, va por shop)
             const order = await db.get(
-              "SELECT id FROM orders WHERE tracking_number = ? AND user_id = ?",
+              `SELECT o.id FROM orders o
+               JOIN shops s ON s.id = o.shop_id
+               WHERE o.tracking_number = ? AND s.user_id = ?`,
               [nEnvio, userId]
             );
             if (!order) continue;
 
-            // Marcar como cobrado en reembolsos_estados
+            // Marcar como cobrado en reembolsos_estado (tabla correcta, sin 's')
             await db.run(
-              `INSERT INTO reembolsos_estados (order_id, estado, fecha_cobro, importe_cobrado)
-               VALUES (?, 'cobrado', NOW(), ?)
-               ON CONFLICT (order_id) DO UPDATE SET
-                 estado = 'cobrado',
-                 fecha_cobro = NOW(),
-                 importe_cobrado = EXCLUDED.importe_cobrado`,
-              [order.id, importe]
+              `INSERT INTO reembolsos_estado (user_id, order_id, estado)
+               VALUES (?, ?, 'cobrado')
+               ON CONFLICT (user_id, order_id) DO UPDATE SET estado = 'cobrado'`,
+              [userId, String(order.id)]
             );
             totalMarcados++;
           }
@@ -170,6 +180,8 @@ router.post("/sync-pdf", async (req, res) => {
     res.json({
       ok: true,
       emailsLeidos: messages.length,
+      pdfsProcesados: totalPDFs,
+      enviosEncontrados: totalEnvios,
       procesados: totalMarcados,
       errores,
     });

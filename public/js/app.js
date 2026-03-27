@@ -1920,8 +1920,8 @@ if (id === "tiendas") {
       if (data.ok) {
         const msg = data.procesados > 0
           ? `✓ ${data.procesados} reembolso(s) marcados como cobrados`
-          : "✓ No hay nuevos PDFs pendientes de procesar";
-        alert(msg);
+          : `Sin reembolsos nuevos\nEmails encontrados: ${data.emailsLeidos ?? 0}\nPDFs: ${data.pdfsProcesados ?? 0}\nNº Envíos en PDF: ${data.enviosEncontrados ?? 0}`;
+        alert(msg + (data.errores?.length ? `\nErrores: ${data.errores.map(e=>e.error).join(", ")}` : ""));
       } else {
         alert("❌ Error: " + (data.error || "desconocido"));
       }
