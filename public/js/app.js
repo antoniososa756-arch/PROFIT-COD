@@ -1861,7 +1861,12 @@ if (id === "tiendas") {
                 <div style="font-size:13px;color:#6b7280;">${data.email || ""}</div>
               </div>
             </div>
-            <button onclick="desconectarGmail()" style="padding:7px 16px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Desconectar</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button onclick="sincronizarPDFsMRW()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+                ↓ Importar PDFs ahora
+              </button>
+              <button onclick="desconectarGmail()" style="padding:7px 16px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Desconectar</button>
+            </div>
           </div>`;
         if (formWrap) formWrap.style.display = "none";
       } else {
@@ -1901,6 +1906,27 @@ if (id === "tiendas") {
       await fetch(`${API_BASE}/api/gmail/config`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
       cargarConfigGmail();
     } catch {}
+  };
+
+  window.sincronizarPDFsMRW = async function() {
+    const btn = event?.target;
+    if (btn) { btn.textContent = "Procesando..."; btn.disabled = true; }
+    try {
+      const res = await fetch(`${API_BASE}/api/gmail/sync-pdf`, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const msg = data.procesados > 0
+          ? `✓ ${data.procesados} reembolso(s) marcados como cobrados`
+          : "✓ No hay nuevos PDFs pendientes de procesar";
+        alert(msg);
+      } else {
+        alert("❌ Error: " + (data.error || "desconocido"));
+      }
+    } catch { alert("❌ Error de conexión"); }
+    finally { if (btn) { btn.textContent = "↓ Importar PDFs ahora"; btn.disabled = false; } }
   };
 
   switchIntegracionesTab("tiendas");

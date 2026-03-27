@@ -65,6 +65,7 @@ app.use("/api/impuestos",    auth, planCheck, require("./routes/impuestos.routes
 app.use("/api/gastos-varios",auth, planCheck, require("./routes/gastos-varios.routes"));
 app.use("/api/nomina",       auth, planCheck, nominaRoutes);
 app.use("/api/gmail",        auth, planCheck, gmailRoutes);
+app.use("/api/gmail",        auth, planCheck, require("./routes/gmail.pdf.routes"));
 
 // FRONT
 app.use(express.static(path.resolve(__dirname, "../public")));
