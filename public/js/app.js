@@ -1215,6 +1215,10 @@ const now = new Date();
 
     </div>
       </div>
+      <div id="met-shop-filter-panel" style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
+      </div>
     </div>
     `;
   }
@@ -1277,20 +1281,44 @@ function aplicarFiltroMetricas() {
 }
 window.aplicarFiltroMetricas = aplicarFiltroMetricas;
 
+function recalcMetricasFiltro() {
+  const checks = document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]");
+  const allCheck = document.getElementById("met-shop-check-all");
+  if (allCheck) allCheck.checked = [...checks].every(c => c.checked);
+  loadMetricas();
+}
+window.recalcMetricasFiltro = recalcMetricasFiltro;
+
+function toggleAllMetricasFiltro(checked) {
+  document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]").forEach(c => c.checked = checked);
+  loadMetricas();
+}
+window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
+
   loadMetricas();
 
-// Cargar tiendas en el selector de métricas
+// Cargar tiendas en el panel de filtro de métricas
   fetch(`${API_BASE}/api/shopify/stores`, {
     headers: { Authorization: "Bearer " + getActiveToken() }
   }).then(r => r.json()).then(stores => {
-    const sel = document.getElementById("metrics-shop");
-    if (sel && Array.isArray(stores)) {
-      stores.forEach(s => {
-        const opt = document.createElement("option");
-        opt.value = s.domain;
-        opt.textContent = s.shop_name || s.domain;
-        sel.appendChild(opt);
-      });
+    const panel = document.getElementById("met-shop-filter-panel");
+    if (panel && Array.isArray(stores) && stores.length > 0) {
+      const checkboxes = stores.map(s =>
+        `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
+          <input type="checkbox" checked value="${s.domain}" onchange="recalcMetricasFiltro()" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          ${escapeHtml(s.shop_name || s.domain)}
+        </label>`
+      ).join("");
+      panel.innerHTML = `
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
+          <input type="checkbox" id="met-shop-check-all" checked onchange="toggleAllMetricasFiltro(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          Todas las tiendas
+        </label>
+        ${checkboxes}
+      `;
+    } else if (panel) {
+      panel.innerHTML = `<div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div><div style="color:#9ca3af;font-size:12px;">Sin tiendas</div>`;
     }
   }).catch(() => {});
   closeAllDrops();
@@ -4636,16 +4664,13 @@ async function loadMetricas() {
   const dateTo   = document.getElementById("metrics-date-to")?.value   || fmt(now);
   const shop     = document.getElementById("metrics-shop")?.value       || "";
 
-  // Leer tiendas seleccionadas por checkbox
-  const checkboxes = document.querySelectorAll("#metrics-balance-wrap input[type='checkbox'][value]");
+  // Leer tiendas seleccionadas por checkbox del panel de filtro
+  const checkboxes = document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]");
   let dominiosFiltro = [];
   if (checkboxes.length > 0) {
     dominiosFiltro = [...checkboxes].filter(c => c.checked).map(c => c.value);
-  } else if (shop) {
-    try {
-      const parsed = JSON.parse(shop);
-      dominiosFiltro = Array.isArray(parsed) ? parsed : [shop];
-    } catch { dominiosFiltro = [shop]; }
+    // Si están todas marcadas, no filtrar (mostrar todas)
+    if (dominiosFiltro.length === checkboxes.length) dominiosFiltro = [];
   }
 
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
