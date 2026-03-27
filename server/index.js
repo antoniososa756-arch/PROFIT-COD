@@ -51,8 +51,9 @@ app.use("/api/health",  require("./routes/health.routes"));
 // Shopify: connect y callback son redirects sin Auth header, se registran sin planCheck
 app.use("/api/shopify", shopifyRoutes);
 
-// Gmail OAuth callback es redirect de Google (sin Auth header), va antes del middleware
+// Gmail OAuth: auth y callback son redirects del navegador (sin Auth header)
 const gmailRoutes = require("./routes/gmail.routes");
+app.get("/api/gmail/auth",     (req, res, next) => { req.db = db; next(); }, gmailRoutes);
 app.get("/api/gmail/callback", (req, res, next) => { req.db = db; next(); }, gmailRoutes);
 
 // Rutas de datos — requieren plan activo (clientes)
