@@ -8,6 +8,14 @@ function getActiveToken() {
 }
 
 console.log("🟢 app.js cargado");
+
+// Estilo para selección de celdas tipo Excel
+if (!document.getElementById("__ads-sel-style")) {
+  const s = document.createElement("style");
+  s.id = "__ads-sel-style";
+  s.textContent = `td.ads-sel { outline: 2px solid #2563eb !important; background: #dbeafe !important; }`;
+  document.head.appendChild(s);
+}
 // public/js/app.js
 (() => {
 
@@ -5953,6 +5961,80 @@ async function loadAdsTable() {
     </table>
   `;
   window.__hideLoadingBar?.();
+
+  // ── Selección de celdas estilo Excel para copiar ──────────────────────────
+  // Limpiar listener previo si se recarga la tabla
+  if (wrap._adsKeydown) document.removeEventListener("keydown", wrap._adsKeydown);
+
+  const table = wrap.querySelector("table");
+  if (table) {
+    let lastSelected = null;
+    const tbodyRows = table.querySelectorAll("tbody tr");
+
+    tbodyRows.forEach((tr, rowIdx) => {
+      tr.querySelectorAll("td").forEach((cell, colIdx) => {
+        cell.dataset.col = colIdx;
+        cell.dataset.row = rowIdx;
+        cell.style.cursor = "pointer";
+        cell.style.userSelect = "none";
+        const input = cell.querySelector("input");
+
+        cell.addEventListener("mousedown", function(e) {
+          if (input && !e.ctrlKey && !e.metaKey && !e.shiftKey) return; // dejar input editable
+          e.preventDefault();
+          const col = parseInt(this.dataset.col);
+          const row = parseInt(this.dataset.row);
+
+          if (e.shiftKey && lastSelected && lastSelected.col === col) {
+            const from = Math.min(lastSelected.row, row);
+            const to   = Math.max(lastSelected.row, row);
+            if (!e.ctrlKey && !e.metaKey) clearAdsSelection(table);
+            tbodyRows.forEach((tr2, r) => {
+              if (r >= from && r <= to) {
+                const c = tr2.querySelectorAll("td")[col];
+                if (c) c.classList.add("ads-sel");
+              }
+            });
+          } else {
+            if (!e.ctrlKey && !e.metaKey) clearAdsSelection(table);
+            this.classList.toggle("ads-sel");
+            lastSelected = { col, row };
+          }
+        });
+      });
+    });
+
+    wrap._adsKeydown = function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        const selected = table.querySelectorAll("td.ads-sel");
+        if (!selected.length) return;
+        const byRow = {};
+        selected.forEach(cell => {
+          const r = cell.dataset.row;
+          const c = cell.dataset.col;
+          if (!byRow[r]) byRow[r] = {};
+          const inp = cell.querySelector("input");
+          byRow[r][c] = inp ? (inp.value || "0") : cell.textContent.trim().replace(/\s*€/g,"");
+        });
+        const text = Object.keys(byRow).sort((a,b)=>a-b)
+          .map(r => Object.keys(byRow[r]).sort((a,b)=>a-b).map(c => byRow[r][c]).join("\t"))
+          .join("\n");
+        navigator.clipboard.writeText(text).then(() => {
+          // Flash visual para confirmar copia
+          table.querySelectorAll("td.ads-sel").forEach(c => {
+            c.style.outline = "2px solid #16a34a";
+            setTimeout(() => { c.style.outline = ""; c.classList.remove("ads-sel"); }, 600);
+          });
+        });
+      }
+      if (e.key === "Escape") clearAdsSelection(table);
+    };
+    document.addEventListener("keydown", wrap._adsKeydown);
+  }
+}
+
+function clearAdsSelection(table) {
+  table.querySelectorAll("td.ads-sel").forEach(c => c.classList.remove("ads-sel"));
 }
 
 // =========================
