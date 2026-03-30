@@ -6014,7 +6014,8 @@ async function loadAdsTable() {
           const c = cell.dataset.col;
           if (!byRow[r]) byRow[r] = {};
           const inp = cell.querySelector("input");
-          byRow[r][c] = inp ? (inp.value || "0") : cell.textContent.trim().replace(/\s*€/g,"");
+          const raw = inp ? (inp.value || "0") : cell.textContent.trim().replace(/\s*€/g,"").trim();
+          byRow[r][c] = raw.replace(".", ","); // Excel español usa coma como decimal
         });
         const text = Object.keys(byRow).sort((a,b)=>a-b)
           .map(r => Object.keys(byRow[r]).sort((a,b)=>a-b).map(c => byRow[r][c]).join("\t"))
