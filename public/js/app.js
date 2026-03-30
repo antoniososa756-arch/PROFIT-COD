@@ -6020,12 +6020,18 @@ async function loadAdsTable() {
         const text = Object.keys(byRow).sort((a,b)=>a-b)
           .map(r => Object.keys(byRow[r]).sort((a,b)=>a-b).map(c => byRow[r][c]).join("\t"))
           .join("\n");
-        navigator.clipboard.writeText(text).then(() => {
-          // Flash visual para confirmar copia
-          table.querySelectorAll("td.ads-sel").forEach(c => {
-            c.style.outline = "2px solid #16a34a";
-            setTimeout(() => { c.style.outline = ""; c.classList.remove("ads-sel"); }, 600);
-          });
+        // Copiar usando textarea (funciona en todos los browsers sin permisos)
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0;";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        // Flash verde para confirmar
+        table.querySelectorAll("td.ads-sel").forEach(c => {
+          c.style.outline = "2px solid #16a34a";
+          setTimeout(() => { c.style.outline = ""; c.classList.remove("ads-sel"); }, 600);
         });
       }
       if (e.key === "Escape") clearAdsSelection(table);
