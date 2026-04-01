@@ -89,18 +89,6 @@ router.get("/callback", async (req, res) => {
       [userId, shop, shopName, accessToken, appSecret]
     );
 
-    // Reasignar pedidos históricos del mismo dominio a esta cuenta
-    // (cuando la tienda se traslada de un usuario a otro)
-    const newShopRow = await db.get("SELECT id FROM shops WHERE user_id = $1 AND shop_domain = $2", [userId, shop]);
-    if (newShopRow) {
-      await db.run(
-        `UPDATE orders SET shop_id = $1, shop_domain = $2
-         WHERE COALESCE(shop_domain, (SELECT shop_domain FROM shops WHERE id = shop_id)) = $2
-           AND shop_id != $1`,
-        [newShopRow.id, shop]
-      );
-    }
-
     const webhookUrl = `${process.env.APP_URL}/api/shopify/webhooks/orders`;
     const topics = ["orders/create", "orders/updated", "fulfillments/create", "fulfillments/update"];
     for (const topic of topics) {
@@ -283,8 +271,10 @@ router.post("/sync-orders", auth, async (req, res) => {
     for (const shop of shops) {
       try {
         const lastOrder = await db.get(
-          `SELECT created_at FROM orders WHERE shop_id = $1 ORDER BY created_at DESC LIMIT 1`,
-          [shop.id]
+          `SELECT created_at FROM orders
+           WHERE COALESCE(shop_domain, (SELECT shop_domain FROM shops WHERE id = shop_id)) = $1
+           ORDER BY created_at DESC LIMIT 1`,
+          [shop.shop_domain]
         );
         const since = lastOrder?.created_at
           ? new Date(new Date(lastOrder.created_at).getTime() - 60 * 60 * 1000).toISOString()
@@ -305,7 +295,6 @@ router.post("/sync-orders", auth, async (req, res) => {
               `INSERT INTO orders (shop_id, shop_domain, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, cancelled_at, raw_json)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                ON CONFLICT(order_id) DO UPDATE SET
-                 shop_id = EXCLUDED.shop_id,
                  shop_domain = EXCLUDED.shop_domain,
                  fulfillment_status = CASE
                    WHEN orders.tracking_number IS NOT NULL
@@ -327,15 +316,6 @@ router.post("/sync-orders", auth, async (req, res) => {
         }
 
         await db.run("UPDATE shops SET last_sync = now()::text WHERE id = $1", [shop.id]);
-
-        // Reasignar pedidos del mismo dominio que pertenecen a otro shop_id
-        // (ocurre cuando la misma tienda Shopify está conectada en varias cuentas)
-        await db.run(
-          `UPDATE orders SET shop_id = $1, shop_domain = $2
-           WHERE COALESCE(shop_domain, (SELECT shop_domain FROM shops WHERE id = shop_id)) = $2
-             AND shop_id != $1`,
-          [shop.id, shop.shop_domain]
-        );
       } catch (e) { console.error("Sync error for shop", shop.shop_domain, e.message); }
     }
     console.log(`Sync completado: ${total} pedidos`);
