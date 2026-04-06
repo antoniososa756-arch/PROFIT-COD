@@ -8646,10 +8646,16 @@ async function checkNotificaciones() {
         const diasTranscurridos = Math.floor((ahora - fechaPedido) / (1000 * 60 * 60 * 24));
         if (diasTranscurridos >= 7) {
           const notiId = `7dias__${id}`;
-          if (!notisIds.has(notiId)) {
+          // Solo notificar una vez por día: clave = userId + fecha de hoy
+          const hoy = ahora.toISOString().slice(0, 10);
+          const shownKey = `notis_shown_${currentUser?.id || "anon"}_${hoy}`;
+          const shownHoy = JSON.parse(localStorage.getItem(shownKey) || "[]");
+          if (!notisIds.has(notiId) && !shownHoy.includes(notiId)) {
             const txt = `${nombre} — ${o.customer_name || ""} (${estado})`;
             nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: txt, date: ahoraISO });
             notisIds.add(notiId);
+            shownHoy.push(notiId);
+            localStorage.setItem(shownKey, JSON.stringify(shownHoy));
             showToast(`⚠️ ${diasTranscurridos} días sin resolver`, txt, "#f59e0b");
           }
         }
