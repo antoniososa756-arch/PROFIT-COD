@@ -1471,11 +1471,21 @@ body.dark select option {
     height: 100vh;
     z-index: 200;
     overflow-y: auto;
+    box-shadow: 4px 0 20px rgba(0,0,0,.12);
   }
   .sidebar.hidden { transform: translateX(-210px); }
   .layout { overflow: visible; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .filters { flex-wrap: wrap; gap: 8px; }
+}
+
+/* ── Small screen sidebar: tighter spacing so it feels like full-screen ── */
+@media (max-width: 768px) {
+  .sidebar { padding: 8px; }
+  .logo-zone { height: 72px; margin-bottom: 10px; }
+  .menu-item { padding: 6px 7px; margin-bottom: 3px; font-size: 12px; }
+  .divider { margin: 7px 0; }
+  .toggle { margin-top: 7px; }
 }
 
 /* ── Mobile (≤768px) ── */
