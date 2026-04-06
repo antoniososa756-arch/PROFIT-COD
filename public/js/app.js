@@ -1114,6 +1114,10 @@ const now = new Date();
               <span class="stat-num" id="stat-total">0</span>
               <span class="stat-label">Total Pedidos</span>
             </div>
+            <div style="border-left:1px solid #e5e7eb;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;">
+              <span style="font-size:18px;font-weight:700;color:#374151;line-height:1;" id="stat-sin-cancelados">0</span>
+              <span style="font-size:11px;color:#9ca3af;margin-top:2px;white-space:nowrap;">Sin cancelados</span>
+            </div>
           </div>
           <div style="border-top:1px solid #e5e7eb;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;">
             <span style="font-size:12px;color:#6b7280;display:flex;flex-direction:column;line-height:1.4;">Enviados<span style="font-size:10px;color:#9ca3af;">(excl. pendientes y cancelados)</span></span>
@@ -4799,20 +4803,22 @@ async function loadMetricas() {
     const statsRes = await fetch(`${API_BASE}/api/metrics/stats?${statsParams}`, { headers: h });
     const stats = await statsRes.json();
 
-    const total      = stats.total      || 0;
-    const pendientes = stats.pendientes  || 0;
-    const transito   = stats.en_transito || 0;
-    const entregados = stats.entregados  || 0;
-    const devueltos  = stats.devueltos   || 0;
-    const destruidos = stats.destruidos  || 0;
-    const enviados   = stats.enviados    || 0;
-    const rojos      = devueltos + destruidos;
-    const facturacion = parseFloat(stats.facturacion || 0);
+    const total          = stats.total          || 0;
+    const pendientes     = stats.pendientes      || 0;
+    const transito       = stats.en_transito     || 0;
+    const entregados     = stats.entregados      || 0;
+    const devueltos      = stats.devueltos       || 0;
+    const destruidos     = stats.destruidos      || 0;
+    const enviados       = stats.enviados        || 0;
+    const sinCancelados  = stats.pedidos_activos || 0;
+    const rojos          = devueltos + destruidos;
+    const facturacion    = parseFloat(stats.facturacion || 0);
 
-    set("stat-total",      total);
-    set("stat-enviados",   enviados);
-    set("stat-pendientes", pendientes);
-    set("stat-transito",   transito);
+    set("stat-total",           total);
+    set("stat-sin-cancelados",  sinCancelados);
+    set("stat-enviados",        enviados);
+    set("stat-pendientes",      pendientes);
+    set("stat-transito",        transito);
     set("stat-entregados", entregados);
     set("stat-devueltos",  devueltos);
     set("stat-destruidos", destruidos);
@@ -5486,25 +5492,27 @@ async function actualizarMetricasSinBalance() {
     if (shopsFiltered.length > 0) statsParams.set("shops", shopsFiltered.join(","));
     const stats = await fetch(`${API_BASE}/api/metrics/stats?${statsParams}`, { headers: h }).then(r => r.json());
 
-    const total      = stats.total      || 0;
-    const pendientes = stats.pendientes  || 0;
-    const transito   = stats.en_transito || 0;
-    const entregados = stats.entregados  || 0;
-    const devueltos  = stats.devueltos   || 0;
-    const destruidos = stats.destruidos  || 0;
-    const enviados   = stats.enviados    || 0;
-    const facturacion = parseFloat(stats.facturacion || 0);
-    const rojos      = devueltos + destruidos;
-    const baseCalc   = enviados > 0 ? enviados : 1;
-    const pctEntregado = ((entregados / baseCalc) * 100).toFixed(2);
-    const pctRojo      = ((rojos      / baseCalc) * 100).toFixed(2);
-    const pctPendiente = ((transito   / baseCalc) * 100).toFixed(2);
+    const total         = stats.total          || 0;
+    const pendientes    = stats.pendientes      || 0;
+    const transito      = stats.en_transito     || 0;
+    const entregados    = stats.entregados      || 0;
+    const devueltos     = stats.devueltos       || 0;
+    const destruidos    = stats.destruidos      || 0;
+    const enviados      = stats.enviados        || 0;
+    const sinCancelados = stats.pedidos_activos || 0;
+    const facturacion   = parseFloat(stats.facturacion || 0);
+    const rojos         = devueltos + destruidos;
+    const baseCalc      = enviados > 0 ? enviados : 1;
+    const pctEntregado  = ((entregados / baseCalc) * 100).toFixed(2);
+    const pctRojo       = ((rojos      / baseCalc) * 100).toFixed(2);
+    const pctPendiente  = ((transito   / baseCalc) * 100).toFixed(2);
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    set("stat-total",      total);
-    set("stat-enviados",   enviados);
-    set("stat-pendientes", pendientes);
-    set("stat-transito",   transito);
+    set("stat-total",          total);
+    set("stat-sin-cancelados", sinCancelados);
+    set("stat-enviados",       enviados);
+    set("stat-pendientes",     pendientes);
+    set("stat-transito",       transito);
     set("stat-entregados", entregados);
     set("stat-devueltos",  devueltos);
     set("stat-destruidos", destruidos);
