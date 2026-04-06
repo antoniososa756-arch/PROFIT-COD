@@ -95,8 +95,8 @@ router.post("/mrw-sync", auth, async (req, res) => {
     const orders = await req.db.all(`
       SELECT o.id, o.tracking_number, o.fulfillment_status
       FROM orders o
-      JOIN shops s ON s.id = o.shop_id
-      WHERE s.user_id = $1
+      LEFT JOIN shops s ON s.id = o.shop_id
+      WHERE (s.user_id = $1 OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
         AND o.tracking_number IS NOT NULL
         AND o.tracking_number != ''
         AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')

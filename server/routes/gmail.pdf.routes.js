@@ -151,8 +151,8 @@ router.post("/sync-pdf", async (req, res) => {
             // Buscar el pedido por tracking_number (orders no tiene user_id directo, va por shop)
             const order = await db.get(
               `SELECT o.id FROM orders o
-               JOIN shops s ON s.id = o.shop_id
-               WHERE o.tracking_number = ? AND s.user_id = ?`,
+               WHERE o.tracking_number = ?
+                 AND (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ?)`,
               [nEnvio, userId]
             );
             if (!order) continue;
