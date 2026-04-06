@@ -1932,7 +1932,9 @@ if (id === "tiendas") {
         alert(msg + (data.errores?.length ? `\nErrores: ${data.errores.map(e=>e.error).join(", ")}` : ""));
         if (data.procesados > 0) loadSidebarReembolsos();
       } else if (data.error === "GMAIL_RECONNECT" || res.status === 401) {
-        alert("⚠️ La sesión de Gmail ha expirado.\n\nPulsa 'Desconectar' y vuelve a conectar tu cuenta de Gmail para renovar el acceso.");
+        if (confirm("⚠️ La sesión de Gmail ha expirado.\n\n¿Reconectar ahora automáticamente?")) {
+          window.location.href = `${API_BASE}/api/gmail/auth?token=${getActiveToken()}`;
+        }
       } else {
         alert("❌ Error: " + (data.error || "desconocido"));
       }
