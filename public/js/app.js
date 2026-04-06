@@ -533,13 +533,6 @@ function escapeAttr(str) {
                       </div>
                       <span>${escapeHtml(n.text)}</span>
                     </div>
-                    ${es7dias ? `
-                    <div style="margin-top:6px;display:flex;gap:6px;">
-                      <button onclick="marcarGestionado(event,'${escapeAttr(n.id)}')"
-                        style="font-size:11px;padding:3px 8px;border:1px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#16a34a;cursor:pointer;font-family:inherit;">
-                        ✓ Gestionado
-                      </button>
-                    </div>` : ""}
                   </div>`;
               }).join("")}
             </div>
@@ -8653,8 +8646,7 @@ async function checkNotificaciones() {
         const diasTranscurridos = Math.floor((ahora - fechaPedido) / (1000 * 60 * 60 * 24));
         if (diasTranscurridos >= 7) {
           const notiId = `7dias__${id}`;
-          const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas_" + (currentUser?.id || "anon")) || "[]");
-          if (!notisIds.has(notiId) && !gestionados.includes(notiId)) {
+          if (!notisIds.has(notiId)) {
             const txt = `${nombre} — ${o.customer_name || ""} (${estado})`;
             nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: txt, date: ahoraISO });
             notisIds.add(notiId);
@@ -8735,25 +8727,7 @@ function irAPedidoDesdeNotif(notiId) {
   setSection("pedidos");
 }
 
-function marcarGestionado(event, notiId) {
-  event.stopPropagation();
-  // Guardar en lista de gestionados para no volver a notificar
-  const gestionados = JSON.parse(localStorage.getItem("notis_gestionadas_" + (currentUser?.id || "anon")) || "[]");
-  if (!gestionados.includes(notiId)) gestionados.push(notiId);
-    localStorage.setItem("notis_gestionadas_" + (currentUser?.id || "anon"), JSON.stringify(gestionados));
-
-  // Eliminar de la lista de notificaciones
-  const list = JSON.parse(localStorage.getItem("notifications") || "[]");
-  const next = list.filter(n => n.id !== notiId);
-  localStorage.setItem("notifications", JSON.stringify(next));
-
-  const d = dict();
-  const panel = document.getElementById("notifPanel");
-  renderNotifPanel(panel, next, d);
-  updateNotifBadge(next.length);
-}
 window.irAPedidoDesdeNotif = irAPedidoDesdeNotif;
-window.marcarGestionado = marcarGestionado;
 
 // =========================
 // IMPORTAR PAGADOS DESDE PDF MRW
