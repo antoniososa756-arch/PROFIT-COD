@@ -1931,6 +1931,8 @@ if (id === "tiendas") {
           : `Sin reembolsos nuevos\nEmails encontrados: ${data.emailsLeidos ?? 0}\nPDFs: ${data.pdfsProcesados ?? 0}\nNº Envíos en PDF: ${data.enviosEncontrados ?? 0}`;
         alert(msg + (data.errores?.length ? `\nErrores: ${data.errores.map(e=>e.error).join(", ")}` : ""));
         if (data.procesados > 0) loadSidebarReembolsos();
+      } else if (data.error === "GMAIL_RECONNECT" || res.status === 401) {
+        alert("⚠️ La sesión de Gmail ha expirado.\n\nPulsa 'Desconectar' y vuelve a conectar tu cuenta de Gmail para renovar el acceso.");
       } else {
         alert("❌ Error: " + (data.error || "desconocido"));
       }

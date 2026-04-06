@@ -19,19 +19,20 @@ async function getValidToken(db, userId) {
   return row.access_token;
 }
 
-async function refreshToken(db, userId, refreshToken) {
+async function refreshToken(db, userId, refreshTok) {
+  if (!refreshTok) throw new Error("GMAIL_RECONNECT");
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id:     CLIENT_ID,
       client_secret: CLIENT_SECRET,
-      refresh_token: refreshToken,
+      refresh_token: refreshTok,
       grant_type:    "refresh_token",
     }),
   });
   const data = await res.json();
-  if (!data.access_token) throw new Error("No se pudo refrescar el token");
+  if (!data.access_token) throw new Error("GMAIL_RECONNECT");
   await db.run(
     "UPDATE gmail_config SET access_token = ? WHERE user_id = ?",
     [data.access_token, userId]
@@ -184,6 +185,9 @@ router.post("/sync-pdf", async (req, res) => {
 
   } catch (e) {
     console.error("gmail sync-pdf error:", e);
+    if (e.message === "GMAIL_RECONNECT") {
+      return res.status(401).json({ error: "GMAIL_RECONNECT" });
+    }
     res.status(500).json({ error: e.message });
   }
 });
