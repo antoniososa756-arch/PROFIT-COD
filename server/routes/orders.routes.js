@@ -14,8 +14,9 @@ router.get("/", auth, async (req, res) => {
   const status = req.query.status || null;
   const from   = req.query.from   || null;
   const to     = req.query.to     || null;
-  const q      = req.query.q      || null;
-  const light  = req.query.light === "1";
+  const q          = req.query.q          || null;
+  const light      = req.query.light === "1";
+  const hasTracking = req.query.hasTracking === "1";
 
   // Paginar solo cuando se pide explícitamente con ?page
   // Los filtros (from, to, shop, status, q) funcionan en ambos modos
@@ -53,6 +54,7 @@ router.get("/", auth, async (req, res) => {
       conditions.push(`(o.order_number ILIKE $${i} OR o.customer_name ILIKE $${i} OR o.tracking_number ILIKE $${i})`);
       params.push(`%${q}%`); i++;
     }
+    if (hasTracking) { conditions.push(`o.tracking_number IS NOT NULL AND o.tracking_number != ''`); }
 
     const where = conditions.join(" AND ");
 

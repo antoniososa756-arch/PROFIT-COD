@@ -2046,6 +2046,7 @@ if (id === "pedidos") {
 
           <span class="tab active" onclick="filterByTab(this, '')">Todos</span>
           <span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
+          <span class="tab" onclick="filterByTabPendienteMRW(this)">Pend. entregar MRW</span>
           <span class="tab" onclick="filterByTab(this, 'enviado')">Enviado</span>
           <span class="tab" onclick="filterByTab(this, 'en_transito')">En tránsito</span>
           <span class="tab" onclick="filterByTab(this, 'entregado')">Entregado</span>
@@ -7557,7 +7558,7 @@ async function refreshCacheBackground() {
 setInterval(refreshCacheBackground, 55000);
 
 // Estado de filtros de pedidos (server-side)
-let ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
+let ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false };
 let ordersTotal = 0, ordersPages = 0;
 let __ordersFetchId = 0;
 
@@ -7572,8 +7573,9 @@ async function fetchOrdersFiltered() {
   if (ordersState.q)        params.set("q",       ordersState.q);
   if (ordersState.status)   params.set("status",   ordersState.status);
   if (ordersState.shop)     params.set("shop",     ordersState.shop);
-  if (ordersState.dateFrom) params.set("from",     ordersState.dateFrom);
-  if (ordersState.dateTo)   params.set("to",       ordersState.dateTo);
+  if (ordersState.dateFrom)   params.set("from",        ordersState.dateFrom);
+  if (ordersState.dateTo)     params.set("to",          ordersState.dateTo);
+  if (ordersState.hasTracking) params.set("hasTracking", "1");
 
   try {
     const res = await fetch(`${API_BASE}/api/orders?${params}`, {
@@ -8268,13 +8270,13 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
+  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false };
   fetchOrdersFiltered();
   toggleFilterPanel();
 }
 
 function clearFiltersInline() {
-  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
+  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false };
   const df = document.getElementById("filter-date-from");
   const dt = document.getElementById("filter-date-to");
   const sh = document.getElementById("filter-shop-inline");
@@ -8291,17 +8293,24 @@ window.clearFiltersInline = clearFiltersInline;
 function filterByTab(el, status) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
-  ordersState = { ...ordersState, status: status || "", page: 1 };
+  ordersState = { ...ordersState, status: status || "", hasTracking: false, page: 1 };
   fetchOrdersFiltered();
 }
 function filterByTabMulti(el, statuses) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
-  ordersState = { ...ordersState, status: statuses.join(","), page: 1 };
+  ordersState = { ...ordersState, status: statuses.join(","), hasTracking: false, page: 1 };
+  fetchOrdersFiltered();
+}
+function filterByTabPendienteMRW(el) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  ordersState = { ...ordersState, status: "pendiente", hasTracking: true, page: 1 };
   fetchOrdersFiltered();
 }
 window.filterByTab = filterByTab;
 window.filterByTabMulti = filterByTabMulti;
+window.filterByTabPendienteMRW = filterByTabPendienteMRW;
 
 
 
