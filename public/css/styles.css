@@ -56,6 +56,8 @@
       flex-direction:column;
       flex-shrink:0;
       transition:transform .2s ease;
+      overflow-y:auto;
+      overflow-x:hidden;
     }
 
     .sidebar.hidden{

@@ -690,8 +690,8 @@ function loadApp(section) {
           <span style="font-size:13px;font-weight:700;color:#374151;" id="sidebar-ree-total">—</span>
         </div>
       </div>
-      <div style="padding:12px 16px;border-top:1px solid #f3f4f6;text-align:center;font-size:11px;color:#9ca3af;">
-        © 2026 ProfitCOD · <a href="https://profitcod.com" style="color:#16a34a;text-decoration:none;">profitcod.com</a>
+      <div style="padding:8px 4px;border-top:1px solid #f3f4f6;text-align:center;font-size:10px;color:#d1d5db;line-height:1.4;">
+        © 2026 <a href="https://profitcod.com" style="color:#16a34a;text-decoration:none;font-weight:600;">ProfitCOD</a>
       </div>
     </div>
 
