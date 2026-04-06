@@ -11,6 +11,7 @@ function mapMRWStatus(texto) {
   if (t.includes("devuelto")) return "devuelto";
   if (t.includes("destruir") || t.includes("destruido")) return "destruido";
   if (t.includes("pendiente de recoger en franquicia")) return "franquicia";
+  if (t.includes("pendiente de recoger")) return "pendiente";
   return "en_transito";
 }
 
@@ -207,7 +208,8 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
       if (estadoRaw.includes("entregado")) status = "entregado";
       else if (estadoRaw.includes("devuelto")) status = "devuelto";
       else if (estadoRaw.includes("destruir") || estadoRaw.includes("destruido")) status = "destruido";
-      else if (estadoRaw.includes("recoger en franquicia") || estadoRaw.includes("franquicia destino") || estadoRaw.includes("concertada en franquicia") || estadoRaw.includes("entrega en franquicia") || estadoRaw.includes("pendiente de recoger")) status = "franquicia";
+      else if (estadoRaw.includes("recoger en franquicia") || estadoRaw.includes("franquicia destino") || estadoRaw.includes("concertada en franquicia") || estadoRaw.includes("entrega en franquicia") || estadoRaw.includes("pendiente de recoger en franquicia")) status = "franquicia";
+      else if (estadoRaw.includes("pendiente de recoger")) status = "pendiente";
 
       const result = await req.db.run(
         `UPDATE orders SET fulfillment_status = $1 WHERE tracking_number = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3)`,

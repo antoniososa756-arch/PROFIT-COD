@@ -66,6 +66,7 @@ function mapMRWStatus(texto) {
   if (t.includes("devuelto")) return "devuelto";
   if (t.includes("destruir") || t.includes("destruido")) return "destruido";
   if (t.includes("pendiente de recoger en franquicia")) return "franquicia";
+  if (t.includes("pendiente de recoger")) return "pendiente";
   return "en_transito";
 }
 
