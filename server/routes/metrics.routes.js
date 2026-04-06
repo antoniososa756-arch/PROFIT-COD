@@ -65,7 +65,7 @@ router.get("/stats", auth, async (req, res) => {
         COALESCE(SUM(o.total_price), 0) AS ingresos_brutos
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE o.shop_id IN (${shopSubquery})
+       WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
          ${dateCondFrom} ${dateCondTo} ${shopCond}`,
       params
     );
@@ -88,7 +88,7 @@ router.get("/stats", auth, async (req, res) => {
       `SELECT COALESCE(SUM(o.total_price), 0) AS descuento_cancelados
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE o.shop_id IN (${shopSubquery})
+       WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
          AND o.fulfillment_status = 'cancelado'
          AND o.cancelled_at IS NOT NULL
          ${cancelDateFrom} ${cancelDateTo} ${cancelShopCond}`,
