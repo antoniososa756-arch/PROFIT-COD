@@ -1115,8 +1115,8 @@ const now = new Date();
               <span class="stat-label">Total Pedidos</span>
             </div>
             <div style="border-left:1px solid #e5e7eb;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;">
-              <span style="font-size:18px;font-weight:700;color:#374151;line-height:1;" id="stat-sin-cancelados">0</span>
-              <span style="font-size:11px;color:#9ca3af;margin-top:2px;white-space:nowrap;">Sin cancelados</span>
+              <span class="stat-num" id="stat-sin-cancelados">0</span>
+              <span class="stat-label" style="white-space:nowrap;">Sin cancelados</span>
             </div>
           </div>
           <div style="border-top:1px solid #e5e7eb;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;">
