@@ -8759,6 +8759,10 @@ async function syncEnvioMRW(btn, orderId) {
       invalidateCache("orders");
       allOrders = [];
       await fetchOrdersFiltered();
+    } else if (data.debug) {
+      // MRW no devolvió EstadoDescripcion — mostrar qué devolvió para diagnóstico
+      const info = data.debug.length ? data.debug.join(" | ") : "Respuesta vacía";
+      showToast("⚠️ MRW sin estado", info, "#f59e0b");
     } else {
       showToast("ℹ️ Sin cambios", `Estado actual: ${statusLabel(data.status)}`, "#6b7280");
     }

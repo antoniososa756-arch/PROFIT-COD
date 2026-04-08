@@ -131,10 +131,15 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
       signal: AbortSignal.timeout(10000)
     });
     const xml = await response.text();
+    console.log(`[MRW-ONE] XML para ${order.tracking_number}:`, xml.slice(0, 800));
     await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]);
 
     const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
-    if (!estadoMatch) return res.json({ ok: true, updated: false, status: order.fulfillment_status });
+    if (!estadoMatch) {
+      // Extraer cualquier texto de la respuesta para diagnóstico
+      const allTags = [...xml.matchAll(/<([A-Za-z:]+)[^>]*>([^<]{1,80})</g)].map(m => `${m[1]}: ${m[2]}`).slice(0, 10);
+      return res.json({ ok: true, updated: false, status: order.fulfillment_status, debug: allTags });
+    }
 
     const nuevoStatus = mapMRWStatus(estadoMatch[1].trim());
     if (nuevoStatus !== order.fulfillment_status) {
