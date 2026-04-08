@@ -9636,6 +9636,10 @@ async function sincronizarMRW() {
       invalidateCache("orders");
       allOrders = [];
       await fetchOrdersFiltered();
+      // Refrescar métricas si la sección activa es métricas
+      if (document.getElementById("sec-metricas")?.style.display !== "none") {
+        await loadMetricas();
+      }
     } else {
       showToast("❌ Error MRW", data.error || "Error desconocido", "#dc2626");
     }
