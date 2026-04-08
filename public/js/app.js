@@ -8303,21 +8303,29 @@ function clearFiltersInline() {
 }
 window.clearFiltersInline = clearFiltersInline;
 
+function _clearSearchOnTabSwitch() {
+  const searchEl = document.getElementById("search");
+  if (searchEl) searchEl.value = "";
+  ordersState = { ...ordersState, q: "" };
+}
 function filterByTab(el, status) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
+  _clearSearchOnTabSwitch();
   ordersState = { ...ordersState, status: status || "", hasTracking: false, page: 1 };
   fetchOrdersFiltered();
 }
 function filterByTabMulti(el, statuses) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
+  _clearSearchOnTabSwitch();
   ordersState = { ...ordersState, status: statuses.join(","), hasTracking: false, page: 1 };
   fetchOrdersFiltered();
 }
 function filterByTabPendienteMRW(el) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
+  _clearSearchOnTabSwitch();
   ordersState = { ...ordersState, status: "pendiente", hasTracking: true, page: 1 };
   fetchOrdersFiltered();
 }
