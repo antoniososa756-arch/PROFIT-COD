@@ -119,7 +119,7 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
       <tem:valorFiltroHasta>${order.tracking_number}</tem:valorFiltroHasta>
       <tem:fechaDesde></tem:fechaDesde>
       <tem:fechaHasta></tem:fechaHasta>
-      <tem:tipoInformacion>0</tem:tipoInformacion>
+      <tem:tipoInformacion>1</tem:tipoInformacion>
     </tem:GetEnvios>
   </soapenv:Body>
 </soapenv:Envelope>`;
@@ -131,17 +131,31 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
       signal: AbortSignal.timeout(10000)
     });
     const xml = await response.text();
-    console.log(`[MRW-ONE] XML para ${order.tracking_number}:`, xml.slice(0, 800));
+    console.log(`[MRW-ONE] XML para ${order.tracking_number}:`, xml.slice(0, 1200));
     await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]);
 
-    const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
-    if (!estadoMatch) {
-      // Extraer cualquier texto de la respuesta para diagnóstico
+    // tipoInformacion=1 devuelve histórico completo — coger el primer EstadoDescripcion no-nil (más reciente)
+    const allEstados = [...xml.matchAll(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/g)]
+      .map(m => m[1].trim()).filter(Boolean);
+
+    // Fallback: si HoraEntrega tiene valor real → fue entregado
+    const horaEntregaMatch = xml.match(/<[^:]*:?HoraEntrega[^>]*>([^<]+)<\/[^:]*:?HoraEntrega>/);
+    if (!allEstados.length && horaEntregaMatch) {
+      const nuevoStatus = "entregado";
+      if (nuevoStatus !== order.fulfillment_status) {
+        await req.db.run("UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2", [nuevoStatus, order.id]);
+      }
+      return res.json({ ok: true, updated: nuevoStatus !== order.fulfillment_status, status: nuevoStatus });
+    }
+
+    if (!allEstados.length) {
       const allTags = [...xml.matchAll(/<([A-Za-z:]+)[^>]*>([^<]{1,80})</g)].map(m => `${m[1]}: ${m[2]}`).slice(0, 10);
       return res.json({ ok: true, updated: false, status: order.fulfillment_status, debug: allTags });
     }
 
-    const nuevoStatus = mapMRWStatus(estadoMatch[1].trim());
+    // El primero es el más reciente en la lista del histórico de MRW
+    const nuevoStatus = mapMRWStatus(allEstados[0]);
+    console.log(`[MRW-ONE] ${order.tracking_number} → "${allEstados[0]}" → ${nuevoStatus}`);
     if (nuevoStatus !== order.fulfillment_status) {
       await req.db.run("UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2", [nuevoStatus, order.id]);
     }
@@ -194,12 +208,11 @@ router.post("/mrw-sync", auth, async (req, res) => {
       <tem:valorFiltroHasta>${order.tracking_number}</tem:valorFiltroHasta>
       <tem:fechaDesde></tem:fechaDesde>
       <tem:fechaHasta></tem:fechaHasta>
-      <tem:tipoInformacion>0</tem:tipoInformacion>
+      <tem:tipoInformacion>1</tem:tipoInformacion>
     </tem:GetEnvios>
   </soapenv:Body>
 </soapenv:Envelope>`;
 
-         
         const response = await fetch("https://trackingservice.mrw.es/TrackingService.svc/TrackingServices", {
           method: "POST",
           headers: {
@@ -210,20 +223,24 @@ router.post("/mrw-sync", auth, async (req, res) => {
         });
 
         const xml = await response.text();
-        // Guardar solo el primero para debug
-        if (!global.__mrwDebugXml) {
-          global.__mrwDebugXml = { tracking: order.tracking_number, xml };
-          console.log(`MRW DEBUG guardado para tracking: ${order.tracking_number}`);
-        }
-        const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
-        if (!estadoMatch) { 
-          
-          errors.push(order.tracking_number); 
-          continue; 
-        }
-        console.log(`MRW: tracking ${order.tracking_number} → estado: ${estadoMatch[1]}`);
 
-        const estadoTexto = estadoMatch[1].trim();
+        // tipoInformacion=1 → histórico completo, coger el primer EstadoDescripcion no-nil (más reciente)
+        const allEstados = [...xml.matchAll(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/g)]
+          .map(m => m[1].trim()).filter(Boolean);
+
+        // Fallback: HoraEntrega con valor real → entregado
+        const horaEntregaMatch = xml.match(/<[^:]*:?HoraEntrega[^>]*>([^<]+)<\/[^:]*:?HoraEntrega>/);
+        let estadoTexto;
+        if (!allEstados.length && horaEntregaMatch) {
+          estadoTexto = "entregado";
+        } else if (!allEstados.length) {
+          errors.push(order.tracking_number);
+          continue;
+        } else {
+          estadoTexto = allEstados[0];
+        }
+
+        console.log(`MRW: tracking ${order.tracking_number} → estado: ${estadoTexto}`);
         const nuevoStatus = mapMRWStatus(estadoTexto);
 
         if (nuevoStatus !== order.fulfillment_status) {

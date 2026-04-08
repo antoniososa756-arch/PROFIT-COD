@@ -111,7 +111,7 @@ async function syncAllMRW() {
       <tem:valorFiltroHasta>${pedido.tracking_number}</tem:valorFiltroHasta>
       <tem:fechaDesde></tem:fechaDesde>
       <tem:fechaHasta></tem:fechaHasta>
-      <tem:tipoInformacion>0</tem:tipoInformacion>
+      <tem:tipoInformacion>1</tem:tipoInformacion>
     </tem:GetEnvios>
   </soapenv:Body>
 </soapenv:Envelope>`;
@@ -125,10 +125,20 @@ async function syncAllMRW() {
             const xml = await res.text();
             await db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [pedido.id]);
 
-            const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
-            if (!estadoMatch) continue;
+            // tipoInformacion=1: histórico completo, primer EstadoDescripcion no-nil = más reciente
+            const allEstados = [...xml.matchAll(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/g)]
+              .map(m => m[1].trim()).filter(Boolean);
+            const horaEntregaMatch = xml.match(/<[^:]*:?HoraEntrega[^>]*>([^<]+)<\/[^:]*:?HoraEntrega>/);
+            let estadoTexto;
+            if (!allEstados.length && horaEntregaMatch) {
+              estadoTexto = "entregado";
+            } else if (!allEstados.length) {
+              continue;
+            } else {
+              estadoTexto = allEstados[0];
+            }
 
-            const nuevoStatus = mapMRWStatus(estadoMatch[1].trim());
+            const nuevoStatus = mapMRWStatus(estadoTexto);
             console.log(`[MRW CRON] ${pedido.tracking_number} → ${nuevoStatus}`);
             if (nuevoStatus !== pedido.fulfillment_status) {
               await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
