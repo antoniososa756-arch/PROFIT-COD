@@ -2105,7 +2105,7 @@ if (id === "pedidos") {
       syncAndRefreshOrders();
     }, 5 * 60 * 1000);
 
-    // Auto-sincronizar MRW cada 15 minutos si está integrado
+    // Auto-sincronizar MRW cada 1 minuto si está integrado (con lock para no apilar)
     if (window.__mrwInterval) clearInterval(window.__mrwInterval);
     window.__mrwInterval = setInterval(async () => {
       try {
@@ -2114,7 +2114,7 @@ if (id === "pedidos") {
         }).then(r => r.json());
         if (creds.integrated) await sincronizarMRW();
       } catch(e) {}
-    }, 3 * 60 * 1000);
+    }, 60 * 1000);
 
   closeAllDrops();
   closeSearchDrop();
@@ -9610,6 +9610,10 @@ function ocultarBarraProgresoMRW() {
 }
 
 async function sincronizarMRW() {
+  // Evitar sincronizaciones concurrentes que consuman memoria
+  if (window.__mrwSyncing) return;
+  window.__mrwSyncing = true;
+
   const btn = document.getElementById("btn-mrw-sync");
   if (btn) { btn.disabled = true; btn.textContent = "⏳ Sincronizando..."; }
 
@@ -9648,6 +9652,7 @@ async function sincronizarMRW() {
     ocultarBarraProgresoMRW();
     showToast("❌ Error", "No se pudo conectar con MRW", "#dc2626");
   } finally {
+    window.__mrwSyncing = false;
     if (btn) { btn.disabled = false; btn.textContent = "🔄 Sincronizar MRW"; }
   }
 }
