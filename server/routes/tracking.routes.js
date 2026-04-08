@@ -85,6 +85,67 @@ router.get("/mrw-sync-status", auth, async (req, res) => {
   res.json(status);
 });
 
+// ── POST sync un solo pedido por tracking_number ─────────────────────────────
+router.post("/mrw-sync-one", auth, async (req, res) => {
+  const { orderId } = req.body || {};
+  if (!orderId) return res.status(400).json({ error: "orderId requerido" });
+  try {
+    const creds = await req.db.get(
+      "SELECT login, pass FROM mrw_credentials WHERE user_id = $1",
+      [req.user.id]
+    );
+    if (!creds) return res.status(400).json({ error: "MRW no integrado" });
+
+    const order = await req.db.get(
+      `SELECT o.id, o.tracking_number, o.fulfillment_status
+       FROM orders o
+       WHERE o.id = $1
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+      [orderId, req.user.id]
+    );
+    if (!order?.tracking_number) return res.status(404).json({ error: "Pedido no encontrado o sin tracking" });
+
+    const soapBody = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tem:GetEnvios>
+      <tem:login>${creds.login}</tem:login>
+      <tem:pass>${creds.pass}</tem:pass>
+      <tem:codigoIdioma>3082</tem:codigoIdioma>
+      <tem:tipoFiltro>0</tem:tipoFiltro>
+      <tem:valorFiltroDesde>${order.tracking_number}</tem:valorFiltroDesde>
+      <tem:valorFiltroHasta>${order.tracking_number}</tem:valorFiltroHasta>
+      <tem:fechaDesde></tem:fechaDesde>
+      <tem:fechaHasta></tem:fechaHasta>
+      <tem:tipoInformacion>0</tem:tipoInformacion>
+    </tem:GetEnvios>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+    const response = await fetch("https://trackingservice.mrw.es/TrackingService.svc/TrackingServices", {
+      method: "POST",
+      headers: { "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "http://tempuri.org/ITrackingService/GetEnvios" },
+      body: soapBody,
+      signal: AbortSignal.timeout(10000)
+    });
+    const xml = await response.text();
+    await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]);
+
+    const estadoMatch = xml.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
+    if (!estadoMatch) return res.json({ ok: true, updated: false, status: order.fulfillment_status });
+
+    const nuevoStatus = mapMRWStatus(estadoMatch[1].trim());
+    if (nuevoStatus !== order.fulfillment_status) {
+      await req.db.run("UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2", [nuevoStatus, order.id]);
+    }
+    res.json({ ok: true, updated: nuevoStatus !== order.fulfillment_status, status: nuevoStatus });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.post("/mrw-sync", auth, async (req, res) => {
   try {
     const creds = await req.db.get(

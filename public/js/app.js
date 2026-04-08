@@ -7700,6 +7700,11 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
       <div style="display:flex;align-items:center;gap:6px;overflow:visible;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
+        ${o.tracking_number ? `
+        <button id="mrw-sync-btn-${o.id}" onclick="syncEnvioMRW(this,${o.id})" title="Sincronizar estado MRW"
+          style="width:22px;height:22px;background:#0ea5e9;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>` : ""}
         ${o.fulfillment_status !== "entregado" && o.fulfillment_status !== "cancelado" && o.fulfillment_status !== "destruido" && o.fulfillment_status !== "devuelto" ? `
         <div style="position:relative;flex-shrink:0;">
           <button onclick="toggleEstadoMenu(event,'menu-estado-${o.id}')" title="Cambiar estado"
@@ -8734,6 +8739,37 @@ function irAPedidoDesdeNotif(notiId) {
 }
 
 window.irAPedidoDesdeNotif = irAPedidoDesdeNotif;
+
+async function syncEnvioMRW(btn, orderId) {
+  btn.disabled = true;
+  btn.style.opacity = "0.5";
+  try {
+    const res = await fetch(`${API_BASE}/api/tracking/mrw-sync-one`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getActiveToken(), "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      showToast("❌ Error", data.error || "No se pudo sincronizar", "#dc2626");
+      return;
+    }
+    if (data.updated) {
+      showToast("✅ Estado actualizado", `Nuevo estado: ${statusLabel(data.status)}`, "#16a34a");
+      invalidateCache("orders");
+      allOrders = [];
+      await fetchOrdersFiltered();
+    } else {
+      showToast("ℹ️ Sin cambios", `Estado actual: ${statusLabel(data.status)}`, "#6b7280");
+    }
+  } catch(e) {
+    showToast("❌ Error", "No se pudo conectar con MRW", "#dc2626");
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+  }
+}
+window.syncEnvioMRW = syncEnvioMRW;
 
 // =========================
 // IMPORTAR PAGADOS DESDE PDF MRW
