@@ -70,6 +70,15 @@ function mapMRWStatus(texto) {
   return "en_transito";
 }
 
+function resolveStatusFromHistory(allEstados) {
+  const FINAL = ["entregado", "devuelto", "destruido"];
+  for (const txt of allEstados) {
+    const s = mapMRWStatus(txt);
+    if (FINAL.includes(s)) return s;
+  }
+  return mapMRWStatus(allEstados[allEstados.length - 1]);
+}
+
 async function syncAllMRW() {
   if (global.__cronMRWRunning) { console.log("[CRON] MRW ya en curso, saltando"); return; }
   global.__cronMRWRunning = true;
@@ -135,10 +144,12 @@ async function syncAllMRW() {
             } else if (!allEstados.length) {
               continue;
             } else {
-              estadoTexto = allEstados[0];
+              estadoTexto = null;
             }
 
-            const nuevoStatus = mapMRWStatus(estadoTexto);
+            const nuevoStatus = estadoTexto === "entregado"
+              ? "entregado"
+              : resolveStatusFromHistory(allEstados);
             console.log(`[MRW CRON] ${pedido.tracking_number} → ${nuevoStatus}`);
             if (nuevoStatus !== pedido.fulfillment_status) {
               await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);

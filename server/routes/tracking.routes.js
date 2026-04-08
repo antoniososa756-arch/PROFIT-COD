@@ -15,6 +15,18 @@ function mapMRWStatus(texto) {
   return "en_transito";
 }
 
+// El histórico de MRW viene en orden ascendente (más antiguo primero).
+// Prioriza estados finales (entregado/devuelto/destruido) si aparecen en algún punto;
+// si no, usa el último elemento (más reciente).
+function resolveStatusFromHistory(allEstados) {
+  const FINAL = ["entregado", "devuelto", "destruido"];
+  for (const txt of allEstados) {
+    const s = mapMRWStatus(txt);
+    if (FINAL.includes(s)) return s;
+  }
+  return mapMRWStatus(allEstados[allEstados.length - 1]);
+}
+
 // ── Crear tabla credenciales MRW ──────────────────────────────
 router.use(async (req, res, next) => {
   try {
@@ -153,9 +165,8 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
       return res.json({ ok: true, updated: false, status: order.fulfillment_status, debug: allTags });
     }
 
-    // El primero es el más reciente en la lista del histórico de MRW
-    const nuevoStatus = mapMRWStatus(allEstados[0]);
-    console.log(`[MRW-ONE] ${order.tracking_number} → "${allEstados[0]}" → ${nuevoStatus}`);
+    const nuevoStatus = resolveStatusFromHistory(allEstados);
+    console.log(`[MRW-ONE] ${order.tracking_number} → ${allEstados.join(" | ")} → ${nuevoStatus}`);
     if (nuevoStatus !== order.fulfillment_status) {
       await req.db.run("UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2", [nuevoStatus, order.id]);
     }
@@ -237,11 +248,13 @@ router.post("/mrw-sync", auth, async (req, res) => {
           errors.push(order.tracking_number);
           continue;
         } else {
-          estadoTexto = allEstados[0];
+          estadoTexto = null;
         }
 
-        console.log(`MRW: tracking ${order.tracking_number} → estado: ${estadoTexto}`);
-        const nuevoStatus = mapMRWStatus(estadoTexto);
+        const nuevoStatus = estadoTexto === "entregado"
+          ? "entregado"
+          : resolveStatusFromHistory(allEstados);
+        console.log(`MRW: tracking ${order.tracking_number} → ${nuevoStatus}`);
 
         if (nuevoStatus !== order.fulfillment_status) {
           await req.db.run(
