@@ -7578,8 +7578,11 @@ async function fetchOrdersFiltered() {
   if (ordersState.q)        params.set("q",       ordersState.q);
   if (ordersState.status)   params.set("status",   ordersState.status);
   if (ordersState.shop)     params.set("shop",     ordersState.shop);
-  if (ordersState.dateFrom)   params.set("from",        ordersState.dateFrom);
-  if (ordersState.dateTo)     params.set("to",          ordersState.dateTo);
+  // Si hay búsqueda de texto, ignorar fechas para encontrar pedidos de cualquier fecha
+  if (!ordersState.q) {
+    if (ordersState.dateFrom)   params.set("from", ordersState.dateFrom);
+    if (ordersState.dateTo)     params.set("to",   ordersState.dateTo);
+  }
   if (ordersState.hasTracking) params.set("hasTracking", "1");
 
   try {
