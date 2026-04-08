@@ -3,6 +3,9 @@ const auth = require("../middlewares/auth");
 const db = require("../db");
 const router = express.Router();
 
+// Migración: añadir columna fecha_pago si no existe
+db.run(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS fecha_pago TEXT`).catch(() => {});
+
 // GET /api/orders  — soporta paginación y filtros server-side
 // Params: page, limit, shop, status, from, to, q, light (sin raw_json)
 router.get("/", auth, async (req, res) => {
@@ -150,7 +153,7 @@ router.get("/reembolsos", auth, async (req, res) => {
         `SELECT o.id, o.order_number, o.created_at, o.tracking_number,
                 o.fulfillment_status, o.financial_status, o.customer_name,
                 o.total_price, o.currency, COALESCE(o.shop_domain, s.shop_domain) as shop_domain,
-                re.estado as estado_pago
+                re.estado as estado_pago, re.fecha_pago
          ${baseQuery}
          ORDER BY o.created_at DESC
          LIMIT $${i} OFFSET $${i+1}`,
@@ -167,10 +170,10 @@ router.post("/reembolso-estado", auth, async (req, res) => {
   const { order_id, estado } = req.body;
   try {
     await db.run(
-     `INSERT INTO reembolsos_estado (user_id, order_id, tracking_number, estado)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT(user_id, order_id) DO UPDATE SET estado = EXCLUDED.estado, tracking_number = EXCLUDED.tracking_number`,
-      [req.user.id, order_id, req.body.tracking_number || null, estado]
+     `INSERT INTO reembolsos_estado (user_id, order_id, tracking_number, estado, fecha_pago)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT(user_id, order_id) DO UPDATE SET estado = EXCLUDED.estado, tracking_number = EXCLUDED.tracking_number, fecha_pago = COALESCE(reembolsos_estado.fecha_pago, EXCLUDED.fecha_pago)`,
+      [req.user.id, order_id, req.body.tracking_number || null, estado, new Date().toISOString().slice(0,10)]
     );
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: "Error" }); }

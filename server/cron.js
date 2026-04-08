@@ -255,6 +255,9 @@ async function syncAllGmailPDF() {
               `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`
             );
             const msgData = await msgRes.json();
+            const emailFecha = msgData.internalDate
+              ? new Date(parseInt(msgData.internalDate)).toISOString().slice(0, 10)
+              : new Date().toISOString().slice(0, 10);
             const partes = msgData.payload?.parts || [];
             const pdfs = partes.filter(p =>
               p.mimeType === "application/pdf" || p.filename?.toLowerCase().endsWith(".pdf")
@@ -283,10 +286,10 @@ async function syncAllGmailPDF() {
                 );
                 if (!order) continue;
                 await db.run(
-                  `INSERT INTO reembolsos_estado (user_id, order_id, estado)
-                   VALUES (?, ?, 'cobrado')
-                   ON CONFLICT (user_id, order_id) DO UPDATE SET estado = 'cobrado'`,
-                  [user_id, String(order.id)]
+                  `INSERT INTO reembolsos_estado (user_id, order_id, estado, fecha_pago)
+                   VALUES (?, ?, 'cobrado', ?)
+                   ON CONFLICT (user_id, order_id) DO UPDATE SET estado = 'cobrado', fecha_pago = COALESCE(reembolsos_estado.fecha_pago, EXCLUDED.fecha_pago)`,
+                  [user_id, String(order.id), emailFecha]
                 );
                 totalMarcados++;
               }

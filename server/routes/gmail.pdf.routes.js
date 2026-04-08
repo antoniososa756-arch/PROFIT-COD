@@ -111,6 +111,10 @@ router.post("/sync-pdf", async (req, res) => {
           `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`
         );
         const msgData = await msgRes.json();
+        // Fecha del email (internalDate = epoch ms)
+        const emailFecha = msgData.internalDate
+          ? new Date(parseInt(msgData.internalDate)).toISOString().slice(0, 10)
+          : new Date().toISOString().slice(0, 10);
 
         // 3. Encontrar adjuntos PDF (buscar también en partes anidadas)
         const todasPartes = [];
@@ -158,12 +162,12 @@ router.post("/sync-pdf", async (req, res) => {
             );
             if (!order) continue;
 
-            // Marcar como cobrado en reembolsos_estado (tabla correcta, sin 's')
+            // Marcar como cobrado en reembolsos_estado con fecha del email
             await db.run(
-              `INSERT INTO reembolsos_estado (user_id, order_id, estado)
-               VALUES (?, ?, 'cobrado')
-               ON CONFLICT (user_id, order_id) DO UPDATE SET estado = 'cobrado'`,
-              [userId, String(order.id)]
+              `INSERT INTO reembolsos_estado (user_id, order_id, estado, fecha_pago)
+               VALUES (?, ?, 'cobrado', ?)
+               ON CONFLICT (user_id, order_id) DO UPDATE SET estado = 'cobrado', fecha_pago = EXCLUDED.fecha_pago`,
+              [userId, String(order.id), emailFecha]
             );
             totalMarcados++;
           }
