@@ -71,6 +71,8 @@ function mapMRWStatus(texto) {
 }
 
 async function syncAllMRW() {
+  if (global.__cronMRWRunning) { console.log("[CRON] MRW ya en curso, saltando"); return; }
+  global.__cronMRWRunning = true;
   console.log("⏰ [CRON] Iniciando sync MRW...");
   try {
     const credsList = await db.all(`SELECT * FROM mrw_credentials`);
@@ -138,6 +140,7 @@ async function syncAllMRW() {
       } catch(e) { console.error(`[CRON] MRW error user ${creds.user_id}:`, e.message); }
     }
   } catch(e) { console.error("[CRON] Error sync MRW:", e.message); }
+  finally { global.__cronMRWRunning = false; }
 }
 
 // ── Función: sincronizar PDFs de MRW via Gmail para todos los usuarios ───────
