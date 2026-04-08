@@ -6848,6 +6848,8 @@ async function switchInformesTab(tab) {
               <span class="tab" onclick="filterReeByTab(this,'cobrado')">Pagado</span>
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <input type="text" id="ree-q" placeholder="Buscar pedido..." oninput="renderReembolsos()"
+                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);width:160px;"/>
               <input type="date" id="ree-date-from" value="" onchange="renderReembolsos()"
                 style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
               <span style="color:#6b7280;font-size:13px;">—</span>
@@ -8446,6 +8448,7 @@ async function loadReembolsos() {
 
 function renderReembolsos() {
   reembolsosState = {
+    q:    document.getElementById("ree-q")?.value?.trim() || "",
     shop: document.getElementById("ree-shop")?.value || "",
     from: document.getElementById("ree-date-from")?.value || "",
     to:   document.getElementById("ree-date-to")?.value || "",
@@ -8457,9 +8460,12 @@ function renderReembolsos() {
 async function fetchReembolsosFiltered() {
   const h = { Authorization: "Bearer " + getActiveToken() };
   const params = new URLSearchParams({ page: reembolsosState.page, limit: 50 });
+  if (reembolsosState.q)    params.set("q",    reembolsosState.q);
   if (reembolsosState.shop) params.set("shop", reembolsosState.shop);
-  if (reembolsosState.from) params.set("from", reembolsosState.from);
-  if (reembolsosState.to)   params.set("to",   reembolsosState.to);
+  if (!reembolsosState.q) {
+    if (reembolsosState.from) params.set("from", reembolsosState.from);
+    if (reembolsosState.to)   params.set("to",   reembolsosState.to);
+  }
   // Pasar filtro de tab al servidor para que pagine correctamente
   const tabFilter = window.__reeTabFilter || "";
   if (tabFilter) params.set("estado", tabFilter);
@@ -8552,9 +8558,11 @@ function clearReembolsosFilters() {
   const df = document.getElementById("ree-date-from");
   const dt = document.getElementById("ree-date-to");
   const sh = document.getElementById("ree-shop");
+  const q  = document.getElementById("ree-q");
   if (df) df.value = "";
   if (dt) dt.value = "";
   if (sh) sh.value = "";
+  if (q)  q.value  = "";
   window.__reeTabFilter = "";
   renderReembolsos();
 }

@@ -114,6 +114,7 @@ router.get("/reembolsos", auth, async (req, res) => {
   const from     = req.query.from   || null;
   const to       = req.query.to     || null;
   const estado   = req.query.estado || null; // "cobrado" | "pendiente" | null (todos)
+  const q        = req.query.q     || null;
   const page     = Math.max(1, parseInt(req.query.page) || 1);
   const limit    = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 100));
   const offset   = (page - 1) * limit;
@@ -127,6 +128,7 @@ router.get("/reembolsos", auth, async (req, res) => {
     const params = [userId];
     let i = 2;
 
+    if (q)    { conditions.push(`(o.order_number ILIKE $${i} OR o.tracking_number ILIKE $${i} OR o.customer_name ILIKE $${i})`); params.push(`%${q}%`); i++; }
     if (shop) { conditions.push(`COALESCE(o.shop_domain, s.shop_domain) = $${i++}`); params.push(shop); }
     if (from) { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
     if (to)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
