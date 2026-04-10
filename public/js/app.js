@@ -3033,12 +3033,22 @@ function openNotif(e, id) {
 }
 
 function clearNotif() {
+  // Guardar todos los IDs actuales en shownHoy para que no se regeneren hoy
+  const d = dict();
+  const currentList = getNotifications(d);
+  if (currentList.length > 0) {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const shownKey = `notis_shown_${currentUser?.id || "anon"}_${hoy}`;
+    const shownHoy = JSON.parse(localStorage.getItem(shownKey) || "[]");
+    const newShown = [...new Set([...shownHoy, ...currentList.map(n => n.id)])];
+    localStorage.setItem(shownKey, JSON.stringify(newShown));
+  }
+
   setNotifications([]);
   updateNotifBadge(0);
 
   const panel = document.getElementById("notifPanel");
   if (panel) {
-    const d = dict();
     renderNotifPanel(panel, [], d);
   }
 
@@ -8688,7 +8698,8 @@ async function checkNotificaciones() {
     }
 
     localStorage.setItem("orders_estados_" + (currentUser?.id || "anon"), JSON.stringify(nuevosEstados));
-    localStorage.setItem("notifications_" + (currentUser?.id || "anon"), JSON.stringify(nuevasNotis));
+    // Limitar a 300 notificaciones para no saturar localStorage
+    localStorage.setItem("notifications_" + (currentUser?.id || "anon"), JSON.stringify(nuevasNotis.slice(0, 300)));
 
     const panel = document.getElementById("notifPanel");
     const d = dict();
