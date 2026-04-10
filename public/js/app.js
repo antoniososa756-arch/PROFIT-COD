@@ -8640,6 +8640,12 @@ async function checkNotificaciones() {
     const notisIds = new Set(notisActuales.map(n => n.id));
     const nuevasNotis = [...notisActuales];
 
+    // Registro permanente para notificaciones de una sola vez (entregado/franquicia)
+    // Este registro NO se borra al limpiar notificaciones
+    const permKey = `notis_perm_${currentUser?.id || "anon"}`;
+    const permShown = new Set(JSON.parse(localStorage.getItem(permKey) || "[]"));
+    const permNuevos = [];
+
     for (const o of orders) {
       const id = String(o.id || o.order_id);
       const estado = o.fulfillment_status;
@@ -8652,36 +8658,39 @@ async function checkNotificaciones() {
       const ahoraMadrid = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
       const horaDetectada = ahoraMadrid; // "20/03/2026, 14:35"
 
-      // 1. Entregado
+      // 1. Entregado — solo UNA VEZ para siempre (usa registro permanente)
       if (estado === "entregado" && estadoAnterior && estadoAnterior !== "entregado") {
         const notiId = `entregado_${id}`;
-        if (!notisIds.has(notiId)) {
+        if (!permShown.has(notiId)) {
           const txt = `${nombre} — ${o.customer_name || ""} · Su pedido fue entregado a las ${horaDetectada}`;
           nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, date: ahoraISO });
           notisIds.add(notiId);
+          permShown.add(notiId);
+          permNuevos.push(notiId);
           showToast("✅ Pedido entregado", txt, "#16a34a");
         }
       }
 
-      // 2. Franquicia
+      // 2. Franquicia — solo UNA VEZ para siempre (usa registro permanente)
       if (estado === "franquicia" && estadoAnterior && estadoAnterior !== "franquicia") {
         const notiId = `franquicia_${id}`;
-        if (!notisIds.has(notiId)) {
+        if (!permShown.has(notiId)) {
           const txt = `${nombre} — ${o.customer_name || ""} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
           nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, date: ahoraISO });
           notisIds.add(notiId);
+          permShown.add(notiId);
+          permNuevos.push(notiId);
           showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
         }
       }
 
-      // 3. Más de 7 días sin resolver
+      // 3. Más de 7 días sin resolver — una vez por día
       const estadosSinResolver = ["en_transito", "franquicia", "enviado", "en_preparacion"];
       if (estadosSinResolver.includes(estado) && o.created_at) {
         const fechaPedido = new Date(o.created_at);
         const diasTranscurridos = Math.floor((ahora - fechaPedido) / (1000 * 60 * 60 * 24));
         if (diasTranscurridos >= 7) {
           const notiId = `7dias__${id}`;
-          // Solo notificar una vez por día: clave = userId + fecha de hoy
           const hoy = ahora.toISOString().slice(0, 10);
           const shownKey = `notis_shown_${currentUser?.id || "anon"}_${hoy}`;
           const shownHoy = JSON.parse(localStorage.getItem(shownKey) || "[]");
@@ -8700,6 +8709,10 @@ async function checkNotificaciones() {
     localStorage.setItem("orders_estados_" + (currentUser?.id || "anon"), JSON.stringify(nuevosEstados));
     // Limitar a 300 notificaciones para no saturar localStorage
     localStorage.setItem("notifications_" + (currentUser?.id || "anon"), JSON.stringify(nuevasNotis.slice(0, 300)));
+    // Guardar registro permanente de notificaciones ya enviadas (entregado/franquicia)
+    if (permNuevos.length > 0) {
+      localStorage.setItem(permKey, JSON.stringify([...permShown].slice(-3000)));
+    }
 
     const panel = document.getElementById("notifPanel");
     const d = dict();
