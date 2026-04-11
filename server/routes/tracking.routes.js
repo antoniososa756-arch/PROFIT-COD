@@ -256,7 +256,13 @@ router.post("/mrw-sync", auth, async (req, res) => {
           : resolveStatusFromHistory(allEstados);
         console.log(`MRW: tracking ${order.tracking_number} → ${nuevoStatus}`);
 
-        if (nuevoStatus !== order.fulfillment_status) {
+        // Solo contar como actualización real si hay cambio significativo.
+        // "en_transito" es el estado por defecto del mapeo — no sobreescribir
+        // estados equivalentes (enviado, en_preparacion) con en_transito.
+        const estadosEnProgreso = ['enviado', 'en_preparacion', 'en_transito'];
+        const esCambioRedundante = nuevoStatus === 'en_transito' && estadosEnProgreso.includes(order.fulfillment_status);
+
+        if (nuevoStatus !== order.fulfillment_status && !esCambioRedundante) {
           await req.db.run(
             "UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2",
             [nuevoStatus, order.id]
