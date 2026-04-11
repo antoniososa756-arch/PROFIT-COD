@@ -1356,7 +1356,8 @@ const now = new Date();
     renderPicker();
   };
   window.__metPHover = function(ds) {
-    const s=window.__metPicker; if (s.selecting){s.hoverDate=ds;renderPicker();}
+    const s=window.__metPicker;
+    if (s.selecting && s.hoverDate !== ds) { s.hoverDate=ds; renderPicker(); }
   };
   window.__metPClose = function() {
     const panel=document.getElementById('met-picker-panel'); if(panel) panel.style.display='none'; window.__metPicker.open=false;
