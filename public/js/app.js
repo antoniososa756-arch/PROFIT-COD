@@ -5467,13 +5467,13 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Esto es un estimado basado en el rango de fecha seleccionado y los precios Unt de MRW y Logística, tu balance final por mes lo puedes ver en Ingresos - Balance Final)</span></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;" id="rent-bal-cols">${cols}</div>
-        <div id="rent-bal-sumatoria" style="margin-top:16px;padding:12px 16px;background:var(--card);border:1px solid #e5e7eb;border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Sumatoria seleccionada</span>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span id="rent-bal-total" style="font-weight:800;font-size:20px;"></span>
-            <button onclick="verDesgloseRentBalance()" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;">Ver desglose</button>
+        <div id="rent-bal-sumatoria" style="margin-top:20px;padding:16px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
+          <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Sumatoria seleccionada</div>
+          <div id="rent-bal-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
+          <div style="border-top:2px solid #16a34a;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+            <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
           </div>
-          <div id="rent-bal-filas" style="display:none;"></div>
         </div>
       </div>
       <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
@@ -5513,57 +5513,6 @@ function toggleAllRentabilidadBalance(checked) {
   recalcRentabilidadBalance();
 }
 window.toggleAllRentabilidadBalance = toggleAllRentabilidadBalance;
-
-function verDesgloseRentBalance() {
-  const data = window.__rentabilidadBalanceData || [];
-  const checks = document.querySelectorAll("#rent-balance-wrap input[type='checkbox'][value]");
-  const sel = new Set([...checks].filter(c=>c.checked).map(c=>c.value));
-  const filtradas = data.filter(d=>sel.has(d.domain));
-  const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2});
-  const total = filtradas.reduce((s,d)=>s+d.resultado,0);
-  const totalColor = total>=0?"#16a34a":"#dc2626";
-  const rows = filtradas.map(d => {
-    const rc = d.resultado>=0?"#16a34a":"#dc2626";
-    return `<tr style="border-bottom:1px solid #f3f4f6;">
-      <td style="padding:10px 14px;font-weight:600;font-size:13px;color:#374151;">${escapeHtml(d.name)}</td>
-      <td style="padding:10px 14px;text-align:right;font-size:12px;color:#16a34a;font-weight:500;">${fmt(d.totalIngreso)} €</td>
-      <td style="padding:10px 14px;text-align:right;font-size:12px;color:#dc2626;font-weight:500;">− ${fmt(d.totalGasto)} €</td>
-      <td style="padding:10px 14px;text-align:right;font-size:13px;font-weight:700;color:${rc};">${fmt(d.resultado)} €</td>
-    </tr>`;
-  }).join('');
-  const overlay = document.createElement('div');
-  overlay.id = '__desglose-sum-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3500;display:flex;align-items:center;justify-content:center;';
-  overlay.innerHTML = `<div style="background:#fff;border-radius:12px;padding:24px;width:560px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-weight:700;font-size:15px;color:#111;">Desglose por tienda</div>
-      <button id="__desglose-sum-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1;padding:4px;">✕</button>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead>
-        <tr style="border-bottom:2px solid #e5e7eb;">
-          <th style="padding:8px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;">Tienda</th>
-          <th style="padding:8px 14px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;">Ingresos</th>
-          <th style="padding:8px 14px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;">Gastos</th>
-          <th style="padding:8px 14px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;">Resultado</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-      <tfoot>
-        <tr style="border-top:2px solid #e5e7eb;background:#f9fafb;">
-          <td style="padding:10px 14px;font-weight:700;font-size:13px;color:#374151;">TOTAL</td>
-          <td style="padding:10px 14px;text-align:right;font-weight:700;font-size:13px;color:#16a34a;">${fmt(filtradas.reduce((s,d)=>s+d.totalIngreso,0))} €</td>
-          <td style="padding:10px 14px;text-align:right;font-weight:700;font-size:13px;color:#dc2626;">− ${fmt(filtradas.reduce((s,d)=>s+d.totalGasto,0))} €</td>
-          <td style="padding:10px 14px;text-align:right;font-weight:800;font-size:15px;color:${totalColor};">${fmt(total)} €</td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>`;
-  document.body.appendChild(overlay);
-  document.getElementById('__desglose-sum-close').onclick = () => overlay.remove();
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-}
-window.verDesgloseRentBalance = verDesgloseRentBalance;
 
 function verDetalleProductosRent(domain) {
   const data = window.__rentabilidadBalanceData || [];
