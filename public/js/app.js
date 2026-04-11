@@ -5537,16 +5537,16 @@ function renderRentKpis(filtradas) {
   const logisticaTotal    = sum('logistica');
 
   const card = (label, value, sub='', color='var(--text,#111827)') =>
-    `<div style="background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
-      <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">${label}</div>
-      <div style="font-size:18px;font-weight:800;color:${color};line-height:1.1;">${value}</div>
-      ${sub ? `<div style="font-size:10px;color:#9ca3af;margin-top:3px;">${sub}</div>` : ''}
+    `<div style="background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">${label}</div>
+      <div style="font-size:22px;font-weight:800;color:${color};line-height:1.1;">${value}</div>
+      ${sub ? `<div style="font-size:11px;color:#6b7280;margin-top:5px;">${sub}</div>` : ''}
     </div>`;
 
   const section = (title, cards) =>
-    `<div style="margin-bottom:14px;">
-      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">${title}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">${cards.join('')}</div>
+    `<div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;padding-bottom:5px;border-bottom:2px solid #e5e7eb;">${title}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;">${cards.join('')}</div>
     </div>`;
 
   const pctColor = pctGanancia >= 0 ? '#16a34a' : '#dc2626';
