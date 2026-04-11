@@ -1228,9 +1228,13 @@ const now = new Date();
   const MNl = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const now = new Date();
 
+  const _sf = localStorage.getItem('met_from'), _st = localStorage.getItem('met_to');
   window.__metPicker = {
-    open: false, startDate: null, endDate: null, hoverDate: null,
-    selecting: false, viewYear: now.getFullYear(), viewMonth: now.getMonth()+1,
+    open: false,
+    startDate: _sf || null,
+    endDate:   _st || null,
+    hoverDate: null, selecting: false,
+    viewYear: now.getFullYear(), viewMonth: now.getMonth()+1,
     preset: 'mes', presetLabel: 'Mes actual'
   };
 
@@ -1358,7 +1362,9 @@ const now = new Date();
     const panel=document.getElementById('met-picker-panel'); if(panel) panel.style.display='none'; window.__metPicker.open=false;
   };
   window.__metPApply = function() {
-    const s=window.__metPicker; if (!s.startDate||!s.endDate) return;
+    const s=window.__metPicker; if (!s.startDate) return;
+    if (!s.endDate) s.endDate = s.startDate; // single day click → same start/end
+    s.selecting = false;
     const from=document.getElementById('metrics-date-from'), to=document.getElementById('metrics-date-to');
     if (from) from.value=s.startDate; if (to) to.value=s.endDate;
     localStorage.setItem('met_from',s.startDate); localStorage.setItem('met_to',s.endDate);
