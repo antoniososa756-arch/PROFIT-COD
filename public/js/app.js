@@ -1373,6 +1373,7 @@ const now = new Date();
   };
   document.addEventListener('click', e=>{
     if (!window.__metPicker.open) return;
+    if (!e.target.isConnected) return; // elemento eliminado por re-render, ignorar
     const wrap=document.getElementById('met-picker-wrap');
     if (wrap&&!wrap.contains(e.target)) window.__metPClose();
   });
