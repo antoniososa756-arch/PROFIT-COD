@@ -2112,7 +2112,7 @@ if (id === "pedidos") {
         const creds = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
           headers: { Authorization: "Bearer " + getActiveToken() }
         }).then(r => r.json());
-        if (creds.integrated) await sincronizarMRW(true);
+        if (creds.integrated) await sincronizarMRW();
       } catch(e) {}
     }, 60 * 1000);
 
@@ -8126,7 +8126,7 @@ async function syncAndRefreshOrders() {
       const creds = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
         headers: { Authorization: "Bearer " + getActiveToken() }
       }).then(r => r.json());
-      if (creds.integrated) await sincronizarMRW(true);
+      if (creds.integrated) await sincronizarMRW();
     } catch(e) {}
 
     const syncedCount = data.synced ?? 0;
@@ -9699,20 +9699,17 @@ async function sincronizarMRW(esAutomatico = false) {
   window.__mrwSyncing = true;
 
   const btn = document.getElementById("btn-mrw-sync");
-  if (btn && !esAutomatico) { btn.disabled = true; btn.textContent = "⏳ Sincronizando..."; }
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Sincronizando..."; }
 
-  // Barra de progreso solo en sync manual
-  let pollingInterval = null;
-  if (!esAutomatico) {
-    pollingInterval = setInterval(async () => {
-      try {
-        const status = await fetch(`${API_BASE}/api/tracking/mrw-sync-status`, {
-          headers: { Authorization: "Bearer " + getActiveToken() }
-        }).then(r => r.json());
-        if (status.total > 1) mostrarBarraProgresoMRW(status.done, status.total);
-      } catch(e) {}
-    }, 800);
-  }
+  // Polling de progreso
+  let pollingInterval = setInterval(async () => {
+    try {
+      const status = await fetch(`${API_BASE}/api/tracking/mrw-sync-status`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      }).then(r => r.json());
+      if (status.total > 1) mostrarBarraProgresoMRW(status.done, status.total);
+    } catch(e) {}
+  }, 800);
 
   try {
     const res = await fetch(`${API_BASE}/api/tracking/mrw-sync`, {
@@ -9720,33 +9717,30 @@ async function sincronizarMRW(esAutomatico = false) {
       headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const data = await res.json();
-    if (pollingInterval) clearInterval(pollingInterval);
+    clearInterval(pollingInterval);
     ocultarBarraProgresoMRW();
     if (data.ok) {
-      // Toast solo en manual, o si hubo cambios reales en automático
-      if (!esAutomatico) {
-        showToast("✅ MRW sincronizado", `${data.updated} pedidos actualizados de ${data.total} consultados`, "#16a34a");
-      } else if (data.updated > 0) {
-        showToast("✅ MRW", `${data.updated} pedido${data.updated > 1 ? "s" : ""} actualizado${data.updated > 1 ? "s" : ""}`, "#16a34a");
-      }
       if (data.updated > 0) {
+        showToast("✅ MRW sincronizado", `${data.updated} pedido${data.updated > 1 ? "s" : ""} actualizado${data.updated > 1 ? "s" : ""}`, "#16a34a");
         invalidateCache("orders");
         allOrders = [];
         await fetchOrdersFiltered();
         if (document.getElementById("sec-metricas")?.style.display !== "none") {
           await loadMetricas();
         }
+      } else {
+        showToast("— MRW sincronizado", "Sin cambios de estado esta vez", "#6b7280");
       }
-    } else if (!esAutomatico) {
+    } else {
       showToast("❌ Error MRW", data.error || "Error desconocido", "#dc2626");
     }
   } catch(e) {
-    if (pollingInterval) clearInterval(pollingInterval);
+    clearInterval(pollingInterval);
     ocultarBarraProgresoMRW();
-    if (!esAutomatico) showToast("❌ Error", "No se pudo conectar con MRW", "#dc2626");
+    showToast("❌ Error", "No se pudo conectar con MRW", "#dc2626");
   } finally {
     window.__mrwSyncing = false;
-    if (btn && !esAutomatico) { btn.disabled = false; btn.textContent = "🔄 Sincronizar MRW"; }
+    if (btn) { btn.disabled = false; btn.textContent = "🔄 Sincronizar MRW"; }
   }
 }
 
