@@ -5513,67 +5513,86 @@ function verDetalleProductosRent(domain) {
   if (!d) return;
   const fmt = n => (parseFloat(n)||0).toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 });
   const prods = d.productosDetalle || [];
-  const mkDist = (dist, uds, costo, color) => Object.entries(dist)
-    .sort((a,b) => parseInt(a[0])-parseInt(b[0]))
-    .map(([qty, pedidos]) => {
-      const udsShopify = pedidos * parseInt(qty);
-      const udsFisicas = udsShopify * uds;
-      return '<div style="font-size:11px;color:' + color + ';margin-top:2px;">'
-        + '• <strong>' + pedidos + ' pedido' + (pedidos!==1?'s':'') + '</strong> × '
-        + qty + ' ud' + (parseInt(qty)!==1?'s':'') + ' Shopify = '
-        + udsShopify + ' uds Shopify × ' + uds + ' uds/venta = <strong>' + udsFisicas + ' uds físicas</strong>'
-        + (costo > 0 ? ' → ' + fmt(costo * uds * parseInt(qty) * pedidos) + '€' : '')
-        + '</div>';
-    }).join('');
-  const filas = prods.length === 0
-    ? '<tr><td colspan="2" style="padding:16px;text-align:center;color:#9ca3af;">Sin datos de productos</td></tr>'
+  const thStyle = 'padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;font-size:10px;font-weight:600;color:#6b7280;text-align:right;white-space:nowrap;';
+  const thStyleL = thStyle.replace('text-align:right','text-align:center');
+  const tdStyle = 'padding:5px 8px;border:1px solid #f3f4f6;font-size:12px;text-align:right;color:#374151;white-space:nowrap;';
+  const mkDistTable = (dist, uds, costo, accent) => {
+    const rows = Object.entries(dist).sort((a,b)=>parseInt(a[0])-parseInt(b[0])).map(([qty,peds]) => {
+      const udsS = peds * parseInt(qty);
+      const udsF = udsS * uds;
+      const sub  = costo > 0 ? fmt(costo * uds * parseInt(qty) * peds) + ' €' : '—';
+      return '<tr>'
+        + '<td style="' + tdStyle + 'text-align:center;font-weight:600;color:' + accent + ';">' + peds + '</td>'
+        + '<td style="' + tdStyle + '">' + qty + '</td>'
+        + '<td style="' + tdStyle + '">' + udsS + '</td>'
+        + '<td style="' + tdStyle + '">' + uds + '</td>'
+        + '<td style="' + tdStyle + 'font-weight:600;">' + udsF + '</td>'
+        + '<td style="' + tdStyle + 'color:' + accent + ';font-weight:600;">' + sub + '</td>'
+        + '</tr>';
+    });
+    return '<table style="width:100%;border-collapse:collapse;margin-top:8px;">'
+      + '<thead><tr>'
+      + '<th style="' + thStyleL + '">Pedidos</th>'
+      + '<th style="' + thStyle + '">Qty/pedido</th>'
+      + '<th style="' + thStyle + '">Uds Shopify</th>'
+      + '<th style="' + thStyle + '">Uds/venta</th>'
+      + '<th style="' + thStyle + '">Uds físicas</th>'
+      + '<th style="' + thStyle + '">Subtotal</th>'
+      + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>';
+  };
+  const cards = prods.length === 0
+    ? '<div style="padding:24px;text-align:center;color:#9ca3af;">Sin datos de productos</div>'
     : prods.map((p, i) => {
-        const rowBg = i%2===0 ? '#fff' : '#f9fafb';
         const totalPedidos = Object.values(p.qtyDist).reduce((s,v)=>s+v, 0);
-        const resumen = '<div style="font-size:11px;color:#9ca3af;margin-bottom:3px;">'
-          + totalPedidos + ' pedido' + (totalPedidos!==1?'s':'') + ' en total | '
-          + p.totalQty + ' uds Shopify | ' + p.totalUds + ' uds físicas | ' + fmt(p.costo) + '€/ud × ' + p.uds + ' uds/venta'
+        let html = '<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:10px;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">'
+          +   '<div style="font-weight:700;font-size:13px;color:#111;flex:1;margin-right:12px;">' + escapeHtml(p.nombre) + '</div>'
+          +   '<div style="font-weight:700;font-size:14px;color:#374151;white-space:nowrap;">' + fmt(p.total) + ' €</div>'
+          + '</div>'
+          + '<div style="padding:10px 14px;">'
+          +   '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">'
+          +     '<span style="background:#f3f4f6;border-radius:4px;padding:2px 6px;margin-right:6px;">Coste: ' + fmt(p.costo) + '€/ud</span>'
+          +     '<span style="background:#f3f4f6;border-radius:4px;padding:2px 6px;margin-right:6px;">Uds/venta: ' + p.uds + '</span>'
+          +     '<span style="background:#f3f4f6;border-radius:4px;padding:2px 6px;margin-right:6px;">' + totalPedidos + ' pedidos</span>'
+          +     '<span style="background:#f3f4f6;border-radius:4px;padding:2px 6px;margin-right:6px;">' + p.totalUds + ' uds físicas</span>'
+          +   '</div>'
+          +   mkDistTable(p.qtyDist, p.uds, p.costo, '#374151')
           + '</div>';
-        let html = '<tr style="background:' + rowBg + ';">'
-          + '<td style="padding:10px 12px;border:1px solid #e5e7eb;">'
-          +   '<div style="font-weight:600;color:#374151;margin-bottom:4px;">' + escapeHtml(p.nombre) + '</div>'
-          +   resumen
-          +   mkDist(p.qtyDist, p.uds, p.costo, '#9ca3af')
-          + '</td>'
-          + '<td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#374151;white-space:nowrap;vertical-align:top;">' + fmt(p.total) + ' €</td>'
-          + '</tr>';
         if (p.devQty > 0) {
           const totalDevPed = Object.values(p.devQtyDist).reduce((s,v)=>s+v, 0);
-          html += '<tr style="background:#f0fdf4;">'
-            + '<td style="padding:7px 12px 7px 24px;border:1px solid #e5e7eb;">'
-            +   '<div style="font-weight:600;color:#16a34a;font-size:12px;margin-bottom:3px;">↩ Recuperado (devuelto)</div>'
-            +   '<div style="font-size:11px;color:#16a34a;margin-bottom:2px;">' + totalDevPed + ' pedido' + (totalDevPed!==1?'s':'') + ' devueltos | ' + p.devQty + ' uds Shopify | ' + p.devUds + ' uds físicas</div>'
-            +   mkDist(p.devQtyDist, p.uds, p.costo, '#16a34a')
-            + '</td>'
-            + '<td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;white-space:nowrap;vertical-align:top;">+' + fmt(p.devTotal) + ' €</td>'
-            + '</tr>';
+          html += '<div style="padding:10px 14px;background:#f0fdf4;border-top:1px solid #bbf7d0;">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+            +   '<span style="font-weight:600;font-size:12px;color:#16a34a;">↩ Recuperado (devuelto)</span>'
+            +   '<span style="font-weight:700;font-size:13px;color:#16a34a;">+' + fmt(p.devTotal) + ' €</span>'
+            + '</div>'
+            + '<div style="font-size:11px;color:#16a34a;margin-bottom:6px;">'
+            +   '<span style="background:#dcfce7;border-radius:4px;padding:2px 6px;margin-right:6px;">' + totalDevPed + ' pedidos devueltos</span>'
+            +   '<span style="background:#dcfce7;border-radius:4px;padding:2px 6px;">' + p.devUds + ' uds físicas recuperadas</span>'
+            + '</div>'
+            + mkDistTable(p.devQtyDist, p.uds, p.costo, '#16a34a')
+            + '</div>';
         }
+        html += '</div>';
         return html;
       }).join('');
   const overlay = document.createElement('div');
   overlay.id = '__prod-detail-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3500;display:flex;align-items:center;justify-content:center;';
-  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:24px;width:620px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+  const neto = d.costoProductos - (d.costoRecuperado||0);
+  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:24px;width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
-    + '<div><div style="font-weight:700;font-size:15px;color:#111;">📦 Desglose de Productos</div>'
-    + '<div style="font-size:12px;color:#6b7280;margin-top:2px;">' + escapeHtml(d.name) + ' — total: ' + fmt(d.costoProductos - (d.costoRecuperado||0)) + ' €</div></div>'
-    + '<button id="__prod-detail-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1;padding:4px;">✕</button>'
+    +   '<div>'
+    +     '<div style="font-weight:700;font-size:15px;color:#111;">📦 Desglose de Productos</div>'
+    +     '<div style="font-size:12px;color:#6b7280;margin-top:2px;">' + escapeHtml(d.name) + ' — coste neto: <strong>' + fmt(neto) + ' €</strong></div>'
+    +   '</div>'
+    +   '<button id="__prod-detail-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;line-height:1;padding:4px;">✕</button>'
     + '</div>'
-    + '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
-    + '<thead><tr style="background:#f3f4f6;">'
-    + '<th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>'
-    + '<th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">Total</th>'
-    + '</tr></thead>'
-    + '<tbody>' + filas + '</tbody>'
-    + '<tfoot><tr style="background:#f0fdf4;">'
-    + '<td style="padding:10px 12px;border:1px solid #bbf7d0;font-weight:700;color:#16a34a;">TOTAL PRODUCTOS</td>'
-    + '<td style="padding:10px 12px;border:1px solid #bbf7d0;text-align:right;font-weight:700;color:#16a34a;">' + fmt(d.costoProductos - (d.costoRecuperado||0)) + ' €</td>'
-    + '</tr></tfoot></table></div>';
+    + '<div>' + cards + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f0fdf4;border-radius:8px;margin-top:4px;">'
+    +   '<span style="font-weight:700;color:#16a34a;font-size:14px;">TOTAL PRODUCTOS</span>'
+    +   '<span style="font-weight:800;color:#16a34a;font-size:16px;">' + fmt(neto) + ' €</span>'
+    + '</div>'
+    + '</div>';
   document.body.appendChild(overlay);
   document.getElementById('__prod-detail-close').onclick = () => overlay.remove();
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
