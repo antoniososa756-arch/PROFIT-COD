@@ -5475,13 +5475,10 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Esto es un estimado basado en el rango de fecha seleccionado y los precios Unt de MRW y Logística, tu balance final por mes lo puedes ver en Ingresos - Balance Final)</span></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;" id="rent-bal-cols">${cols}</div>
-        <div id="rent-bal-sumatoria" style="margin-top:20px;padding:16px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
-          <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Sumatoria seleccionada</div>
-          <div id="rent-bal-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
-          <div style="border-top:2px solid #16a34a;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
-            <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
-          </div>
+        <div id="rent-bal-sumatoria" style="margin-top:20px;padding:12px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+          <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
+          <div id="rent-bal-filas" style="display:none;"></div>
         </div>
       </div>
       <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
