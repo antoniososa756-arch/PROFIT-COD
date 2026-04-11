@@ -5415,33 +5415,41 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
     const resColor = d.resultado >= 0 ? "#16a34a" : "#dc2626";
     const resBg    = d.resultado >= 0 ? "#f0fdf4" : "#fef2f2";
     const resBorder= d.resultado >= 0 ? "#bbf7d0" : "#fecaca";
+    const tr  = (label, sub, val, opts={}) =>
+      `<tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:7px 12px;color:#374151;font-weight:${opts.bold?'700':'500'};font-size:12px;${opts.cursor?'cursor:pointer;':''}${opts.onclick?`"onclick="${opts.onclick}"`:''}"
+          ${opts.onclick ? `onclick="${opts.onclick}"` : ''}>
+          ${label}${sub ? `<div style="font-size:10px;color:#9ca3af;font-weight:400;margin-top:1px;">${sub}</div>` : ''}
+        </td>
+        <td style="padding:7px 12px;text-align:right;font-size:12px;color:${opts.valColor||'#6b7280'};font-weight:${opts.bold?'700':'400'};white-space:nowrap;">${val}</td>
+      </tr>`;
     return `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;" data-domain="${d.domain}">
-        <div style="background:#16a34a;padding:10px 14px;">
-          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
-          <div style="font-size:11px;color:#bbf7d0;">${d.domain}</div>
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;" data-domain="${d.domain}">
+        <div style="background:#16a34a;padding:9px 12px;">
+          <div style="font-weight:700;color:#fff;font-size:13px;">${escapeHtml(d.name)}</div>
+          <div style="font-size:10px;color:#bbf7d0;">${d.domain}</div>
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <table style="width:100%;border-collapse:collapse;">
           <tbody>
-            <tr style="background:#f0fdf4;"><td colspan="2" style="padding:8px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📥 Ingresos</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">COD<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numCOD} pedidos — ${fmt(d.brutoCOD)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión MRW (${d.numCOD}×0.67€) = −${fmt(d.descCOD)}€</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;font-weight:600;">${fmt(d.netoCOD)} €</td></tr>
-            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">TARJETA<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numTarjeta} pedidos — ${fmt(d.brutoTarjeta)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(d.descTarjeta)}€</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;font-weight:600;">${fmt(d.netoTarjeta)} €</td></tr>
-            ${d.man1val > 0 ? `<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">${escapeHtml(d.man1nom||"Extra 1")}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${fmt(d.man1val)} €</td></tr>` : ""}
-            ${d.man2val > 0 ? `<tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">${escapeHtml(d.man2nom||"Extra 2")}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${fmt(d.man2val)} €</td></tr>` : ""}
-            <tr style="background:#f0fdf4;"><td style="padding:8px 14px;border:1px solid #bbf7d0;font-weight:700;color:#16a34a;">Total Ingresos</td><td style="padding:8px 14px;border:1px solid #bbf7d0;text-align:right;font-weight:700;color:#16a34a;">${fmt(d.totalIngreso)} €</td></tr>
-            <tr style="background:#fef2f2;"><td colspan="2" style="padding:8px 14px;border:1px solid #e5e7eb;font-weight:700;color:#dc2626;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📤 Gastos</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gasto Meta</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.meta)} €</td></tr>
-            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gasto TikTok</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.tiktok)} €</td></tr>
-            <tr style="cursor:pointer;" onclick="verDetalleProductosRent('${d.domain}')" title="Ver desglose por producto"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Productos <span style="font-size:10px;color:#3b82f6;font-weight:500;">▶ ver detalle</span><div style="font-size:10px;color:#9ca3af;">${fmt(d.costoProductos)} € bruto${d.costoRecuperado > 0 ? ` − ${fmt(d.costoRecuperado)} € recuperado (${d.numDevueltosProd} dev.)` : ''}</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.costoProductos - (d.costoRecuperado||0))} €</td></tr>
-            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">MRW<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.mrw)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Logística<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.logistica)} €</td></tr>
-            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gastos Fijos<div style="font-size:10px;color:#9ca3af;">${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.fijoXTienda)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Nómina<div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.nominaXTienda)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Shopify</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.shopify)} €</td></tr>
-            ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>`<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">${escapeHtml(g.nombre||'Concepto extra')}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(g.valor)} €</td></tr>`).join("")}
-            <tr style="background:#fefce8;"><td style="padding:8px 14px;border:1px solid #fef08a;color:#854d0e;font-weight:600;">IVA (${(d.ivaPorcentaje*100).toFixed(0)}%)<div style="font-size:10px;color:#a16207;">${d.numCOD + d.numTarjeta} pedidos entregados × ${(d.ivaPorcentaje*100).toFixed(0)}%</div></td><td style="padding:8px 14px;border:1px solid #fef08a;text-align:right;color:#854d0e;font-weight:600;">${fmt(d.ivaTotal)} €</td></tr>
-            <tr style="background:#fef2f2;"><td style="padding:8px 14px;border:1px solid #fecaca;font-weight:700;color:#dc2626;">Total Gastos</td><td style="padding:8px 14px;border:1px solid #fecaca;text-align:right;font-weight:700;color:#dc2626;">− ${fmt(d.totalGasto)} €</td></tr>
-            <tr style="background:${resBg};"><td style="padding:12px 14px;border:1px solid ${resBorder};font-weight:700;color:${resColor};font-size:14px;">RESULTADO</td><td style="padding:12px 14px;border:1px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:16px;">${fmt(d.resultado)} €</td></tr>
+            <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f4f6;">Ingresos</td></tr>
+            ${tr('COD', `${d.numCOD} pedidos · ${fmt(d.brutoCOD)}€ bruto · <span style="color:#dc2626;">−${fmt(d.descCOD)}€ comisión</span>`, fmt(d.netoCOD)+' €', {valColor:'#374151',bold:false})}
+            ${tr('Tarjeta', `${d.numTarjeta} pedidos · ${fmt(d.brutoTarjeta)}€ bruto · <span style="color:#dc2626;">−${fmt(d.descTarjeta)}€ comisión</span>`, fmt(d.netoTarjeta)+' €', {valColor:'#374151'})}
+            ${d.man1val > 0 ? tr(escapeHtml(d.man1nom||'Extra 1'), '', fmt(d.man1val)+' €') : ''}
+            ${d.man2val > 0 ? tr(escapeHtml(d.man2nom||'Extra 2'), '', fmt(d.man2val)+' €') : ''}
+            ${tr('Total Ingresos', '', fmt(d.totalIngreso)+' €', {bold:true, valColor:'#374151'})}
+            <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f4f6;border-top:6px solid #f9fafb;">Gastos</td></tr>
+            ${tr('Gasto Meta', '', fmt(d.meta)+' €')}
+            ${tr('Gasto TikTok', '', fmt(d.tiktok)+' €')}
+            ${tr('Productos <span style="font-size:10px;color:#3b82f6;">▶ ver detalle</span>', `${fmt(d.costoProductos)}€ bruto${d.costoRecuperado>0?` − ${fmt(d.costoRecuperado)}€ recuperado (${d.numDevueltosProd} dev.)`:''}`, fmt(d.costoProductos-(d.costoRecuperado||0))+' €', {cursor:true, onclick:`verDetalleProductosRent('${d.domain}')`})}
+            ${tr('MRW', `${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.`, fmt(d.mrw)+' €')}
+            ${tr('Logística', `${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos`, fmt(d.logistica)+' €')}
+            ${tr('Gastos Fijos', `${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas`, fmt(d.fijoXTienda)+' €')}
+            ${tr('Nómina', `Total nómina ÷ ${d.numTiendas} tiendas`, fmt(d.nominaXTienda)+' €')}
+            ${tr('Shopify', '', fmt(d.shopify)+' €')}
+            ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>tr(escapeHtml(g.nombre||'Concepto extra'),'',fmt(g.valor)+' €')).join('')}
+            ${tr(`IVA (${(d.ivaPorcentaje*100).toFixed(0)}%)`, `${d.numCOD+d.numTarjeta} pedidos entregados × ${(d.ivaPorcentaje*100).toFixed(0)}%`, fmt(d.ivaTotal)+' €')}
+            ${tr('Total Gastos', '', '− '+fmt(d.totalGasto)+' €', {bold:true, valColor:'#374151'})}
+            <tr style="background:${resBg};"><td style="padding:10px 12px;border-top:2px solid ${resBorder};font-weight:700;color:${resColor};font-size:13px;">RESULTADO</td><td style="padding:10px 12px;border-top:2px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:15px;">${fmt(d.resultado)} €</td></tr>
           </tbody>
         </table>
       </div>`;
@@ -5459,13 +5467,13 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Esto es un estimado basado en el rango de fecha seleccionado y los precios Unt de MRW y Logística, tu balance final por mes lo puedes ver en Ingresos - Balance Final)</span></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;" id="rent-bal-cols">${cols}</div>
-        <div id="rent-bal-sumatoria" style="margin-top:20px;padding:16px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
-          <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Sumatoria seleccionada</div>
-          <div id="rent-bal-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
-          <div style="border-top:2px solid #16a34a;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
-            <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
+        <div id="rent-bal-sumatoria" style="margin-top:16px;padding:12px 16px;background:var(--card);border:1px solid #e5e7eb;border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Sumatoria seleccionada</span>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span id="rent-bal-total" style="font-weight:800;font-size:20px;"></span>
+            <button onclick="verDesgloseRentBalance()" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;">Ver desglose</button>
           </div>
+          <div id="rent-bal-filas" style="display:none;"></div>
         </div>
       </div>
       <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
@@ -5505,6 +5513,57 @@ function toggleAllRentabilidadBalance(checked) {
   recalcRentabilidadBalance();
 }
 window.toggleAllRentabilidadBalance = toggleAllRentabilidadBalance;
+
+function verDesgloseRentBalance() {
+  const data = window.__rentabilidadBalanceData || [];
+  const checks = document.querySelectorAll("#rent-balance-wrap input[type='checkbox'][value]");
+  const sel = new Set([...checks].filter(c=>c.checked).map(c=>c.value));
+  const filtradas = data.filter(d=>sel.has(d.domain));
+  const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const total = filtradas.reduce((s,d)=>s+d.resultado,0);
+  const totalColor = total>=0?"#16a34a":"#dc2626";
+  const rows = filtradas.map(d => {
+    const rc = d.resultado>=0?"#16a34a":"#dc2626";
+    return `<tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:10px 14px;font-weight:600;font-size:13px;color:#374151;">${escapeHtml(d.name)}</td>
+      <td style="padding:10px 14px;text-align:right;font-size:12px;color:#16a34a;font-weight:500;">${fmt(d.totalIngreso)} €</td>
+      <td style="padding:10px 14px;text-align:right;font-size:12px;color:#dc2626;font-weight:500;">− ${fmt(d.totalGasto)} €</td>
+      <td style="padding:10px 14px;text-align:right;font-size:13px;font-weight:700;color:${rc};">${fmt(d.resultado)} €</td>
+    </tr>`;
+  }).join('');
+  const overlay = document.createElement('div');
+  overlay.id = '__desglose-sum-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3500;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `<div style="background:#fff;border-radius:12px;padding:24px;width:560px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-weight:700;font-size:15px;color:#111;">Desglose por tienda</div>
+      <button id="__desglose-sum-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1;padding:4px;">✕</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="border-bottom:2px solid #e5e7eb;">
+          <th style="padding:8px 14px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;">Tienda</th>
+          <th style="padding:8px 14px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;">Ingresos</th>
+          <th style="padding:8px 14px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;">Gastos</th>
+          <th style="padding:8px 14px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;">Resultado</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="border-top:2px solid #e5e7eb;background:#f9fafb;">
+          <td style="padding:10px 14px;font-weight:700;font-size:13px;color:#374151;">TOTAL</td>
+          <td style="padding:10px 14px;text-align:right;font-weight:700;font-size:13px;color:#16a34a;">${fmt(filtradas.reduce((s,d)=>s+d.totalIngreso,0))} €</td>
+          <td style="padding:10px 14px;text-align:right;font-weight:700;font-size:13px;color:#dc2626;">− ${fmt(filtradas.reduce((s,d)=>s+d.totalGasto,0))} €</td>
+          <td style="padding:10px 14px;text-align:right;font-weight:800;font-size:15px;color:${totalColor};">${fmt(total)} €</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('__desglose-sum-close').onclick = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+window.verDesgloseRentBalance = verDesgloseRentBalance;
 
 function verDetalleProductosRent(domain) {
   const data = window.__rentabilidadBalanceData || [];
