@@ -5343,10 +5343,15 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
     const totalIngreso = (tCOD - pedCOD.length*MRW_COMISION) + (tPag - tPag*TARJETA_PCT) + (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
 
     const pedTienda = pedidosBase.filter(o => o.shop_domain === store.domain);
-    let costoProductos = 0;
-    pedTienda.filter(o=>!["devuelto","cancelado"].includes(o.fulfillment_status)).forEach(o=>{
-      try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ costoProductos+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(variantesMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{}
-    });
+    // costoProductos: todos los pedidos no cancelados (incluye devuelto y destruido)
+    const _calcCosto = (orders) => {
+      let c = 0;
+      orders.forEach(o=>{ try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ c+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(variantesMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{} });
+      return c;
+    };
+    const costoProductos  = _calcCosto(pedTienda.filter(o => o.fulfillment_status !== "cancelado"));
+    const costoRecuperado = _calcCosto(pedTienda.filter(o => o.fulfillment_status === "devuelto"));
+    const numDevueltosProd = pedTienda.filter(o => o.fulfillment_status === "devuelto").length;
     const envTienda = pedTienda.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status));
     const devTienda = envTienda.filter(o=>o.fulfillment_status==="devuelto").length;
     const precioMRW      = preciosGlobales.precio_mrw      || 0;
@@ -5355,11 +5360,11 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
     const logistica = precioLogistica * envTienda.length;
     const ivaTotal = pedEnt.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
     const extrasTotal = (gastosExtrasRent[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-    const totalGasto = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
+    const totalGasto = ads.meta + ads.tiktok + shopify + (costoProductos - costoRecuperado) + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
     const resultado = totalIngreso - totalGasto;
-    // Detalle de productos para modal
+    // Detalle de productos para modal (incluye devuelto y destruido, excluye cancelado)
     const _prodMap = {};
-    pedTienda.filter(o=>!["devuelto","cancelado"].includes(o.fulfillment_status)).forEach(o=>{
+    pedTienda.filter(o => o.fulfillment_status !== "cancelado").forEach(o=>{
       try {
         const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null;
         if(!raw?.line_items)return;
@@ -5382,7 +5387,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
       numTarjeta: pedPag.length, brutoTarjeta: tPag, descTarjeta: tPag*TARJETA_PCT, netoTarjeta: tPag - tPag*TARJETA_PCT,
       man1nom: man1.nombre||"", man1val: parseFloat(man1.valor)||0,
       man2nom: man2.nombre||"", man2val: parseFloat(man2.valor)||0,
-      meta: ads.meta, tiktok: ads.tiktok, costoProductos, mrw, logistica, shopify,
+      meta: ads.meta, tiktok: ads.tiktok, costoProductos, costoRecuperado, numDevueltosProd, mrw, logistica, shopify,
       fijoXTienda, nominaXTienda, totalOtrosFijos, numTiendas,
       precioMRW, precioLog: precioLogistica,
       enviosMRW: envTienda.length, devMRW: devTienda,
@@ -5414,7 +5419,8 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
             <tr style="background:#fef2f2;"><td colspan="2" style="padding:8px 14px;border:1px solid #e5e7eb;font-weight:700;color:#dc2626;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📤 Gastos</td></tr>
             <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gasto Meta</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.meta)} €</td></tr>
             <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gasto TikTok</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.tiktok)} €</td></tr>
-            <tr style="cursor:pointer;" onclick="verDetalleProductosRent('${d.domain}')" title="Ver desglose por producto"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Productos <span style="font-size:10px;color:#3b82f6;font-weight:500;">▶ ver detalle</span><div style="font-size:10px;color:#9ca3af;">costo × uds × qty</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.costoProductos)} €</td></tr>
+            <tr style="cursor:pointer;" onclick="verDetalleProductosRent('${d.domain}')" title="Ver desglose por producto"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Productos <span style="font-size:10px;color:#3b82f6;font-weight:500;">▶ ver detalle</span><div style="font-size:10px;color:#9ca3af;">costo × uds × qty (enviados + destruidos + devueltos)</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.costoProductos)} €</td></tr>
+            ${d.costoRecuperado > 0 ? `<tr style="background:#f0fdf4;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#16a34a;font-weight:600;">Recuperado (devueltos)<div style="font-size:10px;color:#9ca3af;">${d.numDevueltosProd} pedido${d.numDevueltosProd!==1?'s':''} devuelto${d.numDevueltosProd!==1?'s':''} — producto recuperado en stock</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#16a34a;font-weight:600;">− ${fmt(d.costoRecuperado)} €</td></tr>` : ""}
             <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">MRW<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.mrw)} €</td></tr>
             <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Logística<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.logistica)} €</td></tr>
             <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gastos Fijos<div style="font-size:10px;color:#9ca3af;">${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.fijoXTienda)} €</td></tr>
