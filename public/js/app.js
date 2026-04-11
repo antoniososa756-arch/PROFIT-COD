@@ -6802,8 +6802,9 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
       return d.startsWith(mes);
     });
 
+    const ESTADOS_COSTO_GV = ["enviado","en_transito","en_preparacion","franquicia","entregado","destruido"];
     let costoProductos = 0;
-    pedidosTienda.filter(o => !["devuelto", "cancelado", "pendiente"].includes(o.fulfillment_status)).forEach(o => {
+    pedidosTienda.filter(o => ESTADOS_COSTO_GV.includes(o.fulfillment_status)).forEach(o => {
       try {
         const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
         if (!raw?.line_items) return;
@@ -6815,6 +6816,22 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
         });
       } catch {}
     });
+    let costoRecuperadoGV = 0;
+    let numDevGV = 0;
+    pedidosTienda.filter(o => o.fulfillment_status === "devuelto").forEach(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        if (!raw?.line_items) return;
+        numDevGV++;
+        raw.line_items.forEach(item => {
+          const costo = parseFloat(stockMap[String(item.product_id)] || 0);
+          const uds = parseInt(variantesMap[String(item.variant_id)] || 1);
+          const qty = parseInt(item.quantity || 1);
+          costoRecuperadoGV += costo * uds * qty;
+        });
+      } catch {}
+    });
+    const costoProductosNeto = costoProductos - costoRecuperadoGV;
 
     // MRW: solo enviados + 1 extra por cada devuelto (cancelados y pendientes NO cuentan)
     const estadosEnvioMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
@@ -6837,7 +6854,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
     const entregadosTienda = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
     const ivaTotal = entregadosTienda.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
-    const total = ads.meta + ads.tiktok + shopify + costoProductos + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
+    const total = ads.meta + ads.tiktok + shopify + costoProductosNeto + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
     if (!window.__gastosPorTienda) window.__gastosPorTienda = {};
     window.__gastosPorTienda[store.domain] = total;
 
@@ -6859,8 +6876,9 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Productos</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(costoProductos)} €
-                <div style="font-size:10px;color:#9ca3af;">costo × uds × cantidad por pedido</div>
+              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(costoProductosNeto)} €
+                <div style="font-size:10px;color:#9ca3af;">${fmt(costoProductos)}€ bruto${costoRecuperadoGV>0?` − ${fmt(costoRecuperadoGV)}€ recuperado (${numDevGV} dev.)`:''}
+                </div>
               </td>
             </tr>
             <tr>
