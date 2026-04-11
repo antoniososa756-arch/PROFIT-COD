@@ -1056,29 +1056,18 @@ const now = new Date();
     box.innerHTML = `
       <div style="display:flex;gap:20px;align-items:flex-start;">
         <div style="flex:1;min-width:0;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-            ${['hoy','ayer','mes','mes-ant','personalizado'].map(k => {
-              const labels = {hoy:'Hoy',ayer:'Ayer',mes:'Mes actual','mes-ant':'Mes anterior',personalizado:'Personalizado'};
-              const fns = {hoy:'filtroMetricasHoy()',ayer:'filtroMetricasAyer()',mes:'filtroMetricasMes()','mes-ant':'filtroMetricasMesAnterior()',personalizado:'toggleMetricasPersonalizado()'};
-              return `<button id="btn-met-${k}" onclick="${fns[k]}"
-                style="padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
-                onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#16a34a';this.style.color='#16a34a';"
-                onmouseout="if(!this.classList.contains('active')){this.style.background='#fff';this.style.borderColor='#e5e7eb';this.style.color='#374151';}">
-                ${labels[k]}
-              </button>`;
-            }).join('')}
-          </div>
-          <div id="met-personalizado-panel" style="display:none;align-items:center;gap:8px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
-            <input type="date" id="metrics-date-from" value="${savedFrom}"
-              style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;"/>
-            <span style="color:#9ca3af;font-size:13px;">→</span>
-            <input type="date" id="metrics-date-to" value="${savedTo}"
-              style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;"/>
-            <button onclick="aplicarFiltroMetricas()" style="padding:6px 14px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Aplicar</button>
-          </div>
+        <div style="position:relative;" id="met-picker-wrap">
+          <button id="met-picker-trigger" onclick="toggleMetDatePicker()"
+            style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <span id="met-picker-label">Mes actual</span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="met-picker-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:2000;"></div>
+          <input type="date" id="metrics-date-from" value="${savedFrom}" style="display:none;">
+          <input type="date" id="metrics-date-to" value="${savedTo}" style="display:none;">
           <select id="metrics-shop" style="display:none;"><option value="">Todas las tiendas</option></select>
         </div>
       </div>
@@ -1231,90 +1220,167 @@ const now = new Date();
     </div>
     `;
   }
-function _setMetBtn(active) {
-  ['hoy','ayer','mes','mes-ant','personalizado'].forEach(k => {
-    const b = document.getElementById('btn-met-'+k);
-    if (!b) return;
-    if (k === active) { b.style.background='#16a34a'; b.style.borderColor='#16a34a'; b.style.color='#fff'; b.classList.add('active'); }
-    else              { b.style.background='#fff';     b.style.borderColor='#e5e7eb'; b.style.color='#374151'; b.classList.remove('active'); }
+// ===========================
+// METRICS DATE PICKER
+// ===========================
+(function() {
+  const MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const MNl = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const now = new Date();
+
+  window.__metPicker = {
+    open: false, startDate: null, endDate: null, hoverDate: null,
+    selecting: false, viewYear: now.getFullYear(), viewMonth: now.getMonth()+1,
+    preset: 'mes', presetLabel: 'Mes actual'
+  };
+
+  function fmtD(d) {
+    if (!d) return '—';
+    const [y,m,day] = d.split('-');
+    return `${parseInt(day)} de ${MNl[parseInt(m)-1]} de ${y}`;
+  }
+
+  function renderMonth(year, month) {
+    const s = window.__metPicker;
+    const dim = new Date(year, month, 0).getDate();
+    const fdow = new Date(year, month-1, 1).getDay();
+    const today = new Date().toISOString().split('T')[0];
+    let cells = [];
+    for (let i=0;i<fdow;i++) cells.push(null);
+    for (let d=1;d<=dim;d++) cells.push(d);
+    while (cells.length%7!==0) cells.push(null);
+    let rows='';
+    for (let i=0;i<cells.length;i+=7) {
+      let row='<tr>';
+      for (let j=0;j<7;j++) {
+        const day=cells[i+j];
+        if (!day) { row+='<td style="width:34px;height:34px;"></td>'; continue; }
+        const ds=`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const isS=ds===s.startDate, isE=ds===s.endDate;
+        const hi = s.selecting&&s.startDate&&s.hoverDate&&ds>s.startDate&&ds<=s.hoverDate;
+        const inR = s.startDate&&s.endDate&&ds>s.startDate&&ds<s.endDate;
+        const isT = ds===today;
+        let bg='transparent',col='#374151',fw='400',br='6px',extra='';
+        if (isS||isE) { bg='#111827';col='#fff';fw='700'; }
+        else if (inR||hi) { bg='#e5e7eb';br='0'; }
+        if (isT&&!isS&&!isE) extra='outline:1.5px solid #9ca3af;outline-offset:-2px;';
+        row+=`<td style="width:34px;height:34px;text-align:center;padding:1px;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:${bg};color:${col};border-radius:${br};font-size:13px;font-weight:${fw};cursor:pointer;${extra}"
+            onclick="window.__metPDay('${ds}')" onmouseover="window.__metPHover('${ds}')">${day}</span></td>`;
+      }
+      row+='</tr>'; rows+=row;
+    }
+    return `<div style="min-width:210px;">
+      <div style="text-align:center;font-size:13px;font-weight:600;color:#374151;padding-bottom:8px;">${MN[month-1]} ${year}</div>
+      <table style="border-collapse:collapse;"><thead><tr>${['do','lu','ma','mi','ju','vi','sá'].map(d=>`<th style="width:34px;font-size:11px;color:#9ca3af;font-weight:500;text-align:center;padding-bottom:6px;">${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+  }
+
+  function renderPicker() {
+    const panel=document.getElementById('met-picker-panel'); if(!panel) return;
+    const s=window.__metPicker;
+    const vy=s.viewYear,vm=s.viewMonth;
+    const lm=vm===1?12:vm-1, ly=vm===1?vy-1:vy;
+    const PRESETS=[{key:'hoy',label:'Hoy'},{key:'ayer',label:'Ayer'},{key:'mes',label:'Este mes'},{key:'mes-ant',label:'Mes anterior'},{key:'personalizado',label:'Rango personalizado'}];
+    const sidebar=PRESETS.map(p=>{
+      const act=s.preset===p.key;
+      return `<div onclick="window.__metPPreset('${p.key}')"
+        style="padding:9px 12px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#16a34a':'#374151'};background:${act?'#f0fdf4':'transparent'};"
+        onmouseover="this.style.background='#f9fafb';" onmouseout="this.style.background='${act?'#f0fdf4':'transparent'}';">${p.label}</div>`;
+    }).join('');
+    panel.innerHTML=`<div style="display:flex;box-shadow:0 10px 40px rgba(0,0,0,.18);border-radius:12px;overflow:hidden;background:#fff;border:1px solid #e5e7eb;">
+      <div style="width:165px;padding:10px 8px;border-right:1px solid #f3f4f6;display:flex;flex-direction:column;gap:2px;">${sidebar}</div>
+      <div style="padding:16px 20px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <div style="flex:1;padding:7px 12px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;color:#374151;background:#f9fafb;white-space:nowrap;">${fmtD(s.startDate)}</div>
+          <span style="color:#9ca3af;font-size:18px;">→</span>
+          <div style="flex:1;padding:7px 12px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;color:#374151;background:#f9fafb;white-space:nowrap;">${fmtD(s.endDate)}</div>
+        </div>
+        <div style="display:flex;gap:28px;align-items:flex-start;">
+          <div>
+            <div style="display:flex;justify-content:flex-start;margin-bottom:4px;">
+              <button onclick="window.__metPNav(-1)" style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:#6b7280;line-height:1;">‹</button>
+            </div>
+            ${renderMonth(ly,lm)}
+          </div>
+          <div>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:4px;">
+              <button onclick="window.__metPNav(1)" style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:#6b7280;line-height:1;">›</button>
+            </div>
+            ${renderMonth(vy,vm)}
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #f3f4f6;">
+          <button onclick="window.__metPClose()" style="padding:7px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">Cancelar</button>
+          <button onclick="window.__metPApply()" style="padding:7px 16px;background:#111827;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#fff;">Aplicar</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  window.toggleMetDatePicker = function() {
+    const s=window.__metPicker, panel=document.getElementById('met-picker-panel'); if(!panel) return;
+    if (s.open) { panel.style.display='none'; s.open=false; }
+    else {
+      // Set view to month of endDate or current month
+      const ref = s.endDate || new Date().toISOString().split('T')[0];
+      const [ry,rm] = ref.split('-').map(Number);
+      s.viewYear=ry; s.viewMonth=rm;
+      panel.style.display='block'; s.open=true; renderPicker();
+    }
+  };
+  window.__metPPreset = function(key) {
+    const s=window.__metPicker; s.preset=key; s.selecting=false;
+    const n=new Date(), fmt=d=>d.toISOString().split('T')[0];
+    if (key==='hoy')     { const d=fmt(n); s.startDate=d; s.endDate=d; s.presetLabel='Hoy'; }
+    else if (key==='ayer'){ const d=fmt(new Date(n-864e5)); s.startDate=d; s.endDate=d; s.presetLabel='Ayer'; }
+    else if (key==='mes') { s.startDate=fmt(new Date(n.getFullYear(),n.getMonth(),1)); s.endDate=fmt(n); s.presetLabel='Este mes'; }
+    else if (key==='mes-ant') { s.startDate=fmt(new Date(n.getFullYear(),n.getMonth()-1,1)); s.endDate=fmt(new Date(n.getFullYear(),n.getMonth(),0)); s.presetLabel='Mes anterior'; }
+    else if (key==='personalizado') { s.presetLabel='Personalizado'; }
+    if (s.endDate) { const [ry,rm]=s.endDate.split('-').map(Number); s.viewYear=ry; s.viewMonth=rm; }
+    renderPicker();
+  };
+  window.__metPNav = function(dir) {
+    const s=window.__metPicker; s.viewMonth+=dir;
+    if (s.viewMonth>12){s.viewMonth=1;s.viewYear++;} if (s.viewMonth<1){s.viewMonth=12;s.viewYear--;}
+    renderPicker();
+  };
+  window.__metPDay = function(ds) {
+    const s=window.__metPicker; s.preset='personalizado'; s.presetLabel='Personalizado';
+    if (!s.selecting||!s.startDate) { s.startDate=ds; s.endDate=null; s.selecting=true; }
+    else { if (ds<s.startDate){s.endDate=s.startDate;s.startDate=ds;}else{s.endDate=ds;} s.selecting=false; }
+    renderPicker();
+  };
+  window.__metPHover = function(ds) {
+    const s=window.__metPicker; if (s.selecting){s.hoverDate=ds;renderPicker();}
+  };
+  window.__metPClose = function() {
+    const panel=document.getElementById('met-picker-panel'); if(panel) panel.style.display='none'; window.__metPicker.open=false;
+  };
+  window.__metPApply = function() {
+    const s=window.__metPicker; if (!s.startDate||!s.endDate) return;
+    const from=document.getElementById('metrics-date-from'), to=document.getElementById('metrics-date-to');
+    if (from) from.value=s.startDate; if (to) to.value=s.endDate;
+    localStorage.setItem('met_from',s.startDate); localStorage.setItem('met_to',s.endDate);
+    const lbl=document.getElementById('met-picker-label'); if(lbl) lbl.textContent=s.presetLabel;
+    window.__metPClose(); loadMetricas();
+  };
+  document.addEventListener('click', e=>{
+    if (!window.__metPicker.open) return;
+    const wrap=document.getElementById('met-picker-wrap');
+    if (wrap&&!wrap.contains(e.target)) window.__metPClose();
   });
-  const panel = document.getElementById('met-personalizado-panel');
-  if (panel) panel.style.display = active === 'personalizado' ? 'flex' : 'none';
-}
-window._setMetBtn = _setMetBtn;
 
-function filtroMetricasHoy() {
-  const hoy = new Date().toISOString().split("T")[0];
-  const from = document.getElementById("metrics-date-from");
-  const to   = document.getElementById("metrics-date-to");
-  if (from) from.value = hoy;
-  if (to)   to.value   = hoy;
-  localStorage.setItem("met_from", hoy);
-  localStorage.setItem("met_to",   hoy);
-  _setMetBtn('hoy');
-  loadMetricas();
-}
-window.filtroMetricasHoy = filtroMetricasHoy;
-
-function filtroMetricasAyer() {
-  const ayer = new Date(Date.now() - 864e5).toISOString().split("T")[0];
-  const from = document.getElementById("metrics-date-from");
-  const to   = document.getElementById("metrics-date-to");
-  if (from) from.value = ayer;
-  if (to)   to.value   = ayer;
-  localStorage.setItem("met_from", ayer);
-  localStorage.setItem("met_to",   ayer);
-  _setMetBtn('ayer');
-  loadMetricas();
-}
-window.filtroMetricasAyer = filtroMetricasAyer;
-
-function filtroMetricasMes() {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const today    = now.toISOString().split("T")[0];
-  const from = document.getElementById("metrics-date-from");
-  const to   = document.getElementById("metrics-date-to");
-  if (from) from.value = firstDay;
-  if (to)   to.value   = today;
-  localStorage.setItem("met_from", firstDay);
-  localStorage.setItem("met_to",   today);
-  _setMetBtn('mes');
-  loadMetricas();
-}
-window.filtroMetricasMes = filtroMetricasMes;
-
-function filtroMetricasMesAnterior() {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastDay  = new Date(now.getFullYear(), now.getMonth(), 0);
-  const firstStr = firstDay.toISOString().split("T")[0];
-  const lastStr  = lastDay.toISOString().split("T")[0];
-  const from = document.getElementById("metrics-date-from");
-  const to   = document.getElementById("metrics-date-to");
-  if (from) from.value = firstStr;
-  if (to)   to.value   = lastStr;
-  localStorage.setItem("met_from", firstStr);
-  localStorage.setItem("met_to",   lastStr);
-  _setMetBtn('mes-ant');
-  loadMetricas();
-}
-window.filtroMetricasMesAnterior = filtroMetricasMesAnterior;
-
-function toggleMetricasPersonalizado() {
-  _setMetBtn('personalizado');
-}
-window.toggleMetricasPersonalizado = toggleMetricasPersonalizado;
-
-function aplicarFiltroMetricas() {
-  const from = document.getElementById("metrics-date-from")?.value;
-  const to   = document.getElementById("metrics-date-to")?.value;
-  if (from && to && from > to) { alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin"); return; }
-  if (from) localStorage.setItem("met_from", from);
-  if (to)   localStorage.setItem("met_to", to);
-  loadMetricas();
-}
-window.aplicarFiltroMetricas = aplicarFiltroMetricas;
+  // Compat wrappers
+  window.filtroMetricasHoy          = ()=>{ window.__metPPreset('hoy');     window.__metPApply(); };
+  window.filtroMetricasAyer         = ()=>{ window.__metPPreset('ayer');    window.__metPApply(); };
+  window.filtroMetricasMes          = ()=>{ window.__metPPreset('mes');     window.__metPApply(); };
+  window.filtroMetricasMesAnterior  = ()=>{ window.__metPPreset('mes-ant');  window.__metPApply(); };
+  window.aplicarFiltroMetricas      = ()=>{
+    const from=document.getElementById('metrics-date-from')?.value, to=document.getElementById('metrics-date-to')?.value;
+    if(from) localStorage.setItem('met_from',from); if(to) localStorage.setItem('met_to',to); loadMetricas();
+  };
+})();
 
 function recalcMetricasFiltro() {
   const checks = document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]");
