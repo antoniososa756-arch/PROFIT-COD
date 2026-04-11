@@ -5372,18 +5372,21 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
         if(!raw?.line_items)return;
         raw.line_items.forEach(item=>{
           const pid   = String(item.product_id);
+          const vid   = String(item.variant_id || item.product_id);
           const costo = parseFloat(stockMap[pid])||0;
-          const uds   = parseInt(variantesMap[String(item.variant_id)])||1;
+          const uds   = parseInt(variantesMap[vid])||1;
           const qty   = parseInt(item.quantity)||1;
-          if (!_prodMap[pid]) _prodMap[pid] = { nombre: item.title||pid, costo, uds, totalQty:0, totalUds:0, total:0, devQty:0, devUds:0, devTotal:0 };
+          const varTitle = item.variant_title && item.variant_title !== 'Default Title' ? ` — ${item.variant_title}` : '';
+          const nombre = (item.title||pid) + varTitle;
+          if (!_prodMap[vid]) _prodMap[vid] = { nombre, costo, uds, totalQty:0, totalUds:0, total:0, devQty:0, devUds:0, devTotal:0 };
           if (esDevuelto) {
-            _prodMap[pid].devQty   += qty;
-            _prodMap[pid].devUds   += qty * uds;
-            _prodMap[pid].devTotal += costo * uds * qty;
+            _prodMap[vid].devQty   += qty;
+            _prodMap[vid].devUds   += qty * uds;
+            _prodMap[vid].devTotal += costo * uds * qty;
           } else {
-            _prodMap[pid].totalQty += qty;
-            _prodMap[pid].totalUds += qty * uds;
-            _prodMap[pid].total    += costo * uds * qty;
+            _prodMap[vid].totalQty += qty;
+            _prodMap[vid].totalUds += qty * uds;
+            _prodMap[vid].total    += costo * uds * qty;
           }
         });
       } catch{}
