@@ -5411,47 +5411,55 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
 
   window.__rentabilidadBalanceData = balanceData;
 
+  window.__rentabilidadDesglose = {};
   const cols = balanceData.map(d => {
     const resColor = d.resultado >= 0 ? "#16a34a" : "#dc2626";
     const resBg    = d.resultado >= 0 ? "#f0fdf4" : "#fef2f2";
     const resBorder= d.resultado >= 0 ? "#bbf7d0" : "#fecaca";
     const tr  = (label, sub, val, opts={}) =>
       `<tr style="border-bottom:1px solid #f3f4f6;">
-        <td style="padding:7px 12px;color:#374151;font-weight:${opts.bold?'700':'500'};font-size:12px;${opts.cursor?'cursor:pointer;':''}${opts.onclick?`"onclick="${opts.onclick}"`:''}"
+        <td style="padding:7px 12px;color:#374151;font-weight:${opts.bold?'700':'500'};font-size:12px;${opts.cursor?'cursor:pointer;':''}"
           ${opts.onclick ? `onclick="${opts.onclick}"` : ''}>
           ${label}${sub ? `<div style="font-size:10px;color:#9ca3af;font-weight:400;margin-top:1px;">${sub}</div>` : ''}
         </td>
         <td style="padding:7px 12px;text-align:right;font-size:12px;color:${opts.valColor||'#6b7280'};font-weight:${opts.bold?'700':'400'};white-space:nowrap;">${val}</td>
       </tr>`;
+    // Desglose completo — se abre en modal
+    window.__rentabilidadDesglose[d.domain] = `
+      <table style="width:100%;border-collapse:collapse;">
+        <tbody>
+          <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f4f6;">Ingresos</td></tr>
+          ${tr('COD', `${d.numCOD} pedidos · ${fmt(d.brutoCOD)}€ bruto · <span style="color:#dc2626;">−${fmt(d.descCOD)}€ comisión</span>`, fmt(d.netoCOD)+' €', {valColor:'#374151'})}
+          ${tr('Tarjeta', `${d.numTarjeta} pedidos · ${fmt(d.brutoTarjeta)}€ bruto · <span style="color:#dc2626;">−${fmt(d.descTarjeta)}€ comisión</span>`, fmt(d.netoTarjeta)+' €', {valColor:'#374151'})}
+          ${d.man1val > 0 ? tr(escapeHtml(d.man1nom||'Extra 1'), '', fmt(d.man1val)+' €') : ''}
+          ${d.man2val > 0 ? tr(escapeHtml(d.man2nom||'Extra 2'), '', fmt(d.man2val)+' €') : ''}
+          ${tr('Total Ingresos', '', fmt(d.totalIngreso)+' €', {bold:true, valColor:'#374151'})}
+          <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f4f6;border-top:6px solid #f9fafb;">Gastos</td></tr>
+          ${tr('Gasto Meta', '', fmt(d.meta)+' €')}
+          ${tr('Gasto TikTok', '', fmt(d.tiktok)+' €')}
+          ${tr('Productos <span style="font-size:10px;color:#3b82f6;">▶ ver detalle</span>', `${fmt(d.costoProductos)}€ bruto${d.costoRecuperado>0?` − ${fmt(d.costoRecuperado)}€ recuperado (${d.numDevueltosProd} dev.)`:''}`, fmt(d.costoProductos-(d.costoRecuperado||0))+' €', {cursor:true, onclick:`verDetalleProductosRent('${d.domain}')`})}
+          ${tr('MRW', `${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.`, fmt(d.mrw)+' €')}
+          ${tr('Logística', `${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos`, fmt(d.logistica)+' €')}
+          ${tr('Gastos Fijos', `${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas`, fmt(d.fijoXTienda)+' €')}
+          ${tr('Nómina', `Total nómina ÷ ${d.numTiendas} tiendas`, fmt(d.nominaXTienda)+' €')}
+          ${tr('Shopify', '', fmt(d.shopify)+' €')}
+          ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>tr(escapeHtml(g.nombre||'Concepto extra'),'',fmt(g.valor)+' €')).join('')}
+          ${tr(`IVA (${(d.ivaPorcentaje*100).toFixed(0)}%)`, `${d.numCOD+d.numTarjeta} pedidos entregados × ${(d.ivaPorcentaje*100).toFixed(0)}%`, fmt(d.ivaTotal)+' €')}
+          ${tr('Total Gastos', '', '− '+fmt(d.totalGasto)+' €', {bold:true, valColor:'#374151'})}
+          <tr style="background:${resBg};"><td style="padding:10px 12px;border-top:2px solid ${resBorder};font-weight:700;color:${resColor};font-size:13px;">RESULTADO</td><td style="padding:10px 12px;border-top:2px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:15px;">${fmt(d.resultado)} €</td></tr>
+        </tbody>
+      </table>`;
+    // Tarjeta compacta — vista principal
     return `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;" data-domain="${d.domain}">
-        <div style="background:#16a34a;padding:9px 12px;">
-          <div style="font-weight:700;color:#fff;font-size:13px;">${escapeHtml(d.name)}</div>
-          <div style="font-size:10px;color:#bbf7d0;">${d.domain}</div>
+      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;" data-domain="${d.domain}">
+        <div style="font-weight:700;font-size:13px;color:#374151;">${escapeHtml(d.name)}</div>
+        <div style="font-size:10px;color:#9ca3af;">${d.domain}</div>
+        <div style="margin-top:6px;font-size:12px;display:flex;flex-direction:column;gap:3px;">
+          <div>Ingreso: <span style="color:#16a34a;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
+          <div>Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div>
         </div>
-        <table style="width:100%;border-collapse:collapse;">
-          <tbody>
-            <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f4f6;">Ingresos</td></tr>
-            ${tr('COD', `${d.numCOD} pedidos · ${fmt(d.brutoCOD)}€ bruto · <span style="color:#dc2626;">−${fmt(d.descCOD)}€ comisión</span>`, fmt(d.netoCOD)+' €', {valColor:'#374151',bold:false})}
-            ${tr('Tarjeta', `${d.numTarjeta} pedidos · ${fmt(d.brutoTarjeta)}€ bruto · <span style="color:#dc2626;">−${fmt(d.descTarjeta)}€ comisión</span>`, fmt(d.netoTarjeta)+' €', {valColor:'#374151'})}
-            ${d.man1val > 0 ? tr(escapeHtml(d.man1nom||'Extra 1'), '', fmt(d.man1val)+' €') : ''}
-            ${d.man2val > 0 ? tr(escapeHtml(d.man2nom||'Extra 2'), '', fmt(d.man2val)+' €') : ''}
-            ${tr('Total Ingresos', '', fmt(d.totalIngreso)+' €', {bold:true, valColor:'#374151'})}
-            <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f4f6;border-top:6px solid #f9fafb;">Gastos</td></tr>
-            ${tr('Gasto Meta', '', fmt(d.meta)+' €')}
-            ${tr('Gasto TikTok', '', fmt(d.tiktok)+' €')}
-            ${tr('Productos <span style="font-size:10px;color:#3b82f6;">▶ ver detalle</span>', `${fmt(d.costoProductos)}€ bruto${d.costoRecuperado>0?` − ${fmt(d.costoRecuperado)}€ recuperado (${d.numDevueltosProd} dev.)`:''}`, fmt(d.costoProductos-(d.costoRecuperado||0))+' €', {cursor:true, onclick:`verDetalleProductosRent('${d.domain}')`})}
-            ${tr('MRW', `${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.`, fmt(d.mrw)+' €')}
-            ${tr('Logística', `${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos`, fmt(d.logistica)+' €')}
-            ${tr('Gastos Fijos', `${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas`, fmt(d.fijoXTienda)+' €')}
-            ${tr('Nómina', `Total nómina ÷ ${d.numTiendas} tiendas`, fmt(d.nominaXTienda)+' €')}
-            ${tr('Shopify', '', fmt(d.shopify)+' €')}
-            ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>tr(escapeHtml(g.nombre||'Concepto extra'),'',fmt(g.valor)+' €')).join('')}
-            ${tr(`IVA (${(d.ivaPorcentaje*100).toFixed(0)}%)`, `${d.numCOD+d.numTarjeta} pedidos entregados × ${(d.ivaPorcentaje*100).toFixed(0)}%`, fmt(d.ivaTotal)+' €')}
-            ${tr('Total Gastos', '', '− '+fmt(d.totalGasto)+' €', {bold:true, valColor:'#374151'})}
-            <tr style="background:${resBg};"><td style="padding:10px 12px;border-top:2px solid ${resBorder};font-weight:700;color:${resColor};font-size:13px;">RESULTADO</td><td style="padding:10px 12px;border-top:2px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:15px;">${fmt(d.resultado)} €</td></tr>
-          </tbody>
-        </table>
+        <div style="font-size:16px;font-weight:800;color:${resColor};border-top:1px solid #f3f4f6;padding-top:8px;margin-top:2px;">${fmt(d.resultado)} €</div>
+        <button onclick="verDesgloseRentTienda('${d.domain}')" style="margin-top:4px;padding:6px 0;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;width:100%;">Ver desglose</button>
       </div>`;
   }).join("");
 
@@ -5513,6 +5521,29 @@ function toggleAllRentabilidadBalance(checked) {
   recalcRentabilidadBalance();
 }
 window.toggleAllRentabilidadBalance = toggleAllRentabilidadBalance;
+
+function verDesgloseRentTienda(domain) {
+  const data = window.__rentabilidadBalanceData || [];
+  const d = data.find(x => x.domain === domain);
+  if (!d) return;
+  const detailHtml = (window.__rentabilidadDesglose || {})[domain] || '';
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3500;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `<div style="background:#fff;border-radius:12px;overflow:hidden;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="background:#16a34a;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
+        <div style="font-size:11px;color:#bbf7d0;">${d.domain}</div>
+      </div>
+      <button id="__desglose-tienda-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;padding:4px;">✕</button>
+    </div>
+    ${detailHtml}
+  </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('__desglose-tienda-close').onclick = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+window.verDesgloseRentTienda = verDesgloseRentTienda;
 
 function verDetalleProductosRent(domain) {
   const data = window.__rentabilidadBalanceData || [];
