@@ -1056,43 +1056,30 @@ const now = new Date();
     box.innerHTML = `
       <div style="display:flex;gap:20px;align-items:flex-start;">
         <div style="flex:1;min-width:0;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;justify-content:flex-end;">
-                    <button onclick="filtroMetricasHoy()"
-            id="btn-met-hoy"
-            style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
-            onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
-            onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="16" r="1.5" fill="#6b7280" stroke="none"/></svg>
-            Hoy
-          </button>
-          <button onclick="filtroMetricasMes()"
-            id="btn-met-mes"
-            style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
-            onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
-            onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M7 15h4M7 19h2"/></svg>
-            Mes actual
-          </button>
-          <button onclick="filtroMetricasMesAnterior()"
-            id="btn-met-mes-ant"
-            style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
-            onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
-            onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M7 15h2M7 19h2"/></svg>
-            Mes anterior
-          </button>
-          <input type="date" id="metrics-date-from" value="${savedFrom}"
-            onchange="aplicarFiltroMetricas()"
-            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-          <span style="color:#6b7280;font-size:13px;">—</span>
-          <input type="date" id="metrics-date-to" value="${savedTo}"
-            onchange="aplicarFiltroMetricas()"
-            style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-          <select id="metrics-shop" style="display:none;">
-            <option value="">Todas las tiendas</option>
-          </select>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            ${['hoy','ayer','mes','mes-ant','personalizado'].map(k => {
+              const labels = {hoy:'Hoy',ayer:'Ayer',mes:'Mes actual','mes-ant':'Mes anterior',personalizado:'Personalizado'};
+              const fns = {hoy:'filtroMetricasHoy()',ayer:'filtroMetricasAyer()',mes:'filtroMetricasMes()','mes-ant':'filtroMetricasMesAnterior()',personalizado:'toggleMetricasPersonalizado()'};
+              return `<button id="btn-met-${k}" onclick="${fns[k]}"
+                style="padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
+                onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#16a34a';this.style.color='#16a34a';"
+                onmouseout="if(!this.classList.contains('active')){this.style.background='#fff';this.style.borderColor='#e5e7eb';this.style.color='#374151';}">
+                ${labels[k]}
+              </button>`;
+            }).join('')}
+          </div>
+          <div id="met-personalizado-panel" style="display:none;align-items:center;gap:8px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+            <input type="date" id="metrics-date-from" value="${savedFrom}"
+              style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;"/>
+            <span style="color:#9ca3af;font-size:13px;">→</span>
+            <input type="date" id="metrics-date-to" value="${savedTo}"
+              style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;"/>
+            <button onclick="aplicarFiltroMetricas()" style="padding:6px 14px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Aplicar</button>
+          </div>
+          <select id="metrics-shop" style="display:none;"><option value="">Todas las tiendas</option></select>
         </div>
       </div>
 
@@ -1244,6 +1231,18 @@ const now = new Date();
     </div>
     `;
   }
+function _setMetBtn(active) {
+  ['hoy','ayer','mes','mes-ant','personalizado'].forEach(k => {
+    const b = document.getElementById('btn-met-'+k);
+    if (!b) return;
+    if (k === active) { b.style.background='#16a34a'; b.style.borderColor='#16a34a'; b.style.color='#fff'; b.classList.add('active'); }
+    else              { b.style.background='#fff';     b.style.borderColor='#e5e7eb'; b.style.color='#374151'; b.classList.remove('active'); }
+  });
+  const panel = document.getElementById('met-personalizado-panel');
+  if (panel) panel.style.display = active === 'personalizado' ? 'flex' : 'none';
+}
+window._setMetBtn = _setMetBtn;
+
 function filtroMetricasHoy() {
   const hoy = new Date().toISOString().split("T")[0];
   const from = document.getElementById("metrics-date-from");
@@ -1252,9 +1251,23 @@ function filtroMetricasHoy() {
   if (to)   to.value   = hoy;
   localStorage.setItem("met_from", hoy);
   localStorage.setItem("met_to",   hoy);
+  _setMetBtn('hoy');
   loadMetricas();
 }
 window.filtroMetricasHoy = filtroMetricasHoy;
+
+function filtroMetricasAyer() {
+  const ayer = new Date(Date.now() - 864e5).toISOString().split("T")[0];
+  const from = document.getElementById("metrics-date-from");
+  const to   = document.getElementById("metrics-date-to");
+  if (from) from.value = ayer;
+  if (to)   to.value   = ayer;
+  localStorage.setItem("met_from", ayer);
+  localStorage.setItem("met_to",   ayer);
+  _setMetBtn('ayer');
+  loadMetricas();
+}
+window.filtroMetricasAyer = filtroMetricasAyer;
 
 function filtroMetricasMes() {
   const now = new Date();
@@ -1266,6 +1279,7 @@ function filtroMetricasMes() {
   if (to)   to.value   = today;
   localStorage.setItem("met_from", firstDay);
   localStorage.setItem("met_to",   today);
+  _setMetBtn('mes');
   loadMetricas();
 }
 window.filtroMetricasMes = filtroMetricasMes;
@@ -1282,23 +1296,22 @@ function filtroMetricasMesAnterior() {
   if (to)   to.value   = lastStr;
   localStorage.setItem("met_from", firstStr);
   localStorage.setItem("met_to",   lastStr);
+  _setMetBtn('mes-ant');
   loadMetricas();
 }
 window.filtroMetricasMesAnterior = filtroMetricasMesAnterior;
 
+function toggleMetricasPersonalizado() {
+  _setMetBtn('personalizado');
+}
+window.toggleMetricasPersonalizado = toggleMetricasPersonalizado;
+
 function aplicarFiltroMetricas() {
   const from = document.getElementById("metrics-date-from")?.value;
   const to   = document.getElementById("metrics-date-to")?.value;
-
-  if (from && to && from > to) {
-    alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin");
-    return;
-  }
-
-  // Guardar fechas en localStorage
+  if (from && to && from > to) { alert("❌ La fecha de inicio no puede ser mayor que la fecha de fin"); return; }
   if (from) localStorage.setItem("met_from", from);
   if (to)   localStorage.setItem("met_to", to);
-
   loadMetricas();
 }
 window.aplicarFiltroMetricas = aplicarFiltroMetricas;
