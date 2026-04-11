@@ -5523,7 +5523,8 @@ function renderRentKpis(filtradas) {
 
   const totalIngreso      = sum('totalIngreso');
   const resultado         = sum('resultado');
-  const pctGanancia       = totalIngreso > 0 ? (resultado / totalIngreso * 100) : 0;
+  const facturacionReal   = filtradas.reduce((s,d)=>s+(d.brutoCOD||0)+(d.brutoTarjeta||0), 0);
+  const pctGanancia       = facturacionReal > 0 ? (resultado / facturacionReal * 100) : 0;
   const netoCOD           = sum('netoCOD');
   const netoTarjeta       = sum('netoTarjeta');
   const meta              = sum('meta');
@@ -5554,7 +5555,7 @@ function renderRentKpis(filtradas) {
 
   el.innerHTML =
     section('Facturación', [
-      card('Facturación total', fmt(totalIngreso)+' €'),
+      card('Facturación total', fmt(facturacionReal)+' €', 'Total bruto pedidos no cancelados'),
       card('% Ganancia', pctGanancia.toFixed(1)+'%', fmt(resultado)+' € resultado neto', pctColor),
     ]) +
     section('Ingresos', [
