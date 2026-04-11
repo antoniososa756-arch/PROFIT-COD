@@ -5378,15 +5378,17 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
           const qty   = parseInt(item.quantity)||1;
           const varTitle = item.variant_title && item.variant_title !== 'Default Title' ? ` — ${item.variant_title}` : '';
           const nombre = (item.title||pid) + varTitle;
-          if (!_prodMap[vid]) _prodMap[vid] = { nombre, costo, uds, totalQty:0, totalUds:0, total:0, devQty:0, devUds:0, devTotal:0 };
+          if (!_prodMap[vid]) _prodMap[vid] = { nombre, costo, uds, totalQty:0, totalUds:0, total:0, devQty:0, devUds:0, devTotal:0, qtyDist:{}, devQtyDist:{} };
           if (esDevuelto) {
             _prodMap[vid].devQty   += qty;
             _prodMap[vid].devUds   += qty * uds;
             _prodMap[vid].devTotal += costo * uds * qty;
+            _prodMap[vid].devQtyDist[qty] = (_prodMap[vid].devQtyDist[qty] || 0) + 1;
           } else {
             _prodMap[vid].totalQty += qty;
             _prodMap[vid].totalUds += qty * uds;
             _prodMap[vid].total    += costo * uds * qty;
+            _prodMap[vid].qtyDist[qty] = (_prodMap[vid].qtyDist[qty] || 0) + 1;
           }
         });
       } catch{}
@@ -5511,26 +5513,44 @@ function verDetalleProductosRent(domain) {
   if (!d) return;
   const fmt = n => (parseFloat(n)||0).toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 });
   const prods = d.productosDetalle || [];
+  const mkDist = (dist, uds, costo, color) => Object.entries(dist)
+    .sort((a,b) => parseInt(a[0])-parseInt(b[0]))
+    .map(([qty, pedidos]) => {
+      const udsShopify = pedidos * parseInt(qty);
+      const udsFisicas = udsShopify * uds;
+      return '<div style="font-size:11px;color:' + color + ';margin-top:2px;">'
+        + '• <strong>' + pedidos + ' pedido' + (pedidos!==1?'s':'') + '</strong> × '
+        + qty + ' ud' + (parseInt(qty)!==1?'s':'') + ' Shopify = '
+        + udsShopify + ' uds Shopify × ' + uds + ' uds/venta = <strong>' + udsFisicas + ' uds físicas</strong>'
+        + (costo > 0 ? ' → ' + fmt(costo * uds * parseInt(qty) * pedidos) + '€' : '')
+        + '</div>';
+    }).join('');
   const filas = prods.length === 0
     ? '<tr><td colspan="2" style="padding:16px;text-align:center;color:#9ca3af;">Sin datos de productos</td></tr>'
     : prods.map((p, i) => {
         const rowBg = i%2===0 ? '#fff' : '#f9fafb';
-        const detalle = fmt(p.costo) + '€/ud × ' + p.uds + ' uds/venta × ' + p.totalQty + ' pedidos Shopify = <strong>' + p.totalUds + ' uds físicas</strong>';
+        const totalPedidos = Object.values(p.qtyDist).reduce((s,v)=>s+v, 0);
+        const resumen = '<div style="font-size:11px;color:#9ca3af;margin-bottom:3px;">'
+          + totalPedidos + ' pedido' + (totalPedidos!==1?'s':'') + ' en total | '
+          + p.totalQty + ' uds Shopify | ' + p.totalUds + ' uds físicas | ' + fmt(p.costo) + '€/ud × ' + p.uds + ' uds/venta'
+          + '</div>';
         let html = '<tr style="background:' + rowBg + ';">'
           + '<td style="padding:10px 12px;border:1px solid #e5e7eb;">'
-          +   '<div style="font-weight:600;color:#374151;margin-bottom:3px;">' + escapeHtml(p.nombre) + '</div>'
-          +   '<div style="font-size:11px;color:#9ca3af;">' + detalle + '</div>'
+          +   '<div style="font-weight:600;color:#374151;margin-bottom:4px;">' + escapeHtml(p.nombre) + '</div>'
+          +   resumen
+          +   mkDist(p.qtyDist, p.uds, p.costo, '#9ca3af')
           + '</td>'
-          + '<td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">' + fmt(p.total) + ' €</td>'
+          + '<td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#374151;white-space:nowrap;vertical-align:top;">' + fmt(p.total) + ' €</td>'
           + '</tr>';
         if (p.devQty > 0) {
-          const detalleRec = fmt(p.costo) + '€/ud × ' + p.uds + ' uds/venta × ' + p.devQty + ' devueltos = <strong>' + p.devUds + ' uds recuperadas</strong>';
+          const totalDevPed = Object.values(p.devQtyDist).reduce((s,v)=>s+v, 0);
           html += '<tr style="background:#f0fdf4;">'
             + '<td style="padding:7px 12px 7px 24px;border:1px solid #e5e7eb;">'
-            +   '<div style="font-weight:600;color:#16a34a;font-size:12px;">↩ Recuperado (devuelto)</div>'
-            +   '<div style="font-size:11px;color:#16a34a;opacity:0.8;">' + detalleRec + '</div>'
+            +   '<div style="font-weight:600;color:#16a34a;font-size:12px;margin-bottom:3px;">↩ Recuperado (devuelto)</div>'
+            +   '<div style="font-size:11px;color:#16a34a;margin-bottom:2px;">' + totalDevPed + ' pedido' + (totalDevPed!==1?'s':'') + ' devueltos | ' + p.devQty + ' uds Shopify | ' + p.devUds + ' uds físicas</div>'
+            +   mkDist(p.devQtyDist, p.uds, p.costo, '#16a34a')
             + '</td>'
-            + '<td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;white-space:nowrap;">+' + fmt(p.devTotal) + ' €</td>'
+            + '<td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;white-space:nowrap;vertical-align:top;">+' + fmt(p.devTotal) + ' €</td>'
             + '</tr>';
         }
         return html;
