@@ -5394,8 +5394,9 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
       } catch{}
     });
     const productosDetalle = Object.values(_prodMap).sort((a,b)=>b.total-a.total);
+    const facturacionBruta = pedTienda.reduce((s,o)=>s+(parseFloat(o.total_price)||0), 0);
     return {
-      domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado, ivaTotal, ivaPorcentaje,
+      domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado, ivaTotal, ivaPorcentaje, facturacionBruta,
       numCOD: pedCOD.length, brutoCOD: tCOD, descCOD: pedCOD.length*MRW_COMISION, netoCOD: tCOD - pedCOD.length*MRW_COMISION,
       numTarjeta: pedPag.length, brutoTarjeta: tPag, descTarjeta: tPag*TARJETA_PCT, netoTarjeta: tPag - tPag*TARJETA_PCT,
       man1nom: man1.nombre||"", man1val: parseFloat(man1.valor)||0,
@@ -5523,7 +5524,7 @@ function renderRentKpis(filtradas) {
 
   const totalIngreso      = sum('totalIngreso');
   const resultado         = sum('resultado');
-  const facturacionReal   = filtradas.reduce((s,d)=>s+(d.brutoCOD||0)+(d.brutoTarjeta||0), 0);
+  const facturacionReal   = filtradas.reduce((s,d)=>s+(d.facturacionBruta||0), 0);
   const pctGanancia       = facturacionReal > 0 ? (resultado / facturacionReal * 100) : 0;
   const netoCOD           = sum('netoCOD');
   const netoTarjeta       = sum('netoTarjeta');
