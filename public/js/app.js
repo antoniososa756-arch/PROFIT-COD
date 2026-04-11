@@ -5967,8 +5967,8 @@ async function loadAdsTable() {
             ${td(r.label, "color:#374151;white-space:nowrap;")}
             <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;text-align:right;background:#dbeafe;"><input type="number" min="0" step="0.01" value="${r.meta||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="meta" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #3b82f6;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#fff;color:#1d4ed8;font-weight:600;"></td>
             <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;text-align:right;background:#1a1a1a;"><input type="number" min="0" step="0.01" value="${r.tiktok||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="tiktok" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #fe2c55;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#111;color:#fff;font-weight:600;"></td>
-            ${td(r.facturacion > 0 ? fmt(r.facturacion) : "-", "text-align:right;")}
-            ${td(r.pedidos > 0 ? r.pedidos : "-", "text-align:right;")}
+            ${td(r.facturacion > 0 ? fmt(r.facturacion) : "0,00 €", "text-align:right;color:" + (r.facturacion > 0 ? "inherit" : "#9ca3af") + ";")}
+            ${td(r.pedidos > 0 ? r.pedidos : "0", "text-align:right;color:" + (r.pedidos > 0 ? "inherit" : "#9ca3af") + ";")}
             ${td(fmt(r.cpa), "text-align:right;")}
             ${td(fmt2(r.roas), `text-align:right;font-weight:${r.roas!=null&&r.roas>=2?'700':'400'};color:${r.roas!=null&&r.roas>=2?'#16a34a':r.roas!=null&&r.roas<1?'#dc2626':'inherit'};`)}
           </tr>
