@@ -5052,7 +5052,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
 
     const pedTienda = pedidosBase.filter(o => o.shop_domain === store.domain);
     let costoProductos = 0;
-    pedTienda.filter(o=>!["devuelto","cancelado","pendiente"].includes(o.fulfillment_status)).forEach(o=>{
+    pedTienda.filter(o=>!["devuelto","cancelado"].includes(o.fulfillment_status)).forEach(o=>{
       try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ costoProductos+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(variantesMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{}
     });
     const envTienda = pedTienda.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status));
@@ -5326,7 +5326,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
   } catch {}
 
   const estadosEnvioMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
-  const pedidosBase = ordersRango.filter(o => !["cancelado","pendiente"].includes(o.fulfillment_status));
+  const pedidosBase = ordersRango.filter(o => o.fulfillment_status !== "cancelado");
   const pedidosTarjeta = ordersRango.filter(o => o.fulfillment_status !== "cancelado");
 
   const balanceData = stores.map(store => {
@@ -5344,7 +5344,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
 
     const pedTienda = pedidosBase.filter(o => o.shop_domain === store.domain);
     let costoProductos = 0;
-    pedTienda.filter(o=>!["devuelto","cancelado","pendiente"].includes(o.fulfillment_status)).forEach(o=>{
+    pedTienda.filter(o=>!["devuelto","cancelado"].includes(o.fulfillment_status)).forEach(o=>{
       try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ costoProductos+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(variantesMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{}
     });
     const envTienda = pedTienda.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status));
@@ -5359,7 +5359,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
     const resultado = totalIngreso - totalGasto;
     // Detalle de productos para modal
     const _prodMap = {};
-    pedTienda.filter(o=>!["devuelto","cancelado","pendiente"].includes(o.fulfillment_status)).forEach(o=>{
+    pedTienda.filter(o=>!["devuelto","cancelado"].includes(o.fulfillment_status)).forEach(o=>{
       try {
         const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null;
         if(!raw?.line_items)return;
