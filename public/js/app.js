@@ -5343,13 +5343,13 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
     const totalIngreso = (tCOD - pedCOD.length*MRW_COMISION) + (tPag - tPag*TARJETA_PCT) + (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
 
     const pedTienda = pedidosBase.filter(o => o.shop_domain === store.domain);
-    // costoProductos: todos los pedidos no cancelados (incluye devuelto y destruido)
+    const ESTADOS_COSTO_PROD = ["enviado","en_transito","en_preparacion","franquicia","entregado","destruido"];
     const _calcCosto = (orders) => {
       let c = 0;
       orders.forEach(o=>{ try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; if(!raw?.line_items)return; raw.line_items.forEach(item=>{ c+=(parseFloat(stockMap[String(item.product_id)])||0)*(parseInt(variantesMap[String(item.variant_id)])||1)*(parseInt(item.quantity)||1); }); } catch{} });
       return c;
     };
-    const costoProductos  = _calcCosto(pedTienda.filter(o => o.fulfillment_status !== "cancelado"));
+    const costoProductos  = _calcCosto(pedTienda.filter(o => ESTADOS_COSTO_PROD.includes(o.fulfillment_status)));
     const costoRecuperado = _calcCosto(pedTienda.filter(o => o.fulfillment_status === "devuelto"));
     const numDevueltosProd = pedTienda.filter(o => o.fulfillment_status === "devuelto").length;
     const envTienda = pedTienda.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status));
@@ -5363,7 +5363,6 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
     const totalGasto = ads.meta + ads.tiktok + shopify + (costoProductos - costoRecuperado) + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
     const resultado = totalIngreso - totalGasto;
     // Detalle de productos para modal — separa enviados/destruidos (coste) de devueltos (recuperado)
-    const ESTADOS_COSTO_PROD = ["enviado","en_transito","en_preparacion","franquicia","entregado","destruido"];
     const _prodMap = {};
     pedTienda.forEach(o => {
       const esDevuelto = o.fulfillment_status === "devuelto";
