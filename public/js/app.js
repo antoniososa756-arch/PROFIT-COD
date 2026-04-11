@@ -5512,23 +5512,25 @@ function verDetalleProductosRent(domain) {
   const fmt = n => (parseFloat(n)||0).toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 });
   const prods = d.productosDetalle || [];
   const filas = prods.length === 0
-    ? '<tr><td colspan="5" style="padding:16px;text-align:center;color:#9ca3af;">Sin datos de productos</td></tr>'
+    ? '<tr><td colspan="2" style="padding:16px;text-align:center;color:#9ca3af;">Sin datos de productos</td></tr>'
     : prods.map((p, i) => {
         const rowBg = i%2===0 ? '#fff' : '#f9fafb';
+        const detalle = fmt(p.costo) + '€/ud × ' + p.uds + ' uds/venta × ' + p.totalQty + ' pedidos Shopify = <strong>' + p.totalUds + ' uds físicas</strong>';
         let html = '<tr style="background:' + rowBg + ';">'
-          + '<td style="padding:9px 12px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">' + escapeHtml(p.nombre) + '</td>'
-          + '<td style="padding:9px 12px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">' + fmt(p.costo) + ' €</td>'
-          + '<td style="padding:9px 12px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">' + p.uds + '</td>'
-          + '<td style="padding:9px 12px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">' + p.totalQty + ' <span style="font-size:10px;color:#9ca3af;">(' + p.totalUds + ' uds)</span></td>'
-          + '<td style="padding:9px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#374151;">' + fmt(p.total) + ' €</td>'
+          + '<td style="padding:10px 12px;border:1px solid #e5e7eb;">'
+          +   '<div style="font-weight:600;color:#374151;margin-bottom:3px;">' + escapeHtml(p.nombre) + '</div>'
+          +   '<div style="font-size:11px;color:#9ca3af;">' + detalle + '</div>'
+          + '</td>'
+          + '<td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">' + fmt(p.total) + ' €</td>'
           + '</tr>';
         if (p.devQty > 0) {
+          const detalleRec = fmt(p.costo) + '€/ud × ' + p.uds + ' uds/venta × ' + p.devQty + ' devueltos = <strong>' + p.devUds + ' uds recuperadas</strong>';
           html += '<tr style="background:#f0fdf4;">'
-            + '<td style="padding:5px 12px 5px 24px;border:1px solid #e5e7eb;color:#16a34a;font-size:12px;">↩ Recuperado (devuelto)</td>'
-            + '<td style="padding:5px 12px;border:1px solid #e5e7eb;text-align:right;color:#16a34a;font-size:12px;">' + fmt(p.costo) + ' €</td>'
-            + '<td style="padding:5px 12px;border:1px solid #e5e7eb;text-align:right;color:#16a34a;font-size:12px;">' + p.uds + '</td>'
-            + '<td style="padding:5px 12px;border:1px solid #e5e7eb;text-align:right;color:#16a34a;font-size:12px;">' + p.devQty + ' <span style="font-size:10px;color:#16a34a;">(' + p.devUds + ' uds)</span></td>'
-            + '<td style="padding:5px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">+' + fmt(p.devTotal) + ' €</td>'
+            + '<td style="padding:7px 12px 7px 24px;border:1px solid #e5e7eb;">'
+            +   '<div style="font-weight:600;color:#16a34a;font-size:12px;">↩ Recuperado (devuelto)</div>'
+            +   '<div style="font-size:11px;color:#16a34a;opacity:0.8;">' + detalleRec + '</div>'
+            + '</td>'
+            + '<td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;white-space:nowrap;">+' + fmt(p.devTotal) + ' €</td>'
             + '</tr>';
         }
         return html;
@@ -5536,7 +5538,7 @@ function verDetalleProductosRent(domain) {
   const overlay = document.createElement('div');
   overlay.id = '__prod-detail-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3500;display:flex;align-items:center;justify-content:center;';
-  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:24px;width:680px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:24px;width:620px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
     + '<div><div style="font-weight:700;font-size:15px;color:#111;">📦 Desglose de Productos</div>'
     + '<div style="font-size:12px;color:#6b7280;margin-top:2px;">' + escapeHtml(d.name) + ' — total: ' + fmt(d.costoProductos - (d.costoRecuperado||0)) + ' €</div></div>'
@@ -5545,14 +5547,11 @@ function verDetalleProductosRent(domain) {
     + '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
     + '<thead><tr style="background:#f3f4f6;">'
     + '<th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>'
-    + '<th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">Coste/ud</th>'
-    + '<th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">Uds/venta</th>'
-    + '<th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">Pedidos (uds)</th>'
     + '<th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">Total</th>'
     + '</tr></thead>'
     + '<tbody>' + filas + '</tbody>'
     + '<tfoot><tr style="background:#f0fdf4;">'
-    + '<td colspan="4" style="padding:10px 12px;border:1px solid #bbf7d0;font-weight:700;color:#16a34a;">TOTAL PRODUCTOS</td>'
+    + '<td style="padding:10px 12px;border:1px solid #bbf7d0;font-weight:700;color:#16a34a;">TOTAL PRODUCTOS</td>'
     + '<td style="padding:10px 12px;border:1px solid #bbf7d0;text-align:right;font-weight:700;color:#16a34a;">' + fmt(d.costoProductos - (d.costoRecuperado||0)) + ' €</td>'
     + '</tr></tfoot></table></div>';
   document.body.appendChild(overlay);
