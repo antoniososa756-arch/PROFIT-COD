@@ -5208,6 +5208,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
   const TARJETA_PCT  = 0.04;
 
   let stores = [], orders = [], manuales = [];
+  const facturacionPorTienda = {};
   try {
     const token = getActiveToken();
     const h = { Authorization: "Bearer " + token };
@@ -5218,6 +5219,16 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
       cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(d => Array.isArray(d) ? d : []),
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
+    // Facturación exacta por tienda (mismo cálculo que Gastos Ads: bruto - cancelados por cancelled_at)
+    await Promise.all(stores.map(async store => {
+      try {
+        const p = new URLSearchParams({ shops: store.domain });
+        if (dateFrom) p.set("from", dateFrom);
+        if (dateTo)   p.set("to",   dateTo);
+        const s = await fetch(`${API_BASE}/api/metrics/stats?${p}`, { headers: h }).then(r => r.json());
+        facturacionPorTienda[store.domain] = parseFloat(s.facturacion || 0);
+      } catch {}
+    }));
   } catch {}
 
   const ordersRango = orders;
@@ -5394,7 +5405,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
       } catch{}
     });
     const productosDetalle = Object.values(_prodMap).sort((a,b)=>b.total-a.total);
-    const facturacionBruta = pedTienda.reduce((s,o)=>s+(parseFloat(o.total_price)||0), 0);
+    const facturacionBruta = facturacionPorTienda[store.domain] ?? pedTienda.reduce((s,o)=>s+(parseFloat(o.total_price)||0), 0);
     return {
       domain: store.domain, name: store.shop_name||store.domain, totalIngreso, totalGasto, resultado, ivaTotal, ivaPorcentaje, facturacionBruta,
       numCOD: pedCOD.length, brutoCOD: tCOD, descCOD: pedCOD.length*MRW_COMISION, netoCOD: tCOD - pedCOD.length*MRW_COMISION,
