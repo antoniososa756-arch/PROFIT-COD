@@ -5473,8 +5473,9 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
   wrap.innerHTML = `
     <div style="display:flex;gap:20px;align-items:flex-start;">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Esto es un estimado basado en el rango de fecha seleccionado y los precios Unt de MRW y Logística, tu balance final por mes lo puedes ver en Ingresos - Balance Final)</span></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;" id="rent-bal-cols">${cols}</div>
+        <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Estimado basado en el rango de fecha seleccionado)</span></div>
+        <div id="rent-bal-kpis" style="margin-bottom:20px;"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;" id="rent-bal-cols">${cols}</div>
         <div id="rent-bal-sumatoria" style="margin-top:20px;padding:12px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
           <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
           <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
@@ -5510,8 +5511,74 @@ function recalcRentabilidadBalance() {
   if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total>=0?"#16a34a":"#dc2626"; }
   const allCheck = document.getElementById("rent-bal-check-all");
   if (allCheck) allCheck.checked = filtradas.length === data.length;
+  renderRentKpis(filtradas);
 }
 window.recalcRentabilidadBalance = recalcRentabilidadBalance;
+
+function renderRentKpis(filtradas) {
+  const el = document.getElementById('rent-bal-kpis');
+  if (!el) return;
+  const fmt = n => (parseFloat(n)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const sum = k => filtradas.reduce((s,d)=>s+(parseFloat(d[k])||0),0);
+
+  const totalIngreso      = sum('totalIngreso');
+  const resultado         = sum('resultado');
+  const pctGanancia       = totalIngreso > 0 ? (resultado / totalIngreso * 100) : 0;
+  const netoCOD           = sum('netoCOD');
+  const netoTarjeta       = sum('netoTarjeta');
+  const meta              = sum('meta');
+  const tiktok            = sum('tiktok');
+  const costoProductosNeto= filtradas.reduce((s,d)=>s+((d.costoProductos||0)-(d.costoRecuperado||0)),0);
+  const fijoTotal         = sum('fijoXTienda');
+  const nominaTotal       = sum('nominaXTienda');
+  const shopifyTotal      = sum('shopify');
+  const ivaTotal          = sum('ivaTotal');
+  const mrwTotal          = sum('mrw');
+  const logisticaTotal    = sum('logistica');
+
+  const card = (label, value, sub='', color='var(--text,#111827)') =>
+    `<div style="background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+      <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">${label}</div>
+      <div style="font-size:18px;font-weight:800;color:${color};line-height:1.1;">${value}</div>
+      ${sub ? `<div style="font-size:10px;color:#9ca3af;margin-top:3px;">${sub}</div>` : ''}
+    </div>`;
+
+  const section = (title, cards) =>
+    `<div style="margin-bottom:14px;">
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">${title}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">${cards.join('')}</div>
+    </div>`;
+
+  const pctColor = pctGanancia >= 0 ? '#16a34a' : '#dc2626';
+  const resColor = resultado >= 0 ? '#16a34a' : '#dc2626';
+
+  el.innerHTML =
+    section('Facturación', [
+      card('Facturación total', fmt(totalIngreso)+' €'),
+      card('% Ganancia', pctGanancia.toFixed(1)+'%', fmt(resultado)+' € resultado neto', pctColor),
+    ]) +
+    section('Ingresos', [
+      card('Total ingresos', fmt(totalIngreso)+' €'),
+      card('Ingresos COD', fmt(netoCOD)+' €'),
+      card('Ingresos tarjeta', fmt(netoTarjeta)+' €'),
+    ]) +
+    section('Gastos publicidad', [
+      card('Gasto Meta', fmt(meta)+' €'),
+      card('Gasto TikTok', fmt(tiktok)+' €'),
+    ]) +
+    section('Gastos por tienda', [
+      card('Productos', fmt(costoProductosNeto)+' €'),
+      card('Gastos fijos', fmt(fijoTotal)+' €'),
+      card('Nómina', fmt(nominaTotal)+' €'),
+      card('Shopify', fmt(shopifyTotal)+' €'),
+      card('Impuestos (IVA)', fmt(ivaTotal)+' €'),
+    ]) +
+    section('Gastos logística', [
+      card('MRW', fmt(mrwTotal)+' €'),
+      card('Logística', fmt(logisticaTotal)+' €'),
+    ]);
+}
+window.renderRentKpis = renderRentKpis;
 
 function toggleAllRentabilidadBalance(checked) {
   document.querySelectorAll("#rent-balance-wrap input[type='checkbox'][value]").forEach(c=>c.checked=checked);
