@@ -24,13 +24,17 @@ async function syncAllShopifyOrders() {
               `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
                               ON CONFLICT(order_id) DO UPDATE SET
-                 fulfillment_status = CASE 
-                   WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','cancelado') 
-                   THEN orders.fulfillment_status 
-                   ELSE EXCLUDED.fulfillment_status 
+                 fulfillment_status = CASE
+                   WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','cancelado')
+                   THEN orders.fulfillment_status
+                   WHEN EXCLUDED.fulfillment_status = 'pendiente' AND orders.fulfillment_status != 'pendiente'
+                   THEN orders.fulfillment_status
+                   WHEN orders.tracking_number IS NOT NULL AND orders.tracking_number != '' AND orders.fulfillment_status != 'pendiente'
+                   THEN orders.fulfillment_status
+                   ELSE EXCLUDED.fulfillment_status
                  END,
                  financial_status   = EXCLUDED.financial_status,
-                 tracking_number    = EXCLUDED.tracking_number,
+                 tracking_number    = COALESCE(EXCLUDED.tracking_number, orders.tracking_number),
                  total_price        = EXCLUDED.total_price,
                  raw_json           = EXCLUDED.raw_json`,
               [shop.id, String(o.id), o.name || String(o.order_number), customerName,
