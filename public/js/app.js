@@ -126,7 +126,7 @@ window.__DPF = (function () {
     const presetMobile = narrow
       ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__DPF.pPreset('${p}','${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'#1f2937'};color:${act?'#052e16':'#9ca3af'};border:1px solid ${act?'#22c55e':'#374151'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
       : '';
-    panel.innerHTML=`<div style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
+    panel.innerHTML=`<div class="dpf-panel" style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
       ${sidebarSection}
       <div style="padding:${narrow?'16px':'20px 26px'};">
         ${presetMobile}
@@ -1540,7 +1540,7 @@ const now = new Date();
     const presetMobile = narrow
       ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__metPPreset('${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'#1f2937'};color:${act?'#052e16':'#9ca3af'};border:1px solid ${act?'#22c55e':'#374151'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
       : '';
-    panel.innerHTML=`<div style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
+    panel.innerHTML=`<div class="dpf-panel" style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
       ${narrow?'':` <div style="width:176px;padding:18px 10px;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;gap:2px;">
         <div style="font-size:9.5px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
         ${sidebar}

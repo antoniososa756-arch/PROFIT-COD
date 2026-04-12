@@ -829,55 +829,61 @@
 
 /* =========================
    LIGHT MODE – override hardcoded dark values in JS inline styles
+   Excluye los paneles del date picker (.dpf-panel) que siempre son oscuros
    ========================= */
 
 /* Cards y contenedores */
-body:not(.dark) .card,
-body:not(.dark) [style*="background:#111827"],
-body:not(.dark) [style*="background: #111827"] {
+body:not(.dark) .card {
   background: #ffffff !important;
   color: #111827 !important;
   border-color: #e5e7eb !important;
 }
 
-body:not(.dark) [style*="background:#1f2937"],
-body:not(.dark) [style*="background: #1f2937"] {
+body:not(.dark) [style*="background:#111827"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="background: #111827"]:not(.dpf-panel):not(.dpf-panel *) {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+
+body:not(.dark) [style*="background:#1f2937"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="background: #1f2937"]:not(.dpf-panel):not(.dpf-panel *) {
   background: #f3f4f6 !important;
   color: #111827 !important;
 }
 
-body:not(.dark) [style*="background:#0d1117"],
-body:not(.dark) [style*="background: #0d1117"] {
+body:not(.dark) [style*="background:#0d1117"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="background: #0d1117"]:not(.dpf-panel):not(.dpf-panel *) {
   background: #f9fafb !important;
 }
 
 /* Bordes */
-body:not(.dark) [style*="border:1px solid #374151"],
-body:not(.dark) [style*="border: 1px solid #374151"],
-body:not(.dark) [style*="border-color:#374151"] {
+body:not(.dark) [style*="border:1px solid #374151"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="border: 1px solid #374151"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="border-color:#374151"]:not(.dpf-panel):not(.dpf-panel *) {
   border-color: #e5e7eb !important;
 }
 
-body:not(.dark) [style*="border:1px solid #1f2937"],
-body:not(.dark) [style*="border-bottom:1px solid #1f2937"],
-body:not(.dark) [style*="border-top:1px solid #1f2937"] {
+body:not(.dark) [style*="border:1px solid #1f2937"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="border-bottom:1px solid #1f2937"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="border-top:1px solid #1f2937"]:not(.dpf-panel):not(.dpf-panel *) {
   border-color: #e5e7eb !important;
 }
 
-/* Texto claro forzado → texto oscuro */
-body:not(.dark) [style*="color:#f9fafb"],
-body:not(.dark) [style*="color: #f9fafb"] { color: #111827 !important; }
-body:not(.dark) [style*="color:#e5e7eb"],
-body:not(.dark) [style*="color: #e5e7eb"] { color: #374151 !important; }
-body:not(.dark) [style*="color:#d1d5db"],
-body:not(.dark) [style*="color: #d1d5db"] { color: #6b7280 !important; }
-body:not(.dark) [style*="color:#9ca3af"],
-body:not(.dark) [style*="color: #9ca3af"] { color: #6b7280 !important; }
+/* Texto claro forzado → texto oscuro (excluye picker) */
+body:not(.dark) [style*="color:#f9fafb"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="color: #f9fafb"]:not(.dpf-panel):not(.dpf-panel *) { color: #111827 !important; }
+body:not(.dark) [style*="color:#e5e7eb"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="color: #e5e7eb"]:not(.dpf-panel):not(.dpf-panel *) { color: #374151 !important; }
+body:not(.dark) [style*="color:#d1d5db"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="color: #d1d5db"]:not(.dpf-panel):not(.dpf-panel *) { color: #6b7280 !important; }
+body:not(.dark) [style*="color:#9ca3af"]:not(.dpf-panel):not(.dpf-panel *),
+body:not(.dark) [style*="color: #9ca3af"]:not(.dpf-panel):not(.dpf-panel *) { color: #6b7280 !important; }
 
-/* Inputs y selects */
-body:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([style*="display:none"]),
-body:not(.dark) select,
-body:not(.dark) textarea {
+/* Inputs y selects (excluye picker) */
+body:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([style*="display:none"]):not(.dpf-panel *),
+body:not(.dark) select:not(.dpf-panel *),
+body:not(.dark) textarea:not(.dpf-panel *) {
   background: #f9fafb !important;
   color: #111827 !important;
   border-color: #d1d5db !important;
@@ -885,6 +891,14 @@ body:not(.dark) textarea {
 
 body:not(.dark) input::placeholder,
 body:not(.dark) textarea::placeholder { color: #9ca3af !important; }
+
+/* ── Picker siempre oscuro (modo claro Y oscuro) ── */
+.dpf-panel, .dpf-panel * {
+  color: inherit !important;
+  border-color: inherit !important;
+  background: inherit !important;
+}
+[id$="-picker-panel"] { z-index: 2000; }
 
 /* Tabs border */
 body:not(.dark) .tabs { border-bottom-color: #e5e7eb; }
