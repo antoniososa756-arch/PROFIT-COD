@@ -742,21 +742,56 @@ router.delete("/product-groups/:id", auth, async (req, res) => {
 
 router.post("/entrada-mercancia", auth, async (req, res) => {
   const { shop_domain, product_id, product_name, cantidad, stock_anterior } = req.body;
-  const stock_nuevo = (parseInt(stock_anterior)||0) + (parseInt(cantidad)||0);
+  const userId = req.user.id;
+  const qty = parseInt(cantidad) || 0;
+  const stock_nuevo = (parseInt(stock_anterior) || 0) + qty;
+
   try {
+    // Registrar la entrada en el historial
     await db.run(
       `INSERT INTO entradas_mercancia (user_id, shop_domain, product_id, product_name, cantidad, stock_anterior, stock_nuevo, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, now()::text)`,
-      [req.user.id, shop_domain, product_id, product_name, parseInt(cantidad)||0, parseInt(stock_anterior)||0, stock_nuevo]
+      [userId, shop_domain, product_id, product_name, qty, parseInt(stock_anterior) || 0, stock_nuevo]
     );
-    await db.run(
-      `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo)
-       VALUES ($1, $2, $3, $4, 5)
-       ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET stock = EXCLUDED.stock`,
-      [req.user.id, shop_domain, product_id, stock_nuevo]
+
+    // Comprobar si el producto pertenece a un grupo
+    const groupRow = await db.get(
+      `SELECT group_id FROM product_group_members WHERE user_id = $1 AND product_id = $2`,
+      [userId, product_id]
     );
+
+    if (groupRow?.group_id) {
+      // El stock del grupo es la SUMA de todos los miembros en productos_stock.
+      // Para que el total del grupo sea stock_nuevo, ponemos stock_nuevo en el producto
+      // ingresado y 0 en todos los demás (así la suma = stock_nuevo exacto).
+      const members = await db.all(
+        `SELECT product_id, shop_domain FROM product_group_members WHERE user_id = $1 AND group_id = $2`,
+        [userId, groupRow.group_id]
+      );
+      for (const m of members) {
+        const stockVal = String(m.product_id) === String(product_id) ? stock_nuevo : 0;
+        await db.run(
+          `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo)
+           VALUES ($1, $2, $3, $4, 5)
+           ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET stock = EXCLUDED.stock`,
+          [userId, m.shop_domain, m.product_id, stockVal]
+        );
+      }
+    } else {
+      // Producto sin grupo: actualizar solo él
+      await db.run(
+        `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo)
+         VALUES ($1, $2, $3, $4, 5)
+         ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET stock = EXCLUDED.stock`,
+        [userId, shop_domain, product_id, stock_nuevo]
+      );
+    }
+
     res.json({ ok: true, stock_nuevo });
-  } catch(e) { res.status(500).json({ error: "Error guardando entrada" }); }
+  } catch(e) {
+    console.error("entrada-mercancia error:", e);
+    res.status(500).json({ error: "Error guardando entrada" });
+  }
 });
 
 router.get("/entradas-mercancia", auth, async (req, res) => {
