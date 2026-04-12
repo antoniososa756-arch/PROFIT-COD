@@ -1658,15 +1658,15 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
     const panel = document.getElementById("met-shop-filter-panel");
     if (panel && Array.isArray(stores) && stores.length > 0) {
       const checkboxes = stores.map(s =>
-        `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
-          <input type="checkbox" checked value="${s.domain}" onchange="recalcMetricasFiltro()" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
+        `<label class="shop-check-label shop-check-row">
+          <input type="checkbox" checked value="${s.domain}" onchange="recalcMetricasFiltro()">
           ${escapeHtml(s.shop_name || s.domain)}
         </label>`
       ).join("");
       panel.innerHTML = `
-        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
-        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-          <input type="checkbox" id="met-shop-check-all" checked onchange="toggleAllMetricasFiltro(this.checked)" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <label class="shop-check-label all">
+          <input type="checkbox" id="met-shop-check-all" checked onchange="toggleAllMetricasFiltro(this.checked)">
           Todas las tiendas
         </label>
         ${checkboxes}
