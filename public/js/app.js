@@ -2622,7 +2622,7 @@ if (id === "ayuda") {
     .help-section p, .help-section li { font-size:14px; color:var(--muted,#4b5563); line-height:1.7; margin:0 0 6px 0; }
     .help-section ul { padding-left:20px; margin:0 0 10px 0; }
     .help-tip { background:rgba(34,197,94,.08); border-left:3px solid #22c55e; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#16a34a; margin-top:12px; }
-    .help-warning { background:#fefce8; border-left:3px solid #ca8a04; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#fde047; margin-top:12px; }
+    .help-warning { background:rgba(234,179,8,.1); border-left:3px solid #fbbf24; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#fde047; margin-top:12px; }
   </style>
 
   <div class="help-tabs">
@@ -2798,7 +2798,7 @@ if (id === "pagos-config") {
              background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;">`;
 
   box.innerHTML = `<div style="max-width:560px;">
-    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#fde047;">
+    <div style="background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#fde047;">
       ⚠️ Estas claves se usan para procesar los cobros de los clientes. Mantenlas confidenciales.
     </div>
 
@@ -2976,7 +2976,7 @@ if (id === "plan") {
       <span style="font-size:13px;color:#16a34a;font-weight:600;">Cuenta de administrador — acceso ilimitado a todas las funciones.</span>
     </div>` : ""}
     <div id="plan-current-banner" style="margin-bottom:12px;"></div>
-    <div id="plan-cancel-banner" style="display:none;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 18px;margin-bottom:12px;font-size:13px;color:#fde047;font-weight:600;"></div>
+    <div id="plan-cancel-banner" style="display:none;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:10px;padding:12px 18px;margin-bottom:12px;font-size:13px;color:#fde047;font-weight:600;"></div>
     <div id="plan-trial-banner" style="display:none;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:10px;padding:12px 18px;margin-bottom:20px;font-size:13px;color:#16a34a;font-weight:600;"></div>
     <h3 style="font-size:15px;font-weight:700;margin:0 0 6px;">Elige tu plan</h3>
     <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Tiendas ilimitadas en todos los planes. Precio base mensual + coste por pedido usado.</p>
@@ -3490,15 +3490,15 @@ function _renderSearchDrop(drop, results, loading) {
   }
 
   const statusColors = {
-    pendiente:      { bg: "#fef9c3", color: "#92400e" },
-    en_preparacion: { bg: "#dbeafe", color: "#1e40af" },
-    enviado:        { bg: "#dbeafe", color: "#1e40af" },
-    en_transito:    { bg: "#ede9fe", color: "#5b21b6" },
-    franquicia:     { bg: "#ede9fe", color: "#5b21b6" },
-    entregado:      { bg: "rgba(34,197,94,.12)", color: "#16a34a" },
-    devuelto:       { bg: "#fee2e2", color: "#b91c1c" },
-    destruido:      { bg: "#f3f4f6", color: "#374151" },
-    cancelado:      { bg: "#fee2e2", color: "#b91c1c" },
+    pendiente:      { bg: "rgba(234,179,8,.15)",    color: "#fbbf24", border: "rgba(234,179,8,.3)" },
+    en_preparacion: { bg: "rgba(59,130,246,.15)",   color: "#93c5fd", border: "rgba(59,130,246,.3)" },
+    enviado:        { bg: "rgba(59,130,246,.15)",   color: "#93c5fd", border: "rgba(59,130,246,.3)" },
+    en_transito:    { bg: "rgba(139,92,246,.15)",   color: "#c4b5fd", border: "rgba(139,92,246,.3)" },
+    franquicia:     { bg: "rgba(139,92,246,.15)",   color: "#c4b5fd", border: "rgba(139,92,246,.3)" },
+    entregado:      { bg: "rgba(34,197,94,.15)",    color: "#4ade80", border: "rgba(34,197,94,.3)" },
+    devuelto:       { bg: "rgba(239,68,68,.15)",    color: "#fca5a5", border: "rgba(239,68,68,.3)" },
+    destruido:      { bg: "rgba(107,114,128,.15)",  color: "#9ca3af", border: "rgba(107,114,128,.3)" },
+    cancelado:      { bg: "rgba(239,68,68,.15)",    color: "#fca5a5", border: "rgba(239,68,68,.3)" },
   };
   const statusNames = {
     pendiente: "Pendiente", en_preparacion: "En preparación", enviado: "Enviado",
@@ -3508,11 +3508,11 @@ function _renderSearchDrop(drop, results, loading) {
 
   let html = results.map(r => {
     if (r.type === "pedido" && r.status) {
-      const sc = statusColors[r.status] || { bg: "#f3f4f6", color: "#374151" };
+      const sc = statusColors[r.status] || { bg: "rgba(107,114,128,.15)", color: "#9ca3af", border: "rgba(107,114,128,.3)" };
       const sn = statusNames[r.status] || r.status;
       return `<div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','${escapeAttr(r.orderNumber || "")}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <span>${escapeHtml(r.label)}</span>
-        <span style="padding:2px 7px;border-radius:5px;font-size:11px;font-weight:600;background:${sc.bg};color:${sc.color};white-space:nowrap;flex-shrink:0;">${escapeHtml(sn)}</span>
+        <span style="padding:2px 7px;border-radius:5px;font-size:11px;font-weight:600;background:${sc.bg};color:${sc.color};border:1px solid ${sc.border||'transparent'};white-space:nowrap;flex-shrink:0;">${escapeHtml(sn)}</span>
       </div>`;
     }
     return `<div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','${escapeAttr(r.orderNumber || "")}')">
@@ -3523,7 +3523,7 @@ function _renderSearchDrop(drop, results, loading) {
   // "Ver todos" hint for multiple product matches
   const totalProductos = window.__searchProductosIds?.length || 0;
   if (totalProductos > 1) {
-    html += `<div class="search-item" onclick="goToSearchAllProductos()" style="border-top:1px solid #1f2937;color:#7c3aed;font-weight:600;font-size:12px;">
+    html += `<div class="search-item" onclick="goToSearchAllProductos()" style="border-top:1px solid #1f2937;color:#c4b5fd;font-weight:600;font-size:12px;">
       🔍 Ver los ${totalProductos} resultados de productos · Enter
     </div>`;
   }
@@ -6270,7 +6270,7 @@ async function loadProductos() {
                   const pid2 = String(p.id);
                   const stockInfo = stockMap[pid2] || { stock: 0, stock_minimo: 5 };
                   const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
-                  return `<tr style="background:#fef9c3;" data-pid="${pid2}">
+                  return `<tr style="background:rgba(234,179,8,.08);" data-pid="${pid2}">
                     <td style="padding:10px 14px;border:1px solid #374151;text-align:center;">
                       ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #374151;">` : `<div style="width:48px;height:48px;border-radius:6px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
                     </td>
@@ -8295,7 +8295,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
           <div id="menu-estado-${o.id}" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#111827;border:1px solid #374151;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:140px;overflow:hidden;">
             <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'entregado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#22c55e;cursor:pointer;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(34,197,94,.08)'" onmouseout="this.style.background=''">✓ Entregado</div>
             <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'devuelto')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#ea580c;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background=''">↩ Devuelto</div>
-            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'destruido')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#7c3aed;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">✕ Destruido</div>
+            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'destruido')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#c4b5fd;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">✕ Destruido</div>
             <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'cancelado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">✕ Cancelado</div>
           </div>
         </div>` : ""}
@@ -9084,7 +9084,7 @@ async function fetchReembolsosFiltered() {
             ${estadoPago === "cobrado"
               ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(34,197,94,.12);border:1px solid #86efac;border-radius:999px;font-size:12px;font-weight:600;color:#22c55e;">✅ Pagado</span>
                  ${o.fecha_pago ? `<span style="font-size:11px;color:#6b7280;">${new Date(o.fecha_pago).toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>` : ""}`
-              : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:999px;font-size:12px;font-weight:600;color:#fde047;">⏳ Pendiente</span>
+              : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(234,179,8,.15);border:1px solid rgba(234,179,8,.4);border-radius:999px;font-size:12px;font-weight:700;color:#fbbf24;">⏳ Pendiente</span>
                  <button onclick="confirmarPagadoReembolso(${o.id})" style="padding:4px 12px;font-size:12px;font-weight:600;background:#22c55e;color:#fff;border:none;border-radius:999px;cursor:pointer;">Marcar pagado</button>`
             }
           </div>
@@ -9535,7 +9535,7 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
             <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#dc2626;">Uds. salida</th>
             <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#22c55e;">Devueltos</th>
             <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#22c55e;">Uds. devolución</th>
-            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#7c3aed;">Entrada mercancía</th>
+            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#c4b5fd;">Entrada mercancía</th>
             <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;">Neto</th>
             <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:700;color:#2563eb;background:rgba(59,130,246,.08);">Stock final día</th>
           </tr>
@@ -9548,7 +9548,7 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
               <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#dc2626;font-weight:600;">${r.salida > 0 ? '-'+r.salida : '0'}</td>
               <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#22c55e;">${r.pedidos_devueltos || 0}</td>
               <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#22c55e;font-weight:600;">${r.dev > 0 ? '+'+r.dev : '0'}</td>
-              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#7c3aed;font-weight:600;">${r.entrada > 0 ? '+'+r.entrada : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#c4b5fd;font-weight:600;">${r.entrada > 0 ? '+'+r.entrada : '0'}</td>
               <td style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:${r.neto>=0?'#22c55e':'#dc2626'};">${r.neto>=0?'+':''}${r.neto}</td>
               <td style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:700;font-size:14px;background:rgba(59,130,246,.08);color:${r.saldoFin<0?'#dc2626':r.saldoFin===0?'#f59e0b':'#2563eb'};">${r.saldoFin}</td>
             </tr>`).join("")}
@@ -9612,7 +9612,7 @@ async function abrirVincularStock() {
           <div style="border:1px solid ${isEditing?'#c4b5fd':'#e5e7eb'};border-radius:8px;background:#1f2937;overflow:hidden;">
             <!-- Group header row -->
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;gap:8px;">
-              <div style="font-size:13px;font-weight:700;color:#7c3aed;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              <div style="font-size:13px;font-weight:700;color:#c4b5fd;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                 🔗 ${escapeHtml(g.name)}
                 <span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:6px;">${members.length} producto${members.length!==1?'s':''}</span>
               </div>
@@ -9687,7 +9687,7 @@ async function abrirVincularStock() {
             <input type="checkbox" data-pid="${pid}" data-shop="${escapeHtml(p.shop_domain||si.shop_domain||'')}" ${isSel?'checked':''} onchange="window.__vincularToggle(this)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">
             <div style="flex:1;min-width:0;">
               <div style="font-size:13px;font-weight:600;color:#f9fafb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.title)}</div>
-              <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name||p.shop_domain||'')}${si.group_name?` · <span style="color:#7c3aed;font-weight:600;">🔗 ${escapeHtml(si.group_name)}</span>`:''}</div>
+              <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name||p.shop_domain||'')}${si.group_name?` · <span style="color:#c4b5fd;font-weight:600;">🔗 ${escapeHtml(si.group_name)}</span>`:''}</div>
             </div>
             <div style="font-size:13px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#22c55e'};flex-shrink:0;">${si.stock??'—'}</div>
           </label>`;

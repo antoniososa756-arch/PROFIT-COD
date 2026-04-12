@@ -1148,11 +1148,11 @@ body.dark .sidebar .toggle span { color: #9ca3af; }
   width: fit-content;
 }
 
-.status.yellow  { background: rgba(234,179,8,.12); color: #fde047; border:1px solid rgba(234,179,8,.2); }
-.status.red     { background: rgba(239,68,68,.12); color: #fca5a5; border:1px solid rgba(239,68,68,.2); }
-.status.orange  { background: rgba(249,115,22,.12); color: #fdba74; border:1px solid rgba(249,115,22,.2); }
-.status.blue    { background: rgba(59,130,246,.12); color: #93c5fd; border:1px solid rgba(59,130,246,.2); }
-.status.purple  { background: rgba(139,92,246,.12); color: #c4b5fd; border:1px solid rgba(139,92,246,.2); }
+.status.yellow  { background: rgba(234,179,8,.15);  color: #fbbf24; border:1px solid rgba(234,179,8,.35); font-weight:600; }
+.status.red     { background: rgba(239,68,68,.15);  color: #fca5a5; border:1px solid rgba(239,68,68,.35); font-weight:600; }
+.status.orange  { background: rgba(249,115,22,.15); color: #fdba74; border:1px solid rgba(249,115,22,.35); font-weight:600; }
+.status.blue    { background: rgba(59,130,246,.15); color: #93c5fd; border:1px solid rgba(59,130,246,.35); font-weight:600; }
+.status.purple  { background: rgba(139,92,246,.15); color: #c4b5fd; border:1px solid rgba(139,92,246,.35); font-weight:600; }
 
 /* === BOTONES PEDIDOS === */
 .btn-filter {
