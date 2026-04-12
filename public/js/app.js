@@ -1365,7 +1365,7 @@ const now = new Date();
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon" style="background:#22c55e;">
+          <div class="stat-icon green">
             <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div class="stat-info">
@@ -1375,7 +1375,7 @@ const now = new Date();
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon" style="background:#dc2626;">
+          <div class="stat-icon red">
             <svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div class="stat-info">
@@ -1385,7 +1385,7 @@ const now = new Date();
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon" style="background:#7c3aed;">
+          <div class="stat-icon purple">
             <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </div>
           <div class="stat-info">
@@ -1395,7 +1395,7 @@ const now = new Date();
         </div>
 
     <div class="stat-card">
-          <div class="stat-icon" style="background:#0ea5e9;">
+          <div class="stat-icon cyan">
             <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div class="stat-info">
@@ -1405,7 +1405,7 @@ const now = new Date();
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon" style="background:#f97316;">
+          <div class="stat-icon orange">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           </div>
           <div class="stat-info">
@@ -1415,7 +1415,7 @@ const now = new Date();
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon" style="background:#10b981;">
+          <div class="stat-icon teal">
             <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
           </div>
           <div class="stat-info">
