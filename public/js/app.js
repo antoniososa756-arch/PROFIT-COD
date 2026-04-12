@@ -45,7 +45,7 @@ window.__DPF = (function () {
         const hi=s.selecting&&s.startDate&&s.hoverDate&&ds>s.startDate&&ds<=s.hoverDate;
         const inR=s.startDate&&s.endDate&&ds>s.startDate&&ds<s.endDate;
         const isT=ds===today;
-        let bg='transparent',col='#e5e7eb',fw='400',br='6px',tdBg='transparent';
+        let bg='transparent',col='var(--pk-day-text)',fw='400',br='6px',tdBg='transparent';
         if (isS||isE) { bg='#22c55e';col='#fff';fw='700'; }
         else if (inR) { tdBg='rgba(34,197,94,.15)';col='#86efac';fw='500';br='0'; }
         else if (hi)  { tdBg='rgba(34,197,94,.08)';col='#86efac';br='0'; }
@@ -53,15 +53,15 @@ window.__DPF = (function () {
         row+=`<td style="width:36px;height:36px;text-align:center;padding:0;background:${tdBg};">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:${bg};color:${col};border-radius:${br};font-size:13px;font-weight:${fw};cursor:pointer;transition:all .12s;"
             onclick="window.__DPF.pDay('${p}','${ds}')" onmouseover="window.__DPF.pHover('${p}','${ds}')"
-            onmouseenter="if(!${isS||isE})this.style.background='rgba(255,255,255,.1)';"
+            onmouseenter="if(!${isS||isE})this.style.background='var(--pk-hover)';"
             onmouseleave="if(!${isS||isE})this.style.background='transparent';"
           >${day}</span></td>`;
       }
       row+='</tr>'; rows+=row;
     }
     return `<div>
-      <div style="text-align:center;font-size:13px;font-weight:700;color:#f9fafb;padding-bottom:10px;letter-spacing:.3px;">${MN[month-1]} ${year}</div>
-      <table style="border-collapse:collapse;"><thead><tr>${['do','lu','ma','mi','ju','vi','sá'].map(d=>`<th style="width:36px;font-size:10px;color:#6b7280;font-weight:600;text-align:center;padding-bottom:8px;text-transform:uppercase;letter-spacing:.6px;">${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+      <div style="text-align:center;font-size:13px;font-weight:700;color:var(--pk-text);padding-bottom:10px;letter-spacing:.3px;">${MN[month-1]} ${year}</div>
+      <table style="border-collapse:collapse;"><thead><tr>${['do','lu','ma','mi','ju','vi','sá'].map(d=>`<th style="width:36px;font-size:10px;color:var(--pk-text3);font-weight:600;text-align:center;padding-bottom:8px;text-transform:uppercase;letter-spacing:.6px;">${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
     </div>`;
   }
   function reposition(p) {
@@ -96,13 +96,13 @@ window.__DPF = (function () {
     const sidebar=PRESETS.map(q=>{
       const act=s.preset===q.key;
       return `<div onclick="window.__DPF.pPreset('${p}','${q.key}')"
-        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#22c55e':'#9ca3af'};background:${act?'rgba(34,197,94,.12)':'transparent'};border-left:${act?'3px solid #22c55e':'3px solid transparent'};transition:all .12s;"
-        onmouseover="if(!${act})this.style.background='rgba(255,255,255,.06)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${q.label}</div>`;
+        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#22c55e':'var(--pk-text2)'};background:${act?'rgba(34,197,94,.12)':'transparent'};border-left:${act?'3px solid #22c55e':'3px solid transparent'};transition:all .12s;"
+        onmouseover="if(!${act})this.style.background='var(--pk-hover)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${q.label}</div>`;
     }).join('');
-    const dateBox=(d,ph)=>`<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#22c55e':'#374151'};border-radius:9px;background:${d?'rgba(34,197,94,.08)':'#1f2937'};">
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#22c55e':'#4b5563'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-      <span style="font-size:12.5px;color:${d?'#86efac':'#4b5563'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):ph}</span></div>`;
-    const navBtn=(dir,lbl)=>`<button onclick="window.__DPF.pNav('${p}',${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#1f2937;border:1px solid #374151;border-radius:7px;cursor:pointer;font-size:15px;color:#9ca3af;font-weight:700;transition:all .12s;" onmouseover="this.style.color='#f9fafb';this.style.borderColor='#4b5563';" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151';">${lbl}</button>`;
+    const dateBox=(d,ph)=>`<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#22c55e':'var(--pk-border2)'};border-radius:9px;background:${d?'rgba(34,197,94,.08)':'var(--pk-input)'};">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#22c55e':'var(--pk-text3)'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span style="font-size:12.5px;color:${d?'#86efac':'var(--pk-text2)'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):ph}</span></div>`;
+    const navBtn=(dir,lbl)=>`<button onclick="window.__DPF.pNav('${p}',${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:var(--pk-btn-bg);border:1px solid var(--pk-border2);border-radius:7px;cursor:pointer;font-size:15px;color:var(--pk-text2);font-weight:700;transition:all .12s;" onmouseover="this.style.color='var(--pk-text)';this.style.borderColor='var(--pk-border)';" onmouseout="this.style.color='var(--pk-text2)';this.style.borderColor='var(--pk-border2)';">${lbl}</button>`;
     const calSection = narrow
       ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span>${navBtn(1,'›')}</div>
          ${renderMonth(s,vy,vm)}`
@@ -111,32 +111,32 @@ window.__DPF = (function () {
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span></div>
             ${renderMonth(s,ly,lm)}
           </div>
-          <div style="width:1px;background:#1f2937;align-self:stretch;margin-top:42px;"></div>
+          <div style="width:1px;background:var(--pk-border);align-self:stretch;margin-top:42px;"></div>
           <div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span></span>${navBtn(1,'›')}</div>
             ${renderMonth(s,vy,vm)}
           </div>
         </div>`;
     const sidebarSection = narrow ? '' :
-      `<div style="width:176px;padding:18px 10px;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;gap:2px;">
-        <div style="font-size:9.5px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
+      `<div style="width:176px;padding:18px 10px;background:var(--pk-sidebar);border-right:1px solid var(--pk-border);display:flex;flex-direction:column;gap:2px;">
+        <div style="font-size:9.5px;font-weight:700;color:var(--pk-text3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
         ${sidebar}
       </div>`;
     const presetMobile = narrow
-      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__DPF.pPreset('${p}','${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'#1f2937'};color:${act?'#052e16':'#9ca3af'};border:1px solid ${act?'#22c55e':'#374151'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__DPF.pPreset('${p}','${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'var(--pk-btn-bg)'};color:${act?'#052e16':'var(--pk-text2)'};border:1px solid ${act?'#22c55e':'var(--pk-border2)'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
       : '';
-    panel.innerHTML=`<div class="dpf-panel" style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
+    panel.innerHTML=`<div class="dpf-panel" style="display:flex;box-shadow:var(--pk-shadow);border-radius:14px;overflow:hidden;background:var(--pk-bg);border:1px solid var(--pk-border);">
       ${sidebarSection}
       <div style="padding:${narrow?'16px':'20px 26px'};">
         ${presetMobile}
         <div style="display:flex;align-items:center;gap:${narrow?'6px':'10px'};margin-bottom:${narrow?'14px':'20px'};">
           ${dateBox(s.startDate,'Fecha inicio')}
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#374151" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--pk-text3)" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           ${dateBox(s.endDate,'Fecha fin')}
         </div>
         ${calSection}
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid #1f2937;">
-          <button onclick="window.__DPF.pClose('${p}')" style="padding:8px 18px;background:transparent;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#9ca3af;transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">Cancelar</button>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid var(--pk-border);">
+          <button onclick="window.__DPF.pClose('${p}')" style="padding:8px 18px;background:transparent;border:1.5px solid var(--pk-border2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--pk-text2);transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='var(--pk-border)';this.style.color='var(--pk-text)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.color='var(--pk-text2)';">Cancelar</button>
           <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
         </div>
       </div>
@@ -164,11 +164,11 @@ window.__DPF = (function () {
     triggerBtn: function(prefix, label) {
       return `<div style="position:relative;" id="${prefix}-picker-wrap">
         <button onclick="window.__DPF.pToggle('${prefix}')"
-          style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:#111827;border:1.5px solid #374151;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#e5e7eb;transition:all .15s;"
-          onmouseover="this.style.borderColor='#4b5563';this.style.background='#1f2937';" onmouseout="this.style.borderColor='#374151';this.style.background='#111827';">
+          style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
+          onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           <span id="${prefix}-picker-label">${label}</span>
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#4b5563" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div id="${prefix}-picker-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:2000;"></div>
       </div>`;
@@ -1272,11 +1272,11 @@ const now = new Date();
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
         <div style="position:relative;" id="met-picker-wrap">
           <button id="met-picker-trigger" onclick="toggleMetDatePicker()"
-            style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:#111827;border:1.5px solid #374151;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#e5e7eb;transition:all .15s;"
-            onmouseover="this.style.borderColor='#4b5563';this.style.background='#1f2937';" onmouseout="this.style.borderColor='#374151';this.style.background='#111827';">
+            style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
+            onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
             <span id="met-picker-label">Mes actual</span>
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#4b5563" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div id="met-picker-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:2000;"></div>
           <input type="date" id="metrics-date-from" value="${savedFrom}" style="display:none;">
@@ -1477,7 +1477,7 @@ const now = new Date();
         const hi = s.selecting&&s.startDate&&s.hoverDate&&ds>s.startDate&&ds<=s.hoverDate;
         const inR = s.startDate&&s.endDate&&ds>s.startDate&&ds<s.endDate;
         const isT = ds===today;
-        let bg='transparent', col='#e5e7eb', fw='400', br='6px', tdBg='transparent', outline='none';
+        let bg='transparent', col='var(--pk-day-text)', fw='400', br='6px', tdBg='transparent', outline='none';
         if (isS||isE) { bg='#22c55e'; col='#fff'; fw='700'; outline='none'; }
         else if (inR) { tdBg='rgba(34,197,94,.15)'; col='#86efac'; fw='500'; br='0'; }
         else if (hi)  { tdBg='rgba(34,197,94,.08)'; col='#86efac'; br='0'; }
@@ -1485,15 +1485,15 @@ const now = new Date();
         row+=`<td style="width:36px;height:36px;text-align:center;padding:0;background:${tdBg};">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:${bg};color:${col};border-radius:${br};font-size:13px;font-weight:${fw};cursor:pointer;transition:all .12s;"
             onclick="window.__metPDay('${ds}')" onmouseover="window.__metPHover('${ds}')"
-            onmouseenter="if(!${isS||isE})this.style.background='rgba(255,255,255,.1)';"
+            onmouseenter="if(!${isS||isE})this.style.background='var(--pk-hover)';"
             onmouseleave="if(!${isS||isE})this.style.background='transparent';"
             >${day}</span></td>`;
       }
       row+='</tr>'; rows+=row;
     }
     return `<div>
-      <div style="text-align:center;font-size:13px;font-weight:700;color:#f9fafb;padding-bottom:10px;letter-spacing:.3px;">${MN[month-1]} ${year}</div>
-      <table style="border-collapse:collapse;"><thead><tr>${['do','lu','ma','mi','ju','vi','sá'].map(d=>`<th style="width:36px;font-size:10px;color:#6b7280;font-weight:600;text-align:center;padding-bottom:8px;text-transform:uppercase;letter-spacing:.6px;">${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+      <div style="text-align:center;font-size:13px;font-weight:700;color:var(--pk-text);padding-bottom:10px;letter-spacing:.3px;">${MN[month-1]} ${year}</div>
+      <table style="border-collapse:collapse;"><thead><tr>${['do','lu','ma','mi','ju','vi','sá'].map(d=>`<th style="width:36px;font-size:10px;color:var(--pk-text3);font-weight:600;text-align:center;padding-bottom:8px;text-transform:uppercase;letter-spacing:.6px;">${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
     </div>`;
   }
 
@@ -1527,39 +1527,39 @@ const now = new Date();
     const sidebar=PRESETS.map(p=>{
       const act=s.preset===p.key;
       return `<div onclick="window.__metPPreset('${p.key}')"
-        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#22c55e':'#9ca3af'};background:${act?'rgba(34,197,94,.12)':'transparent'};border-left:${act?'3px solid #22c55e':'3px solid transparent'};transition:all .12s;"
-        onmouseover="if(!${act})this.style.background='rgba(255,255,255,.06)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${p.label}</div>`;
+        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#22c55e':'var(--pk-text2)'};background:${act?'rgba(34,197,94,.12)':'transparent'};border-left:${act?'3px solid #22c55e':'3px solid transparent'};transition:all .12s;"
+        onmouseover="if(!${act})this.style.background='var(--pk-hover)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${p.label}</div>`;
     }).join('');
-    const dateBox = (d,placeholder) => `<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#22c55e':'#374151'};border-radius:9px;background:${d?'rgba(34,197,94,.08)':'#1f2937'};">
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#22c55e':'#4b5563'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-      <span style="font-size:12.5px;color:${d?'#86efac':'#4b5563'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):placeholder}</span>
+    const dateBox = (d,placeholder) => `<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#22c55e':'var(--pk-border2)'};border-radius:9px;background:${d?'rgba(34,197,94,.08)':'var(--pk-input)'};">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#22c55e':'var(--pk-text3)'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span style="font-size:12.5px;color:${d?'#86efac':'var(--pk-text2)'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):placeholder}</span>
     </div>`;
-    const navBtn = (dir,label) => `<button onclick="window.__metPNav(${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#1f2937;border:1px solid #374151;border-radius:7px;cursor:pointer;font-size:15px;color:#9ca3af;font-weight:700;transition:all .12s;" onmouseover="this.style.color='#f9fafb';this.style.borderColor='#4b5563';" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151';">${label}</button>`;
+    const navBtn = (dir,label) => `<button onclick="window.__metPNav(${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:var(--pk-btn-bg);border:1px solid var(--pk-border2);border-radius:7px;cursor:pointer;font-size:15px;color:var(--pk-text2);font-weight:700;transition:all .12s;" onmouseover="this.style.color='var(--pk-text)';this.style.borderColor='var(--pk-border)';" onmouseout="this.style.color='var(--pk-text2)';this.style.borderColor='var(--pk-border2)';">${label}</button>`;
     const calSection = narrow
       ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span>${navBtn(1,'›')}</div>${renderMonth(vy,vm)}`
       : `<div style="display:flex;gap:28px;align-items:flex-start;">
           <div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span></div>${renderMonth(ly,lm)}</div>
-          <div style="width:1px;background:#1f2937;align-self:stretch;margin-top:42px;"></div>
+          <div style="width:1px;background:var(--pk-border);align-self:stretch;margin-top:42px;"></div>
           <div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span></span>${navBtn(1,'›')}</div>${renderMonth(vy,vm)}</div>
         </div>`;
     const presetMobile = narrow
-      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__metPPreset('${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'#1f2937'};color:${act?'#052e16':'#9ca3af'};border:1px solid ${act?'#22c55e':'#374151'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__metPPreset('${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'var(--pk-btn-bg)'};color:${act?'#052e16':'var(--pk-text2)'};border:1px solid ${act?'#22c55e':'var(--pk-border2)'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
       : '';
-    panel.innerHTML=`<div class="dpf-panel" style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
-      ${narrow?'':` <div style="width:176px;padding:18px 10px;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;gap:2px;">
-        <div style="font-size:9.5px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
+    panel.innerHTML=`<div class="dpf-panel" style="display:flex;box-shadow:var(--pk-shadow);border-radius:14px;overflow:hidden;background:var(--pk-bg);border:1px solid var(--pk-border);">
+      ${narrow?'':` <div style="width:176px;padding:18px 10px;background:var(--pk-sidebar);border-right:1px solid var(--pk-border);display:flex;flex-direction:column;gap:2px;">
+        <div style="font-size:9.5px;font-weight:700;color:var(--pk-text3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
         ${sidebar}
       </div>`}
       <div style="padding:${narrow?'16px':'20px 26px'};">
         ${presetMobile}
         <div style="display:flex;align-items:center;gap:${narrow?'6px':'10px'};margin-bottom:${narrow?'14px':'20px'};">
           ${dateBox(s.startDate,'Fecha inicio')}
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#374151" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--pk-text3)" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           ${dateBox(s.endDate,'Fecha fin')}
         </div>
         ${calSection}
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid #1f2937;">
-          <button onclick="window.__metPClose()" style="padding:8px 18px;background:transparent;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#9ca3af;transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">Cancelar</button>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid var(--pk-border);">
+          <button onclick="window.__metPClose()" style="padding:8px 18px;background:transparent;border:1.5px solid var(--pk-border2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--pk-text2);transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='var(--pk-border)';this.style.color='var(--pk-text)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.color='var(--pk-text2)';">Cancelar</button>
           <button onclick="window.__metPApply()" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
         </div>
       </div>

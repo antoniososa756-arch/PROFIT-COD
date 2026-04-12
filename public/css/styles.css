@@ -13,6 +13,20 @@
       --muted:#6b7280;
       --danger:#ef4444;
       --input:#f3f4f6;
+
+      /* Picker theme – light mode */
+      --pk-bg:#ffffff;
+      --pk-sidebar:#f3f4f6;
+      --pk-input:#f1f5f9;
+      --pk-text:#111827;
+      --pk-text2:#6b7280;
+      --pk-text3:#9ca3af;
+      --pk-border:#e5e7eb;
+      --pk-border2:#d1d5db;
+      --pk-btn-bg:#f3f4f6;
+      --pk-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
+      --pk-hover:rgba(0,0,0,.05);
+      --pk-day-text:#374151;
     }
 
     body.dark{
@@ -26,6 +40,20 @@
       --shadow: 0 10px 30px rgba(0,0,0,.5);
       --muted:#6b7280;
       --input:#1f2937;
+
+      /* Picker theme – dark mode */
+      --pk-bg:#111827;
+      --pk-sidebar:#0d1117;
+      --pk-input:#1f2937;
+      --pk-text:#f9fafb;
+      --pk-text2:#9ca3af;
+      --pk-text3:#6b7280;
+      --pk-border:#1f2937;
+      --pk-border2:#374151;
+      --pk-btn-bg:#1f2937;
+      --pk-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);
+      --pk-hover:rgba(255,255,255,.06);
+      --pk-day-text:#e5e7eb;
     }
 
     *{ box-sizing:border-box; }
@@ -892,58 +920,7 @@ body:not(.dark) textarea:not(.dpf-panel *) {
 body:not(.dark) input::placeholder,
 body:not(.dark) textarea::placeholder { color: #9ca3af !important; }
 
-/* ── Picker siempre oscuro (modo claro Y oscuro) ── */
-/* Usar ID selectors (mayor especificidad) para ganar a body:not(.dark) rules */
-#met-picker-panel .dpf-panel,
-#rent-picker-panel .dpf-panel,
-#filter-picker-panel .dpf-panel,
-#ree-picker-panel .dpf-panel { background: #111827 !important; color: #f9fafb !important; }
-
-#met-picker-panel .dpf-panel [style*="background:#0d1117"],
-#rent-picker-panel .dpf-panel [style*="background:#0d1117"],
-#filter-picker-panel .dpf-panel [style*="background:#0d1117"],
-#ree-picker-panel .dpf-panel [style*="background:#0d1117"] { background: #0d1117 !important; }
-
-#met-picker-panel .dpf-panel [style*="background:#1f2937"],
-#rent-picker-panel .dpf-panel [style*="background:#1f2937"],
-#filter-picker-panel .dpf-panel [style*="background:#1f2937"],
-#ree-picker-panel .dpf-panel [style*="background:#1f2937"] { background: #1f2937 !important; }
-
-#met-picker-panel .dpf-panel [style*="background:#111827"],
-#rent-picker-panel .dpf-panel [style*="background:#111827"],
-#filter-picker-panel .dpf-panel [style*="background:#111827"],
-#ree-picker-panel .dpf-panel [style*="background:#111827"] { background: #111827 !important; }
-
-#met-picker-panel .dpf-panel [style*="color:#f9fafb"],
-#rent-picker-panel .dpf-panel [style*="color:#f9fafb"],
-#filter-picker-panel .dpf-panel [style*="color:#f9fafb"],
-#ree-picker-panel .dpf-panel [style*="color:#f9fafb"] { color: #f9fafb !important; }
-
-#met-picker-panel .dpf-panel [style*="color:#9ca3af"],
-#rent-picker-panel .dpf-panel [style*="color:#9ca3af"],
-#filter-picker-panel .dpf-panel [style*="color:#9ca3af"],
-#ree-picker-panel .dpf-panel [style*="color:#9ca3af"] { color: #9ca3af !important; }
-
-#met-picker-panel .dpf-panel [style*="color:#6b7280"],
-#rent-picker-panel .dpf-panel [style*="color:#6b7280"],
-#filter-picker-panel .dpf-panel [style*="color:#6b7280"],
-#ree-picker-panel .dpf-panel [style*="color:#6b7280"] { color: #6b7280 !important; }
-
-#met-picker-panel .dpf-panel [style*="color:#d1d5db"],
-#rent-picker-panel .dpf-panel [style*="color:#d1d5db"],
-#filter-picker-panel .dpf-panel [style*="color:#d1d5db"],
-#ree-picker-panel .dpf-panel [style*="color:#d1d5db"] { color: #d1d5db !important; }
-
-#met-picker-panel .dpf-panel [style*="color:#e5e7eb"],
-#rent-picker-panel .dpf-panel [style*="color:#e5e7eb"],
-#filter-picker-panel .dpf-panel [style*="color:#e5e7eb"],
-#ree-picker-panel .dpf-panel [style*="color:#e5e7eb"] { color: #e5e7eb !important; }
-
-#met-picker-panel .dpf-panel input,
-#rent-picker-panel .dpf-panel input,
-#filter-picker-panel .dpf-panel input,
-#ree-picker-panel .dpf-panel input { background: #1f2937 !important; color: #f9fafb !important; border-color: #374151 !important; }
-
+/* Picker panels: use CSS variables, no hardcoded overrides needed */
 [id$="-picker-panel"] { z-index: 2000; }
 
 /* Tabs border */
