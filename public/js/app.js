@@ -66,26 +66,25 @@ window.__DPF = (function () {
   }
   function reposition(p) {
     const panel = document.getElementById(`${p}-picker-panel`); if (!panel) return;
-    const rect = panel.getBoundingClientRect();
-    // If overflows left → align left edge to wrap instead of right
-    if (rect.left < 8) { panel.style.right='auto'; panel.style.left='0'; }
-    // If overflows right → align right
-    else if (rect.right > window.innerWidth - 8) { panel.style.left='auto'; panel.style.right='0'; }
-    // If overflows bottom → open upward
-    if (rect.bottom > window.innerHeight - 8) { panel.style.top='auto'; panel.style.bottom='calc(100% + 6px)'; }
-    else { panel.style.bottom=''; panel.style.top='calc(100% + 6px)'; }
-    // On very narrow screens: make it fixed and centered
+    // On very narrow screens: fixed centered modal
     if (window.innerWidth < 600) {
       panel.style.position='fixed';
-      panel.style.left='8px';
-      panel.style.right='8px';
-      panel.style.top='50%';
-      panel.style.bottom='';
+      panel.style.left='8px'; panel.style.right='8px';
+      panel.style.top='50%'; panel.style.bottom='';
       panel.style.transform='translateY(-50%)';
-      panel.style.maxHeight='90vh';
-      panel.style.overflowY='auto';
+      panel.style.maxHeight='90vh'; panel.style.overflowY='auto';
       panel.style.zIndex='3000';
+      return;
     }
+    // Desktop: keep absolute positioning, only adjust alignment to prevent overflow
+    panel.style.position='absolute';
+    panel.style.transform=''; panel.style.maxHeight=''; panel.style.overflowY='';
+    panel.style.top='calc(100% + 6px)'; panel.style.bottom='';
+    panel.style.right='0'; panel.style.left='';
+    const rect = panel.getBoundingClientRect();
+    if (rect.left < 8) { panel.style.right='auto'; panel.style.left='0'; }
+    else if (rect.right > window.innerWidth - 8) { panel.style.left='auto'; panel.style.right='0'; }
+    if (rect.bottom > window.innerHeight - 8) { panel.style.top='auto'; panel.style.bottom='calc(100% + 6px)'; }
   }
   function render(p) {
     const panel = document.getElementById(`${p}-picker-panel`); if (!panel) return;
@@ -1500,17 +1499,23 @@ const now = new Date();
 
   function metReposition() {
     const panel = document.getElementById('met-picker-panel'); if (!panel) return;
-    // Reset first
-    panel.style.right='0'; panel.style.left=''; panel.style.position='';
-    panel.style.transform=''; panel.style.top='calc(100% + 6px)';
+    // On very narrow screens: fixed centered modal
     if (window.innerWidth < 600) {
       panel.style.position='fixed'; panel.style.left='8px'; panel.style.right='8px';
-      panel.style.top='50%'; panel.style.transform='translateY(-50%)';
+      panel.style.top='50%'; panel.style.bottom='';
+      panel.style.transform='translateY(-50%)';
       panel.style.maxHeight='90vh'; panel.style.overflowY='auto'; panel.style.zIndex='3000';
-    } else {
-      const rect = panel.getBoundingClientRect();
-      if (rect.left < 8) { panel.style.right='auto'; panel.style.left='0'; }
+      return;
     }
+    // Desktop: keep absolute positioning, only adjust alignment to prevent overflow
+    panel.style.position='absolute';
+    panel.style.transform=''; panel.style.maxHeight=''; panel.style.overflowY='';
+    panel.style.top='calc(100% + 6px)'; panel.style.bottom='';
+    panel.style.right='0'; panel.style.left='';
+    const rect = panel.getBoundingClientRect();
+    if (rect.left < 8) { panel.style.right='auto'; panel.style.left='0'; }
+    else if (rect.right > window.innerWidth - 8) { panel.style.left='auto'; panel.style.right='0'; }
+    if (rect.bottom > window.innerHeight - 8) { panel.style.top='auto'; panel.style.bottom='calc(100% + 6px)'; }
   }
   function renderPicker() {
     const panel=document.getElementById('met-picker-panel'); if(!panel) return;
