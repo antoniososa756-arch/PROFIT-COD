@@ -47,7 +47,7 @@ window.__DPF = (function () {
         const isT=ds===today;
         let bg='transparent',col='#e5e7eb',fw='400',br='6px',tdBg='transparent';
         if (isS||isE) { bg='#22c55e';col='#fff';fw='700'; }
-        else if (inR) { tdBg='rgba(34,197,94,.15)';col='#bbf7d0';fw='500';br='0'; }
+        else if (inR) { tdBg='rgba(34,197,94,.15)';col='#86efac';fw='500';br='0'; }
         else if (hi)  { tdBg='rgba(34,197,94,.08)';col='#86efac';br='0'; }
         if (isT&&!isS&&!isE) { fw='700';col=inR||hi?col:'#4ade80'; }
         row+=`<td style="width:36px;height:36px;text-align:center;padding:0;background:${tdBg};">
@@ -104,7 +104,7 @@ window.__DPF = (function () {
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #1f2937;">
           <button onclick="window.__DPF.pClose('${p}')" style="padding:8px 18px;background:transparent;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#9ca3af;transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">Cancelar</button>
-          <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
+          <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#22c55e';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
         </div>
       </div>
     </div>`;
@@ -738,7 +738,7 @@ function loadApp(section) {
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("shopify") === "connected") {
     history.replaceState({}, "", "/");
-    showToast("✅ Tienda conectada", "La tienda Shopify se conectó correctamente", "#16a34a");
+    showToast("✅ Tienda conectada", "La tienda Shopify se conectó correctamente", "#22c55e");
     section = "tiendas";
   } else if (urlParams.get("shopify") === "error") {
     history.replaceState({}, "", "/");
@@ -844,25 +844,25 @@ function loadApp(section) {
 
       <div class="spacer"></div>
 
-      <div style="margin:0 8px 12px;border-top:1px solid #e5e7eb;padding-top:10px;">
+      <div style="margin:0 8px 12px;border-top:1px solid #1f2937;padding-top:10px;">
         <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.6px;padding:0 4px 6px;">Pendiente MRW</div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;">
           <span style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;">
             <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0;"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h6"/></svg>
             Pedidos
           </span>
-          <span style="font-size:13px;font-weight:700;color:#374151;" id="sidebar-ree-count">—</span>
+          <span style="font-size:13px;font-weight:700;color:#e5e7eb;" id="sidebar-ree-count">—</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;">
           <span style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;">
             <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0;"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg>
             Importe
           </span>
-          <span style="font-size:13px;font-weight:700;color:#374151;" id="sidebar-ree-total">—</span>
+          <span style="font-size:13px;font-weight:700;color:#e5e7eb;" id="sidebar-ree-total">—</span>
         </div>
       </div>
       <div style="padding:8px 4px;border-top:1px solid #f3f4f6;text-align:center;font-size:10px;color:#d1d5db;line-height:1.4;">
-        © 2026 <a href="https://profitcod.com" style="color:#16a34a;text-decoration:none;font-weight:600;">ProfitCOD</a>
+        © 2026 <a href="https://profitcod.com" style="color:#22c55e;text-decoration:none;font-weight:600;">ProfitCOD</a>
       </div>
     </div>
 
@@ -894,7 +894,7 @@ function loadApp(section) {
               </div>
             </div>
 
-            <div id="topbar-plan-chip" onclick="setSection('plan')" style="display:none;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:#f9fafb;border:1px solid #e5e7eb;cursor:pointer;font-size:12px;font-weight:600;color:#374151;white-space:nowrap;flex-shrink:0;" title="Ver plan"></div>
+            <div id="topbar-plan-chip" onclick="setSection('plan')" style="display:none;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:#1f2937;border:1px solid #374151;cursor:pointer;font-size:12px;font-weight:600;color:#e5e7eb;white-space:nowrap;flex-shrink:0;" title="Ver plan"></div>
 
             <div class="topbar-right" style="position:relative;">
 
@@ -1039,7 +1039,7 @@ function updateOrderLimitBanner() {
           ? `Período de prueba: ¡último día! Activa un plan para no perder el acceso.`
           : `Período de prueba: ${daysTrialLeft} día${daysTrialLeft === 1 ? "" : "s"} restantes`;
       // Verde si ≥3 días, naranja si ≤2
-      const bg = daysTrialLeft <= 2 ? "#f59e0b" : "#16a34a";
+      const bg = daysTrialLeft <= 2 ? "#f59e0b" : "#22c55e";
       trialBanner.style.cssText = `display:flex;background:${bg};color:#fff;padding:9px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;`;
     } else {
       trialBanner.style.display = "none";
@@ -1074,7 +1074,7 @@ window.startTrialAndReload = async function() {
     const d = await r.json();
     if (d.ok) {
       window.__userPlan = { ...window.__userPlan, plan: "starter", status: "trial", trial_active: true, trial_ends_at: d.trial_ends_at, had_trial: true };
-      showToast("🎉 ¡Prueba activada!", "Tienes 7 días gratuitos. Disfrútalo.", "#16a34a");
+      showToast("🎉 ¡Prueba activada!", "Tienes 7 días gratuitos. Disfrútalo.", "#22c55e");
       setSection(localStorage.getItem("section") || "metricas");
     } else {
       alert(d.error || "No se pudo activar el período de prueba");
@@ -1110,7 +1110,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
 
 // Si el plan aún no ha cargado, mostrar spinner y esperar
     if (!up.plan) {
-      if (box) { box.className = "card"; box.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:80px;"><div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#16a34a;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`; }
+      if (box) { box.className = "card"; box.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:80px;"><div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#22c55e;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`; }
       // Reintentar hasta 10 veces (5 segundos) esperando que cargue el plan
       let retryCount = (window.__planRetryCount || 0) + 1;
       window.__planRetryCount = retryCount;
@@ -1157,21 +1157,21 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
           <div>
-            <div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;">${headline}</div>
+            <div style="font-size:20px;font-weight:800;color:#f9fafb;margin-bottom:8px;">${headline}</div>
             <div style="font-size:14px;color:#6b7280;max-width:460px;">${subline}</div>
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
             ${planCards.map(p => `
               <div style="border:2px solid ${p.color};border-radius:12px;padding:16px 20px;min-width:140px;text-align:left;">
                 <div style="font-size:11px;font-weight:700;color:${p.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${p.name}</div>
-                <div style="font-size:22px;font-weight:800;color:#111827;">${p.price}€<span style="font-size:12px;font-weight:400;color:#6b7280;">/mes</span></div>
+                <div style="font-size:22px;font-weight:800;color:#f9fafb;">${p.price}€<span style="font-size:12px;font-weight:400;color:#6b7280;">/mes</span></div>
                 <div style="font-size:11px;color:#6b7280;margin-top:2px;">+ ${p.ppo}€/pedido</div>
                 <div style="font-size:11px;color:#6b7280;">hasta ${p.limit} pedidos/mes</div>
               </div>`).join("")}
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
-            ${!up.had_trial ? `<button onclick="startTrialAndReload()" style="padding:12px 32px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">🎁 Probar gratis 7 días</button>` : ""}
-            <button onclick="setSection('plan')" style="padding:12px 32px;background:${up.had_trial ? "#16a34a" : "#f9fafb"};color:${up.had_trial ? "#fff" : "#374151"};border:1px solid #e5e7eb;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">Ver planes y activar</button>
+            ${!up.had_trial ? `<button onclick="startTrialAndReload()" style="padding:12px 32px;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">🎁 Probar gratis 7 días</button>` : ""}
+            <button onclick="setSection('plan')" style="padding:12px 32px;background:${up.had_trial ? "#22c55e" : "#f9fafb"};color:${up.had_trial ? "#fff" : "#374151"};border:1px solid #374151;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">Ver planes y activar</button>
           </div>
         </div>`;
     }
@@ -1197,7 +1197,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
         <div>
-          <div style="font-size:18px;font-weight:800;color:#111827;margin-bottom:8px;">Has alcanzado el límite de pedidos</div>
+          <div style="font-size:18px;font-weight:800;color:#f9fafb;margin-bottom:8px;">Has alcanzado el límite de pedidos</div>
           <div style="font-size:14px;color:#6b7280;max-width:420px;">
             Has usado <strong>${(up.monthly_orders||0).toLocaleString("es-ES")}</strong> pedidos este mes.
             Tu plan <strong>${up.plan}</strong> permite <strong>${(up.order_limit||0).toLocaleString("es-ES")}</strong>.<br><br>
@@ -1205,7 +1205,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
           </div>
         </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;">
-          <button onclick="setSection('plan')" style="padding:11px 28px;background:#16a34a;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;">Cambiar de plan</button>
+          <button onclick="setSection('plan')" style="padding:11px 28px;background:#22c55e;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;">Cambiar de plan</button>
           <span style="font-size:13px;color:#9ca3af;">o espera ${daysLeft} día${daysLeft===1?"":"s"} para que se reinicie</span>
         </div>`;
       box.appendChild(overlay);
@@ -1262,14 +1262,14 @@ const now = new Date();
               <span class="stat-num" id="stat-total">0</span>
               <span class="stat-label">Total Pedidos</span>
             </div>
-            <div style="border-left:1px solid #e5e7eb;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;">
+            <div style="border-left:1px solid #1f2937;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;">
               <span class="stat-num" id="stat-sin-cancelados">0</span>
               <span class="stat-label" style="white-space:nowrap;">Sin cancelados</span>
             </div>
           </div>
-          <div style="border-top:1px solid #e5e7eb;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;">
+          <div style="border-top:1px solid #1f2937;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;">
             <span style="font-size:12px;color:#6b7280;display:flex;flex-direction:column;line-height:1.4;">Enviados<span style="font-size:10px;color:#9ca3af;">(excl. pendientes y cancelados)</span></span>
-            <span style="font-size:14px;font-weight:700;color:#16a34a;" id="stat-enviados">0</span>
+            <span style="font-size:14px;font-weight:700;color:#22c55e;" id="stat-enviados">0</span>
           </div>
         </div>
 
@@ -1302,7 +1302,7 @@ const now = new Date();
             <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
               <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:80px;height:80px;">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="transparent" stroke-width="3.5"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#16a34a" stroke-width="3.5"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" stroke-width="3.5"
                   stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#dc2626" stroke-width="3.5"
                   stroke-dasharray="0 100" id="donut-rojo" stroke-linecap="butt"/>
@@ -1315,7 +1315,7 @@ const now = new Date();
             </div>
             <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;">
               <div style="display:flex;align-items:center;gap:6px;">
-                <span style="width:10px;height:10px;border-radius:50%;background:#16a34a;display:inline-block;flex-shrink:0;"></span>
+                <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
                 <span id="legend-entregado">Entregado 0%</span>
               </div>
               <div style="display:flex;align-items:center;gap:6px;">
@@ -1331,7 +1331,7 @@ const now = new Date();
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon" style="background:#16a34a;">
+          <div class="stat-icon" style="background:#22c55e;">
             <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div class="stat-info">
@@ -1392,7 +1392,7 @@ const now = new Date();
 
     </div>
       </div>
-      <div id="met-shop-filter-panel" style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
+      <div id="met-shop-filter-panel" style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
         <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
         <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
       </div>
@@ -1445,7 +1445,7 @@ const now = new Date();
         const isT = ds===today;
         let bg='transparent', col='#e5e7eb', fw='400', br='6px', tdBg='transparent', outline='none';
         if (isS||isE) { bg='#22c55e'; col='#fff'; fw='700'; outline='none'; }
-        else if (inR) { tdBg='rgba(34,197,94,.15)'; col='#bbf7d0'; fw='500'; br='0'; }
+        else if (inR) { tdBg='rgba(34,197,94,.15)'; col='#86efac'; fw='500'; br='0'; }
         else if (hi)  { tdBg='rgba(34,197,94,.08)'; col='#86efac'; br='0'; }
         if (isT&&!isS&&!isE) { fw='700'; col=inR||hi?col:'#4ade80'; }
         row+=`<td style="width:36px;height:36px;text-align:center;padding:0;background:${tdBg};">
@@ -1504,7 +1504,7 @@ const now = new Date();
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #1f2937;">
           <button onclick="window.__metPClose()" style="padding:8px 18px;background:transparent;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#9ca3af;transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">Cancelar</button>
-          <button onclick="window.__metPApply()" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
+          <button onclick="window.__metPApply()" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#22c55e';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
         </div>
       </div>
     </div>`;
@@ -1602,14 +1602,14 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
     if (panel && Array.isArray(stores) && stores.length > 0) {
       const checkboxes = stores.map(s =>
         `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
-          <input type="checkbox" checked value="${s.domain}" onchange="recalcMetricasFiltro()" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          <input type="checkbox" checked value="${s.domain}" onchange="recalcMetricasFiltro()" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
           ${escapeHtml(s.shop_name || s.domain)}
         </label>`
       ).join("");
       panel.innerHTML = `
         <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
         <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-          <input type="checkbox" id="met-shop-check-all" checked onchange="toggleAllMetricasFiltro(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          <input type="checkbox" id="met-shop-check-all" checked onchange="toggleAllMetricasFiltro(this.checked)" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
           Todas las tiendas
         </label>
         ${checkboxes}
@@ -1685,7 +1685,7 @@ if (id === "crear-cliente") {
         return;
       }
 
-      msg.style.color = "#16a34a";
+      msg.style.color = "#22c55e";
       msg.textContent = "Cliente creado correctamente";
       form.reset();
 
@@ -1919,15 +1919,15 @@ if (id === "tiendas") {
   box.innerHTML = `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
       <button id="int-tab-btn-tiendas" onclick="switchIntegracionesTab('tiendas')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #16a34a;font-size:13px;font-weight:600;cursor:pointer;background:#16a34a;color:#fff;">
+        style="padding:8px 18px;border-radius:8px;border:1px solid #22c55e;font-size:13px;font-weight:600;cursor:pointer;background:#22c55e;color:#fff;">
         Tiendas
       </button>
       <button id="int-tab-btn-agencia" onclick="switchIntegracionesTab('agencia')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;">
+        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;">
         Agencia de envío
       </button>
       <button id="int-tab-btn-reembolsos" onclick="switchIntegracionesTab('reembolsos')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;">
+        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;">
         Reembolsos
       </button>
     </div>
@@ -1939,7 +1939,7 @@ if (id === "tiendas") {
       const btn = document.getElementById("int-tab-btn-" + k);
       if (!btn) return;
       if (k === tab) {
-        btn.style.background = "#16a34a"; btn.style.color = "#fff"; btn.style.borderColor = "#16a34a";
+        btn.style.background = "#22c55e"; btn.style.color = "#fff"; btn.style.borderColor = "#22c55e";
       } else {
         btn.style.background = "#fff"; btn.style.color = "#374151"; btn.style.borderColor = "#e5e7eb";
       }
@@ -1967,7 +1967,7 @@ if (id === "tiendas") {
         <div class="card" style="padding:24px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
             <div>
-              <div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">🚚 Integración MRW</div>
+              <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">🚚 Integración MRW</div>
               <div style="font-size:13px;color:#6b7280;">Conecta tu cuenta MRW para sincronizar estados de envío automáticamente</div>
             </div>
             <div id="mrw-status-badge"></div>
@@ -1982,11 +1982,11 @@ if (id === "tiendas") {
       content.innerHTML = `
         <div class="card" style="padding:28px;max-width:560px;">
           <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-            <div style="width:44px;height:44px;background:#f0fdf4;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <div style="width:44px;height:44px;background:rgba(34,197,94,.08);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             </div>
             <div>
-              <div style="font-size:16px;font-weight:700;color:#111827;">Correo de reembolsos MRW</div>
+              <div style="font-size:16px;font-weight:700;color:#f9fafb;">Correo de reembolsos MRW</div>
               <div style="font-size:13px;color:#6b7280;margin-top:2px;">Conecta el correo donde MRW te envía los PDFs de liquidación COD para importarlos automáticamente</div>
             </div>
           </div>
@@ -1995,14 +1995,14 @@ if (id === "tiendas") {
 
           <div id="gmail-form-wrap">
             <div style="margin-bottom:14px;">
-              <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Correo donde recibes los PDFs de MRW *</label>
+              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Correo donde recibes los PDFs de MRW *</label>
               <input type="email" id="pdf-email-input" placeholder="ejemplo@gmail.com"
-                style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
+                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
               <div style="font-size:12px;color:#9ca3af;margin-top:5px;">Debe ser una cuenta Gmail o Google Workspace.</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <button onclick="iniciarConexionGmail()"
-                style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;box-shadow:0 1px 3px rgba(0,0,0,.08);">
+                style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#111827;border:1.5px solid #374151;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:#e5e7eb;box-shadow:0 1px 3px rgba(0,0,0,.08);">
                 <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Conectar con Google
               </button>
@@ -2025,43 +2025,43 @@ if (id === "tiendas") {
       });
       const data = await res.json();
       if (data.integrated) {
-        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#dcfce7;color:#16a34a;border-radius:20px;font-size:13px;font-weight:700;">✓ Conectado</span>`;
+        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:rgba(34,197,94,.12);color:#22c55e;border-radius:20px;font-size:13px;font-weight:700;">✓ Conectado</span>`;
         wrap.innerHTML = `
-          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div style="background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
             <div>
-              <div style="font-weight:600;color:#15803d;margin-bottom:4px;">MRW integrado correctamente</div>
+              <div style="font-weight:600;color:#16a34a;margin-bottom:4px;">MRW integrado correctamente</div>
               <div style="font-size:13px;color:#6b7280;">Login: <strong>${data.login || "—"}</strong>${data.franquicia ? " · Franquicia: <strong>" + data.franquicia + "</strong>" : ""}${data.abonado ? " · Abonado: <strong>" + data.abonado + "</strong>" : ""}</div>
             </div>
             <button onclick="desintegrarMRW();setTimeout(()=>switchIntegracionesTab('agencia'),500)" 
-              style="padding:8px 18px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+              style="padding:8px 18px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
               ✕ Desconectar MRW
             </button>
           </div>
           <div style="font-size:13px;color:#6b7280;">La sincronización automática de estados está activa. Los pedidos se actualizan cada 5 minutos.</div>
         `;
       } else {
-        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#f3f4f6;color:#6b7280;border-radius:20px;font-size:13px;font-weight:700;">No conectado</span>`;
-        const inp = `width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
+        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#1f2937;color:#6b7280;border-radius:20px;font-size:13px;font-weight:700;">No conectado</span>`;
+        const inp = `width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
         wrap.innerHTML = `
           <div style="max-width:480px;display:flex;flex-direction:column;gap:14px;">
-            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#1e40af;">
+            <div style="background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#93c5fd;">
               💡 Necesitas las credenciales SAGEC de MRW (Login y Contraseña del WebService TrackingServices)
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Login SAGEC *</label>
+              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Login SAGEC *</label>
               <input id="mrw-login-int" type="text" placeholder="Ej: CD01234Ejemplo" style="${inp}">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
+              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
               <input id="mrw-pass-int" type="password" placeholder="Contraseña" style="${inp}">
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div>
-                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Franquicia</label>
+                <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Franquicia</label>
                 <input id="mrw-franquicia-int" type="text" placeholder="Ej: 01234" style="${inp}">
               </div>
               <div>
-                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Abonado</label>
+                <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Abonado</label>
                 <input id="mrw-abonado-int" type="text" placeholder="Ej: 603835" style="${inp}">
               </div>
             </div>
@@ -2094,7 +2094,7 @@ if (id === "tiendas") {
       });
       const data = await res.json();
       if (data.ok) {
-        showToast("✅ MRW conectado", "La sincronización automática está activa", "#16a34a");
+        showToast("✅ MRW conectado", "La sincronización automática está activa", "#22c55e");
         switchIntegracionesTab("agencia");
       } else {
         if (msg) { msg.style.color="#dc2626"; msg.textContent=data.error||"Error guardando"; }
@@ -2111,19 +2111,19 @@ if (id === "tiendas") {
       if (data?.connected) {
         // Ya conectado — mostrar estado y opción de desconectar
         if (statusWrap) statusWrap.innerHTML = `
-          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div style="background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
             <div style="display:flex;align-items:center;gap:10px;">
               <span style="font-size:18px;">✓</span>
               <div>
-                <div style="font-weight:600;color:#15803d;font-size:14px;">Gmail conectado</div>
+                <div style="font-weight:600;color:#16a34a;font-size:14px;">Gmail conectado</div>
                 <div style="font-size:13px;color:#6b7280;">${data.email || ""}</div>
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button onclick="sincronizarPDFsMRW()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+              <button onclick="sincronizarPDFsMRW()" style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 ↓ Importar PDFs ahora
               </button>
-              <button onclick="desconectarGmail()" style="padding:7px 16px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Desconectar</button>
+              <button onclick="desconectarGmail()" style="padding:7px 16px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Desconectar</button>
             </div>
           </div>`;
         if (formWrap) formWrap.style.display = "none";
@@ -2152,7 +2152,7 @@ if (id === "tiendas") {
         body: JSON.stringify({ email })
       });
       if (res.ok) {
-        if (msg) { msg.textContent = "Redirigiendo a Google..."; msg.style.color = "#16a34a"; }
+        if (msg) { msg.textContent = "Redirigiendo a Google..."; msg.style.color = "#22c55e"; }
         setTimeout(() => { window.location.href = `${API_BASE}/api/gmail/auth?token=${getActiveToken()}`; }, 800);
       } else { if (msg) { msg.textContent = "❌ Error al guardar el correo"; msg.style.color = "#dc2626"; } }
     } catch { if (msg) { msg.textContent = "❌ Error de conexión"; msg.style.color = "#dc2626"; } }
@@ -2216,11 +2216,11 @@ if (id === "productos") {
       </button>
       <div style="display:flex;align-items:center;gap:10px;">
         <select id="productos-shop-filter" onchange="loadProductos()"
-          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           <option value="">Todas las tiendas</option>
         </select>
         <button onclick="loadProductos()"
-          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
           🔄 Sincronizar productos
         </button>
         <button onclick="abrirVincularStock()"
@@ -2276,10 +2276,10 @@ if (id === "pedidos") {
               <input type="date" id="filter-date-to" value="${new Date().toISOString().split('T')[0]}" style="display:none;">
               <select id="filter-shop-inline"
                 onchange="applyFilters()"
-                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+                style="padding:7px 10px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
                 <option value="">Todas las tiendas</option>
               </select>
-              <button onclick="clearFiltersInline()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
+              <button onclick="clearFiltersInline()" style="padding:7px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
             </div>
 
             <!-- DERECHA: Sincronizar -->
@@ -2394,7 +2394,7 @@ if (id === "facturas") {
           ["nomina","Nómina"]
         ].map(([key, label]) => `
           <button id="tab-btn-${key}" onclick="switchFacturasTab('${key}')"
-            style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;transition:all .15s;">
+            style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;transition:all .15s;">
             ${label}
           </button>
         `).join("")}
@@ -2424,18 +2424,18 @@ if (id === "gastos-ads") {
     box.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
         <select id="ads-shop-sel"
-          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           <option value="">Cargando tiendas...</option>
         </select>
         <select id="ads-month-sel"
-          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${Array.from({length:12},(_,i)=>{
             const d = new Date(); d.setMonth(i);
             return `<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${d.toLocaleString("es",{month:"long"})}</option>`;
           }).join("")}
         </select>
         <select id="ads-year-sel"
-          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
         </div>
@@ -2495,15 +2495,15 @@ if (id === "informes") {
   box.innerHTML = `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
       <button id="inf-tab-btn-reembolsos" onclick="switchInformesTab('reembolsos')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #16a34a;font-size:13px;font-weight:600;cursor:pointer;background:#16a34a;color:#fff;">
+        style="padding:8px 18px;border-radius:8px;border:1px solid #22c55e;font-size:13px;font-weight:600;cursor:pointer;background:#22c55e;color:#fff;">
         Reembolsos
       </button>
       <button id="inf-tab-btn-ingresos" onclick="switchInformesTab('ingresos')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;">
+        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;">
         Ingresos
       </button>
       <button id="inf-tab-btn-balance" onclick="switchInformesTab('balance')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#374151;">
+        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;">
         Balance Final
       </button>
     </div>
@@ -2527,20 +2527,20 @@ if (id === "gastos-varios") {
     box.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
         <select id="gv-month-sel"
-          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
             .map((m,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${m}</option>`).join("")}
         </select>
         <select id="gv-year-sel"
-          style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
         <button onclick="loadGastosVarios()"
-          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
           Ver
         </button>
       </div>
-      <div id="gv-mes-label" style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;"></div>
+      <div id="gv-mes-label" style="margin-bottom:16px;padding:10px 16px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:8px;font-size:13px;color:#22c55e;font-weight:600;"></div>
       <div id="gv-content"></div>
     `;
   }
@@ -2560,17 +2560,17 @@ if (id === "ayuda") {
   box.innerHTML = `
   <style>
     .help-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:28px; }
-    .help-tab-btn { padding:9px 20px; border-radius:10px; border:1.5px solid #e5e7eb; font-size:13px; font-weight:600; cursor:pointer; background:var(--card,#fff); color:var(--text,#111827); transition:all .15s; }
-    .help-tab-btn.active, .help-tab-btn:hover { background:#16a34a; color:#fff; border-color:#16a34a; }
+    .help-tab-btn { padding:9px 20px; border-radius:10px; border:1.5px solid #374151; font-size:13px; font-weight:600; cursor:pointer; background:var(--card,#fff); color:var(--text,#111827); transition:all .15s; }
+    .help-tab-btn.active, .help-tab-btn:hover { background:#22c55e; color:#fff; border-color:#22c55e; }
     .help-panel { display:none; }
     .help-panel.active { display:block; }
     .help-section { background:var(--card,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; padding:24px 28px; margin-bottom:18px; }
     .help-section h2 { font-size:17px; font-weight:700; color:var(--text,#111827); margin:0 0 8px 0; }
-    .help-section h3 { font-size:14px; font-weight:700; color:#16a34a; margin:18px 0 6px 0; }
+    .help-section h3 { font-size:14px; font-weight:700; color:#22c55e; margin:18px 0 6px 0; }
     .help-section p, .help-section li { font-size:14px; color:var(--muted,#4b5563); line-height:1.7; margin:0 0 6px 0; }
     .help-section ul { padding-left:20px; margin:0 0 10px 0; }
-    .help-tip { background:#f0fdf4; border-left:3px solid #16a34a; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#15803d; margin-top:12px; }
-    .help-warning { background:#fefce8; border-left:3px solid #ca8a04; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#92400e; margin-top:12px; }
+    .help-tip { background:rgba(34,197,94,.08); border-left:3px solid #22c55e; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#16a34a; margin-top:12px; }
+    .help-warning { background:#fefce8; border-left:3px solid #ca8a04; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#fde047; margin-top:12px; }
   </style>
 
   <div class="help-tabs">
@@ -2742,11 +2742,11 @@ if (id === "pagos-config") {
 
   const inp = (id, ph, type="text") =>
     `<input id="${id}" type="${type}" placeholder="${ph}"
-      style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;
+      style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;
              background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;">`;
 
   box.innerHTML = `<div style="max-width:560px;">
-    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#92400e;">
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#fde047;">
       ⚠️ Estas claves se usan para procesar los cobros de los clientes. Mantenlas confidenciales.
     </div>
 
@@ -2757,20 +2757,20 @@ if (id === "pagos-config") {
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div>
-          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Clave pública (pk_live_...)</label>
+          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Clave pública (pk_live_...)</label>
           ${inp("cfg-stripe-pk","pk_live_...")}
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Clave secreta (sk_live_...)</label>
+          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Clave secreta (sk_live_...)</label>
           ${inp("cfg-stripe-sk","sk_live_...","password")}
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Webhook secret (whsec_...)</label>
+          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Webhook secret (whsec_...)</label>
           ${inp("cfg-stripe-wh","whsec_...","password")}
         </div>
       </div>
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f3f4f6;">
-        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px;">Price IDs de suscripciones mensuales</div>
+        <div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:10px;">Price IDs de suscripciones mensuales</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:12px;color:#10b981;font-weight:700;width:72px;">Starter</span>
@@ -2800,16 +2800,16 @@ if (id === "pagos-config") {
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div>
-          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Client ID</label>
+          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Client ID</label>
           ${inp("cfg-pp-client","AXxx...")}
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Secret</label>
+          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Secret</label>
           ${inp("cfg-pp-secret","EXxx...","password")}
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Entorno</label>
-          <select id="cfg-pp-env" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Entorno</label>
+          <select id="cfg-pp-env" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
             <option value="live">Producción (live)</option>
             <option value="sandbox">Sandbox (pruebas)</option>
           </select>
@@ -2819,7 +2819,7 @@ if (id === "pagos-config") {
 
     <div id="pagos-cfg-msg" style="font-size:13px;min-height:18px;margin-bottom:10px;"></div>
     <button onclick="guardarPagosConfig()"
-      style="padding:10px 28px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+      style="padding:10px 28px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
       Guardar configuración
     </button>
   </div>`;
@@ -2853,7 +2853,7 @@ if (id === "pagos-config") {
         // Mostrar botón Editar
         const btnEdit = document.createElement("button");
         btnEdit.textContent = "✏️ Editar configuración";
-        btnEdit.style.cssText = "padding:10px 20px;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-left:10px;";
+        btnEdit.style.cssText = "padding:10px 20px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-left:10px;";
         btnEdit.onclick = () => {
           for (const id of Object.keys(campos)) {
             const el = document.getElementById(id);
@@ -2891,7 +2891,7 @@ if (id === "pagos-config") {
         }),
       });
       const d = await res.json();
-      if (d.ok) { msg.textContent = "✅ Configuración guardada correctamente"; msg.style.color = "#16a34a"; }
+      if (d.ok) { msg.textContent = "✅ Configuración guardada correctamente"; msg.style.color = "#22c55e"; }
       else { msg.textContent = "❌ Error: " + (d.error || "desconocido"); msg.style.color = "#dc2626"; }
     } catch(e) { msg.textContent = "❌ Error: " + e.message; msg.style.color = "#dc2626"; }
   };
@@ -2919,27 +2919,27 @@ if (id === "plan") {
 
   box.className = "card";
   box.innerHTML = `<div style="max-width:960px;">
-    ${isAdmin ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 18px;margin-bottom:24px;display:flex;align-items:center;gap:10px;">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      <span style="font-size:13px;color:#15803d;font-weight:600;">Cuenta de administrador — acceso ilimitado a todas las funciones.</span>
+    ${isAdmin ? `<div style="background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:10px;padding:12px 18px;margin-bottom:24px;display:flex;align-items:center;gap:10px;">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#22c55e" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span style="font-size:13px;color:#16a34a;font-weight:600;">Cuenta de administrador — acceso ilimitado a todas las funciones.</span>
     </div>` : ""}
     <div id="plan-current-banner" style="margin-bottom:12px;"></div>
-    <div id="plan-cancel-banner" style="display:none;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 18px;margin-bottom:12px;font-size:13px;color:#92400e;font-weight:600;"></div>
-    <div id="plan-trial-banner" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 18px;margin-bottom:20px;font-size:13px;color:#15803d;font-weight:600;"></div>
+    <div id="plan-cancel-banner" style="display:none;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px 18px;margin-bottom:12px;font-size:13px;color:#fde047;font-weight:600;"></div>
+    <div id="plan-trial-banner" style="display:none;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:10px;padding:12px 18px;margin-bottom:20px;font-size:13px;color:#16a34a;font-weight:600;"></div>
     <h3 style="font-size:15px;font-weight:700;margin:0 0 6px;">Elige tu plan</h3>
     <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Tiendas ilimitadas en todos los planes. Precio base mensual + coste por pedido usado.</p>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;" id="plan-cards">
       ${Object.entries(PLAN_DEFS).map(([p, info]) => `
-        <div id="plan-card-${p}" style="border:2px solid #e5e7eb;border-radius:14px;padding:20px;display:flex;flex-direction:column;position:relative;transition:border-color .2s;">
+        <div id="plan-card-${p}" style="border:2px solid #374151;border-radius:14px;padding:20px;display:flex;flex-direction:column;position:relative;transition:border-color .2s;">
           <div style="font-size:12px;font-weight:700;color:${info.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${info.name}</div>
           <div style="display:flex;align-items:baseline;gap:3px;margin-bottom:2px;">
-            <span style="font-size:26px;font-weight:800;color:#111827;">${info.price}€</span>
+            <span style="font-size:26px;font-weight:800;color:#f9fafb;">${info.price}€</span>
             <span style="font-size:12px;color:#6b7280;">/mes</span>
           </div>
           <div style="font-size:12px;color:${info.color};font-weight:600;margin-bottom:2px;">+ ${info.ppo}€ por pedido</div>
           <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">hasta ${info.limit} pedidos/mes</div>
           <ul style="list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;flex:1;">
-            ${info.features.map(f => `<li style="display:flex;align-items:center;gap:6px;font-size:11px;color:#374151;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
+            ${info.features.map(f => `<li style="display:flex;align-items:center;gap:6px;font-size:11px;color:#e5e7eb;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
           </ul>
           <div id="plan-actions-${p}" style="margin-top:auto;"></div>
         </div>`).join("")}
@@ -2969,8 +2969,8 @@ if (id === "plan") {
     if (banner) {
       const expStr = expiresAt ? new Date(expiresAt).toLocaleDateString("es-ES") : null;
       const statusLabel = (d.status === "trial" && d.status !== "active") ? " · <span style='color:#f59e0b;font-weight:700;'>Período de prueba</span>" : "";
-      banner.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;flex-wrap:wrap;">
-        <span style="font-size:13px;color:#374151;">Plan actual:</span>
+      banner.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#1f2937;border:1px solid #374151;border-radius:10px;flex-wrap:wrap;">
+        <span style="font-size:13px;color:#e5e7eb;">Plan actual:</span>
         <span style="font-weight:700;color:${planColors[currentPlan] || "#6b7280"};font-size:14px;">${planNames[currentPlan] || currentPlan}</span>
         ${statusLabel}
         ${expStr ? `<span style="font-size:12px;color:#9ca3af;margin-left:4px;">· Vence el ${expStr}</span>` : ""}
@@ -3009,7 +3009,7 @@ if (id === "plan") {
     });
     const activeCard = document.getElementById("plan-card-" + currentPlan);
     if (activeCard) {
-      const col = planColors[currentPlan] || "#16a34a";
+      const col = planColors[currentPlan] || "#22c55e";
       activeCard.style.borderColor = col;
       activeCard.style.boxShadow = `0 0 0 3px ${col}22`;
     }
@@ -3023,13 +3023,13 @@ if (id === "plan") {
         if (inv.available) {
           invoiceDiv.style.display = "block";
           invoiceDiv.innerHTML = `
-            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-top:4px;">
-              <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;">Resumen del mes actual (${inv.cycle_start} → ${inv.cycle_end})</div>
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:16px 20px;margin-top:4px;">
+              <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:10px;">Resumen del mes actual (${inv.cycle_start} → ${inv.cycle_end})</div>
               <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
                 <div style="display:flex;justify-content:space-between;"><span style="color:#6b7280;">Cuota base:</span><span style="font-weight:600;">${inv.base_price.toFixed(2)}€</span></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:#6b7280;">Pedidos usados:</span><span style="font-weight:600;">${inv.orders_used} × ${inv.price_per_order}€</span></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:#6b7280;">Coste variable:</span><span style="font-weight:600;">${inv.variable_cost.toFixed(2)}€</span></div>
-                <div style="display:flex;justify-content:space-between;border-top:1px solid #e5e7eb;padding-top:6px;margin-top:2px;"><span style="font-weight:700;color:#111827;">Total estimado:</span><span style="font-weight:800;font-size:15px;color:#111827;">${inv.total.toFixed(2)}€</span></div>
+                <div style="display:flex;justify-content:space-between;border-top:1px solid #1f2937;padding-top:6px;margin-top:2px;"><span style="font-weight:700;color:#f9fafb;">Total estimado:</span><span style="font-weight:800;font-size:15px;color:#f9fafb;">${inv.total.toFixed(2)}€</span></div>
               </div>
             </div>`;
         } else {
@@ -3060,13 +3060,13 @@ if (id === "plan") {
       const canTrial  = p === "starter" && !d.had_trial && d.status !== "active" && d.status !== "trial";
       actDiv.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:8px;position:relative;">
-          ${isCurrent ? `<div style="text-align:center;padding:7px;background:#f0fdf4;border-radius:8px;font-size:12px;font-weight:700;color:#16a34a;">✓ Plan actual${d.status === "trial" ? " (prueba)" : ""}</div>` : ""}
+          ${isCurrent ? `<div style="text-align:center;padding:7px;background:rgba(34,197,94,.08);border-radius:8px;font-size:12px;font-weight:700;color:#22c55e;">✓ Plan actual${d.status === "trial" ? " (prueba)" : ""}</div>` : ""}
           ${canTrial ? `<button onclick="startTrial('${p}')"
-            style="width:100%;padding:9px;background:#f0fdf4;color:#16a34a;border:1.5px solid #bbf7d0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
+            style="width:100%;padding:9px;background:rgba(34,197,94,.08);color:#22c55e;border:1.5px solid #86efac;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
             🎁 Probar gratis 7 días
           </button>` : ""}
           ${isCurrent && d.status === "active" ? `<button onclick="gestionarSuscripcion()"
-            style="width:100%;padding:9px;background:#f9fafb;color:#374151;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+            style="width:100%;padding:9px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
             ⚙️ Gestionar suscripción
           </button>` : ""}
           ${!(isCurrent && d.status === "active") ? `<button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
@@ -3074,9 +3074,9 @@ if (id === "plan") {
             Suscribirse
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>` : ""}
-          <div id="payment-menu-${p}" style="display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:100;">
+          <div id="payment-menu-${p}" style="display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#111827;border:1px solid #374151;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:100;">
             <button onclick="pagarStripe('${p}')"
-              style="width:100%;padding:9px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;color:#111827;margin-bottom:6px;">
+              style="width:100%;padding:9px 12px;background:#1f2937;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;color:#f9fafb;margin-bottom:6px;">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#635bff" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
               Pago con tarjeta
             </button>
@@ -3118,7 +3118,7 @@ if (id === "plan") {
       });
       const d = await r.json();
       if (d.ok) {
-        showToast("🎉 ¡Prueba activada!", `Tienes 7 días gratuitos con el plan ${plan}. Disfrútalo.`, "#16a34a");
+        showToast("🎉 ¡Prueba activada!", `Tienes 7 días gratuitos con el plan ${plan}. Disfrútalo.`, "#22c55e");
         loadPlanUI();
       } else {
         alert(d.error || "No se pudo activar el período de prueba");
@@ -3171,7 +3171,7 @@ if (id === "plan") {
           });
           const d = await r.json();
           if (d.ok) {
-            showToast("✅ Pago completado", `Plan ${plan} activado correctamente`, "#16a34a");
+            showToast("✅ Pago completado", `Plan ${plan} activado correctamente`, "#22c55e");
             loadPlanUI();
           } else {
             alert("Error al procesar el pago: " + (d.error || "desconocido"));
@@ -3204,7 +3204,7 @@ if (id === "plan") {
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("payment") === "success") {
     history.replaceState({}, "", "/");
-    showToast("✅ Pago completado", "Tu plan ha sido activado. Puede tardar unos segundos en reflejarse.", "#16a34a");
+    showToast("✅ Pago completado", "Tu plan ha sido activado. Puede tardar unos segundos en reflejarse.", "#22c55e");
   } else if (urlParams.get("payment") === "cancelled") {
     history.replaceState({}, "", "/");
     showToast("ℹ️ Pago cancelado", "No se realizó ningún cargo.", "#6b7280");
@@ -3443,7 +3443,7 @@ function _renderSearchDrop(drop, results, loading) {
     enviado:        { bg: "#dbeafe", color: "#1e40af" },
     en_transito:    { bg: "#ede9fe", color: "#5b21b6" },
     franquicia:     { bg: "#ede9fe", color: "#5b21b6" },
-    entregado:      { bg: "#dcfce7", color: "#15803d" },
+    entregado:      { bg: "rgba(34,197,94,.12)", color: "#16a34a" },
     devuelto:       { bg: "#fee2e2", color: "#b91c1c" },
     destruido:      { bg: "#f3f4f6", color: "#374151" },
     cancelado:      { bg: "#fee2e2", color: "#b91c1c" },
@@ -3471,7 +3471,7 @@ function _renderSearchDrop(drop, results, loading) {
   // "Ver todos" hint for multiple product matches
   const totalProductos = window.__searchProductosIds?.length || 0;
   if (totalProductos > 1) {
-    html += `<div class="search-item" onclick="goToSearchAllProductos()" style="border-top:1px solid #e5e7eb;color:#7c3aed;font-weight:600;font-size:12px;">
+    html += `<div class="search-item" onclick="goToSearchAllProductos()" style="border-top:1px solid #1f2937;color:#7c3aed;font-weight:600;font-size:12px;">
       🔍 Ver los ${totalProductos} resultados de productos · Enter
     </div>`;
   }
@@ -3648,9 +3648,9 @@ function switchFacturasTab(key) {
     const btn = document.getElementById("tab-btn-" + k);
     if (!btn) return;
     if (k === key) {
-      btn.style.background = "#16a34a";
+      btn.style.background = "#22c55e";
       btn.style.color = "#fff";
-      btn.style.borderColor = "#16a34a";
+      btn.style.borderColor = "#22c55e";
     } else {
       btn.style.background = "#fff";
       btn.style.color = "#374151";
@@ -3676,17 +3676,17 @@ function switchFacturasTab(key) {
                 <input type="date" id="ree-date-from" value="" style="display:none;">
                 <input type="date" id="ree-date-to" value="" style="display:none;">
                 <select id="ree-shop" onchange="renderReembolsos()"
-                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+                  style="padding:7px 10px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
                   <option value="">Todas las tiendas</option>
                 </select>
-                <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
-                <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;color:#16a34a;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+                <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
+                <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:rgba(34,197,94,.08);border:1px solid #22c55e;border-radius:8px;color:#22c55e;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
                   ✅ Importar Pagados
                   <input type="file" accept=".pdf" multiple style="display:none;" onchange="importarPagadosPDF(this)">
                 </label>
               </div>
           </div>
-          <div style="border-bottom:1px solid #e5e7eb;margin-bottom:12px;"></div>
+          <div style="border-bottom:1px solid #1f2937;margin-bottom:12px;"></div>
 
           <div id="ree-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
 
@@ -3728,13 +3728,13 @@ function switchFacturasTab(key) {
   if (key === "gastos-ads") {
     content.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
-        <select id="ads-shop-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        <select id="ads-shop-sel" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           <option value="">Cargando tiendas...</option>
         </select>
-        <select id="ads-month-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        <select id="ads-month-sel" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${Array.from({length:12},(_,i)=>{const d=new Date();d.setMonth(i);return `<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${d.toLocaleString("es",{month:"long"})}</option>`;}).join("")}
         </select>
-        <select id="ads-year-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        <select id="ads-year-sel" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
               </div>
@@ -3763,15 +3763,15 @@ function switchFacturasTab(key) {
   if (key === "gastos-tienda") {
     content.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
-        <select id="gv-month-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        <select id="gv-month-sel" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"].map((m,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${m}</option>`).join("")}
         </select>
-        <select id="gv-year-sel" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        <select id="gv-year-sel" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
-        <button onclick="loadGastosVarios()" style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
+        <button onclick="loadGastosVarios()" style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
       </div>
-      <div id="gv-mes-label" style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;"></div>
+      <div id="gv-mes-label" style="margin-bottom:16px;padding:10px 16px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:8px;font-size:13px;color:#22c55e;font-weight:600;"></div>
       <div id="gv-content"></div>
     `;
     loadGastosVarios();
@@ -3805,13 +3805,13 @@ async function loadNomina() {
 
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
-      <select id="nom-month-sel" onchange="loadNominaData()" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+      <select id="nom-month-sel" onchange="loadNominaData()" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
       </select>
-      <select id="nom-year-sel" onchange="loadNominaData()" style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+      <select id="nom-year-sel" onchange="loadNominaData()" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
       </select>
-      <button onclick="openAddTrabajador()" style="padding:7px 16px;background:#fff;color:#16a34a;border:1px solid #16a34a;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">+ Trabajador</button>
+      <button onclick="openAddTrabajador()" style="padding:7px 16px;background:#111827;color:#22c55e;border:1px solid #22c55e;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">+ Trabajador</button>
     </div>
     <div id="nomina-content">Cargando...</div>
   `;
@@ -3843,15 +3843,15 @@ async function loadNominaData() {
 
     const fmt = n => (parseFloat(n)||0).toFixed(2);
     const thS = `padding:11px 14px;border:1px solid #d1fae5;font-weight:600;color:#fff;text-align:`;
-    const inp = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
+    const inp = `width:100%;padding:6px 8px;border:1px solid #374151;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
 
     const totalNomina = trabajadores.reduce((s,t) => s + (parseFloat(pagosMap[t.id])||0), 0);
 
     content.innerHTML = `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+      <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead>
-            <tr style="background:#16a34a;">
+            <tr style="background:#22c55e;">
               <th style="${thS}left;">TRABAJADOR</th>
               <th style="${thS}right;">PAGO DEL MES (€)</th>
               <th style="${thS}center;">ACCIONES</th>
@@ -3860,17 +3860,17 @@ async function loadNominaData() {
           <tbody>
             ${trabajadores.map(t => `
               <tr>
-                <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">${escapeHtml(t.nombre)}</td>
-                <td style="padding:8px 14px;border:1px solid #e5e7eb;">
+                <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">${escapeHtml(t.nombre)}</td>
+                <td style="padding:8px 14px;border:1px solid #374151;">
                   <input type="number" step="0.01" min="0"
                     value="${fmt(pagosMap[t.id]||0)}"
                     data-id="${t.id}" data-mes="${mes}"
                     onchange="saveNominaPago(this)"
                     style="${inp}text-align:right;">
                 </td>
-                <td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:center;">
+                <td style="padding:8px 14px;border:1px solid #374151;text-align:center;">
                   <button onclick="deleteTrabajador(${t.id})"
-                    style="padding:4px 12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:12px;cursor:pointer;">
+                    style="padding:4px 12px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:12px;cursor:pointer;">
                     Eliminar
                   </button>
                 </td>
@@ -3878,10 +3878,10 @@ async function loadNominaData() {
             `).join("")}
           </tbody>
           <tfoot>
-            <tr style="background:#f0fdf4;">
-              <td style="padding:11px 14px;border:1px solid #e5e7eb;font-weight:700;">TOTAL NÓMINA</td>
-              <td style="padding:11px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalNomina)} €</td>
-              <td style="border:1px solid #e5e7eb;"></td>
+            <tr style="background:rgba(34,197,94,.08);">
+              <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;">TOTAL NÓMINA</td>
+              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;">${fmt(totalNomina)} €</td>
+              <td style="border:1px solid #374151;"></td>
             </tr>
           </tfoot>
         </table>
@@ -3905,7 +3905,7 @@ async function saveNominaPago(input) {
     });
     window.__hideLoadingBar?.();
     invalidateCache("nomina");
-    input.style.borderColor = "#16a34a";
+    input.style.borderColor = "#22c55e";
     setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
     await loadNominaData();
   } catch(e) { window.__hideLoadingBar?.(); console.error(e); }
@@ -3996,7 +3996,7 @@ window.openAddTrabajador = openAddTrabajador;
       <button id="chat-fab" onclick="window.__toggleChat()" title="Soporte" style="
         position:fixed;bottom:24px;right:24px;z-index:9000;
         width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
-        background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;
+        background:#22c55e;color:#fff;display:flex;align-items:center;justify-content:center;
         box-shadow:0 4px 16px rgba(0,0,0,.2);transition:transform .2s;">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -4013,10 +4013,10 @@ window.openAddTrabajador = openAddTrabajador;
 
       <div id="chat-panel" style="
         display:none;position:fixed;bottom:88px;right:24px;z-index:9000;
-        width:340px;height:480px;background:#fff;border-radius:16px;
+        width:340px;height:480px;background:#111827;border-radius:16px;
         box-shadow:0 8px 32px rgba(0,0,0,.15);display:none;flex-direction:column;overflow:hidden;">
 
-        <div style="background:#16a34a;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="background:#22c55e;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
           <div style="display:flex;align-items:center;gap:10px;">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span style="font-weight:700;font-size:14px;color:#fff;" id="chat-panel-title">Soporte ProfitCod</span>
@@ -4030,29 +4030,29 @@ window.openAddTrabajador = openAddTrabajador;
         <div id="chat-info-form" style="display:none;flex:1;padding:20px;display:none;flex-direction:column;gap:14px;justify-content:center;">
           <p style="font-size:13px;color:#6b7280;margin:0;">Antes de continuar, indícanos cómo contactarte:</p>
           <div style="display:flex;flex-direction:column;gap:6px;">
-            <label style="font-size:12px;font-weight:600;color:#374151;">Nombre *</label>
+            <label style="font-size:12px;font-weight:600;color:#e5e7eb;">Nombre *</label>
             <input id="chat-info-name" type="text" placeholder="Tu nombre completo"
-              style="padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
+              style="padding:9px 12px;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;">
-            <label style="font-size:12px;font-weight:600;color:#374151;">Email</label>
+            <label style="font-size:12px;font-weight:600;color:#e5e7eb;">Email</label>
             <input id="chat-info-email" type="email"
-              style="padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;background:#f9fafb;color:#374151;outline:none;" readonly />
+              style="padding:9px 12px;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;background:#1f2937;color:#e5e7eb;outline:none;" readonly />
           </div>
           <div id="chat-info-error" style="font-size:12px;color:#dc2626;display:none;"></div>
           <button onclick="window.__submitChatInfo()"
-            style="padding:10px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;">
+            style="padding:10px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;">
             Iniciar conversación
           </button>
         </div>
 
         <div id="chat-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;"></div>
 
-        <div id="chat-input-area" style="border-top:1px solid #e5e7eb;padding:10px;display:flex;gap:8px;align-items:flex-end;">
+        <div id="chat-input-area" style="border-top:1px solid #1f2937;padding:10px;display:flex;gap:8px;align-items:flex-end;">
           <textarea id="chat-input" rows="1" placeholder="Escribe un mensaje..."
-            style="flex:1;resize:none;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;max-height:80px;overflow-y:auto;"
+            style="flex:1;resize:none;border:1px solid #374151;border-radius:10px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;max-height:80px;overflow-y:auto;"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.__sendChatMsg();}"></textarea>
-          <button onclick="window.__sendChatMsg()" style="padding:8px 14px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Enviar</button>
+          <button onclick="window.__sendChatMsg()" style="padding:8px 14px;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Enviar</button>
         </div>
       </div>`;
     document.body.appendChild(widget);
@@ -4064,7 +4064,7 @@ window.openAddTrabajador = openAddTrabajador;
     const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" }) : "";
     return `<div style="display:flex;flex-direction:column;align-items:${isMe ? "flex-end" : "flex-start"};">
       <div style="max-width:80%;padding:8px 12px;border-radius:${isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px"};
-        background:${isMe ? "#16a34a" : "#f3f4f6"};color:${isMe ? "#fff" : "#111827"};font-size:13px;line-height:1.5;">
+        background:${isMe ? "#22c55e" : "#f3f4f6"};color:${isMe ? "#fff" : "#111827"};font-size:13px;line-height:1.5;">
         ${escapeHtml ? escapeHtml(m.content) : m.content}
       </div>
       <span style="font-size:10px;color:#9ca3af;margin-top:2px;">${time}</span>
@@ -4129,7 +4129,7 @@ window.openAddTrabajador = openAddTrabajador;
           : "";
         div.innerHTML = `
           <div>
-            <div style="font-size:13px;font-weight:600;color:#111827;">${c.label}</div>
+            <div style="font-size:13px;font-weight:600;color:#f9fafb;">${c.label}</div>
             <div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${c.last_content || ""}</div>
           </div>${unread}`;
         frag.appendChild(div);
@@ -4327,7 +4327,7 @@ function openUserSection(type) {
 
   if (!box) return;
 
-  const inp = (id, ph, type="text") => `<input id="${id}" type="${type}" placeholder="${ph}" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;">`;
+  const inp = (id, ph, type="text") => `<input id="${id}" type="${type}" placeholder="${ph}" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;">`;
 
   if (type === "profile") {
     title.textContent = "Perfil";
@@ -4337,11 +4337,11 @@ function openUserSection(type) {
     box.innerHTML = `<div style="max-width:480px;">
       <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px;">
         <div style="position:relative;cursor:pointer;" onclick="document.getElementById('avatar-input').click()">
-          <div id="avatar-circle" style="width:96px;height:96px;border-radius:50%;background:#f3f4f6;border:2px solid #e5e7eb;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+          <div id="avatar-circle" style="width:96px;height:96px;border-radius:50%;background:#1f2937;border:2px solid #374151;overflow:hidden;display:flex;align-items:center;justify-content:center;">
             <svg id="avatar-placeholder-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <img id="avatar-img" style="display:none;width:100%;height:100%;object-fit:cover;" />
           </div>
-          <div style="position:absolute;bottom:2px;right:2px;background:#16a34a;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;bottom:2px;right:2px;background:#22c55e;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </div>
         </div>
@@ -4350,16 +4350,16 @@ function openUserSection(type) {
           <input id="display-name-input" type="text"
             value="${escapeHtml(currentUser.display_name)}"
             placeholder="Tu nombre o empresa..."
-            style="border:none;border-bottom:2px solid #e5e7eb;padding:4px 6px;font-size:17px;font-weight:700;color:#111827;text-align:center;background:transparent;font-family:inherit;width:220px;outline:none;transition:border-color .2s;"
-            onfocus="this.style.borderBottomColor='#16a34a'"
+            style="border:none;border-bottom:2px solid #e5e7eb;padding:4px 6px;font-size:17px;font-weight:700;color:#f9fafb;text-align:center;background:transparent;font-family:inherit;width:220px;outline:none;transition:border-color .2s;"
+            onfocus="this.style.borderBottomColor='#22c55e'"
             onblur="this.style.borderBottomColor='#e5e7eb';guardarDisplayName(this.value)"
             onkeydown="if(event.key==='Enter'){this.blur();}">
         </div>
         <div style="margin-top:4px;font-size:12px;color:#9ca3af;">${escapeHtml(currentUser.email)}</div>
-        <span style="margin-top:6px;padding:3px 14px;background:#dcfce7;color:#16a34a;border-radius:20px;font-size:12px;font-weight:600;">${escapeHtml(currentUser.role)}</span>
+        <span style="margin-top:6px;padding:3px 14px;background:rgba(34,197,94,.12);color:#22c55e;border-radius:20px;font-size:12px;font-weight:600;">${escapeHtml(currentUser.role)}</span>
       </div>
 
-      <div style="border-top:1px solid #e5e7eb;padding-top:22px;">
+      <div style="border-top:1px solid #1f2937;padding-top:22px;">
         <div style="font-weight:700;font-size:14px;margin-bottom:14px;">Cambiar contraseña</div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           ${inp("curr-pass","Contraseña actual","password")}
@@ -4367,7 +4367,7 @@ function openUserSection(type) {
           ${inp("confirm-pass","Confirmar nueva contraseña","password")}
         </div>
         <div id="pass-msg" style="margin-top:8px;font-size:12px;min-height:16px;"></div>
-        <button onclick="changePassword()" style="margin-top:12px;padding:9px 22px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Actualizar contraseña</button>
+        <button onclick="changePassword()" style="margin-top:12px;padding:9px 22px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Actualizar contraseña</button>
       </div>
     </div>`;
 
@@ -4422,7 +4422,7 @@ function openUserSection(type) {
         ${inp("bill-country","País")}
       </div>
       <div id="billing-msg" style="margin-top:10px;font-size:12px;min-height:16px;"></div>
-      <button onclick="saveBillingData()" style="margin-top:14px;padding:9px 22px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Actualizar datos de facturación</button>
+      <button onclick="saveBillingData()" style="margin-top:14px;padding:9px 22px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Actualizar datos de facturación</button>
 
       <div style="border-top:1px solid #fee2e2;margin-top:36px;padding-top:24px;">
         <div style="font-weight:700;font-size:14px;color:#dc2626;margin-bottom:6px;">Zona de peligro</div>
@@ -4486,7 +4486,7 @@ async function handleAvatarChange(event) {
         headerAvatar.style.backgroundSize = "cover";
         headerAvatar.style.backgroundPosition = "center";
       }
-      showToast("Foto de perfil actualizada", "", "#16a34a");
+      showToast("Foto de perfil actualizada", "", "#22c55e");
     }
   } catch { alert("Error al guardar la imagen"); }
 }
@@ -4505,10 +4505,10 @@ function abrirEditorAvatar(srcUrl) {
     modal.id = "avatar-editor-modal";
     modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;";
     modal.innerHTML = `
-      <div style="background:#fff;border-radius:16px;padding:28px 24px;width:320px;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 24px 64px rgba(0,0,0,0.4);">
-        <div style="font-size:15px;font-weight:700;color:#111827;align-self:flex-start;">Ajustar foto de perfil</div>
+      <div style="background:#111827;border-radius:16px;padding:28px 24px;width:320px;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 24px 64px rgba(0,0,0,0.4);">
+        <div style="font-size:15px;font-weight:700;color:#f9fafb;align-self:flex-start;">Ajustar foto de perfil</div>
         <!-- Círculo de preview con canvas -->
-        <div style="width:${PREVIEW}px;height:${PREVIEW}px;border-radius:50%;overflow:hidden;border:3px solid #16a34a;cursor:grab;flex-shrink:0;touch-action:none;">
+        <div style="width:${PREVIEW}px;height:${PREVIEW}px;border-radius:50%;overflow:hidden;border:3px solid #22c55e;cursor:grab;flex-shrink:0;touch-action:none;">
           <canvas id="avatar-crop-canvas" width="${PREVIEW}" height="${PREVIEW}" style="display:block;"></canvas>
         </div>
         <!-- Slider zoom -->
@@ -4517,12 +4517,12 @@ function abrirEditorAvatar(srcUrl) {
             <span>Zoom</span><span id="avatar-zoom-label">1.0×</span>
           </div>
           <input id="avatar-zoom-slider" type="range" min="50" max="300" value="100"
-            style="width:100%;accent-color:#16a34a;cursor:pointer;">
+            style="width:100%;accent-color:#22c55e;cursor:pointer;">
         </div>
         <!-- Botones -->
         <div style="display:flex;gap:10px;width:100%;">
-          <button id="avatar-cancel-btn" style="flex:1;padding:10px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
-          <button id="avatar-save-btn" style="flex:1;padding:10px;background:#16a34a;border:none;border-radius:8px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;">Guardar foto</button>
+          <button id="avatar-cancel-btn" style="flex:1;padding:10px;background:#1f2937;border:1px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+          <button id="avatar-save-btn" style="flex:1;padding:10px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;">Guardar foto</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -4647,7 +4647,7 @@ async function changePassword() {
     const data = await res.json();
     if (!res.ok) { if (msg) { msg.style.color="#dc2626"; msg.textContent=data.error||"Error al cambiar contraseña."; } }
     else {
-      if (msg) { msg.style.color="#16a34a"; msg.textContent="Contraseña actualizada correctamente."; }
+      if (msg) { msg.style.color="#22c55e"; msg.textContent="Contraseña actualizada correctamente."; }
       document.getElementById("curr-pass").value = "";
       document.getElementById("new-pass").value = "";
       document.getElementById("confirm-pass").value = "";
@@ -4673,7 +4673,7 @@ async function saveBillingData() {
     });
     const data = await res.json();
     if (!res.ok) { if (msg) { msg.style.color="#dc2626"; msg.textContent=data.error||"Error al guardar."; } }
-    else { if (msg) { msg.style.color="#16a34a"; msg.textContent="Datos de facturación actualizados."; } }
+    else { if (msg) { msg.style.color="#22c55e"; msg.textContent="Datos de facturación actualizados."; } }
   } catch { if (msg) { msg.style.color="#dc2626"; msg.textContent="Error de conexión."; } }
 }
 
@@ -4685,11 +4685,11 @@ function showCancelAccount() {
       <div style="background:var(--card);border-radius:14px;padding:32px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
         <div style="font-weight:700;font-size:16px;color:#dc2626;margin-bottom:8px;">¿Cancelar tu cuenta?</div>
         <div style="color:#6b7280;font-size:13px;margin-bottom:20px;">Esta acción es irreversible. Se eliminarán todos tus datos. Escribe tu contraseña para confirmar.</div>
-        <input type="password" id="cancel-pass" placeholder="Tu contraseña" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;margin-bottom:8px;">
+        <input type="password" id="cancel-pass" placeholder="Tu contraseña" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;margin-bottom:8px;">
         <div id="cancel-msg" style="font-size:12px;color:#dc2626;min-height:16px;margin-bottom:14px;"></div>
         <div style="display:flex;gap:10px;">
           <button onclick="confirmCancelAccount()" style="flex:1;padding:9px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Sí, cancelar mi cuenta</button>
-          <button onclick="document.getElementById('cancel-overlay').remove()" style="flex:1;padding:9px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Volver</button>
+          <button onclick="document.getElementById('cancel-overlay').remove()" style="flex:1;padding:9px;background:#e5e7eb;color:#e5e7eb;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Volver</button>
         </div>
       </div>
     </div>`;
@@ -5334,35 +5334,35 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   window.__metricasBalanceData = balanceData;
 
   const cols = balanceData.map(d => {
-    const resColor = d.resultado >= 0 ? "#16a34a" : "#dc2626";
-    const resBg    = d.resultado >= 0 ? "#f0fdf4" : "#fef2f2";
-    const resBorder= d.resultado >= 0 ? "#bbf7d0" : "#fecaca";
+    const resColor = d.resultado >= 0 ? "#22c55e" : "#dc2626";
+    const resBg    = d.resultado >= 0 ? "rgba(34,197,94,.08)" : "#fef2f2";
+    const resBorder= d.resultado >= 0 ? "#86efac" : "#fecaca";
     return `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;" data-domain="${d.domain}">
-        <div style="background:#16a34a;padding:10px 14px;">
+      <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;" data-domain="${d.domain}">
+        <div style="background:#22c55e;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
-          <div style="font-size:11px;color:#bbf7d0;">${d.domain}</div>
+          <div style="font-size:11px;color:#86efac;">${d.domain}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
-            <tr style="background:#f0fdf4;"><td colspan="2" style="padding:8px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📥 Ingresos</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">COD<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numCOD} pedidos — ${fmt(d.brutoCOD)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión MRW (${d.numCOD}×0.67€) = −${fmt(d.descCOD)}€</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;font-weight:600;">${fmt(d.netoCOD)} €</td></tr>
-            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">TARJETA<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numTarjeta} pedidos — ${fmt(d.brutoTarjeta)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(d.descTarjeta)}€</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#374151;font-weight:600;">${fmt(d.netoTarjeta)} €</td></tr>
-            ${d.man1val > 0 ? `<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">${escapeHtml(d.man1nom||"Extra 1")}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${fmt(d.man1val)} €</td></tr>` : ""}
-            ${d.man2val > 0 ? `<tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">${escapeHtml(d.man2nom||"Extra 2")}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;">${fmt(d.man2val)} €</td></tr>` : ""}
-            <tr style="background:#f0fdf4;"><td style="padding:8px 14px;border:1px solid #bbf7d0;font-weight:700;color:#16a34a;">Total Ingresos</td><td style="padding:8px 14px;border:1px solid #bbf7d0;text-align:right;font-weight:700;color:#16a34a;">${fmt(d.totalIngreso)} €</td></tr>
-            <tr style="background:#fef2f2;"><td colspan="2" style="padding:8px 14px;border:1px solid #e5e7eb;font-weight:700;color:#dc2626;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📤 Gastos</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gasto Meta</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.meta)} €</td></tr>
-            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gasto TikTok</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.tiktok)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Productos<div style="font-size:10px;color:#9ca3af;">costo × uds × qty</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.costoProductos)} €</td></tr>
-            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">MRW<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.mrw)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Logística<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.logistica)} €</td></tr>
-            <tr style="background:#f9fafb;"><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Gastos Fijos<div style="font-size:10px;color:#9ca3af;">${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.fijoXTienda)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Nómina<div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.nominaXTienda)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">Shopify</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(d.shopify)} €</td></tr>
-            ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>`<tr><td style="padding:8px 14px;border:1px solid #e5e7eb;color:#374151;font-weight:600;">${escapeHtml(g.nombre||'Concepto extra')}</td><td style="padding:8px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(g.valor)} €</td></tr>`).join("")}
+            <tr style="background:rgba(34,197,94,.08);"><td colspan="2" style="padding:8px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📥 Ingresos</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">COD<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numCOD} pedidos — ${fmt(d.brutoCOD)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión MRW (${d.numCOD}×0.67€) = −${fmt(d.descCOD)}€</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#e5e7eb;font-weight:600;">${fmt(d.netoCOD)} €</td></tr>
+            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">TARJETA<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numTarjeta} pedidos — ${fmt(d.brutoTarjeta)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(d.descTarjeta)}€</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#e5e7eb;font-weight:600;">${fmt(d.netoTarjeta)} €</td></tr>
+            ${d.man1val > 0 ? `<tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">${escapeHtml(d.man1nom||"Extra 1")}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;">${fmt(d.man1val)} €</td></tr>` : ""}
+            ${d.man2val > 0 ? `<tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">${escapeHtml(d.man2nom||"Extra 2")}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;">${fmt(d.man2val)} €</td></tr>` : ""}
+            <tr style="background:rgba(34,197,94,.08);"><td style="padding:8px 14px;border:1px solid #86efac;font-weight:700;color:#22c55e;">Total Ingresos</td><td style="padding:8px 14px;border:1px solid #86efac;text-align:right;font-weight:700;color:#22c55e;">${fmt(d.totalIngreso)} €</td></tr>
+            <tr style="background:rgba(239,68,68,.1);"><td colspan="2" style="padding:8px 14px;border:1px solid #374151;font-weight:700;color:#dc2626;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📤 Gastos</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Gasto Meta</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.meta)} €</td></tr>
+            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Gasto TikTok</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.tiktok)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Productos<div style="font-size:10px;color:#9ca3af;">costo × uds × qty</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.costoProductos)} €</td></tr>
+            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">MRW<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.mrw)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Logística<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.logistica)} €</td></tr>
+            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Gastos Fijos<div style="font-size:10px;color:#9ca3af;">${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.fijoXTienda)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Nómina<div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.nominaXTienda)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Shopify</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.shopify)} €</td></tr>
+            ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>`<tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">${escapeHtml(g.nombre||'Concepto extra')}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(g.valor)} €</td></tr>`).join("")}
             <tr style="background:#fefce8;"><td style="padding:8px 14px;border:1px solid #fef08a;color:#854d0e;font-weight:600;">IVA (${(d.ivaPorcentaje*100).toFixed(0)}%)<div style="font-size:10px;color:#a16207;">${d.numCOD + d.numTarjeta} pedidos entregados × ${(d.ivaPorcentaje*100).toFixed(0)}%</div></td><td style="padding:8px 14px;border:1px solid #fef08a;text-align:right;color:#854d0e;font-weight:600;">${fmt(d.ivaTotal)} €</td></tr>
-             <tr style="background:#fef2f2;"><td style="padding:8px 14px;border:1px solid #fecaca;font-weight:700;color:#dc2626;">Total Gastos</td><td style="padding:8px 14px;border:1px solid #fecaca;text-align:right;font-weight:700;color:#dc2626;">− ${fmt(d.totalGasto)} €</td></tr>
+             <tr style="background:rgba(239,68,68,.1);"><td style="padding:8px 14px;border:1px solid #fecaca;font-weight:700;color:#dc2626;">Total Gastos</td><td style="padding:8px 14px;border:1px solid #fecaca;text-align:right;font-weight:700;color:#dc2626;">− ${fmt(d.totalGasto)} €</td></tr>
             <tr style="background:${resBg};"><td style="padding:12px 14px;border:1px solid ${resBorder};font-weight:700;color:${resColor};font-size:14px;">RESULTADO</td><td style="padding:12px 14px;border:1px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:16px;">${fmt(d.resultado)} €</td></tr>
           </tbody>
         </table>
@@ -5371,7 +5371,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
 
   const storeCheckboxes = balanceData.map(d =>
     `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
-      <input type="checkbox" checked value="${d.domain}" onchange="recalcMetricasBalance()" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+      <input type="checkbox" checked value="${d.domain}" onchange="recalcMetricasBalance()" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
       ${escapeHtml(d.name)}
     </label>`
   ).join("");
@@ -5379,21 +5379,21 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   wrap.innerHTML = `
     <div style="display:flex;gap:20px;align-items:flex-start;">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Esto es un estimado basado en el rango de fecha seleccionado y los precios Unt de MRW y Logística, tu balance final por mes lo puedes ver en Ingresos - Balance Final)</span></div>
+        <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Esto es un estimado basado en el rango de fecha seleccionado y los precios Unt de MRW y Logística, tu balance final por mes lo puedes ver en Ingresos - Balance Final)</span></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;" id="met-bal-cols">${cols}</div>
-        <div id="met-bal-sumatoria" style="margin-top:20px;padding:16px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
+        <div id="met-bal-sumatoria" style="margin-top:20px;padding:16px 20px;background:rgba(34,197,94,.08);border:2px solid #22c55e;border-radius:12px;">
           <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Sumatoria seleccionada</div>
           <div id="met-bal-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
-          <div style="border-top:2px solid #16a34a;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+          <div style="border-top:2px solid #22c55e;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:15px;color:#e5e7eb;">TOTAL</span>
             <span id="met-bal-total" style="font-weight:800;font-size:22px;"></span>
           </div>
         </div>
       </div>
-       <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
+       <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
         <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
         <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-          <input type="checkbox" id="met-bal-check-all" checked onchange="toggleAllMetricasBalance(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          <input type="checkbox" id="met-bal-check-all" checked onchange="toggleAllMetricasBalance(this.checked)" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
           Todas las tiendas
         </label>
         ${storeCheckboxes}
@@ -5414,8 +5414,8 @@ function recalcMetricasBalance() {
   const total = filtradas.reduce((s,d)=>s+d.resultado,0);
   const filasEl = document.getElementById("met-bal-filas");
   const totalEl = document.getElementById("met-bal-total");
-  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#16a34a;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#16a34a':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
-  if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total>=0?"#16a34a":"#dc2626"; }
+  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#111827;border:1px solid #374151;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#22c55e':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
+  if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total>=0?"#22c55e":"#dc2626"; }
   const allCheck = document.getElementById("met-bal-check-all");
   if (allCheck) allCheck.checked = filtradas.length === data.length;
 
@@ -5676,12 +5676,12 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
 
   window.__rentabilidadDesglose = {};
   const cols = balanceData.map(d => {
-    const resColor = d.resultado >= 0 ? "#16a34a" : "#dc2626";
-    const resBg    = d.resultado >= 0 ? "#f0fdf4" : "#fef2f2";
-    const resBorder= d.resultado >= 0 ? "#bbf7d0" : "#fecaca";
+    const resColor = d.resultado >= 0 ? "#22c55e" : "#dc2626";
+    const resBg    = d.resultado >= 0 ? "rgba(34,197,94,.08)" : "#fef2f2";
+    const resBorder= d.resultado >= 0 ? "#86efac" : "#fecaca";
     const tr  = (label, sub, val, opts={}) =>
       `<tr style="border-bottom:1px solid #f3f4f6;">
-        <td style="padding:7px 12px;color:#374151;font-weight:${opts.bold?'700':'500'};font-size:12px;${opts.cursor?'cursor:pointer;':''}"
+        <td style="padding:7px 12px;color:#e5e7eb;font-weight:${opts.bold?'700':'500'};font-size:12px;${opts.cursor?'cursor:pointer;':''}"
           ${opts.onclick ? `onclick="${opts.onclick}"` : ''}>
           ${label}${sub ? `<div style="font-size:10px;color:#9ca3af;font-weight:400;margin-top:1px;">${sub}</div>` : ''}
         </td>
@@ -5714,21 +5714,21 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
       </table>`;
     // Tarjeta compacta — vista principal
     return `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;" data-domain="${d.domain}">
-        <div style="font-weight:700;font-size:13px;color:#374151;">${escapeHtml(d.name)}</div>
+      <div style="background:var(--card);border:1px solid #374151;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;" data-domain="${d.domain}">
+        <div style="font-weight:700;font-size:13px;color:#e5e7eb;">${escapeHtml(d.name)}</div>
         <div style="font-size:10px;color:#9ca3af;">${d.domain}</div>
         <div style="margin-top:6px;font-size:12px;display:flex;flex-direction:column;gap:3px;">
-          <div>Ingreso: <span style="color:#16a34a;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
+          <div>Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
           <div>Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div>
         </div>
         <div style="font-size:16px;font-weight:800;color:${resColor};border-top:1px solid #f3f4f6;padding-top:8px;margin-top:2px;">${fmt(d.resultado)} €</div>
-        <button onclick="verDesgloseRentTienda('${d.domain}')" style="margin-top:4px;padding:6px 0;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;width:100%;">Ver desglose</button>
+        <button onclick="verDesgloseRentTienda('${d.domain}')" style="margin-top:4px;padding:6px 0;background:#1f2937;border:1px solid #374151;border-radius:6px;font-size:12px;font-weight:600;color:#e5e7eb;cursor:pointer;width:100%;">Ver desglose</button>
       </div>`;
   }).join("");
 
   const storeCheckboxes = balanceData.map(d =>
     `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
-      <input type="checkbox" checked value="${d.domain}" onchange="recalcRentabilidadBalance()" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+      <input type="checkbox" checked value="${d.domain}" onchange="recalcRentabilidadBalance()" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
       ${escapeHtml(d.name)}
     </label>`
   ).join("");
@@ -5736,19 +5736,19 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
   wrap.innerHTML = `
     <div style="display:flex;gap:20px;align-items:flex-start;">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Estimado basado en el rango de fecha seleccionado)</span></div>
+        <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Estimado basado en el rango de fecha seleccionado)</span></div>
         <div id="rent-bal-kpis" style="margin-bottom:20px;"></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;" id="rent-bal-cols">${cols}</div>
-        <div id="rent-bal-sumatoria" style="margin-top:20px;padding:12px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+        <div id="rent-bal-sumatoria" style="margin-top:20px;padding:12px 20px;background:rgba(34,197,94,.08);border:2px solid #22c55e;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:700;font-size:15px;color:#e5e7eb;">TOTAL</span>
           <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
           <div id="rent-bal-filas" style="display:none;"></div>
         </div>
       </div>
-      <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
+      <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
         <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
         <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-          <input type="checkbox" id="rent-bal-check-all" checked onchange="toggleAllRentabilidadBalance(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+          <input type="checkbox" id="rent-bal-check-all" checked onchange="toggleAllRentabilidadBalance(this.checked)" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
           Todas las tiendas
         </label>
         ${storeCheckboxes}
@@ -5770,8 +5770,8 @@ function recalcRentabilidadBalance() {
   const total = filtradas.reduce((s,d)=>s+d.resultado,0);
   const filasEl = document.getElementById("rent-bal-filas");
   const totalEl = document.getElementById("rent-bal-total");
-  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#16a34a;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#16a34a':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
-  if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total>=0?"#16a34a":"#dc2626"; }
+  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#111827;border:1px solid #374151;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#22c55e':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
+  if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total>=0?"#22c55e":"#dc2626"; }
   const allCheck = document.getElementById("rent-bal-check-all");
   if (allCheck) allCheck.checked = filtradas.length === data.length;
   renderRentKpis(filtradas);
@@ -5801,7 +5801,7 @@ function renderRentKpis(filtradas) {
   const logisticaTotal    = sum('logistica');
 
   const card = (label, value, sub='', color='var(--text,#111827)') =>
-    `<div style="background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;">
+    `<div style="background:var(--card);border:1px solid #374151;border-radius:10px;padding:16px 18px;">
       <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">${label}</div>
       <div style="font-size:22px;font-weight:800;color:${color};line-height:1.1;">${value}</div>
       ${sub ? `<div style="font-size:11px;color:#6b7280;margin-top:5px;">${sub}</div>` : ''}
@@ -5809,12 +5809,12 @@ function renderRentKpis(filtradas) {
 
   const section = (title, cards) =>
     `<div style="margin-bottom:16px;">
-      <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;padding-bottom:5px;border-bottom:2px solid #e5e7eb;">${title}</div>
+      <div style="font-size:11px;font-weight:700;color:#e5e7eb;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;padding-bottom:5px;border-bottom:2px solid #e5e7eb;">${title}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;">${cards.join('')}</div>
     </div>`;
 
-  const pctColor = pctGanancia >= 0 ? '#16a34a' : '#dc2626';
-  const resColor = resultado >= 0 ? '#16a34a' : '#dc2626';
+  const pctColor = pctGanancia >= 0 ? '#22c55e' : '#dc2626';
+  const resColor = resultado >= 0 ? '#22c55e' : '#dc2626';
 
   el.innerHTML =
     section('Facturación', [
@@ -5857,11 +5857,11 @@ function verDesgloseRentTienda(domain) {
   const detailHtml = (window.__rentabilidadDesglose || {})[domain] || '';
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3500;display:flex;align-items:center;justify-content:center;';
-  overlay.innerHTML = `<div style="background:#fff;border-radius:12px;overflow:hidden;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-    <div style="background:#16a34a;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+  overlay.innerHTML = `<div style="background:#111827;border-radius:12px;overflow:hidden;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="background:#22c55e;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
       <div>
         <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
-        <div style="font-size:11px;color:#bbf7d0;">${d.domain}</div>
+        <div style="font-size:11px;color:#86efac;">${d.domain}</div>
       </div>
       <button id="__desglose-tienda-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;padding:4px;">✕</button>
     </div>
@@ -5879,9 +5879,9 @@ function verDetalleProductosRent(domain) {
   if (!d) return;
   const fmt = n => (parseFloat(n)||0).toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 });
   const prods = d.productosDetalle || [];
-  const thStyle = 'padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;font-size:10px;font-weight:600;color:#6b7280;text-align:right;white-space:nowrap;';
+  const thStyle = 'padding:5px 8px;background:#1f2937;border:1px solid #374151;font-size:10px;font-weight:600;color:#6b7280;text-align:right;white-space:nowrap;';
   const thStyleL = thStyle.replace('text-align:right','text-align:center');
-  const tdStyle = 'padding:5px 8px;border:1px solid #f3f4f6;font-size:12px;text-align:right;color:#374151;white-space:nowrap;';
+  const tdStyle = 'padding:5px 8px;border:1px solid #f3f4f6;font-size:12px;text-align:right;color:#e5e7eb;white-space:nowrap;';
   const mkDistTable = (dist, uds, costo, accent) => {
     const rows = Object.entries(dist).sort((a,b)=>parseInt(a[0])-parseInt(b[0])).map(([qty,peds]) => {
       const udsS = peds * parseInt(qty);
@@ -5910,32 +5910,32 @@ function verDetalleProductosRent(domain) {
     ? '<div style="padding:24px;text-align:center;color:#9ca3af;">Sin datos de productos</div>'
     : prods.map((p, i) => {
         const totalPedidos = Object.values(p.qtyDist).reduce((s,v)=>s+v, 0);
-        let html = '<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:10px;">'
-          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">'
+        let html = '<div style="border:1px solid #374151;border-radius:8px;overflow:hidden;margin-bottom:10px;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px;background:#1f2937;border-bottom:1px solid #1f2937;">'
           +   '<div style="font-weight:700;font-size:13px;color:#111;flex:1;margin-right:12px;">' + escapeHtml(p.nombre) + '</div>'
-          +   '<div style="font-weight:700;font-size:14px;color:#374151;white-space:nowrap;">' + fmt(p.total) + ' €</div>'
+          +   '<div style="font-weight:700;font-size:14px;color:#e5e7eb;white-space:nowrap;">' + fmt(p.total) + ' €</div>'
           + '</div>'
           + '<div style="padding:10px 14px;">'
           +   '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">'
-          +     '<span style="background:#f3f4f6;border-radius:4px;padding:2px 6px;margin-right:6px;">Coste: ' + fmt(p.costo) + '€/ud</span>'
-          +     '<span style="background:#f3f4f6;border-radius:4px;padding:2px 6px;margin-right:6px;">Uds/venta: ' + p.uds + '</span>'
-          +     '<span style="background:#f3f4f6;border-radius:4px;padding:2px 6px;margin-right:6px;">' + totalPedidos + ' pedidos</span>'
-          +     '<span style="background:#f3f4f6;border-radius:4px;padding:2px 6px;margin-right:6px;">' + p.totalUds + ' uds físicas</span>'
+          +     '<span style="background:#1f2937;border-radius:4px;padding:2px 6px;margin-right:6px;">Coste: ' + fmt(p.costo) + '€/ud</span>'
+          +     '<span style="background:#1f2937;border-radius:4px;padding:2px 6px;margin-right:6px;">Uds/venta: ' + p.uds + '</span>'
+          +     '<span style="background:#1f2937;border-radius:4px;padding:2px 6px;margin-right:6px;">' + totalPedidos + ' pedidos</span>'
+          +     '<span style="background:#1f2937;border-radius:4px;padding:2px 6px;margin-right:6px;">' + p.totalUds + ' uds físicas</span>'
           +   '</div>'
           +   mkDistTable(p.qtyDist, p.uds, p.costo, '#374151')
           + '</div>';
         if (p.devQty > 0) {
           const totalDevPed = Object.values(p.devQtyDist).reduce((s,v)=>s+v, 0);
-          html += '<div style="padding:10px 14px;background:#f0fdf4;border-top:1px solid #bbf7d0;">'
+          html += '<div style="padding:10px 14px;background:rgba(34,197,94,.08);border-top:1px solid #86efac;">'
             + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-            +   '<span style="font-weight:600;font-size:12px;color:#16a34a;">↩ Recuperado (devuelto)</span>'
-            +   '<span style="font-weight:700;font-size:13px;color:#16a34a;">+' + fmt(p.devTotal) + ' €</span>'
+            +   '<span style="font-weight:600;font-size:12px;color:#22c55e;">↩ Recuperado (devuelto)</span>'
+            +   '<span style="font-weight:700;font-size:13px;color:#22c55e;">+' + fmt(p.devTotal) + ' €</span>'
             + '</div>'
-            + '<div style="font-size:11px;color:#16a34a;margin-bottom:6px;">'
-            +   '<span style="background:#dcfce7;border-radius:4px;padding:2px 6px;margin-right:6px;">' + totalDevPed + ' pedidos devueltos</span>'
-            +   '<span style="background:#dcfce7;border-radius:4px;padding:2px 6px;">' + p.devUds + ' uds físicas recuperadas</span>'
+            + '<div style="font-size:11px;color:#22c55e;margin-bottom:6px;">'
+            +   '<span style="background:rgba(34,197,94,.12);border-radius:4px;padding:2px 6px;margin-right:6px;">' + totalDevPed + ' pedidos devueltos</span>'
+            +   '<span style="background:rgba(34,197,94,.12);border-radius:4px;padding:2px 6px;">' + p.devUds + ' uds físicas recuperadas</span>'
             + '</div>'
-            + mkDistTable(p.devQtyDist, p.uds, p.costo, '#16a34a')
+            + mkDistTable(p.devQtyDist, p.uds, p.costo, '#22c55e')
             + '</div>';
         }
         html += '</div>';
@@ -5945,7 +5945,7 @@ function verDetalleProductosRent(domain) {
   overlay.id = '__prod-detail-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3500;display:flex;align-items:center;justify-content:center;';
   const neto = d.costoProductos - (d.costoRecuperado||0);
-  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:24px;width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+  overlay.innerHTML = '<div style="background:#111827;border-radius:12px;padding:24px;width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
     +   '<div>'
     +     '<div style="font-weight:700;font-size:15px;color:#111;">📦 Desglose de Productos</div>'
@@ -5954,9 +5954,9 @@ function verDetalleProductosRent(domain) {
     +   '<button id="__prod-detail-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;line-height:1;padding:4px;">✕</button>'
     + '</div>'
     + '<div>' + cards + '</div>'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f0fdf4;border-radius:8px;margin-top:4px;">'
-    +   '<span style="font-weight:700;color:#16a34a;font-size:14px;">TOTAL PRODUCTOS</span>'
-    +   '<span style="font-weight:800;color:#16a34a;font-size:16px;">' + fmt(neto) + ' €</span>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(34,197,94,.08);border-radius:8px;margin-top:4px;">'
+    +   '<span style="font-weight:700;color:#22c55e;font-size:14px;">TOTAL PRODUCTOS</span>'
+    +   '<span style="font-weight:800;color:#22c55e;font-size:16px;">' + fmt(neto) + ' €</span>'
     + '</div>'
     + '</div>';
   document.body.appendChild(overlay);
@@ -6104,17 +6104,17 @@ async function loadProductos() {
 
     wrap.innerHTML = filtered.map(shop => `
       <div style="margin-bottom:32px;">
-        <h3 style="font-size:15px;font-weight:700;color:#16a34a;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
+        <h3 style="font-size:15px;font-weight:700;color:#22c55e;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
           🏪 ${escapeHtml(shop.shop_name)}
           <span style="font-size:12px;color:#9ca3af;font-weight:400;margin-left:8px;">${shop.products.length} productos</span>
         </h3>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead>
-            <tr style="background:#f9fafb;">
-              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:60px;">Imagen</th>
-              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
-              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Variantes & SKU</th>
-              <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:120px;">Stock</th>
+            <tr style="background:#1f2937;">
+              <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;width:60px;">Imagen</th>
+              <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Producto</th>
+              <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Variantes & SKU</th>
+              <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:120px;">Stock</th>
             </tr>
           </thead>
           <tbody>
@@ -6124,41 +6124,41 @@ async function loadProductos() {
               const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
               return `
               <tr data-pid="${pid}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-                <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
+                <td style="padding:10px 14px;border:1px solid #374151;text-align:center;">
                   ${p.image
-                    ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;">`
-                    : `<div style="width:48px;height:48px;border-radius:6px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`
+                    ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #374151;">`
+                    : `<div style="width:48px;height:48px;border-radius:6px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`
                   }
                 </td>
-                <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
+                <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#f9fafb;vertical-align:top;">
                   <span class="producto-nombre">${escapeHtml(p.title)}</span>
                   <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
                     <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">Costo compra:</span>
                     <input type="number" min="0" step="0.01"
                       value="${stockInfo.costo_compra || ''}"
                       placeholder="0.00"
-                      style="width:80px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
+                      style="width:80px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
                       onchange="guardarCostoCompra('${shop.shop_domain}','${pid}',this.value)"
                       title="Costo de compra del producto">
                     <span style="font-size:11px;color:#9ca3af;">€</span>
                   </div>
                 </td>
-                <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
+                <td style="padding:10px 14px;border:1px solid #374151;vertical-align:top;">
                   ${p.variants.map(v => {
                     const vid = String(v.id);
                     const uds = variantesMap[vid] || 1;
                     return `
                     <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;">
-                      <span style="font-size:12px;color:#374151;flex:1;">${escapeHtml(v.title)}</span>
+                      <span style="font-size:12px;color:#e5e7eb;flex:1;">${escapeHtml(v.title)}</span>
                       <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">uds/venta:</span>
                       <input type="number" min="1" value="${uds}"
-                        style="width:52px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
+                        style="width:52px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
                         onchange="guardarVarianteConfig('${shop.shop_domain}','${vid}',this.value)"
                         title="Unidades reales que consume esta variante">
                     </div>`;
                   }).join("")}
                 </td>
-                <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
+                <td style="padding:10px 14px;border:1px solid #374151;text-align:center;vertical-align:middle;">
                   <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
                     <div style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:${stockBajo?'#fef2f2':'#f9fafb'};color:${stockBajo?'#dc2626':(stockInfo.stock<0?'#b45309':'#111827')};">
                       ${stockInfo.stock}
@@ -6166,16 +6166,16 @@ async function loadProductos() {
                     <div style="display:flex;align-items:center;gap:4px;">
                       <span style="font-size:10px;color:#9ca3af;">mín:</span>
                       <input type="number" min="0" value="${stockInfo.stock_minimo}"
-                        style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
+                        style="width:45px;padding:2px 4px;border:1px solid #374151;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
                         onchange="guardarStockMinimo('${shop.shop_domain}','${pid}',this.value)"
                         title="Stock mínimo para alerta">
                     </div>
                     ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
                     <button onclick="abrirHistoricoStock('${pid}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
-                      style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
+                      style="margin-top:2px;padding:2px 8px;background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
                       Histórico
                     </button>
-                    ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;font-size:10px;color:#16a34a;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
+                    ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:5px;font-size:10px;color:#22c55e;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
                   </div>
                 </td>
               </tr>`;
@@ -6200,18 +6200,18 @@ async function loadProductos() {
         });
         wrap.innerHTML = `
           <div style="margin-bottom:12px;">
-            <button onclick="loadProductos()" style="padding:6px 14px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">← Volver a todos los productos</button>
+            <button onclick="loadProductos()" style="padding:6px 14px;background:#1f2937;border:1px solid #374151;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">← Volver a todos los productos</button>
             <span style="margin-left:10px;font-size:13px;color:#6b7280;">${filtrados.length} resultado${filtrados.length!==1?'s':''} encontrado${filtrados.length!==1?'s':''}</span>
           </div>
           ${Object.values(byShop).map(shop => `
           <div style="margin-bottom:28px;">
-            <h3 style="font-size:15px;font-weight:700;color:#16a34a;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">🏪 ${escapeHtml(shop.shop_name)}</h3>
+            <h3 style="font-size:15px;font-weight:700;color:#22c55e;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">🏪 ${escapeHtml(shop.shop_name)}</h3>
             <table style="width:100%;border-collapse:collapse;font-size:13px;">
-              <thead><tr style="background:#f9fafb;">
-                <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:60px;">Imagen</th>
-                <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
-                <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Variantes & SKU</th>
-                <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:120px;">Stock</th>
+              <thead><tr style="background:#1f2937;">
+                <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;width:60px;">Imagen</th>
+                <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Producto</th>
+                <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Variantes & SKU</th>
+                <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:120px;">Stock</th>
               </tr></thead>
               <tbody>
                 ${shop.products.map(p => {
@@ -6219,45 +6219,45 @@ async function loadProductos() {
                   const stockInfo = stockMap[pid2] || { stock: 0, stock_minimo: 5 };
                   const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
                   return `<tr style="background:#fef9c3;" data-pid="${pid2}">
-                    <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
-                      ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;">` : `<div style="width:48px;height:48px;border-radius:6px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
+                    <td style="padding:10px 14px;border:1px solid #374151;text-align:center;">
+                      ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #374151;">` : `<div style="width:48px;height:48px;border-radius:6px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
                     </td>
-                    <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
+                    <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#f9fafb;vertical-align:top;">
                       <span class="producto-nombre">${escapeHtml(p.title)}</span>
                       <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
                         <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">Costo compra:</span>
                         <input type="number" min="0" step="0.01" value="${stockInfo.costo_compra || ''}" placeholder="0.00"
-                          style="width:80px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
+                          style="width:80px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
                           onchange="guardarCostoCompra('${shop.shop_domain}','${pid2}',this.value)">
                         <span style="font-size:11px;color:#9ca3af;">€</span>
                       </div>
                     </td>
-                    <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
+                    <td style="padding:10px 14px;border:1px solid #374151;vertical-align:top;">
                       ${p.variants.map(v => {
                         const vid = String(v.id);
                         const uds = variantesMap[vid] || 1;
                         return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;">
-                          <span style="font-size:12px;color:#374151;flex:1;">${escapeHtml(v.title)}</span>
+                          <span style="font-size:12px;color:#e5e7eb;flex:1;">${escapeHtml(v.title)}</span>
                           <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">uds/venta:</span>
-                          <input type="number" min="1" value="${uds}" style="width:52px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarVarianteConfig('${shop.shop_domain}','${vid}',this.value)">
+                          <input type="number" min="1" value="${uds}" style="width:52px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarVarianteConfig('${shop.shop_domain}','${vid}',this.value)">
                         </div>`;
                       }).join("")}
                     </td>
-                    <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
+                    <td style="padding:10px 14px;border:1px solid #374151;text-align:center;vertical-align:middle;">
                       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
                         <div style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:${stockBajo?'#fef2f2':'#f9fafb'};color:${stockBajo?'#dc2626':(stockInfo.stock<0?'#b45309':'#111827')};">
                           ${stockInfo.stock}
                         </div>
                         <div style="display:flex;align-items:center;gap:4px;">
                           <span style="font-size:10px;color:#9ca3af;">mín:</span>
-                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shop.shop_domain}','${pid2}',this.value)">
+                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #374151;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shop.shop_domain}','${pid2}',this.value)">
                         </div>
                         ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
                         <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
-                          style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
+                          style="margin-top:2px;padding:2px 8px;background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
                           Histórico
                         </button>
-                        ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;font-size:10px;color:#16a34a;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
+                        ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:5px;font-size:10px;color:#22c55e;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
                       </div>
                     </td>
                   </tr>`;
@@ -6279,19 +6279,19 @@ async function loadProductos() {
         const shopNom = productoFiltrado.shop_name;
         wrap.innerHTML = `
           <div style="margin-bottom:12px;">
-            <button onclick="loadProductos()" style="padding:6px 14px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">← Volver a todos los productos</button>
+            <button onclick="loadProductos()" style="padding:6px 14px;background:#1f2937;border:1px solid #374151;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">← Volver a todos los productos</button>
           </div>
           <div style="margin-bottom:32px;">
-            <h3 style="font-size:15px;font-weight:700;color:#16a34a;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
+            <h3 style="font-size:15px;font-weight:700;color:#22c55e;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
               🏪 ${escapeHtml(shopNom)}
             </h3>
             <table style="width:100%;border-collapse:collapse;font-size:13px;">
               <thead>
-                <tr style="background:#f9fafb;">
-                  <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:60px;">Imagen</th>
-                  <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
-                  <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Variantes & SKU</th>
-                  <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:120px;">Stock</th>
+                <tr style="background:#1f2937;">
+                  <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;width:60px;">Imagen</th>
+                  <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Producto</th>
+                  <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Variantes & SKU</th>
+                  <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:120px;">Stock</th>
                 </tr>
               </thead>
               <tbody>
@@ -6302,48 +6302,48 @@ async function loadProductos() {
                   const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
                   return `
                   <tr data-pid="${pid2}" style="background:#fef9c3;">
-                    <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;">
-                      ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;">` : `<div style="width:48px;height:48px;border-radius:6px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
+                    <td style="padding:10px 14px;border:1px solid #374151;text-align:center;">
+                      ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #374151;">` : `<div style="width:48px;height:48px;border-radius:6px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
                     </td>
-                    <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;vertical-align:top;">
+                    <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#f9fafb;vertical-align:top;">
                       <span class="producto-nombre">${escapeHtml(p.title)}</span>
                       <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
                         <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">Costo compra:</span>
                         <input type="number" min="0" step="0.01"
                           value="${stockInfo.costo_compra || ''}"
                           placeholder="0.00"
-                          style="width:80px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
+                          style="width:80px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
                           onchange="guardarCostoCompra('${shopDom}','${pid2}',this.value)">
                         <span style="font-size:11px;color:#9ca3af;">€</span>
                       </div>
                     </td>
                     </td>
-                    <td style="padding:10px 14px;border:1px solid #e5e7eb;vertical-align:top;">
+                    <td style="padding:10px 14px;border:1px solid #374151;vertical-align:top;">
                       ${p.variants.map(v => {
                         const vid = String(v.id);
                         const uds = variantesMap[vid] || 1;
                         return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;">
-                          <span style="font-size:12px;color:#374151;flex:1;">${escapeHtml(v.title)}</span>
+                          <span style="font-size:12px;color:#e5e7eb;flex:1;">${escapeHtml(v.title)}</span>
                           <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">uds/venta:</span>
-                          <input type="number" min="1" value="${uds}" style="width:52px;padding:3px 6px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarVarianteConfig('${shopDom}','${vid}',this.value)">
+                          <input type="number" min="1" value="${uds}" style="width:52px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarVarianteConfig('${shopDom}','${vid}',this.value)">
                         </div>`;
                       }).join("")}
                     </td>
-                    <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;">
+                    <td style="padding:10px 14px;border:1px solid #374151;text-align:center;vertical-align:middle;">
                       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
                         <div style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:${stockBajo?'#fef2f2':'#f9fafb'};color:${stockBajo?'#dc2626':(stockInfo.stock<0?'#b45309':'#111827')};">
                           ${stockInfo.stock}
                         </div>
                         <div style="display:flex;align-items:center;gap:4px;">
                           <span style="font-size:10px;color:#9ca3af;">mín:</span>
-                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',this.value)">
+                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #374151;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',this.value)">
                         </div>
                         ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
                         <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
-                          style="margin-top:2px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
+                          style="margin-top:2px;padding:2px 8px;background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
                           Histórico
                         </button>
-                        ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;font-size:10px;color:#16a34a;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
+                        ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:5px;font-size:10px;color:#22c55e;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
                       </div>
                     </td>
                   </tr>`;
@@ -6433,41 +6433,41 @@ async function loadAdsTable() {
 
   const fmt  = n => n != null ? n.toFixed(2)+" €" : "-";
   const fmt2 = n => n != null ? n.toFixed(2) : "-";
-  const td   = (content, extra="") => `<td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;${extra}">${content}</td>`;
-  const th   = (content, extra="") => `<th style="padding:11px 14px;border:1px solid #e5e7eb;font-weight:600;font-size:13px;${extra}">${content}</th>`;
+  const td   = (content, extra="") => `<td style="padding:10px 14px;border:1px solid #374151;font-size:15px;${extra}">${content}</td>`;
+  const th   = (content, extra="") => `<th style="padding:11px 14px;border:1px solid #374151;font-weight:600;font-size:13px;${extra}">${content}</th>`;
 
   wrap.innerHTML = `
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
-        <tr style="background:#f9fafb;">
-          ${th("Día","text-align:left;color:#374151;")}
+        <tr style="background:#1f2937;">
+          ${th("Día","text-align:left;color:#e5e7eb;")}
           ${th("Gasto Meta","text-align:right;background:#1877f2;color:#fff;")}
           ${th("Gasto TikTok","text-align:right;background:#111;color:#fff;")}
-          ${th("Facturación","text-align:right;color:#374151;")}
-          ${th("Cantidad Pedidos","text-align:right;color:#374151;")}
-          ${th("CPA","text-align:right;color:#374151;")}
-          ${th("ROAS","text-align:right;color:#374151;")}
+          ${th("Facturación","text-align:right;color:#e5e7eb;")}
+          ${th("Cantidad Pedidos","text-align:right;color:#e5e7eb;")}
+          ${th("CPA","text-align:right;color:#e5e7eb;")}
+          ${th("ROAS","text-align:right;color:#e5e7eb;")}
         </tr>
-        <tr style="background:#16a34a;">
-          <td style="padding:13px 16px;font-weight:700;color:#fff;border:1px solid #15803d;font-size:15px;">Balance del mes</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalMeta)}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalTiktok)}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalFact)}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${totalPedidos}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt(totalCPA)}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #15803d;">${fmt2(totalROAS)}</td>
+        <tr style="background:#22c55e;">
+          <td style="padding:13px 16px;font-weight:700;color:#fff;border:1px solid #16a34a;font-size:15px;">Balance del mes</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalMeta)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalTiktok)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalFact)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${totalPedidos}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalCPA)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt2(totalROAS)}</td>
         </tr>
       </thead>
       <tbody>
         ${rows.map(r => `
           <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            ${td(r.label, "color:#374151;white-space:nowrap;")}
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;text-align:right;background:#dbeafe;"><input type="number" min="0" step="0.01" value="${r.meta||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="meta" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #3b82f6;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#fff;color:#1d4ed8;font-weight:600;"></td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:15px;text-align:right;background:#1a1a1a;"><input type="number" min="0" step="0.01" value="${r.tiktok||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="tiktok" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #fe2c55;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#111;color:#fff;font-weight:600;"></td>
+            ${td(r.label, "color:#e5e7eb;white-space:nowrap;")}
+            <td style="padding:10px 14px;border:1px solid #374151;font-size:15px;text-align:right;background:rgba(59,130,246,.1);"><input type="number" min="0" step="0.01" value="${r.meta||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="meta" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #3b82f6;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#111827;color:#93c5fd;font-weight:600;"></td>
+            <td style="padding:10px 14px;border:1px solid #374151;font-size:15px;text-align:right;background:#1a1a1a;"><input type="number" min="0" step="0.01" value="${r.tiktok||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="tiktok" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #fe2c55;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#111;color:#fff;font-weight:600;"></td>
             ${td(r.facturacion > 0 ? fmt(r.facturacion) : "0,00 €", "text-align:right;color:" + (r.facturacion > 0 ? "inherit" : "#9ca3af") + ";")}
             ${td(r.pedidos > 0 ? r.pedidos : "0", "text-align:right;color:" + (r.pedidos > 0 ? "inherit" : "#9ca3af") + ";")}
             ${td(fmt(r.cpa), "text-align:right;")}
-            ${td(fmt2(r.roas), `text-align:right;font-weight:${r.roas!=null&&r.roas>=2?'700':'400'};color:${r.roas!=null&&r.roas>=2?'#16a34a':r.roas!=null&&r.roas<1?'#dc2626':'inherit'};`)}
+            ${td(fmt2(r.roas), `text-align:right;font-weight:${r.roas!=null&&r.roas>=2?'700':'400'};color:${r.roas!=null&&r.roas>=2?'#22c55e':r.roas!=null&&r.roas<1?'#dc2626':'inherit'};`)}
           </tr>
         `).join("")}
       </tbody>
@@ -6543,7 +6543,7 @@ async function loadAdsTable() {
         document.body.removeChild(ta);
         // Flash verde para confirmar
         table.querySelectorAll("td.ads-sel").forEach(c => {
-          c.style.outline = "2px solid #16a34a";
+          c.style.outline = "2px solid #22c55e";
           setTimeout(() => { c.style.outline = ""; c.classList.remove("ads-sel"); }, 600);
         });
       }
@@ -6569,19 +6569,19 @@ async function loadGastosFijos() {
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
       <select id="gf-month-sel"
-        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
       </select>
       <select id="gf-year-sel"
-        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
       </select>
       <button onclick="loadGastosFijosData()"
-        style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
         Ver
       </button>
       <button onclick="copiarMesAnteriorGF()"
-        style="padding:7px 16px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        style="padding:7px 16px;background:rgba(34,197,94,.08);color:#22c55e;border:1px solid #86efac;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
         📋 Copiar mes anterior
       </button>
     </div>
@@ -6682,27 +6682,27 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   }
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
-  const inp = `width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
+  const inp = `width:100%;padding:6px 8px;border:1px solid #374151;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
   const totalValor = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
   const thStyle = `padding:11px 14px;border:1px solid #d1fae5;font-weight:600;color:#fff;text-align:`;
 
   const tablaGF = `
-    <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+    <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
-          <tr style="background:#16a34a;">
+          <tr style="background:#22c55e;">
             <th style="${thStyle}left;">GASTO FIJO</th>
             <th style="${thStyle}right;">VALOR MES</th>
             <th style="${thStyle}right;">P. UNIT</th>
             <th style="${thStyle}right;">ESTIMADO</th>
             <th style="${thStyle}center;width:36px;"></th>
           </tr>
-          <tr style="background:#f0fdf4;">
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;text-align:right;">${fmt(totalValor)} €</td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;"></td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;text-align:right;">— €</td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;"></td>
+          <tr style="background:rgba(34,197,94,.08);">
+            <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;">TOTAL</td>
+            <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;text-align:right;">${fmt(totalValor)} €</td>
+            <td style="padding:10px 14px;border:1px solid #374151;"></td>
+            <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;text-align:right;">— €</td>
+            <td style="padding:10px 14px;border:1px solid #374151;"></td>
           </tr>
         </thead>
         <tbody>
@@ -6715,7 +6715,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
             }
             return `
             <tr data-id="${item.id}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-              <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+              <td style="padding:7px 12px;border:1px solid #374151;">
                 ${esFijo
                   ? `<span style="font-weight:600;color:var(--text);">${item.nombre}</span>`
                   : `<input type="text" value="${escapeHtml(item.nombre||'')}" placeholder="Descripción..."
@@ -6723,14 +6723,14 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
                       style="${inp}">`
                 }
               </td>
-              <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+              <td style="padding:7px 12px;border:1px solid #374151;">
                 <input type="number" min="0" step="0.01" value="${fmt(item.valor)}"
                   data-id="${item.id}" data-field="valor" data-mes="${mes}"
                   onchange="updateGastoFijoValor(this)"
-                  onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();this.style.borderColor='#16a34a';setTimeout(()=>{this.style.borderColor='#e5e7eb'},1500);this.dispatchEvent(new Event('change'));}"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();this.style.borderColor='#22c55e';setTimeout(()=>{this.style.borderColor='#e5e7eb'},1500);this.dispatchEvent(new Event('change'));}"
                   style="${inp}text-align:right;">
               </td>
-              <td style="padding:7px 12px;border:1px solid #e5e7eb;">
+              <td style="padding:7px 12px;border:1px solid #374151;">
                 ${esFijo
                   ? `<input type="number" min="0" step="0.01" value="${fmt(item.precio_unit)}"
                       data-id="${item.id}" data-field="precio_unit" data-mes="${mes}"
@@ -6740,10 +6740,10 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
                   : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
                 }
               </td>
-              <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">
+              <td style="padding:7px 12px;border:1px solid #374151;text-align:right;color:#6b7280;">
                 ${estimado!=null ? fmt(estimado)+" €" : "—"}
               </td>
-              <td style="padding:7px 12px;border:1px solid #e5e7eb;text-align:center;">
+              <td style="padding:7px 12px;border:1px solid #374151;text-align:center;">
                 ${!esFijo
                   ? `<button onclick="deleteGastoFijo(${item.id})"
                       style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:15px;font-weight:700;padding:0;">✕</button>`
@@ -6756,7 +6756,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
       </table>
       <div style="padding:12px 14px;">
         <button onclick="addGastoFijo()"
-          style="padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
           + Añadir fila
         </button>
       </div>
@@ -6764,10 +6764,10 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   `;
 
   const tablaIMP = `
-    <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:16px;">
+    <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;margin-bottom:16px;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
-          <tr style="background:#16a34a;">
+          <tr style="background:#22c55e;">
             <th style="${thStyle}left;">IMPUESTO</th>
             <th style="${thStyle}right;">%</th>
           </tr>
@@ -6775,8 +6775,8 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
         <tbody>
           ${impuestos.map(imp => `
           <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">IVA</td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;">
+            <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">IVA</td>
+            <td style="padding:10px 14px;border:1px solid #374151;text-align:right;">
               <input type="number" min="0" step="0.01" value="${fmt(imp.porcentaje)}"
                 data-id="${imp.id}" data-field="porcentaje"
                 onchange="updateImpuesto(this)"
@@ -6787,18 +6787,18 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
         </tbody>
       </table>
     </div>
-    <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+    <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
-          <tr style="background:#16a34a;">
+          <tr style="background:#22c55e;">
             <th style="${thStyle}left;">PRECIO UNIT. ENVÍO</th>
             <th style="${thStyle}right;">€</th>
           </tr>
         </thead>
         <tbody>
           <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">MRW</td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;">
+            <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">MRW</td>
+            <td style="padding:10px 14px;border:1px solid #374151;text-align:right;">
               <input type="number" min="0" step="0.01" value="${fmt(preciosGlobales.precio_mrw)}"
                 id="precio-global-mrw"
                 onchange="guardarPreciosGlobales()"
@@ -6807,8 +6807,8 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
             </td>
           </tr>
           <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;">LOGÍSTICA</td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;">
+            <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">LOGÍSTICA</td>
+            <td style="padding:10px 14px;border:1px solid #374151;text-align:right;">
               <input type="number" min="0" step="0.01" value="${fmt(preciosGlobales.precio_logistica)}"
                 id="precio-global-logistica"
                 onchange="guardarPreciosGlobales()"
@@ -6825,7 +6825,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   const mesLabel = monthNames[parseInt(month)-1].toUpperCase() + " " + year;
 
   content.innerHTML = `
-    <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
+    <div style="margin-bottom:16px;padding:10px 16px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:8px;font-size:13px;color:#22c55e;font-weight:600;">
       📅 Trabajando en: ${mesLabel}
     </div>
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
@@ -6867,7 +6867,7 @@ async function updateGastoFijo(input) {
       body: JSON.stringify({ nombre, precio_unit: field==="precio_unit" ? parseFloat(input.value)||0 : precioUnit })
     });
     input.blur();
-    input.style.borderColor = "#16a34a";
+    input.style.borderColor = "#22c55e";
     setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
   } catch(e) { console.error(e); }
 }
@@ -6909,7 +6909,7 @@ async function updateImpuesto(input) {
     });
     invalidateCache("impuestos");
     input.blur();
-    input.style.borderColor = "#16a34a";
+    input.style.borderColor = "#22c55e";
     setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
   } catch(e) { console.error(e); }
 }
@@ -6935,7 +6935,7 @@ async function updateGastoFijoPrecio(input) {
     input.blur();
     invalidateCache("gastos-fijos");
     invalidateCache("precios-globales");
-    input.style.borderColor = "#16a34a";
+    input.style.borderColor = "#22c55e";
     setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
   } catch(e) { console.error(e); }
 }
@@ -7134,7 +7134,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
   });
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
-  const inp = `padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;text-align:right;`;
+  const inp = `padding:6px 8px;border:1px solid #374151;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;text-align:right;`;
 
   // Construir mapas desde datos ya cargados
   const stockMap = {};
@@ -7218,50 +7218,50 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
     window.__gastosPorTienda[store.domain] = total;
 
     return `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;min-width:220px;flex:1;">
-        <div style="background:#16a34a;padding:12px 16px;">
+      <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;min-width:220px;flex:1;">
+        <div style="background:#22c55e;padding:12px 16px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
-          <div style="font-size:11px;color:#bbf7d0;margin-top:2px;">${store.domain}</div>
+          <div style="font-size:11px;color:#86efac;margin-top:2px;">${store.domain}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gasto Meta</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.meta)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Gasto Meta</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(ads.meta)} €</td>
             </tr>
-            <tr style="background:#f9fafb;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gasto TikTok</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
+            <tr style="background:#1f2937;">
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Gasto TikTok</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
             </tr>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Productos</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(costoProductosNeto)} €
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Productos</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(costoProductosNeto)} €
                 <div style="font-size:10px;color:#9ca3af;">${fmt(costoProductos)}€ bruto${costoRecuperadoGV>0?` − ${fmt(costoRecuperadoGV)}€ recuperado (${numDevGV} dev.)`:''}
                 </div>
               </td>
             </tr>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">MRW</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(mrw)} €
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">MRW</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(mrw)} €
                 <div style="font-size:10px;color:#9ca3af;">${fmt(totalMRW)}€ ÷ ${totalEnviosGlobales} envíos globales (${enviosTiendaMRW.length} salidas + ${devueltosTienda} dev. esta tienda)</div>
               </td>
             </tr>
-            <tr style="background:#f9fafb;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Logística</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(logistica)} €
+            <tr style="background:#1f2937;">
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Logística</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(logistica)} €
                 <div style="font-size:10px;color:#9ca3af;">${fmt(totalLogistica)}€ ÷ ${totalPedidosGlobales} envíos × ${enviosTiendaMRW.length} esta tienda</div>
               </td>
             </tr>
             <tr>
               <tr>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Gastos Fijos</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(fijoXTienda)} €
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Gastos Fijos</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(fijoXTienda)} €
                 <div style="font-size:10px;color:#9ca3af;">${fmt(totalOtrosFijos)}€ ÷ ${numTiendas} tiendas</div>
               </td>
             </tr>
-            <tr style="background:#f9fafb;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Nómina</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;color:#6b7280;">${fmt(nominaXTienda)} €
+            <tr style="background:#1f2937;">
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Nómina</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(nominaXTienda)} €
                 <div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${numTiendas} tiendas</div>
               </td>
             </tr>
@@ -7271,7 +7271,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                 <div style="font-size:10px;color:#a16207;">${entregadosTienda.length} pedidos entregados × ${(ivaPorcentaje*100).toFixed(0)}%</div>
               </td>
             </tr>
-            <tr style="background:#eff6ff;">
+            <tr style="background:rgba(59,130,246,.08);">
               <td style="padding:10px 14px;border:1px solid #bfdbfe;font-weight:700;color:#2563eb;">Shopify</td>
               <td style="padding:10px 14px;border:1px solid #bfdbfe;">
                 <input type="number" min="0" step="0.01"
@@ -7279,11 +7279,11 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                   data-shop="${store.domain}" data-mes="${mes}"
                   onchange="saveGastoVarioShopify(this)"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
-                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;">
+                  style="${inp}background:rgba(59,130,246,.08);color:#2563eb;font-weight:600;">
               </td>
             </tr>
             ${(gastosExtras[store.domain]||[]).map((g) => `
-            <tr style="background:#eff6ff;">
+            <tr style="background:rgba(59,130,246,.08);">
               <td style="padding:7px 14px;border:1px solid #bfdbfe;">
                 <input type="text" value="${escapeHtml(g.nombre||'')}" placeholder="Concepto..."
                   data-id="${g.id}" data-shop="${store.domain}" data-mes="${mes}"
@@ -7294,12 +7294,12 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                 <input type="number" min="0" step="0.01" value="${fmt(g.valor||0)}" placeholder="0.00"
                   data-id="${g.id}" data-shop="${store.domain}" data-mes="${mes}"
                   onchange="updateGastoExtraValor(this)"
-                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;flex:1;">
+                  style="${inp}background:rgba(59,130,246,.08);color:#2563eb;font-weight:600;flex:1;">
                 <button onclick="deleteGastoExtra(${g.id})"
                   style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px;font-weight:700;padding:0;flex-shrink:0;">✕</button>
               </td>
             </tr>`).join("")}
-            <tr style="background:#eff6ff;">
+            <tr style="background:rgba(59,130,246,.08);">
               <td colspan="2" style="padding:6px 14px;border:1px solid #bfdbfe;">
                 <button onclick="addGastoExtra('${store.domain}','${mes}')"
                   style="background:none;border:none;cursor:pointer;color:#2563eb;font-size:12px;font-weight:600;padding:0;font-family:inherit;">
@@ -7307,9 +7307,9 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                 </button>
               </td>
             </tr>
-            <tr style="background:#f0fdf4;">
-              <td style="padding:11px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
-              <td style="padding:11px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(total)} €</td>
+            <tr style="background:rgba(34,197,94,.08);">
+              <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;">TOTAL</td>
+              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;">${fmt(total)} €</td>
             </tr>
           </tbody>
         </table>
@@ -7355,7 +7355,7 @@ async function switchInformesTab(tab) {
     const btn = document.getElementById(`inf-tab-btn-${k}`);
     if (!btn) return;
     if (k === tab) {
-      btn.style.background = "#16a34a"; btn.style.color = "#fff"; btn.style.borderColor = "#16a34a";
+      btn.style.background = "#22c55e"; btn.style.color = "#fff"; btn.style.borderColor = "#22c55e";
     } else {
       btn.style.background = "#fff"; btn.style.color = "#374151"; btn.style.borderColor = "#e5e7eb";
     }
@@ -7374,22 +7374,22 @@ async function switchInformesTab(tab) {
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <input type="text" id="ree-q" placeholder="Buscar pedido..." oninput="renderReembolsos()"
-                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);width:160px;"/>
+                style="padding:7px 10px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;color:#f9fafb;background:#1f2937;width:160px;"/>
               ${window.__DPF.triggerBtn('ree', 'Período')}
               <input type="date" id="ree-date-from" value="" style="display:none;">
               <input type="date" id="ree-date-to" value="" style="display:none;">
               <select id="ree-shop" onchange="renderReembolsos()"
-                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+                style="padding:7px 10px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
                 <option value="">Todas las tiendas</option>
               </select>
-              <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
-              <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;color:#16a34a;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+              <button onclick="clearReembolsosFilters()" style="padding:7px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
+              <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:rgba(34,197,94,.08);border:1px solid #22c55e;border-radius:8px;color:#22c55e;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
                 ✅ Importar Pagados
                 <input type="file" accept=".pdf" multiple style="display:none;" onchange="importarPagadosPDF(this)">
               </label>
             </div>
           </div>
-          <div style="border-bottom:1px solid #e5e7eb;margin-bottom:12px;"></div>
+          <div style="border-bottom:1px solid #1f2937;margin-bottom:12px;"></div>
           <div id="ree-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
           <div class="orders-table">
             <div class="orders-row head" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
@@ -7433,11 +7433,11 @@ async function loadInformesIngresos() {
   content.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
       <select id="inf-month-sel" onchange="renderInformesIngresos()"
-        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
       </select>
       <select id="inf-year-sel" onchange="renderInformesIngresos()"
-        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
       </select>
     </div>
@@ -7477,7 +7477,7 @@ async function renderInformesIngresos() {
   const pedidosMesTarjeta = orders.filter(o => o.fulfillment_status !== "cancelado");
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
-  const inp = `padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;`;
+  const inp = `padding:6px 8px;border:1px solid #374151;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);width:100%;box-sizing:border-box;`;
   const MRW_COMISION = 0.67;
   const TARJETA_PCT  = 0.04;
 
@@ -7518,60 +7518,60 @@ async function renderInformesIngresos() {
     grandTotal += totalTienda;
 
     return `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-        <div style="background:#16a34a;padding:10px 14px;">
+      <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
+        <div style="background:#22c55e;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
-          <div style="font-size:11px;color:#bbf7d0;">${store.domain}</div>
+          <div style="font-size:11px;color:#86efac;">${store.domain}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">
                 COD
                 <div style="font-size:10px;color:#9ca3af;font-weight:400;">${fmt(totalCOD)} € — ${pedidosCOD.length} pedidos</div>
                 <div style="font-size:10px;color:#dc2626;">Comisión MRW (${pedidosCOD.length}×0.67€) = −${fmt(descCOD)}€</div>
               </td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoCOD)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#e5e7eb;">${fmt(netoCOD)} €</td>
             </tr>
-            <tr style="background:#f9fafb;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">
+            <tr style="background:#1f2937;">
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">
                 TARJETA
                 <div style="font-size:10px;color:#9ca3af;font-weight:400;">${fmt(totalPagado)} € — ${pedidosPagado.length} pedidos</div>
                 <div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(descPagado)}€</div>
               </td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#374151;">${fmt(netoPagado)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#e5e7eb;">${fmt(netoPagado)} €</td>
             </tr>
-            <tr style="background:#eff6ff;">
+            <tr style="background:rgba(59,130,246,.08);">
               <td style="padding:8px 14px;border:1px solid #bfdbfe;">
                 <input type="text" value="${escapeHtml(man1.nombre||'')}" placeholder="Nombre ingreso extra 1..."
                   data-shop="${store.domain}" data-mes="${mes}" data-col="1" data-field="nombre"
                   onchange="guardarIngresoManual(this)"
-                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;margin-bottom:4px;">
+                  style="${inp}background:rgba(59,130,246,.08);color:#2563eb;font-weight:600;margin-bottom:4px;">
               </td>
               <td style="padding:8px 14px;border:1px solid #bfdbfe;">
                 <input type="number" min="0" step="0.01" value="${fmt(man1.valor)}" placeholder="0.00"
                   data-shop="${store.domain}" data-mes="${mes}" data-col="1" data-field="valor"
                   onchange="guardarIngresoManual(this)"
-                  style="${inp}text-align:right;background:#eff6ff;color:#2563eb;font-weight:600;">
+                  style="${inp}text-align:right;background:rgba(59,130,246,.08);color:#2563eb;font-weight:600;">
               </td>
             </tr>
-            <tr style="background:#eff6ff;">
+            <tr style="background:rgba(59,130,246,.08);">
               <td style="padding:8px 14px;border:1px solid #bfdbfe;">
                 <input type="text" value="${escapeHtml(man2.nombre||'')}" placeholder="Nombre ingreso extra 2..."
                   data-shop="${store.domain}" data-mes="${mes}" data-col="2" data-field="nombre"
                   onchange="guardarIngresoManual(this)"
-                  style="${inp}background:#eff6ff;color:#2563eb;font-weight:600;margin-bottom:4px;">
+                  style="${inp}background:rgba(59,130,246,.08);color:#2563eb;font-weight:600;margin-bottom:4px;">
               </td>
               <td style="padding:8px 14px;border:1px solid #bfdbfe;">
                 <input type="number" min="0" step="0.01" value="${fmt(man2.valor)}" placeholder="0.00"
                   data-shop="${store.domain}" data-mes="${mes}" data-col="2" data-field="valor"
                   onchange="guardarIngresoManual(this)"
-                  style="${inp}text-align:right;background:#eff6ff;color:#2563eb;font-weight:600;">
+                  style="${inp}text-align:right;background:rgba(59,130,246,.08);color:#2563eb;font-weight:600;">
               </td>
             </tr>
-            <tr style="background:#f0fdf4;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;">TOTAL</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#16a34a;">${fmt(totalTienda)} €</td>
+            <tr style="background:rgba(34,197,94,.08);">
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;">TOTAL</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;">${fmt(totalTienda)} €</td>
             </tr>
           </tbody>
         </table>
@@ -7580,10 +7580,10 @@ async function renderInformesIngresos() {
   }).join("");
 
   wrap.innerHTML = `
-    <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
+    <div style="margin-bottom:16px;padding:10px 16px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:8px;font-size:13px;color:#22c55e;font-weight:600;">
       📅 ${mesLabel} — ${totalPedidosEntregados} pedidos entregados — Total ingresos: ${fmt(grandTotal)} €
     </div>
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;">
+    <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:20px;">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
       ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
     </div>
@@ -7639,14 +7639,14 @@ async function guardarIngresoManual(input) {
     });
 
     const totalTienda = totalCOD + totalPagado + totalManual;
-    const totalEl = wrap.querySelector("tr[style*='#f0fdf4'] td:last-child");
+    const totalEl = wrap.querySelector("tr[style*='rgba(34,197,94,.08)'] td:last-child");
     if (totalEl) totalEl.textContent = totalTienda.toFixed(2) + " €";
 
     // Actualizar el gran total del banner
     const allCards = document.querySelectorAll("#inf-ingresos-wrap div[style*='border-radius:12px']");
     let grandTotal = 0;
     allCards.forEach(card => {
-      const totEl = card.querySelector("tr[style*='#f0fdf4'] td:last-child");
+      const totEl = card.querySelector("tr[style*='rgba(34,197,94,.08)'] td:last-child");
       if (totEl) grandTotal += parseFloat(totEl.textContent) || 0;
     });
     const bannerEl = document.querySelector("#inf-ingresos-wrap div[style*='bbf7d0']");
@@ -7669,11 +7669,11 @@ async function loadInformesBalance() {
   content.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
       <select id="inf-bal-month-sel" onchange="renderInformesBalance()"
-        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${monthNames.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?"selected":""}>${m}</option>`).join("")}
       </select>
       <select id="inf-bal-year-sel" onchange="renderInformesBalance()"
-        style="padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+        style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
         ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===now.getFullYear()?"selected":""}>${y}</option>`).join("")}
       </select>
     </div>
@@ -7769,24 +7769,24 @@ async function renderInformesBalance() {
 
   // ── 5. Render HTML ────────────────────────────────────────
   const cols = balanceData.map(d => {
-    const resColor = d.resultado >= 0 ? "#16a34a" : "#dc2626";
-    const resBg    = d.resultado >= 0 ? "#f0fdf4" : "#fef2f2";
-    const resBorder= d.resultado >= 0 ? "#bbf7d0" : "#fecaca";
+    const resColor = d.resultado >= 0 ? "#22c55e" : "#dc2626";
+    const resBg    = d.resultado >= 0 ? "rgba(34,197,94,.08)" : "#fef2f2";
+    const resBorder= d.resultado >= 0 ? "#86efac" : "#fecaca";
     return `
-      <div style="background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;" data-domain="${d.domain}">
-        <div style="background:#16a34a;padding:10px 14px;">
+      <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;" data-domain="${d.domain}">
+        <div style="background:#22c55e;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
-          <div style="font-size:11px;color:#bbf7d0;">${d.domain}</div>
+          <div style="font-size:11px;color:#86efac;">${d.domain}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Total Ingreso</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#16a34a;">${fmt(d.totalIngreso)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Total Ingreso</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#22c55e;">${fmt(d.totalIngreso)} €</td>
             </tr>
-            <tr style="background:#fef2f2;">
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#374151;">Total Gasto</td>
-              <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:right;font-weight:600;color:#dc2626;">− ${fmt(d.totalGasto)} €</td>
+            <tr style="background:rgba(239,68,68,.1);">
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Total Gasto</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#dc2626;">− ${fmt(d.totalGasto)} €</td>
             </tr>
             <tr style="background:${resBg};">
               <td style="padding:12px 14px;border:1px solid ${resBorder};font-weight:700;color:${resColor};font-size:14px;">RESULTADO</td>
@@ -7799,34 +7799,34 @@ async function renderInformesBalance() {
 
   const storeCheckboxes = balanceData.map(d =>
     `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
-      <input type="checkbox" checked value="${d.domain}" onchange="recalcBalanceSuma()" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+      <input type="checkbox" checked value="${d.domain}" onchange="recalcBalanceSuma()" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
       ${escapeHtml(d.name)}
     </label>`
   ).join("");
 
   wrap.innerHTML = `
-    <div style="margin-bottom:16px;padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#16a34a;font-weight:600;">
+    <div style="margin-bottom:16px;padding:10px 16px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:8px;font-size:13px;color:#22c55e;font-weight:600;">
       📅 ${mesLabel}
     </div>
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;">
+    <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:20px;">
       <div style="display:flex;gap:20px;align-items:flex-start;">
         <div style="flex:1;min-width:0;">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;" id="bal-cols">
             ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
           </div>
-          <div id="bal-sumatoria" style="margin-top:24px;padding:18px 22px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;">
+          <div id="bal-sumatoria" style="margin-top:24px;padding:18px 22px;background:rgba(34,197,94,.08);border:2px solid #22c55e;border-radius:12px;">
             <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Sumatoria seleccionada</div>
             <div id="bal-suma-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;"></div>
-            <div style="border-top:2px solid #16a34a;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-weight:700;font-size:15px;color:#374151;">TOTAL</span>
+            <div style="border-top:2px solid #22c55e;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:700;font-size:15px;color:#e5e7eb;">TOTAL</span>
               <span id="bal-suma-total" style="font-weight:800;font-size:24px;"></span>
             </div>
           </div>
         </div>
-        <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:14px;position:sticky;top:80px;">
+        <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:80px;">
           <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
           <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-            <input type="checkbox" id="bal-check-all" checked onchange="toggleAllBalanceShops(this.checked)" style="width:15px;height:15px;accent-color:#16a34a;cursor:pointer;">
+            <input type="checkbox" id="bal-check-all" checked onchange="toggleAllBalanceShops(this.checked)" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
             Todas las tiendas
           </label>
           ${storeCheckboxes}
@@ -7856,15 +7856,15 @@ function recalcBalanceSuma() {
   const totalEl = document.getElementById("bal-suma-total");
 
   if (filasEl) filasEl.innerHTML = filtradas.map(d =>
-    `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;">
+    `<div style="background:#111827;border:1px solid #374151;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;">
       <div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div>
-      <div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#16a34a;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
+      <div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
       <div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div>
-      <div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#16a34a':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div>
+      <div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#22c55e':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div>
     </div>`
   ).join("");
 
-  if (totalEl) { totalEl.textContent = fmt(totalResultado) + " €"; totalEl.style.color = totalResultado >= 0 ? "#16a34a" : "#dc2626"; }
+  if (totalEl) { totalEl.textContent = fmt(totalResultado) + " €"; totalEl.style.color = totalResultado >= 0 ? "#22c55e" : "#dc2626"; }
 
   const allCheck = document.getElementById("bal-check-all");
   if (allCheck) allCheck.checked = filtradas.length === data.length;
@@ -8224,7 +8224,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${paymentBadge}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
       <div style="display:flex;align-items:center;gap:6px;overflow:visible;">
@@ -8240,8 +8240,8 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
             style="width:22px;height:22px;background:#4f46e5;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="white"><circle cx="2" cy="5" r="1.2"/><circle cx="5" cy="5" r="1.2"/><circle cx="8" cy="5" r="1.2"/></svg>
           </button>
-          <div id="menu-estado-${o.id}" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:140px;overflow:hidden;">
-            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'entregado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#16a34a;cursor:pointer;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">✓ Entregado</div>
+          <div id="menu-estado-${o.id}" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#111827;border:1px solid #374151;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:140px;overflow:hidden;">
+            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'entregado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#22c55e;cursor:pointer;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(34,197,94,.08)'" onmouseout="this.style.background=''">✓ Entregado</div>
             <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'devuelto')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#ea580c;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background=''">↩ Devuelto</div>
             <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'destruido')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#7c3aed;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">✕ Destruido</div>
             <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'cancelado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">✕ Cancelado</div>
@@ -8259,7 +8259,7 @@ if (pagination) {
 
     // Botón anterior
     pages += `<button onclick="goToOrdersPage(${Math.max(1, p-1)})"
-      style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;
+      style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;
         background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};
         font-size:13px;cursor:pointer;font-family:inherit;"
       ${p===1?"disabled":""}>‹</button>`;
@@ -8272,7 +8272,7 @@ if (pagination) {
 
     if (startPage > 1) {
       pages += `<button onclick="goToOrdersPage(1)"
-        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;
           background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`;
       if (startPage > 2) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`;
     }
@@ -8280,8 +8280,8 @@ if (pagination) {
     for (let i = startPage; i <= endPage; i++) {
       const isActive = i === p;
       pages += `<button onclick="goToOrdersPage(${i})"
-        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#16a34a":"#e5e7eb"};
-          background:${isActive?"#16a34a":"var(--card)"};color:${isActive?"#fff":"var(--text)"};
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#22c55e":"#e5e7eb"};
+          background:${isActive?"#22c55e":"var(--card)"};color:${isActive?"#fff":"var(--text)"};
           font-size:13px;font-weight:${isActive?"700":"400"};cursor:pointer;font-family:inherit;">
         ${i}
       </button>`;
@@ -8290,13 +8290,13 @@ if (pagination) {
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`;
       pages += `<button onclick="goToOrdersPage(${totalPages})"
-        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;
           background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${totalPages}</button>`;
     }
 
     // Botón siguiente
     pages += `<button onclick="goToOrdersPage(${Math.min(totalPages, p+1)})"
-      style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;
+      style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;
         background:var(--card);color:${p===totalPages?"#d1d5db":"var(--text)"};
         font-size:13px;cursor:pointer;font-family:inherit;"
       ${p===totalPages?"disabled":""}>›</button>`;
@@ -8361,7 +8361,7 @@ async function marcarEntregado(orderId, orderNumber, internalId) {
     });
     const data = await res.json();
     if (!data.ok) { alert(data.error || "Error al actualizar el pedido"); return; }
-    showToast(`Pedido ${orderNumber} marcado como entregado`, "", "#16a34a");
+    showToast(`Pedido ${orderNumber} marcado como entregado`, "", "#22c55e");
     await fetchOrdersFiltered();
   } catch(e) { alert("Error de conexión"); }
 }
@@ -8379,7 +8379,7 @@ document.addEventListener("click", () => {
 });
 
 const _estadoLabels = { entregado: "entregado", devuelto: "devuelto", destruido: "destruido", cancelado: "cancelado" };
-const _estadoColors = { entregado: "#16a34a", devuelto: "#ea580c", destruido: "#7c3aed", cancelado: "#dc2626" };
+const _estadoColors = { entregado: "#22c55e", devuelto: "#ea580c", destruido: "#7c3aed", cancelado: "#dc2626" };
 
 async function cambiarEstadoPedido(orderId, orderNumber, internalId, estado) {
   const label = _estadoLabels[estado] || estado;
@@ -8471,8 +8471,8 @@ function openStoreMenu(e, storeId) {
     position:fixed;
     top:${rect.bottom + 4}px;
     left:${rect.left - 120}px;
-    background:#fff;
-    border:1px solid #e5e7eb;
+    background:#111827;
+    border:1px solid #374151;
     border-radius:10px;
     box-shadow:0 4px 16px rgba(0,0,0,0.12);
     z-index:9999;
@@ -8536,7 +8536,7 @@ function openReactivateModal(domain, storeId) {
   modal.innerHTML = `
     <div class="modal" style="max-width:420px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <div style="width:36px;height:36px;border-radius:8px;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-weight:700;color:#16a34a;">
+        <div style="width:36px;height:36px;border-radius:8px;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-weight:700;color:#22c55e;">
           S
         </div>
         <div>
@@ -8545,14 +8545,14 @@ function openReactivateModal(domain, storeId) {
         </div>
       </div>
 
-      <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:16px;background:#f9fafb;">
+      <div style="border:1px solid #374151;border-radius:10px;padding:12px;margin-bottom:16px;background:#1f2937;">
         <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">Tienda Shopify</div>
         <div style="font-weight:600;">${domain}</div>
       </div>
 
       <label style="font-size:13px;font-weight:500;">Token privado de Shopify</label>
 
-      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:10px 12px;border:1.5px solid #22c55e;border-radius:10px;background:#f0fdf4;">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:10px 12px;border:1.5px solid #22c55e;border-radius:10px;background:rgba(34,197,94,.08);">
         <span style="font-size:16px;">🔑</span>
         <input
           id="reactivate-token"
@@ -8687,14 +8687,14 @@ async function toggleFilterPanel() {
   panel.id = "filter-panel";
   panel.style.cssText = `
     position:fixed; top:0; right:0; width:300px; height:100vh;
-    background:#fff; border-left:1px solid #e5e7eb;
-    box-shadow:-4px 0 20px rgba(0,0,0,0.1);
+    background:#111827; border-left:1px solid #1f2937;
+    box-shadow:-4px 0 20px rgba(0,0,0,0.5);
     z-index:999; display:flex; flex-direction:column;
     font-family:inherit;
   `;
 
   panel.innerHTML = `
-    <div style="padding:20px 20px 14px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+    <div style="padding:20px 20px 14px; border-bottom:1px solid #1f2937; display:flex; justify-content:space-between; align-items:center;">
       <span style="font-size:16px; font-weight:700;">Filtros</span>
       <span onclick="toggleFilterPanel()" style="cursor:pointer; font-size:20px; color:#6b7280; line-height:1;">×</span>
     </div>
@@ -8702,17 +8702,17 @@ async function toggleFilterPanel() {
     <div style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:20px;">
 
       <div>
-        <label style="font-size:12px; font-weight:600; color:#374151; display:block; margin-bottom:8px;">Fecha</label>
+        <label style="font-size:12px; font-weight:600; color:#e5e7eb; display:block; margin-bottom:8px;">Fecha</label>
         <input type="date" id="filter-date-from" value="${activeFilters.dateFrom}"
-          style="width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; margin-bottom:6px;">
+          style="width:100%; padding:8px 10px; border:1px solid #374151; border-radius:8px; font-size:13px; margin-bottom:6px;">
         <input type="date" id="filter-date-to" value="${activeFilters.dateTo}"
-          style="width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px;">
+          style="width:100%; padding:8px 10px; border:1px solid #374151; border-radius:8px; font-size:13px;">
       </div>
 
       <div>
-        <label style="font-size:12px; font-weight:600; color:#374151; display:block; margin-bottom:8px;">Estado logístico</label>
+        <label style="font-size:12px; font-weight:600; color:#e5e7eb; display:block; margin-bottom:8px;">Estado logístico</label>
         <select id="filter-status"
-          style="width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#fff;">
+          style="width:100%; padding:8px 10px; border:1px solid #374151; border-radius:8px; font-size:13px; background:#111827;">
           <option value="">Todos</option>
 <option value="pendiente" ${activeFilters.status==="pendiente"?"selected":""}>Pendiente</option>
 <option value="entregado" ${activeFilters.status==="entregado"?"selected":""}>Entregado</option>
@@ -8724,18 +8724,18 @@ async function toggleFilterPanel() {
       </div>
 
       <div>
-        <label style="font-size:12px; font-weight:600; color:#374151; display:block; margin-bottom:8px;">Tiendas</label>
-        <div style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden;">
+        <label style="font-size:12px; font-weight:600; color:#e5e7eb; display:block; margin-bottom:8px;">Tiendas</label>
+        <div style="border:1px solid #374151; border-radius:8px; overflow:hidden;">
           <div
             onclick="selectFilterShop('')"
             id="shop-opt-all"
             style="padding:10px 12px; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:8px;
-              background:${!activeFilters.shop ? '#f0fdf4' : '#fff'};
-              color:${!activeFilters.shop ? '#16a34a' : '#111827'};
+              background:${!activeFilters.shop ? 'rgba(34,197,94,.1)' : 'transparent'};
+              color:${!activeFilters.shop ? '#4ade80' : '#9ca3af'};
               font-weight:${!activeFilters.shop ? '600' : '400'};"
           >
-            <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${!activeFilters.shop ? '#16a34a' : '#d1d5db'};
-              background:${!activeFilters.shop ? '#16a34a' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
+            <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${!activeFilters.shop ? '#22c55e' : '#374151'};
+              background:${!activeFilters.shop ? '#22c55e' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
             Todas las tiendas
           </div>
           ${stores.map(s => `
@@ -8743,15 +8743,15 @@ async function toggleFilterPanel() {
               onclick="selectFilterShop('${s.domain}')"
               id="shop-opt-${s.id}"
               style="padding:10px 12px; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:8px;
-                border-top:1px solid #f3f4f6;
-                background:${activeFilters.shop===s.domain ? '#f0fdf4' : '#fff'};
-                color:${activeFilters.shop===s.domain ? '#16a34a' : '#111827'};
+                border-top:1px solid #1f2937;
+                background:${activeFilters.shop===s.domain ? 'rgba(34,197,94,.1)' : 'transparent'};
+                color:${activeFilters.shop===s.domain ? '#4ade80' : '#9ca3af'};
                 font-weight:${activeFilters.shop===s.domain ? '600' : '400'};"
-              onmouseover="this.style.background='#f9fafb'"
-              onmouseout="this.style.background='${activeFilters.shop===s.domain ? '#f0fdf4' : '#fff'}'"
+              onmouseover="this.style.background='rgba(255,255,255,.04)'"
+              onmouseout="this.style.background='${activeFilters.shop===s.domain ? 'rgba(34,197,94,.1)' : 'transparent'}'"
             >
-              <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${activeFilters.shop===s.domain ? '#16a34a' : '#d1d5db'};
-                background:${activeFilters.shop===s.domain ? '#16a34a' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
+              <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${activeFilters.shop===s.domain ? '#22c55e' : '#d1d5db'};
+                background:${activeFilters.shop===s.domain ? '#22c55e' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
               ${escapeHtml(s.shop_name || s.domain)}
             </div>
           `).join("")}
@@ -8760,13 +8760,13 @@ async function toggleFilterPanel() {
 
     </div>
 
-    <div style="padding:16px 20px; border-top:1px solid #e5e7eb; display:flex; gap:10px;">
+    <div style="padding:16px 20px; border-top:1px solid #1f2937; display:flex; gap:10px;">
       <button onclick="clearFilters()"
-        style="flex:1; padding:10px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; font-size:13px; cursor:pointer; font-weight:600;">
+        style="flex:1; padding:10px; border:1px solid #374151; border-radius:8px; background:transparent; font-size:13px; cursor:pointer; font-weight:600; color:#9ca3af; font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">
         Limpiar
       </button>
       <button onclick="applyFilters()"
-        style="flex:1; padding:10px; border:none; border-radius:8px; background:#16a34a; color:#fff; font-size:13px; cursor:pointer; font-weight:700;">
+        style="flex:1; padding:10px; border:none; border-radius:8px; background:#22c55e; color:#052e16; font-size:13px; cursor:pointer; font-weight:700; font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 16px rgba(34,197,94,.4)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='none';">
         Aplicar
       </button>
     </div>
@@ -9024,16 +9024,16 @@ async function fetchReembolsosFiltered() {
         <div class="orders-row" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
           <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
-          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:500;font-size:12px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;font-size:12px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${escapeHtml(o.customer_name || "-")}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             ${estadoPago === "cobrado"
-              ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:999px;font-size:12px;font-weight:600;color:#16a34a;">✅ Pagado</span>
+              ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(34,197,94,.12);border:1px solid #86efac;border-radius:999px;font-size:12px;font-weight:600;color:#22c55e;">✅ Pagado</span>
                  ${o.fecha_pago ? `<span style="font-size:11px;color:#6b7280;">${new Date(o.fecha_pago).toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>` : ""}`
-              : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:999px;font-size:12px;font-weight:600;color:#92400e;">⏳ Pendiente</span>
-                 <button onclick="confirmarPagadoReembolso(${o.id})" style="padding:4px 12px;font-size:12px;font-weight:600;background:#16a34a;color:#fff;border:none;border-radius:999px;cursor:pointer;">Marcar pagado</button>`
+              : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:999px;font-size:12px;font-weight:600;color:#fde047;">⏳ Pendiente</span>
+                 <button onclick="confirmarPagadoReembolso(${o.id})" style="padding:4px 12px;font-size:12px;font-weight:600;background:#22c55e;color:#fff;border:none;border-radius:999px;cursor:pointer;">Marcar pagado</button>`
             }
           </div>
         </div>`;
@@ -9045,12 +9045,12 @@ async function fetchReembolsosFiltered() {
       const p = page;
       const delta = 2;
       let pagesHtml = "";
-      pagesHtml += `<button onclick="goToReePage(${Math.max(1,p-1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
+      pagesHtml += `<button onclick="goToReePage(${Math.max(1,p-1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
       let sp = Math.max(1,p-delta), ep = Math.min(pages,p+delta);
-      if (sp > 1) { pagesHtml += `<button onclick="goToReePage(1)" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`; if (sp>2) pagesHtml += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; }
-      for (let i=sp;i<=ep;i++) { const a=i===p; pagesHtml += `<button onclick="goToReePage(${i})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${a?"#16a34a":"#e5e7eb"};background:${a?"#16a34a":"var(--card)"};color:${a?"#fff":"var(--text)"};font-size:13px;font-weight:${a?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`; }
-      if (ep < pages) { if (ep<pages-1) pagesHtml += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; pagesHtml += `<button onclick="goToReePage(${pages})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${pages}</button>`; }
-      pagesHtml += `<button onclick="goToReePage(${Math.min(pages,p+1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #e5e7eb;background:var(--card);color:${p===pages?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===pages?"disabled":""}>›</button>`;
+      if (sp > 1) { pagesHtml += `<button onclick="goToReePage(1)" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`; if (sp>2) pagesHtml += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; }
+      for (let i=sp;i<=ep;i++) { const a=i===p; pagesHtml += `<button onclick="goToReePage(${i})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${a?"#22c55e":"#e5e7eb"};background:${a?"#22c55e":"var(--card)"};color:${a?"#fff":"var(--text)"};font-size:13px;font-weight:${a?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`; }
+      if (ep < pages) { if (ep<pages-1) pagesHtml += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; pagesHtml += `<button onclick="goToReePage(${pages})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${pages}</button>`; }
+      pagesHtml += `<button onclick="goToReePage(${Math.min(pages,p+1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===pages?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===pages?"disabled":""}>›</button>`;
       pagination.innerHTML = pagesHtml;
     }
   } catch(e) {
@@ -9187,7 +9187,7 @@ async function checkNotificaciones() {
           notisIds.add(notiId);
           permShown.add(notiId);
           permNuevos.push(notiId);
-          showToast("✅ Pedido entregado", txt, "#16a34a");
+          showToast("✅ Pedido entregado", txt, "#22c55e");
         }
       }
 
@@ -9252,9 +9252,9 @@ function showToast(title, text, color) {
     position:fixed;
     bottom:24px;
     right:24px;
-    background:#fff;
-    border:1px solid #e5e7eb;
-    border-left:4px solid ${color || "#16a34a"};
+    background:#111827;
+    border:1px solid #374151;
+    border-left:4px solid ${color || "#22c55e"};
     border-radius:10px;
     box-shadow:0 4px 20px rgba(0,0,0,0.12);
     padding:14px 18px;
@@ -9270,7 +9270,7 @@ function showToast(title, text, color) {
   `;
   toast.innerHTML = `
     <div style="flex:1;">
-      <div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:3px;">${escapeHtml(title)}</div>
+      <div style="font-size:13px;font-weight:700;color:#f9fafb;margin-bottom:3px;">${escapeHtml(title)}</div>
       <div style="font-size:12px;color:#6b7280;">${escapeHtml(text)}</div>
     </div>
     <div onclick="document.getElementById('${id}')?.remove()" style="cursor:pointer;color:#9ca3af;font-size:16px;line-height:1;flex-shrink:0;">×</div>
@@ -9319,7 +9319,7 @@ async function syncEnvioMRW(btn, orderId) {
       return;
     }
     if (data.updated) {
-      showToast("✅ Estado actualizado", `Nuevo estado: ${statusLabel(data.status)}`, "#16a34a");
+      showToast("✅ Estado actualizado", `Nuevo estado: ${statusLabel(data.status)}`, "#22c55e");
       invalidateCache("orders");
       allOrders = [];
       await fetchOrdersFiltered();
@@ -9433,7 +9433,7 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
   modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;";
   modal.innerHTML = `
     <div style="background:var(--card);border-radius:12px;width:680px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-      <div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
+      <div style="padding:16px 20px;border-bottom:1px solid #1f2937;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="font-weight:700;font-size:15px;color:var(--text);">Histórico de stock</div>
           <div style="font-size:12px;color:#6b7280;margin-top:2px;">${escapeHtml(productName)}</div>
@@ -9477,28 +9477,28 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
     body.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
-          <tr style="background:#f9fafb;">
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Fecha</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Pedidos env.</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#dc2626;">Uds. salida</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Devueltos</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#16a34a;">Uds. devolución</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#7c3aed;">Entrada mercancía</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">Neto</th>
-            <th style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:#2563eb;background:#eff6ff;">Stock final día</th>
+          <tr style="background:#1f2937;">
+            <th style="padding:8px 12px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Fecha</th>
+            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#dc2626;">Pedidos env.</th>
+            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#dc2626;">Uds. salida</th>
+            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#22c55e;">Devueltos</th>
+            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#22c55e;">Uds. devolución</th>
+            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#7c3aed;">Entrada mercancía</th>
+            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;">Neto</th>
+            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:700;color:#2563eb;background:rgba(59,130,246,.08);">Stock final día</th>
           </tr>
         </thead>
         <tbody>
           ${rowsConSaldo.map(r => `
             <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:500;">${r.fecha}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;">${r.pedidos_enviados || 0}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#dc2626;font-weight:600;">${r.salida > 0 ? '-'+r.salida : '0'}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#16a34a;">${r.pedidos_devueltos || 0}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#16a34a;font-weight:600;">${r.dev > 0 ? '+'+r.dev : '0'}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;color:#7c3aed;font-weight:600;">${r.entrada > 0 ? '+'+r.entrada : '0'}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:${r.neto>=0?'#16a34a':'#dc2626'};">${r.neto>=0?'+':''}${r.neto}</td>
-              <td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center;font-weight:700;font-size:14px;background:#eff6ff;color:${r.saldoFin<0?'#dc2626':r.saldoFin===0?'#f59e0b':'#2563eb'};">${r.saldoFin}</td>
+              <td style="padding:8px 12px;border:1px solid #374151;font-weight:500;">${r.fecha}</td>
+              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#dc2626;">${r.pedidos_enviados || 0}</td>
+              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#dc2626;font-weight:600;">${r.salida > 0 ? '-'+r.salida : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#22c55e;">${r.pedidos_devueltos || 0}</td>
+              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#22c55e;font-weight:600;">${r.dev > 0 ? '+'+r.dev : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#7c3aed;font-weight:600;">${r.entrada > 0 ? '+'+r.entrada : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:${r.neto>=0?'#22c55e':'#dc2626'};">${r.neto>=0?'+':''}${r.neto}</td>
+              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:700;font-size:14px;background:rgba(59,130,246,.08);color:${r.saldoFin<0?'#dc2626':r.saldoFin===0?'#f59e0b':'#2563eb'};">${r.saldoFin}</td>
             </tr>`).join("")}
         </tbody>
       </table>`;
@@ -9519,7 +9519,7 @@ async function abrirVincularStock() {
   modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
   modal.innerHTML = `
     <div style="background:var(--card);border-radius:12px;width:720px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.35);">
-      <div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="padding:16px 20px;border-bottom:1px solid #1f2937;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <div style="font-weight:700;font-size:15px;color:var(--text);">🔗 Vincular stock entre productos</div>
         <button onclick="document.getElementById('vincular-stock-modal').remove()"
           style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1;">×</button>
@@ -9551,13 +9551,13 @@ async function abrirVincularStock() {
     const selectedCount = selected.size;
     if (groups.length === 0) { el.innerHTML = ""; return; }
     el.innerHTML = `
-      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Grupos actuales</div>
+      <div style="font-size:12px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Grupos actuales</div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
         ${groups.map(g => {
           const members = g.members || [];
           const isEditing = editingGroupId === g.id;
           return `
-          <div style="border:1px solid ${isEditing?'#c4b5fd':'#e5e7eb'};border-radius:8px;background:#f9fafb;overflow:hidden;">
+          <div style="border:1px solid ${isEditing?'#c4b5fd':'#e5e7eb'};border-radius:8px;background:#1f2937;overflow:hidden;">
             <!-- Group header row -->
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;gap:8px;">
               <div style="font-size:13px;font-weight:700;color:#7c3aed;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
@@ -9574,14 +9574,14 @@ async function abrirVincularStock() {
                   ${isEditing ? 'Cerrar' : 'Editar'}
                 </button>
                 <button onclick="window.__vincularDeleteGroup(${g.id})"
-                  style="padding:4px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;">
+                  style="padding:4px 10px;background:rgba(239,68,68,.1);border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;">
                   Eliminar
                 </button>
               </div>
             </div>
             <!-- Members list (visible only when editing) -->
             ${isEditing ? `
-            <div style="border-top:1px solid #e5e7eb;">
+            <div style="border-top:1px solid #1f2937;">
               ${members.length === 0 ? '<div style="padding:10px 12px;font-size:12px;color:#9ca3af;">Sin productos en este grupo</div>' :
                 members.map(m => {
                   const p = allProducts.find(x => String(x.id) === String(m.product_id));
@@ -9590,12 +9590,12 @@ async function abrirVincularStock() {
                   return `
                   <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f3f4f6;">
                     <div style="flex:1;min-width:0;">
-                      <div style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
+                      <div style="font-size:12px;font-weight:600;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
                       <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p?.shop_name||m.shop_domain||'')}</div>
                     </div>
                     <div style="font-size:12px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#374151'};flex-shrink:0;white-space:nowrap;">Stock: ${si.stock??'—'}</div>
                     <button onclick="window.__vincularRemoveMember(${g.id},'${escapeHtml(m.product_id)}')"
-                      style="padding:3px 8px;background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;font-size:11px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">
+                      style="padding:3px 8px;background:rgba(239,68,68,.1);border:1px solid #fca5a5;border-radius:5px;font-size:11px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">
                       Desvincular
                     </button>
                   </div>`;
@@ -9634,10 +9634,10 @@ async function abrirVincularStock() {
           <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;background:${isSel?'#f5f3ff':'transparent'};border:1px solid ${isSel?'#c4b5fd':'transparent'};">
             <input type="checkbox" data-pid="${pid}" data-shop="${escapeHtml(p.shop_domain||si.shop_domain||'')}" ${isSel?'checked':''} onchange="window.__vincularToggle(this)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">
             <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.title)}</div>
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.title)}</div>
               <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name||p.shop_domain||'')}${si.group_name?` · <span style="color:#7c3aed;font-weight:600;">🔗 ${escapeHtml(si.group_name)}</span>`:''}</div>
             </div>
-            <div style="font-size:13px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#16a34a'};flex-shrink:0;">${si.stock??'—'}</div>
+            <div style="font-size:13px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#22c55e'};flex-shrink:0;">${si.stock??'—'}</div>
           </label>`;
         }).join("");
   }
@@ -9655,23 +9655,23 @@ async function abrirVincularStock() {
   body.innerHTML = `
     <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
       <input id="vincular-buscar" type="text" placeholder="Buscar producto..."
-        style="flex:1;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
+        style="flex:1;padding:8px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
       <span id="vincular-sel-count" style="font-size:12px;color:#6b7280;white-space:nowrap;">0 seleccionados</span>
     </div>
     <div id="vincular-groups-panel"></div>
-    <div style="margin-bottom:14px;padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;">
-      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Crear nuevo grupo con la selección</div>
+    <div style="margin-bottom:14px;padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#0d1117;">
+      <div style="font-size:12px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Crear nuevo grupo con la selección</div>
       <div style="display:flex;gap:8px;">
         <input id="nuevo-grupo-nombre" type="text" placeholder="Nombre del grupo..."
-          style="flex:1;padding:7px 10px;border:1px solid #e5e7eb;border-radius:7px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
+          style="flex:1;padding:7px 10px;border:1px solid #374151;border-radius:7px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
         <button onclick="window.__vincularCrearGrupo()"
           style="padding:7px 14px;background:#7c3aed;border:none;border-radius:7px;font-size:13px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">
           <span id="vincular-btn-crear-label">Crear grupo</span>
         </button>
       </div>
     </div>
-    <div id="vincular-product-count" style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">Productos (${allProducts.length})</div>
-    <div id="vincular-product-list" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:6px;"></div>`;
+    <div id="vincular-product-count" style="font-size:12px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Productos (${allProducts.length})</div>
+    <div id="vincular-product-list" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;border:1px solid #374151;border-radius:8px;padding:6px;"></div>`;
 
   // Wire search input — only updates product list, never replaces the input itself
   document.getElementById("vincular-buscar").addEventListener("input", e => {
@@ -9845,11 +9845,11 @@ async function abrirEntradaMercancia() {
 
       <div style="display:flex;gap:8px;margin-bottom:16px;">
         <button onclick="switchEntradaTab('nueva')" id="tab-nueva"
-          style="padding:7px 16px;border-radius:8px;border:1px solid #16a34a;background:#16a34a;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          style="padding:7px 16px;border-radius:8px;border:1px solid #22c55e;background:#22c55e;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
           Nueva entrada
         </button>
         <button onclick="switchEntradaTab('historial')" id="tab-historial"
-          style="padding:7px 16px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          style="padding:7px 16px;border-radius:8px;border:1px solid #374151;background:#111827;color:#e5e7eb;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
           Historial
         </button>
       </div>
@@ -9867,11 +9867,11 @@ async function switchEntradaTab(tab) {
   const btnNueva = document.getElementById("tab-nueva");
   const btnHist = document.getElementById("tab-historial");
   if (tab === "nueva") {
-    btnNueva.style.background = "#16a34a"; btnNueva.style.color = "#fff"; btnNueva.style.borderColor = "#16a34a";
+    btnNueva.style.background = "#22c55e"; btnNueva.style.color = "#fff"; btnNueva.style.borderColor = "#22c55e";
     btnHist.style.background = "#fff"; btnHist.style.color = "#374151"; btnHist.style.borderColor = "#e5e7eb";
     await cargarTabNuevaEntrada();
   } else {
-    btnHist.style.background = "#16a34a"; btnHist.style.color = "#fff"; btnHist.style.borderColor = "#16a34a";
+    btnHist.style.background = "#22c55e"; btnHist.style.color = "#fff"; btnHist.style.borderColor = "#22c55e";
     btnNueva.style.background = "#fff"; btnNueva.style.color = "#374151"; btnNueva.style.borderColor = "#e5e7eb";
     await cargarTabHistorial();
   }
@@ -9898,8 +9898,8 @@ async function cargarTabNuevaEntrada() {
     <div style="margin-bottom:16px;">
       <input id="entrada-search" type="text" placeholder="🔍 Buscar producto por nombre..."
         oninput="filtrarProductosEntrada()"
-        style="width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
-      <div id="entrada-search-results" style="margin-top:8px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;display:none;"></div>
+        style="width:100%;padding:10px 14px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+      <div id="entrada-search-results" style="margin-top:8px;border:1px solid #374151;border-radius:8px;overflow:hidden;display:none;"></div>
     </div>
     <div id="entrada-producto-seleccionado" style="display:none;">
       <div id="entrada-producto-card"></div>
@@ -9931,30 +9931,30 @@ async function cargarTabHistorial() {
     content.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
-          <tr style="background:#f9fafb;">
-            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Fecha</th>
-            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;">Producto</th>
-            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:left;font-weight:600;color:#374151;width:80px;">Tienda</th>
-            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;">Cantidad</th>
-            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;">Anterior</th>
-            <th style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;width:80px;">Nuevo</th>
+          <tr style="background:#1f2937;">
+            <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Fecha</th>
+            <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Producto</th>
+            <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;width:80px;">Tienda</th>
+            <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:80px;">Cantidad</th>
+            <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:80px;">Anterior</th>
+            <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:80px;">Nuevo</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map(r => `
           <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;color:#6b7280;white-space:nowrap;">
+            <td style="padding:10px 14px;border:1px solid #374151;color:#6b7280;white-space:nowrap;">
               ${r.created_at ? new Date(r.created_at).toLocaleString("es-ES") : "-"}
             </td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-weight:600;color:#111827;">
+            <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#f9fafb;">
               ${escapeHtml(r.product_name)}
             </td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280;">
+            <td style="padding:10px 14px;border:1px solid #374151;font-size:11px;color:#6b7280;">
               ${escapeHtml(r.shop_domain)}
             </td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:#16a34a;">+${r.cantidad}</td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;color:#6b7280;">${r.stock_anterior}</td>
-            <td style="padding:10px 14px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:#16a34a;">${r.stock_nuevo}</td>
+            <td style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:700;color:#22c55e;">+${r.cantidad}</td>
+            <td style="padding:10px 14px;border:1px solid #374151;text-align:center;color:#6b7280;">${r.stock_anterior}</td>
+            <td style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:700;color:#22c55e;">${r.stock_nuevo}</td>
           </tr>`).join("")}
         </tbody>
       </table>
@@ -9986,9 +9986,9 @@ function filtrarProductosEntrada() {
     <div onclick="seleccionarProductoEntrada('${String(p.id)}')"
       style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:10px;"
       onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-      ${p.image ? `<img src="${p.image}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;">` : `<div style="width:32px;height:32px;border-radius:4px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📦</div>`}
+      ${p.image ? `<img src="${p.image}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;">` : `<div style="width:32px;height:32px;border-radius:4px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📦</div>`}
       <div>
-        <div style="font-weight:600;color:#111827;">${escapeHtml(p.title)}</div>
+        <div style="font-weight:600;color:#f9fafb;">${escapeHtml(p.title)}</div>
         <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name || p.shop_domain)}</div>
       </div>
     </div>
@@ -10014,35 +10014,35 @@ function seleccionarProductoEntrada(pid) {
   if (card) card.style.display = "block";
 
   cardContent.innerHTML = `
-    <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-      <div style="background:#16a34a;padding:14px 18px;display:flex;align-items:center;gap:12px;">
+    <div style="border:1px solid #374151;border-radius:12px;overflow:hidden;">
+      <div style="background:#22c55e;padding:14px 18px;display:flex;align-items:center;gap:12px;">
         ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:2px solid rgba(255,255,255,0.3);">` : `<div style="width:48px;height:48px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;">📦</div>`}
         <div>
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(p.title)}</div>
-          <div style="font-size:12px;color:#bbf7d0;">${escapeHtml(p.shop_name || p.shop_domain)}</div>
+          <div style="font-size:12px;color:#86efac;">${escapeHtml(p.shop_name || p.shop_domain)}</div>
         </div>
       </div>
       <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:end;">
         <div style="text-align:center;">
           <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stock actual</div>
-          <div style="font-size:28px;font-weight:700;color:#374151;">${stockActual}</div>
+          <div style="font-size:28px;font-weight:700;color:#e5e7eb;">${stockActual}</div>
           <div style="font-size:11px;color:#9ca3af;">unidades</div>
         </div>
         <div style="text-align:center;">
           <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Cantidad a ingresar</div>
           <input type="number" min="1" id="entrada-qty-selected" placeholder="0"
             oninput="actualizarPreviewNuevo(${stockActual})"
-            style="width:100%;padding:10px;border:2px solid #16a34a;border-radius:8px;font-size:18px;text-align:center;font-family:inherit;font-weight:700;color:#16a34a;background:var(--card);">
+            style="width:100%;padding:10px;border:2px solid #22c55e;border-radius:8px;font-size:18px;text-align:center;font-family:inherit;font-weight:700;color:#22c55e;background:var(--card);">
         </div>
         <div style="text-align:center;">
           <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stock nuevo</div>
-          <div style="font-size:28px;font-weight:700;color:#16a34a;" id="entrada-preview-nuevo">${stockActual}</div>
+          <div style="font-size:28px;font-weight:700;color:#22c55e;" id="entrada-preview-nuevo">${stockActual}</div>
           <div style="font-size:11px;color:#9ca3af;">unidades</div>
         </div>
       </div>
       <div style="padding:0 20px 20px;">
         <button onclick="confirmarEntradaSeleccionada('${pid}','${escapeAttr(p.title)}','${p.shop_domain}',${stockActual})"
-          style="width:100%;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+          style="width:100%;padding:12px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
           ✓ Registrar entrada de mercancía
         </button>
       </div>
@@ -10055,7 +10055,7 @@ function actualizarPreviewNuevo(stockActual) {
   const el = document.getElementById("entrada-preview-nuevo");
   if (el) {
     el.textContent = stockActual + qty;
-    el.style.color = qty > 0 ? "#16a34a" : "#9ca3af";
+    el.style.color = qty > 0 ? "#22c55e" : "#9ca3af";
   }
 }
 
@@ -10071,7 +10071,7 @@ async function confirmarEntradaSeleccionada(productId, productName, shopDomain, 
     });
     const data = await res.json();
     if (data.ok) {
-      showToast("✅ Entrada registrada", `${productName} — +${qty} uds (stock: ${data.stock_nuevo})`, "#16a34a");
+      showToast("✅ Entrada registrada", `${productName} — +${qty} uds (stock: ${data.stock_nuevo})`, "#22c55e");
       await cargarTabNuevaEntrada();
       loadProductos();
     }
@@ -10120,42 +10120,42 @@ function abrirModalMRW() {
   modal.innerHTML = `
     <div class="modal" style="max-width:460px;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
-        <div style="width:40px;height:40px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:20px;">🚚</div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.1);display:flex;align-items:center;justify-content:center;font-size:20px;">🚚</div>
         <div>
           <h3 style="margin:0;font-size:16px;font-weight:700;">Integrar MRW Webservice</h3>
           <div style="font-size:12px;color:#6b7280;">Sincronización automática de estados de envío</div>
         </div>
       </div>
-      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#1e40af;margin-bottom:16px;">
+      <div style="background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#93c5fd;margin-bottom:16px;">
         💡 Necesitas las credenciales SAGEC de MRW (Login y Contraseña del WebService TrackingServices)
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div>
-          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Login SAGEC *</label>
+          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Login SAGEC *</label>
           <input id="mrw-login" type="text" placeholder="Ej: CD01234Ejemplo"
-            style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+            style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
+          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
           <input id="mrw-pass" type="password" placeholder="Contraseña"
-            style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+            style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
-            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Franquicia</label>
+            <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Franquicia</label>
             <input id="mrw-franquicia" type="text" placeholder="Ej: 01234"
-              style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+              style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
           </div>
           <div>
-            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Abonado</label>
+            <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Abonado</label>
             <input id="mrw-abonado" type="text" placeholder="Ej: 603835"
-              style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
+              style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
           </div>
         </div>
         <div id="mrw-modal-msg" style="font-size:13px;min-height:18px;"></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px;">
-        <button onclick="closeModal()" style="flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;font-weight:600;">Cancelar</button>
+        <button onclick="closeModal()" style="flex:1;padding:10px;border:1px solid #374151;border-radius:8px;background:#111827;font-size:13px;cursor:pointer;font-weight:600;">Cancelar</button>
         <button onclick="guardarCredencialesMRW()" style="flex:1;padding:10px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;">
           ✓ Conectar MRW
         </button>
@@ -10182,7 +10182,7 @@ async function guardarCredencialesMRW() {
     const data = await res.json();
     if (data.ok) {
       closeModal();
-      showToast("✅ MRW integrado", "La sincronización automática está activa", "#16a34a");
+      showToast("✅ MRW integrado", "La sincronización automática está activa", "#22c55e");
       checkMRWIntegration();
     } else {
       if (msg) { msg.style.color = "#dc2626"; msg.textContent = data.error || "Error guardando"; }
@@ -10202,7 +10202,7 @@ function mostrarBarraProgresoMRW(done, total) {
   bar.innerHTML = `
     <div style="font-weight:700;margin-bottom:8px;">🔄 Sincronizando MRW...</div>
     <div style="background:#374151;border-radius:6px;overflow:hidden;height:8px;margin-bottom:6px;">
-      <div style="background:#16a34a;height:8px;width:${pct}%;transition:width 0.3s;border-radius:6px;"></div>
+      <div style="background:#22c55e;height:8px;width:${pct}%;transition:width 0.3s;border-radius:6px;"></div>
     </div>
     <div style="color:#9ca3af;font-size:12px;">${done} de ${total} pedidos (${pct}%)</div>
   `;
@@ -10241,7 +10241,7 @@ async function sincronizarMRW(esAutomatico = false) {
     ocultarBarraProgresoMRW();
     if (data.ok) {
       if (data.updated > 0) {
-        showToast("✅ MRW sincronizado", `${data.updated} pedido${data.updated > 1 ? "s" : ""} actualizado${data.updated > 1 ? "s" : ""}`, "#16a34a");
+        showToast("✅ MRW sincronizado", `${data.updated} pedido${data.updated > 1 ? "s" : ""} actualizado${data.updated > 1 ? "s" : ""}`, "#22c55e");
         invalidateCache("orders");
         allOrders = [];
         await fetchOrdersFiltered();
