@@ -1987,17 +1987,17 @@ if (id === "tiendas") {
   box.className = "";
   box.removeAttribute("style");
   box.innerHTML = `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;background:var(--input);padding:4px;border-radius:10px;width:fit-content;">
       <button id="int-tab-btn-tiendas" onclick="switchIntegracionesTab('tiendas')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #22c55e;font-size:13px;font-weight:600;cursor:pointer;background:#22c55e;color:#fff;">
+        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:#22c55e;color:#fff;box-shadow:0 2px 8px rgba(34,197,94,.25);transition:all .15s;">
         Tiendas
       </button>
       <button id="int-tab-btn-agencia" onclick="switchIntegracionesTab('agencia')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;">
+        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
         Agencia de envío
       </button>
       <button id="int-tab-btn-reembolsos" onclick="switchIntegracionesTab('reembolsos')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;">
+        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
         Reembolsos
       </button>
     </div>
@@ -2009,9 +2009,9 @@ if (id === "tiendas") {
       const btn = document.getElementById("int-tab-btn-" + k);
       if (!btn) return;
       if (k === tab) {
-        btn.style.background = "#22c55e"; btn.style.color = "#fff"; btn.style.borderColor = "#22c55e";
+        btn.style.background = "#22c55e"; btn.style.color = "#fff"; btn.style.boxShadow = "0 2px 8px rgba(34,197,94,.25)";
       } else {
-        btn.style.background = "#fff"; btn.style.color = "#374151"; btn.style.borderColor = "#e5e7eb";
+        btn.style.background = "transparent"; btn.style.color = "var(--muted)"; btn.style.boxShadow = "none";
       }
     });
 
