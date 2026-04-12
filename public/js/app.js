@@ -5427,8 +5427,8 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   }).join("");
 
   const storeCheckboxes = balanceData.map(d =>
-    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
-      <input type="checkbox" checked value="${d.domain}" onchange="recalcMetricasBalance()" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
+    `<label class="shop-check-label shop-check-row">
+      <input type="checkbox" checked value="${d.domain}" onchange="recalcMetricasBalance()">
       ${escapeHtml(d.name)}
     </label>`
   ).join("");
@@ -5448,9 +5448,9 @@ async function loadMetricasBalance(dateFrom, dateTo) {
         </div>
       </div>
        <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
-        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
-        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-          <input type="checkbox" id="met-bal-check-all" checked onchange="toggleAllMetricasBalance(this.checked)" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <label class="shop-check-label all">
+          <input type="checkbox" id="met-bal-check-all" checked onchange="toggleAllMetricasBalance(this.checked)">
           Todas las tiendas
         </label>
         ${storeCheckboxes}
@@ -5784,8 +5784,8 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
   }).join("");
 
   const storeCheckboxes = balanceData.map(d =>
-    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
-      <input type="checkbox" checked value="${d.domain}" onchange="recalcRentabilidadBalance()" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
+    `<label class="shop-check-label shop-check-row">
+      <input type="checkbox" checked value="${d.domain}" onchange="recalcRentabilidadBalance()">
       ${escapeHtml(d.name)}
     </label>`
   ).join("");
@@ -5803,9 +5803,9 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
         </div>
       </div>
       <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
-        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
-        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-          <input type="checkbox" id="rent-bal-check-all" checked onchange="toggleAllRentabilidadBalance(this.checked)" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+        <label class="shop-check-label all">
+          <input type="checkbox" id="rent-bal-check-all" checked onchange="toggleAllRentabilidadBalance(this.checked)">
           Todas las tiendas
         </label>
         ${storeCheckboxes}
@@ -7855,8 +7855,8 @@ async function renderInformesBalance() {
   }).join("");
 
   const storeCheckboxes = balanceData.map(d =>
-    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid #f3f4f6;">
-      <input type="checkbox" checked value="${d.domain}" onchange="recalcBalanceSuma()" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
+    `<label class="shop-check-label shop-check-row">
+      <input type="checkbox" checked value="${d.domain}" onchange="recalcBalanceSuma()">
       ${escapeHtml(d.name)}
     </label>`
   ).join("");
@@ -7881,9 +7881,9 @@ async function renderInformesBalance() {
           </div>
         </div>
         <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:80px;">
-          <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
-          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;font-weight:700;color:var(--text);border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-            <input type="checkbox" id="bal-check-all" checked onchange="toggleAllBalanceShops(this.checked)" style="width:15px;height:15px;accent-color:#22c55e;cursor:pointer;">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
+          <label class="shop-check-label all">
+            <input type="checkbox" id="bal-check-all" checked onchange="toggleAllBalanceShops(this.checked)">
             Todas las tiendas
           </label>
           ${storeCheckboxes}
