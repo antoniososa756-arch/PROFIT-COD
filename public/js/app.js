@@ -6137,6 +6137,96 @@ async function actualizarMetricasSinBalance() {
 }
 window.actualizarMetricasSinBalance = actualizarMetricasSinBalance;
 
+function renderProductoRow(p, stockInfo, stockMap, variantesMap, shopDomain) {
+  const pid = String(p.id);
+  const stockBajo = stockInfo.stock !== null && stockInfo.stock <= (stockInfo.stock_minimo ?? 5);
+  const stockNeg  = stockInfo.stock < 0;
+  const stockOk   = !stockBajo && !stockNeg;
+  const stockBg   = stockBajo || stockNeg ? 'rgba(239,68,68,.1)'  : stockInfo.stock===0 ? 'rgba(234,179,8,.1)' : 'rgba(34,197,94,.08)';
+  const stockCol  = stockBajo || stockNeg ? '#dc2626' : stockInfo.stock===0 ? '#d97706' : '#16a34a';
+  const stockBord = stockBajo || stockNeg ? 'rgba(239,68,68,.3)' : stockInfo.stock===0 ? 'rgba(234,179,8,.3)' : 'rgba(34,197,94,.25)';
+  const imgCell = p.image
+    ? `<img src="${p.image}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">`
+    : `<div style="width:52px;height:52px;border-radius:8px;background:var(--input);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">
+         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+       </div>`;
+  return `
+  <tr data-pid="${pid}" style="border-bottom:1px solid var(--border);transition:background .1s;" onmouseover="this.style.background='var(--input)'" onmouseout="this.style.background=''">
+    <td style="padding:12px 14px;text-align:center;vertical-align:middle;">${imgCell}</td>
+    <td style="padding:12px 14px;vertical-align:top;">
+      <div style="font-weight:600;color:var(--text);font-size:13px;line-height:1.4;margin-bottom:8px;" class="producto-nombre">${escapeHtml(p.title)}</div>
+      <div style="display:inline-flex;align-items:center;gap:5px;background:var(--input);padding:4px 10px;border-radius:6px;border:1px solid var(--border);">
+        <span style="font-size:11px;color:var(--muted);">Costo</span>
+        <input type="number" min="0" step="0.01" value="${stockInfo.costo_compra||''}" placeholder="0.00"
+          style="width:65px;padding:2px 4px;border:none;background:transparent;font-size:12px;text-align:right;font-family:inherit;color:var(--text);outline:none;"
+          onchange="guardarCostoCompra('${shopDomain}','${pid}',this.value)" title="Costo de compra">
+        <span style="font-size:11px;color:var(--muted);">€</span>
+      </div>
+    </td>
+    <td style="padding:12px 14px;vertical-align:top;">
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        ${p.variants.map(v => {
+          const vid = String(v.id);
+          const uds = variantesMap[vid] || 1;
+          return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
+            <span style="font-size:12px;color:var(--text);flex:1;">${escapeHtml(v.title)}</span>
+            <span style="font-size:11px;color:var(--muted);">×</span>
+            <input type="number" min="1" value="${uds}"
+              style="width:50px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--input);color:var(--text);outline:none;"
+              onchange="guardarVarianteConfig('${shopDomain}','${vid}',this.value)" title="Unidades por venta">
+          </div>`;
+        }).join('')}
+      </div>
+    </td>
+    <td style="padding:12px 14px;text-align:center;vertical-align:middle;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+        <div style="min-width:64px;padding:5px 10px;border-radius:7px;font-size:15px;font-weight:700;text-align:center;background:${stockBg};color:${stockCol};border:1.5px solid ${stockBord};">
+          ${stockInfo.stock}
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span style="font-size:10px;color:var(--muted);">mín:</span>
+          <input type="number" min="0" value="${stockInfo.stock_minimo??5}"
+            style="width:42px;padding:2px 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;text-align:center;font-family:inherit;background:var(--input);color:var(--text);outline:none;"
+            onchange="guardarStockMinimo('${shopDomain}','${pid}',this.value)">
+        </div>
+        ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;background:rgba(239,68,68,.08);padding:2px 7px;border-radius:4px;border:1px solid rgba(239,68,68,.2);">Bajo stock</span>` : ''}
+        <button onclick="abrirHistoricoStock('${pid}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
+          style="padding:3px 10px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;transition:background .1s;"
+          onmouseover="this.style.background='rgba(37,99,235,.15)'" onmouseout="this.style.background='rgba(37,99,235,.08)'">Histórico</button>
+        ${stockInfo.group_name ? `<div style="padding:2px 8px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:5px;font-size:10px;color:#16a34a;font-weight:600;">${escapeHtml(stockInfo.group_name)}</div>` : ''}
+      </div>
+    </td>
+  </tr>`;
+}
+
+function renderProductoTable(shop, stockMap, variantesMap) {
+  return `
+  <div style="margin-bottom:32px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--border);">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18" /><path d="M4.5 5h15l1.5 4"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M10 20v-5a2 2 0 0 1 4 0v5"/></svg>
+      <span style="font-size:14px;font-weight:700;color:var(--text);">${escapeHtml(shop.shop_name)}</span>
+      <span style="font-size:11px;color:var(--muted);background:var(--input);padding:2px 9px;border-radius:999px;border:1px solid var(--border);">${shop.products.length} productos</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <thead>
+        <tr style="background:var(--input);">
+          <th style="padding:10px 14px;border-bottom:2px solid var(--border);text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;width:68px;">Imagen</th>
+          <th style="padding:10px 14px;border-bottom:2px solid var(--border);text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Producto</th>
+          <th style="padding:10px 14px;border-bottom:2px solid var(--border);text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Variantes & Uds</th>
+          <th style="padding:10px 14px;border-bottom:2px solid var(--border);text-align:center;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;width:130px;">Stock</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${shop.products.map(p => {
+          const pid = String(p.id);
+          const stockInfo = stockMap[pid] || { stock: 0, stock_minimo: 5 };
+          return renderProductoRow(p, stockInfo, stockMap, variantesMap, shop.shop_domain);
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
 async function loadProductos() {
   const wrap = document.getElementById("productos-wrap");
   if (!wrap) return;
@@ -6179,88 +6269,7 @@ async function loadProductos() {
 
     const filtered = shopFilter ? data.filter(s => s.shop_domain === shopFilter) : data;
 
-    wrap.innerHTML = filtered.map(shop => `
-      <div style="margin-bottom:32px;">
-        <h3 style="font-size:15px;font-weight:700;color:#22c55e;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
-          🏪 ${escapeHtml(shop.shop_name)}
-          <span style="font-size:12px;color:#9ca3af;font-weight:400;margin-left:8px;">${shop.products.length} productos</span>
-        </h3>
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead>
-            <tr style="background:#1f2937;">
-              <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;width:60px;">Imagen</th>
-              <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Producto</th>
-              <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Variantes & SKU</th>
-              <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:120px;">Stock</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${shop.products.map(p => {
-              const pid = String(p.id);
-              const stockInfo = stockMap[pid] || { stock: 0, stock_minimo: 5 };
-              const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
-              return `
-              <tr data-pid="${pid}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-                <td style="padding:10px 14px;border:1px solid #374151;text-align:center;">
-                  ${p.image
-                    ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #374151;">`
-                    : `<div style="width:48px;height:48px;border-radius:6px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`
-                  }
-                </td>
-                <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#f9fafb;vertical-align:top;">
-                  <span class="producto-nombre">${escapeHtml(p.title)}</span>
-                  <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">Costo compra:</span>
-                    <input type="number" min="0" step="0.01"
-                      value="${stockInfo.costo_compra || ''}"
-                      placeholder="0.00"
-                      style="width:80px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
-                      onchange="guardarCostoCompra('${shop.shop_domain}','${pid}',this.value)"
-                      title="Costo de compra del producto">
-                    <span style="font-size:11px;color:#9ca3af;">€</span>
-                  </div>
-                </td>
-                <td style="padding:10px 14px;border:1px solid #374151;vertical-align:top;">
-                  ${p.variants.map(v => {
-                    const vid = String(v.id);
-                    const uds = variantesMap[vid] || 1;
-                    return `
-                    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;">
-                      <span style="font-size:12px;color:#e5e7eb;flex:1;">${escapeHtml(v.title)}</span>
-                      <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">uds/venta:</span>
-                      <input type="number" min="1" value="${uds}"
-                        style="width:52px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
-                        onchange="guardarVarianteConfig('${shop.shop_domain}','${vid}',this.value)"
-                        title="Unidades reales que consume esta variante">
-                    </div>`;
-                  }).join("")}
-                </td>
-                <td style="padding:10px 14px;border:1px solid #374151;text-align:center;vertical-align:middle;">
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                    <div style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:${stockBajo?'#fef2f2':'#f9fafb'};color:${stockBajo?'#dc2626':(stockInfo.stock<0?'#b45309':'#111827')};">
-                      ${stockInfo.stock}
-                    </div>
-                    <div style="display:flex;align-items:center;gap:4px;">
-                      <span style="font-size:10px;color:#9ca3af;">mín:</span>
-                      <input type="number" min="0" value="${stockInfo.stock_minimo}"
-                        style="width:45px;padding:2px 4px;border:1px solid #374151;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);"
-                        onchange="guardarStockMinimo('${shop.shop_domain}','${pid}',this.value)"
-                        title="Stock mínimo para alerta">
-                    </div>
-                    ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
-                    <button onclick="abrirHistoricoStock('${pid}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
-                      style="margin-top:2px;padding:2px 8px;background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
-                      Histórico
-                    </button>
-                    ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:5px;font-size:10px;color:#22c55e;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
-                  </div>
-                </td>
-              </tr>`;
-            }).join("")}
-          </tbody>
-        </table>
-      </div>
-    `).join("");
+    wrap.innerHTML = filtered.map(shop => renderProductoTable(shop, stockMap, variantesMap)).join("");
 
  // Si venimos de búsqueda con múltiples resultados, mostrarlos todos
     if (window.__pendingProductoIds?.length > 0) {
@@ -6276,72 +6285,11 @@ async function loadProductos() {
           byShop[key].products.push(p);
         });
         wrap.innerHTML = `
-          <div style="margin-bottom:12px;">
-            <button onclick="loadProductos()" style="padding:6px 14px;background:#1f2937;border:1px solid #374151;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">← Volver a todos los productos</button>
-            <span style="margin-left:10px;font-size:13px;color:#6b7280;">${filtrados.length} resultado${filtrados.length!==1?'s':''} encontrado${filtrados.length!==1?'s':''}</span>
+          <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+            <button onclick="loadProductos()" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--input);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text);">← Volver</button>
+            <span style="font-size:13px;color:var(--muted);">${filtrados.length} resultado${filtrados.length!==1?'s':''} encontrado${filtrados.length!==1?'s':''}</span>
           </div>
-          ${Object.values(byShop).map(shop => `
-          <div style="margin-bottom:28px;">
-            <h3 style="font-size:15px;font-weight:700;color:#22c55e;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">🏪 ${escapeHtml(shop.shop_name)}</h3>
-            <table style="width:100%;border-collapse:collapse;font-size:13px;">
-              <thead><tr style="background:#1f2937;">
-                <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;width:60px;">Imagen</th>
-                <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Producto</th>
-                <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Variantes & SKU</th>
-                <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:120px;">Stock</th>
-              </tr></thead>
-              <tbody>
-                ${shop.products.map(p => {
-                  const pid2 = String(p.id);
-                  const stockInfo = stockMap[pid2] || { stock: 0, stock_minimo: 5 };
-                  const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
-                  return `<tr style="background:rgba(234,179,8,.08);" data-pid="${pid2}">
-                    <td style="padding:10px 14px;border:1px solid #374151;text-align:center;">
-                      ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #374151;">` : `<div style="width:48px;height:48px;border-radius:6px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
-                    </td>
-                    <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#f9fafb;vertical-align:top;">
-                      <span class="producto-nombre">${escapeHtml(p.title)}</span>
-                      <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
-                        <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">Costo compra:</span>
-                        <input type="number" min="0" step="0.01" value="${stockInfo.costo_compra || ''}" placeholder="0.00"
-                          style="width:80px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
-                          onchange="guardarCostoCompra('${shop.shop_domain}','${pid2}',this.value)">
-                        <span style="font-size:11px;color:#9ca3af;">€</span>
-                      </div>
-                    </td>
-                    <td style="padding:10px 14px;border:1px solid #374151;vertical-align:top;">
-                      ${p.variants.map(v => {
-                        const vid = String(v.id);
-                        const uds = variantesMap[vid] || 1;
-                        return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;">
-                          <span style="font-size:12px;color:#e5e7eb;flex:1;">${escapeHtml(v.title)}</span>
-                          <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">uds/venta:</span>
-                          <input type="number" min="1" value="${uds}" style="width:52px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarVarianteConfig('${shop.shop_domain}','${vid}',this.value)">
-                        </div>`;
-                      }).join("")}
-                    </td>
-                    <td style="padding:10px 14px;border:1px solid #374151;text-align:center;vertical-align:middle;">
-                      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                        <div style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:${stockBajo?'#fef2f2':'#f9fafb'};color:${stockBajo?'#dc2626':(stockInfo.stock<0?'#b45309':'#111827')};">
-                          ${stockInfo.stock}
-                        </div>
-                        <div style="display:flex;align-items:center;gap:4px;">
-                          <span style="font-size:10px;color:#9ca3af;">mín:</span>
-                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #374151;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shop.shop_domain}','${pid2}',this.value)">
-                        </div>
-                        ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
-                        <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
-                          style="margin-top:2px;padding:2px 8px;background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
-                          Histórico
-                        </button>
-                        ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:5px;font-size:10px;color:#22c55e;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
-                      </div>
-                    </td>
-                  </tr>`;
-                }).join("")}
-              </tbody>
-            </table>
-          </div>`).join("")}`;
+          ${Object.values(byShop).map(shop => renderProductoTable(shop, stockMap, variantesMap)).join('')}`;
         return;
       }
     }
