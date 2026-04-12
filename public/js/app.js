@@ -2280,23 +2280,29 @@ if (id === "productos") {
 
   box.className = "card";
   box.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:10px;flex-wrap:wrap;">
       <button onclick="abrirEntradaMercancia()"
-        style="padding:7px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-        📦 Entrada de mercancía
+        style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;background:rgba(37,99,235,.1);color:#2563eb;border:1.5px solid rgba(37,99,235,.25);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;"
+        onmouseover="this.style.background='rgba(37,99,235,.18)';this.style.borderColor='rgba(37,99,235,.4)';" onmouseout="this.style.background='rgba(37,99,235,.1)';this.style.borderColor='rgba(37,99,235,.25)';">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        Entrada de mercancía
       </button>
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <select id="productos-shop-filter" onchange="loadProductos()"
-          style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          style="padding:8px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;cursor:pointer;outline:none;">
           <option value="">Todas las tiendas</option>
         </select>
         <button onclick="loadProductos()"
-          style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-          🔄 Sincronizar productos
+          style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;background:rgba(34,197,94,.1);color:#16a34a;border:1.5px solid rgba(34,197,94,.25);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;"
+          onmouseover="this.style.background='rgba(34,197,94,.18)';this.style.borderColor='rgba(34,197,94,.4)';" onmouseout="this.style.background='rgba(34,197,94,.1)';this.style.borderColor='rgba(34,197,94,.25)';">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+          Sincronizar
         </button>
         <button onclick="abrirVincularStock()"
-          style="padding:7px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-          🔗 Vincular stock
+          style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;background:rgba(139,92,246,.1);color:#7c3aed;border:1.5px solid rgba(139,92,246,.25);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;"
+          onmouseover="this.style.background='rgba(139,92,246,.18)';this.style.borderColor='rgba(139,92,246,.4)';" onmouseout="this.style.background='rgba(139,92,246,.1)';this.style.borderColor='rgba(139,92,246,.25)';">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Vincular stock
         </button>
       </div>
     </div>
