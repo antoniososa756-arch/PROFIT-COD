@@ -6143,9 +6143,9 @@ function renderProductoCard(p, stockInfo, variantesMap, shopDomain) {
   const stockMin = stockInfo.stock_minimo ?? 5;
   const stockBajo = stock <= stockMin;
   const stockNeg  = stock < 0;
-  const stockBg   = stockNeg || stockBajo ? 'rgba(239,68,68,.12)' : stock === 0 ? 'rgba(234,179,8,.12)' : 'rgba(34,197,94,.1)';
-  const stockCol  = stockNeg || stockBajo ? '#dc2626' : stock === 0 ? '#d97706' : '#16a34a';
-  const stockBord = stockNeg || stockBajo ? 'rgba(239,68,68,.35)' : stock === 0 ? 'rgba(234,179,8,.35)' : 'rgba(34,197,94,.3)';
+  const stockBg   = stockNeg || stockBajo ? '#dc2626' : stock === 0 ? '#d97706' : '#16a34a';
+  const stockCol  = '#fff';
+  const stockBord = stockNeg || stockBajo ? '#b91c1c' : stock === 0 ? '#b45309' : '#15803d';
   const imgSection = p.image
     ? `<img src="${p.image}" style="width:100%;height:180px;object-fit:cover;display:block;">`
     : `<div style="width:100%;height:180px;background:var(--input);display:flex;align-items:center;justify-content:center;">
