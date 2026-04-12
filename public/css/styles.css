@@ -156,11 +156,13 @@
     }
 
     .menu-item svg{
-      width:16px;
-      height:16px;
+      width:17px;
+      height:17px;
       stroke:currentColor;
       fill:none;
-      stroke-width:1.5;
+      stroke-width:1.6;
+      stroke-linecap:round;
+      stroke-linejoin:round;
       flex-shrink:0;
     }
 

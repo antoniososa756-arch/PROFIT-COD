@@ -411,59 +411,72 @@ if (!appEl) {
 const icons = {
   metricas: `
     <svg viewBox="0 0 24 24">
-      <rect x="3" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/>
-      <rect x="14" y="14" width="7" height="7" rx="1"/>
+      <rect x="3" y="3" width="7" height="9" rx="1.5"/>
+      <rect x="14" y="3" width="7" height="5" rx="1.5"/>
+      <rect x="14" y="12" width="7" height="9" rx="1.5"/>
+      <rect x="3" y="16" width="7" height="5" rx="1.5"/>
     </svg>
   `,
   rentabilidad: `
     <svg viewBox="0 0 24 24">
-      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="16 7 22 7 22 13" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `,
   tiendas: `
     <svg viewBox="0 0 24 24">
-      <path d="M3 9l1-4h16l1 4"/>
-      <path d="M5 9v10h14V9"/>
-      <path d="M9 19v-6h6v6"/>
+      <path d="M3 9h18" stroke-linecap="round"/>
+      <path d="M4.5 5h15l1.5 4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9" stroke-linecap="round"/>
+      <path d="M10 20v-5a2 2 0 0 1 4 0v5" stroke-linecap="round"/>
+      <path d="M9 9v1a3 3 0 0 1-6 0V9" stroke-linecap="round"/>
+      <path d="M15 9v1a3 3 0 0 0 6 0V9" stroke-linecap="round"/>
     </svg>
   `,
   productos: `
     <svg viewBox="0 0 24 24">
-      <path d="M3 7l9 5 9-5"/>
-      <path d="M3 7v10l9 5 9-5V7"/>
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="22.08" x2="12" y2="12" stroke-linecap="round"/>
     </svg>
   `,
   pedidos: `
     <svg viewBox="0 0 24 24">
-      <rect x="4" y="4" width="16" height="16" rx="2"/>
-      <path d="M8 9h8M8 13h6"/>
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="9" y="3" width="6" height="4" rx="1.5"/>
+      <line x1="9" y1="12" x2="15" y2="12" stroke-linecap="round"/>
+      <line x1="9" y1="16" x2="12" y2="16" stroke-linecap="round"/>
     </svg>
   `,
   facturas: `
     <svg viewBox="0 0 24 24">
-      <path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/>
-      <path d="M9 7h6M9 11h6"/>
+      <path d="M6 2h12v20l-3-2-3 2-3-2-3 2z" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="9" y1="8" x2="15" y2="8" stroke-linecap="round"/>
+      <line x1="9" y1="12" x2="15" y2="12" stroke-linecap="round"/>
+      <line x1="9" y1="16" x2="12" y2="16" stroke-linecap="round"/>
     </svg>
   `,
   informes: `
     <svg viewBox="0 0 24 24">
-      <path d="M4 20V4h16"/>
-      <path d="M8 16v-4M12 16v-7M16 16v-10"/>
+      <line x1="18" y1="20" x2="18" y2="4" stroke-linecap="round"/>
+      <line x1="12" y1="20" x2="12" y2="10" stroke-linecap="round"/>
+      <line x1="6" y1="20" x2="6" y2="14" stroke-linecap="round"/>
+      <line x1="3" y1="20" x2="21" y2="20" stroke-linecap="round"/>
     </svg>
   `,
   ayuda: `
     <svg viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9"/>
-      <path d="M12 8a3 3 0 0 1 3 3c0 2-3 2-3 4"/>
-      <circle cx="12" cy="17" r="1"/>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="17" r=".5" fill="currentColor"/>
     </svg>
   `,
   plan: `
     <svg viewBox="0 0 24 24">
-      <rect x="3" y="4" width="18" height="14" rx="2"/>
-      <path d="M3 10h18"/>
+      <rect x="2" y="5" width="20" height="14" rx="2"/>
+      <line x1="2" y1="10" x2="22" y2="10"/>
+      <line x1="7" y1="15" x2="7.5" y2="15" stroke-linecap="round" stroke-width="3"/>
+      <line x1="11" y1="15" x2="14" y2="15" stroke-linecap="round"/>
     </svg>
   `
 };
