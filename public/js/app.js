@@ -64,11 +64,35 @@ window.__DPF = (function () {
       <table style="border-collapse:collapse;"><thead><tr>${['do','lu','ma','mi','ju','vi','sá'].map(d=>`<th style="width:36px;font-size:10px;color:#6b7280;font-weight:600;text-align:center;padding-bottom:8px;text-transform:uppercase;letter-spacing:.6px;">${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
     </div>`;
   }
+  function reposition(p) {
+    const panel = document.getElementById(`${p}-picker-panel`); if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    // If overflows left → align left edge to wrap instead of right
+    if (rect.left < 8) { panel.style.right='auto'; panel.style.left='0'; }
+    // If overflows right → align right
+    else if (rect.right > window.innerWidth - 8) { panel.style.left='auto'; panel.style.right='0'; }
+    // If overflows bottom → open upward
+    if (rect.bottom > window.innerHeight - 8) { panel.style.top='auto'; panel.style.bottom='calc(100% + 6px)'; }
+    else { panel.style.bottom=''; panel.style.top='calc(100% + 6px)'; }
+    // On very narrow screens: make it fixed and centered
+    if (window.innerWidth < 600) {
+      panel.style.position='fixed';
+      panel.style.left='8px';
+      panel.style.right='8px';
+      panel.style.top='50%';
+      panel.style.bottom='';
+      panel.style.transform='translateY(-50%)';
+      panel.style.maxHeight='90vh';
+      panel.style.overflowY='auto';
+      panel.style.zIndex='3000';
+    }
+  }
   function render(p) {
     const panel = document.getElementById(`${p}-picker-panel`); if (!panel) return;
     const s = window.__DPF._inst[p];
     const vy=s.viewYear, vm=s.viewMonth;
     const lm=vm===1?12:vm-1, ly=vm===1?vy-1:vy;
+    const narrow = window.innerWidth < 680;
     const PRESETS=[{key:'hoy',label:'Hoy'},{key:'ayer',label:'Ayer'},{key:'mes',label:'Este mes'},{key:'mes-ant',label:'Mes anterior'},{key:'personalizado',label:'Rango personalizado'}];
     const sidebar=PRESETS.map(q=>{
       const act=s.preset===q.key;
@@ -80,18 +104,10 @@ window.__DPF = (function () {
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#22c55e':'#4b5563'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       <span style="font-size:12.5px;color:${d?'#86efac':'#4b5563'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):ph}</span></div>`;
     const navBtn=(dir,lbl)=>`<button onclick="window.__DPF.pNav('${p}',${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#1f2937;border:1px solid #374151;border-radius:7px;cursor:pointer;font-size:15px;color:#9ca3af;font-weight:700;transition:all .12s;" onmouseover="this.style.color='#f9fafb';this.style.borderColor='#4b5563';" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151';">${lbl}</button>`;
-    panel.innerHTML=`<div style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
-      <div style="width:176px;padding:18px 10px;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;gap:2px;">
-        <div style="font-size:9.5px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
-        ${sidebar}
-      </div>
-      <div style="padding:20px 26px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-          ${dateBox(s.startDate,'Fecha inicio')}
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#374151" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          ${dateBox(s.endDate,'Fecha fin')}
-        </div>
-        <div style="display:flex;gap:28px;align-items:flex-start;">
+    const calSection = narrow
+      ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span>${navBtn(1,'›')}</div>
+         ${renderMonth(s,vy,vm)}`
+      : `<div style="display:flex;gap:28px;align-items:flex-start;">
           <div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span></div>
             ${renderMonth(s,ly,lm)}
@@ -101,13 +117,32 @@ window.__DPF = (function () {
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span></span>${navBtn(1,'›')}</div>
             ${renderMonth(s,vy,vm)}
           </div>
+        </div>`;
+    const sidebarSection = narrow ? '' :
+      `<div style="width:176px;padding:18px 10px;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;gap:2px;">
+        <div style="font-size:9.5px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
+        ${sidebar}
+      </div>`;
+    const presetMobile = narrow
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__DPF.pPreset('${p}','${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'#1f2937'};color:${act?'#052e16':'#9ca3af'};border:1px solid ${act?'#22c55e':'#374151'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
+      : '';
+    panel.innerHTML=`<div style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
+      ${sidebarSection}
+      <div style="padding:${narrow?'16px':'20px 26px'};">
+        ${presetMobile}
+        <div style="display:flex;align-items:center;gap:${narrow?'6px':'10px'};margin-bottom:${narrow?'14px':'20px'};">
+          ${dateBox(s.startDate,'Fecha inicio')}
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#374151" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          ${dateBox(s.endDate,'Fecha fin')}
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #1f2937;">
+        ${calSection}
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid #1f2937;">
           <button onclick="window.__DPF.pClose('${p}')" style="padding:8px 18px;background:transparent;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#9ca3af;transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">Cancelar</button>
-          <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#22c55e';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
+          <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
         </div>
       </div>
     </div>`;
+    reposition(p);
   }
   return {
     _inst: {},
@@ -1463,11 +1498,26 @@ const now = new Date();
     </div>`;
   }
 
+  function metReposition() {
+    const panel = document.getElementById('met-picker-panel'); if (!panel) return;
+    // Reset first
+    panel.style.right='0'; panel.style.left=''; panel.style.position='';
+    panel.style.transform=''; panel.style.top='calc(100% + 6px)';
+    if (window.innerWidth < 600) {
+      panel.style.position='fixed'; panel.style.left='8px'; panel.style.right='8px';
+      panel.style.top='50%'; panel.style.transform='translateY(-50%)';
+      panel.style.maxHeight='90vh'; panel.style.overflowY='auto'; panel.style.zIndex='3000';
+    } else {
+      const rect = panel.getBoundingClientRect();
+      if (rect.left < 8) { panel.style.right='auto'; panel.style.left='0'; }
+    }
+  }
   function renderPicker() {
     const panel=document.getElementById('met-picker-panel'); if(!panel) return;
     const s=window.__metPicker;
     const vy=s.viewYear,vm=s.viewMonth;
     const lm=vm===1?12:vm-1, ly=vm===1?vy-1:vy;
+    const narrow = window.innerWidth < 680;
     const PRESETS=[{key:'hoy',label:'Hoy'},{key:'ayer',label:'Ayer'},{key:'mes',label:'Este mes'},{key:'mes-ant',label:'Mes anterior'},{key:'personalizado',label:'Rango personalizado'}];
     const sidebar=PRESETS.map(p=>{
       const act=s.preset===p.key;
@@ -1480,34 +1530,36 @@ const now = new Date();
       <span style="font-size:12.5px;color:${d?'#86efac':'#4b5563'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):placeholder}</span>
     </div>`;
     const navBtn = (dir,label) => `<button onclick="window.__metPNav(${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#1f2937;border:1px solid #374151;border-radius:7px;cursor:pointer;font-size:15px;color:#9ca3af;font-weight:700;transition:all .12s;" onmouseover="this.style.color='#f9fafb';this.style.borderColor='#4b5563';" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151';">${label}</button>`;
+    const calSection = narrow
+      ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span>${navBtn(1,'›')}</div>${renderMonth(vy,vm)}`
+      : `<div style="display:flex;gap:28px;align-items:flex-start;">
+          <div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span></div>${renderMonth(ly,lm)}</div>
+          <div style="width:1px;background:#1f2937;align-self:stretch;margin-top:42px;"></div>
+          <div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span></span>${navBtn(1,'›')}</div>${renderMonth(vy,vm)}</div>
+        </div>`;
+    const presetMobile = narrow
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__metPPreset('${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'#1f2937'};color:${act?'#052e16':'#9ca3af'};border:1px solid ${act?'#22c55e':'#374151'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
+      : '';
     panel.innerHTML=`<div style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
-      <div style="width:176px;padding:18px 10px;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;gap:2px;">
+      ${narrow?'':` <div style="width:176px;padding:18px 10px;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;gap:2px;">
         <div style="font-size:9.5px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
         ${sidebar}
-      </div>
-      <div style="padding:20px 26px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+      </div>`}
+      <div style="padding:${narrow?'16px':'20px 26px'};">
+        ${presetMobile}
+        <div style="display:flex;align-items:center;gap:${narrow?'6px':'10px'};margin-bottom:${narrow?'14px':'20px'};">
           ${dateBox(s.startDate,'Fecha inicio')}
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#374151" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           ${dateBox(s.endDate,'Fecha fin')}
         </div>
-        <div style="display:flex;gap:28px;align-items:flex-start;">
-          <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span></div>
-            ${renderMonth(ly,lm)}
-          </div>
-          <div style="width:1px;background:#1f2937;align-self:stretch;margin-top:42px;"></div>
-          <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span></span>${navBtn(1,'›')}</div>
-            ${renderMonth(vy,vm)}
-          </div>
-        </div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #1f2937;">
+        ${calSection}
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid #1f2937;">
           <button onclick="window.__metPClose()" style="padding:8px 18px;background:transparent;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#9ca3af;transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">Cancelar</button>
-          <button onclick="window.__metPApply()" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#22c55e';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
+          <button onclick="window.__metPApply()" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
         </div>
       </div>
     </div>`;
+    metReposition();
   }
 
   window.toggleMetDatePicker = function() {
