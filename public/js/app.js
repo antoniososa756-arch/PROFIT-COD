@@ -1060,10 +1060,11 @@ const now = new Date();
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
         <div style="position:relative;" id="met-picker-wrap">
           <button id="met-picker-trigger" onclick="toggleMetDatePicker()"
-            style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:#111827;border:1.5px solid #374151;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#e5e7eb;transition:all .15s;"
+            onmouseover="this.style.borderColor='#4b5563';this.style.background='#1f2937';" onmouseout="this.style.borderColor='#374151';this.style.background='#111827';">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
             <span id="met-picker-label">Mes actual</span>
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#4b5563" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div id="met-picker-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:2000;"></div>
           <input type="date" id="metrics-date-from" value="${savedFrom}" style="display:none;">
@@ -1258,25 +1259,29 @@ const now = new Date();
       let row='<tr>';
       for (let j=0;j<7;j++) {
         const day=cells[i+j];
-        if (!day) { row+='<td style="width:34px;height:34px;"></td>'; continue; }
+        if (!day) { row+='<td style="width:36px;height:36px;"></td>'; continue; }
         const ds=`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         const isS=ds===s.startDate, isE=ds===s.endDate;
         const hi = s.selecting&&s.startDate&&s.hoverDate&&ds>s.startDate&&ds<=s.hoverDate;
         const inR = s.startDate&&s.endDate&&ds>s.startDate&&ds<s.endDate;
         const isT = ds===today;
-        let bg='transparent',col='#374151',fw='400',br='6px',extra='';
-        if (isS||isE) { bg='#111827';col='#fff';fw='700'; }
-        else if (inR||hi) { bg='#e5e7eb';br='0'; }
-        if (isT&&!isS&&!isE) extra='outline:1.5px solid #9ca3af;outline-offset:-2px;';
-        row+=`<td style="width:34px;height:34px;text-align:center;padding:1px;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:${bg};color:${col};border-radius:${br};font-size:13px;font-weight:${fw};cursor:pointer;${extra}"
-            onclick="window.__metPDay('${ds}')" onmouseover="window.__metPHover('${ds}')">${day}</span></td>`;
+        let bg='transparent', col='#e5e7eb', fw='400', br='6px', tdBg='transparent', outline='none';
+        if (isS||isE) { bg='#22c55e'; col='#fff'; fw='700'; outline='none'; }
+        else if (inR) { tdBg='rgba(34,197,94,.15)'; col='#bbf7d0'; fw='500'; br='0'; }
+        else if (hi)  { tdBg='rgba(34,197,94,.08)'; col='#86efac'; br='0'; }
+        if (isT&&!isS&&!isE) { fw='700'; col=inR||hi?col:'#4ade80'; }
+        row+=`<td style="width:36px;height:36px;text-align:center;padding:0;background:${tdBg};">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:${bg};color:${col};border-radius:${br};font-size:13px;font-weight:${fw};cursor:pointer;transition:all .12s;"
+            onclick="window.__metPDay('${ds}')" onmouseover="window.__metPHover('${ds}')"
+            onmouseenter="if(!${isS||isE})this.style.background='rgba(255,255,255,.1)';"
+            onmouseleave="if(!${isS||isE})this.style.background='transparent';"
+            >${day}</span></td>`;
       }
       row+='</tr>'; rows+=row;
     }
-    return `<div style="min-width:210px;">
-      <div style="text-align:center;font-size:13px;font-weight:600;color:#374151;padding-bottom:8px;">${MN[month-1]} ${year}</div>
-      <table style="border-collapse:collapse;"><thead><tr>${['do','lu','ma','mi','ju','vi','sá'].map(d=>`<th style="width:34px;font-size:11px;color:#9ca3af;font-weight:500;text-align:center;padding-bottom:6px;">${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+    return `<div>
+      <div style="text-align:center;font-size:13px;font-weight:700;color:#f9fafb;padding-bottom:10px;letter-spacing:.3px;">${MN[month-1]} ${year}</div>
+      <table style="border-collapse:collapse;"><thead><tr>${['do','lu','ma','mi','ju','vi','sá'].map(d=>`<th style="width:36px;font-size:10px;color:#6b7280;font-weight:600;text-align:center;padding-bottom:8px;text-transform:uppercase;letter-spacing:.6px;">${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
     </div>`;
   }
 
@@ -1289,34 +1294,39 @@ const now = new Date();
     const sidebar=PRESETS.map(p=>{
       const act=s.preset===p.key;
       return `<div onclick="window.__metPPreset('${p.key}')"
-        style="padding:9px 12px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#16a34a':'#374151'};background:${act?'#f0fdf4':'transparent'};"
-        onmouseover="this.style.background='#f9fafb';" onmouseout="this.style.background='${act?'#f0fdf4':'transparent'}';">${p.label}</div>`;
+        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#22c55e':'#9ca3af'};background:${act?'rgba(34,197,94,.12)':'transparent'};border-left:${act?'3px solid #22c55e':'3px solid transparent'};transition:all .12s;"
+        onmouseover="if(!${act})this.style.background='rgba(255,255,255,.06)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${p.label}</div>`;
     }).join('');
-    panel.innerHTML=`<div style="display:flex;box-shadow:0 10px 40px rgba(0,0,0,.18);border-radius:12px;overflow:hidden;background:#fff;border:1px solid #e5e7eb;">
-      <div style="width:165px;padding:10px 8px;border-right:1px solid #f3f4f6;display:flex;flex-direction:column;gap:2px;">${sidebar}</div>
-      <div style="padding:16px 20px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-          <div style="flex:1;padding:7px 12px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;color:#374151;background:#f9fafb;white-space:nowrap;">${fmtD(s.startDate)}</div>
-          <span style="color:#9ca3af;font-size:18px;">→</span>
-          <div style="flex:1;padding:7px 12px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;color:#374151;background:#f9fafb;white-space:nowrap;">${fmtD(s.endDate)}</div>
+    const dateBox = (d,placeholder) => `<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#22c55e':'#374151'};border-radius:9px;background:${d?'rgba(34,197,94,.08)':'#1f2937'};">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#22c55e':'#4b5563'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span style="font-size:12.5px;color:${d?'#86efac':'#4b5563'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):placeholder}</span>
+    </div>`;
+    const navBtn = (dir,label) => `<button onclick="window.__metPNav(${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#1f2937;border:1px solid #374151;border-radius:7px;cursor:pointer;font-size:15px;color:#9ca3af;font-weight:700;transition:all .12s;" onmouseover="this.style.color='#f9fafb';this.style.borderColor='#4b5563';" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151';">${label}</button>`;
+    panel.innerHTML=`<div style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
+      <div style="width:176px;padding:18px 10px;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;gap:2px;">
+        <div style="font-size:9.5px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
+        ${sidebar}
+      </div>
+      <div style="padding:20px 26px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+          ${dateBox(s.startDate,'Fecha inicio')}
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#374151" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          ${dateBox(s.endDate,'Fecha fin')}
         </div>
         <div style="display:flex;gap:28px;align-items:flex-start;">
           <div>
-            <div style="display:flex;justify-content:flex-start;margin-bottom:4px;">
-              <button onclick="window.__metPNav(-1)" style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:#6b7280;line-height:1;">‹</button>
-            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span></div>
             ${renderMonth(ly,lm)}
           </div>
+          <div style="width:1px;background:#1f2937;align-self:stretch;margin-top:42px;"></div>
           <div>
-            <div style="display:flex;justify-content:flex-end;margin-bottom:4px;">
-              <button onclick="window.__metPNav(1)" style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:#6b7280;line-height:1;">›</button>
-            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span></span>${navBtn(1,'›')}</div>
             ${renderMonth(vy,vm)}
           </div>
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #f3f4f6;">
-          <button onclick="window.__metPClose()" style="padding:7px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">Cancelar</button>
-          <button onclick="window.__metPApply()" style="padding:7px 16px;background:#111827;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#fff;">Aplicar</button>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #1f2937;">
+          <button onclick="window.__metPClose()" style="padding:8px 18px;background:transparent;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#9ca3af;transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">Cancelar</button>
+          <button onclick="window.__metPApply()" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
         </div>
       </div>
     </div>`;
