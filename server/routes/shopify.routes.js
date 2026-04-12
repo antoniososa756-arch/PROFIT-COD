@@ -744,14 +744,15 @@ router.post("/entrada-mercancia", auth, async (req, res) => {
   const { shop_domain, product_id, product_name, cantidad, stock_anterior } = req.body;
   const userId = req.user.id;
   const qty = parseInt(cantidad) || 0;
-  const stock_nuevo = (parseInt(stock_anterior) || 0) + qty;
+  // stock_anterior es el valor MOSTRADO (base + movimientos), solo para el historial
+  const stock_nuevo_display = (parseInt(stock_anterior) || 0) + qty;
 
   try {
-    // Registrar la entrada en el historial
+    // Registrar la entrada en el historial (valores de display, para info del usuario)
     await db.run(
       `INSERT INTO entradas_mercancia (user_id, shop_domain, product_id, product_name, cantidad, stock_anterior, stock_nuevo, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, now()::text)`,
-      [userId, shop_domain, product_id, product_name, qty, parseInt(stock_anterior) || 0, stock_nuevo]
+      [userId, shop_domain, product_id, product_name, qty, parseInt(stock_anterior) || 0, stock_nuevo_display]
     );
 
     // Comprobar si el producto pertenece a un grupo
@@ -761,33 +762,50 @@ router.post("/entrada-mercancia", auth, async (req, res) => {
     );
 
     if (groupRow?.group_id) {
-      // El stock del grupo es la SUMA de todos los miembros en productos_stock.
-      // Para que el total del grupo sea stock_nuevo, ponemos stock_nuevo en el producto
-      // ingresado y 0 en todos los demás (así la suma = stock_nuevo exacto).
+      // El stock visible = SUM(productos_stock.stock de todos los miembros) + movimientos netos
+      // Los movimientos ya están contabilizados automáticamente, NO los podemos tocar.
+      // Solo hay que incrementar la BASE (productos_stock) en qty.
+      // Para ello: obtenemos la base actual del grupo y sumamos qty al producto ingresado.
+      const currentBase = await db.get(
+        `SELECT COALESCE(SUM(ps.stock), 0) AS base
+         FROM product_group_members pgm
+         LEFT JOIN productos_stock ps ON ps.product_id = pgm.product_id AND ps.user_id = pgm.user_id
+         WHERE pgm.user_id = $1 AND pgm.group_id = $2`,
+        [userId, groupRow.group_id]
+      );
+      const newGroupBase = (parseInt(currentBase?.base) || 0) + qty;
+
+      // Ponemos el nuevo total de base en el producto ingresado y 0 en los demás
+      // (así SUM = newGroupBase → stock visible = newGroupBase + movimientos = correcto)
       const members = await db.all(
         `SELECT product_id, shop_domain FROM product_group_members WHERE user_id = $1 AND group_id = $2`,
         [userId, groupRow.group_id]
       );
       for (const m of members) {
-        const stockVal = String(m.product_id) === String(product_id) ? stock_nuevo : 0;
+        const baseVal = String(m.product_id) === String(product_id) ? newGroupBase : 0;
         await db.run(
           `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo)
            VALUES ($1, $2, $3, $4, 5)
            ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET stock = EXCLUDED.stock`,
-          [userId, m.shop_domain, m.product_id, stockVal]
+          [userId, m.shop_domain, m.product_id, baseVal]
         );
       }
     } else {
-      // Producto sin grupo: actualizar solo él
+      // Producto sin grupo: incrementar su base actual en qty
+      const currentRow = await db.get(
+        `SELECT COALESCE(stock, 0) AS stock FROM productos_stock WHERE user_id = $1 AND product_id = $2`,
+        [userId, product_id]
+      );
+      const newBase = (parseInt(currentRow?.stock) || 0) + qty;
       await db.run(
         `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo)
          VALUES ($1, $2, $3, $4, 5)
          ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET stock = EXCLUDED.stock`,
-        [userId, shop_domain, product_id, stock_nuevo]
+        [userId, shop_domain, product_id, newBase]
       );
     }
 
-    res.json({ ok: true, stock_nuevo });
+    res.json({ ok: true, stock_nuevo: stock_nuevo_display });
   } catch(e) {
     console.error("entrada-mercancia error:", e);
     res.status(500).json({ error: "Error guardando entrada" });
