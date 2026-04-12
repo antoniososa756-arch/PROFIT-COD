@@ -16,6 +16,184 @@ if (!document.getElementById("__ads-sel-style")) {
   s.textContent = `td.ads-sel { outline: 2px solid #2563eb !important; background: #dbeafe !important; }`;
   document.head.appendChild(s);
 }
+// ─── Global Dark Date Picker Factory ─────────────────────────────────────────
+window.__DPF = (function () {
+  const MN  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const MNl = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  function fmtD(d) {
+    if (!d) return '—';
+    const [y,m,day] = d.split('-');
+    return `${parseInt(day)} de ${MNl[parseInt(m)-1]} de ${y}`;
+  }
+  function renderMonth(s, year, month) {
+    const dim  = new Date(year, month, 0).getDate();
+    const fdow = new Date(year, month-1, 1).getDay();
+    const today = new Date().toISOString().split('T')[0];
+    const p = s._prefix;
+    let cells = [];
+    for (let i=0;i<fdow;i++) cells.push(null);
+    for (let d=1;d<=dim;d++) cells.push(d);
+    while (cells.length%7!==0) cells.push(null);
+    let rows='';
+    for (let i=0;i<cells.length;i+=7) {
+      let row='<tr>';
+      for (let j=0;j<7;j++) {
+        const day=cells[i+j];
+        if (!day) { row+='<td style="width:36px;height:36px;"></td>'; continue; }
+        const ds=`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const isS=ds===s.startDate, isE=ds===s.endDate;
+        const hi=s.selecting&&s.startDate&&s.hoverDate&&ds>s.startDate&&ds<=s.hoverDate;
+        const inR=s.startDate&&s.endDate&&ds>s.startDate&&ds<s.endDate;
+        const isT=ds===today;
+        let bg='transparent',col='#e5e7eb',fw='400',br='6px',tdBg='transparent';
+        if (isS||isE) { bg='#22c55e';col='#fff';fw='700'; }
+        else if (inR) { tdBg='rgba(34,197,94,.15)';col='#bbf7d0';fw='500';br='0'; }
+        else if (hi)  { tdBg='rgba(34,197,94,.08)';col='#86efac';br='0'; }
+        if (isT&&!isS&&!isE) { fw='700';col=inR||hi?col:'#4ade80'; }
+        row+=`<td style="width:36px;height:36px;text-align:center;padding:0;background:${tdBg};">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:${bg};color:${col};border-radius:${br};font-size:13px;font-weight:${fw};cursor:pointer;transition:all .12s;"
+            onclick="window.__DPF.pDay('${p}','${ds}')" onmouseover="window.__DPF.pHover('${p}','${ds}')"
+            onmouseenter="if(!${isS||isE})this.style.background='rgba(255,255,255,.1)';"
+            onmouseleave="if(!${isS||isE})this.style.background='transparent';"
+          >${day}</span></td>`;
+      }
+      row+='</tr>'; rows+=row;
+    }
+    return `<div>
+      <div style="text-align:center;font-size:13px;font-weight:700;color:#f9fafb;padding-bottom:10px;letter-spacing:.3px;">${MN[month-1]} ${year}</div>
+      <table style="border-collapse:collapse;"><thead><tr>${['do','lu','ma','mi','ju','vi','sá'].map(d=>`<th style="width:36px;font-size:10px;color:#6b7280;font-weight:600;text-align:center;padding-bottom:8px;text-transform:uppercase;letter-spacing:.6px;">${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+  }
+  function render(p) {
+    const panel = document.getElementById(`${p}-picker-panel`); if (!panel) return;
+    const s = window.__DPF._inst[p];
+    const vy=s.viewYear, vm=s.viewMonth;
+    const lm=vm===1?12:vm-1, ly=vm===1?vy-1:vy;
+    const PRESETS=[{key:'hoy',label:'Hoy'},{key:'ayer',label:'Ayer'},{key:'mes',label:'Este mes'},{key:'mes-ant',label:'Mes anterior'},{key:'personalizado',label:'Rango personalizado'}];
+    const sidebar=PRESETS.map(q=>{
+      const act=s.preset===q.key;
+      return `<div onclick="window.__DPF.pPreset('${p}','${q.key}')"
+        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#22c55e':'#9ca3af'};background:${act?'rgba(34,197,94,.12)':'transparent'};border-left:${act?'3px solid #22c55e':'3px solid transparent'};transition:all .12s;"
+        onmouseover="if(!${act})this.style.background='rgba(255,255,255,.06)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${q.label}</div>`;
+    }).join('');
+    const dateBox=(d,ph)=>`<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#22c55e':'#374151'};border-radius:9px;background:${d?'rgba(34,197,94,.08)':'#1f2937'};">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#22c55e':'#4b5563'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span style="font-size:12.5px;color:${d?'#86efac':'#4b5563'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):ph}</span></div>`;
+    const navBtn=(dir,lbl)=>`<button onclick="window.__DPF.pNav('${p}',${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#1f2937;border:1px solid #374151;border-radius:7px;cursor:pointer;font-size:15px;color:#9ca3af;font-weight:700;transition:all .12s;" onmouseover="this.style.color='#f9fafb';this.style.borderColor='#4b5563';" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#374151';">${lbl}</button>`;
+    panel.innerHTML=`<div style="display:flex;box-shadow:0 24px 64px rgba(0,0,0,.55),0 4px 20px rgba(0,0,0,.35);border-radius:14px;overflow:hidden;background:#111827;border:1px solid #1f2937;">
+      <div style="width:176px;padding:18px 10px;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;gap:2px;">
+        <div style="font-size:9.5px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.8px;padding:0 8px 10px;">Período</div>
+        ${sidebar}
+      </div>
+      <div style="padding:20px 26px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+          ${dateBox(s.startDate,'Fecha inicio')}
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#374151" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          ${dateBox(s.endDate,'Fecha fin')}
+        </div>
+        <div style="display:flex;gap:28px;align-items:flex-start;">
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span></div>
+            ${renderMonth(s,ly,lm)}
+          </div>
+          <div style="width:1px;background:#1f2937;align-self:stretch;margin-top:42px;"></div>
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span></span>${navBtn(1,'›')}</div>
+            ${renderMonth(s,vy,vm)}
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #1f2937;">
+          <button onclick="window.__DPF.pClose('${p}')" style="padding:8px 18px;background:transparent;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#9ca3af;transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">Cancelar</button>
+          <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  return {
+    _inst: {},
+    create: function(prefix, from, to, preset, presetLabel, fromKey, toKey, applyFn) {
+      const ref = to || new Date().toISOString().split('T')[0];
+      const [ry,rm] = ref.split('-').map(Number);
+      this._inst[prefix] = { _prefix:prefix, _fromKey:fromKey, _toKey:toKey, _applyFn:applyFn,
+        open:false, startDate:from||null, endDate:to||null, hoverDate:null, selecting:false,
+        viewYear:ry, viewMonth:rm, preset:preset||'personalizado', presetLabel:presetLabel||'Personalizado' };
+      document.removeEventListener('click', this._inst[prefix]._outsideHandler);
+      const self = this;
+      this._inst[prefix]._outsideHandler = function(e) {
+        const s = self._inst[prefix]; if (!s||!s.open) return;
+        if (!e.target.isConnected) return;
+        const wrap = document.getElementById(`${prefix}-picker-wrap`);
+        if (wrap && !wrap.contains(e.target)) self.pClose(prefix);
+      };
+      document.addEventListener('click', this._inst[prefix]._outsideHandler);
+    },
+    triggerBtn: function(prefix, label) {
+      return `<div style="position:relative;" id="${prefix}-picker-wrap">
+        <button onclick="window.__DPF.pToggle('${prefix}')"
+          style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:#111827;border:1.5px solid #374151;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#e5e7eb;transition:all .15s;"
+          onmouseover="this.style.borderColor='#4b5563';this.style.background='#1f2937';" onmouseout="this.style.borderColor='#374151';this.style.background='#111827';">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span id="${prefix}-picker-label">${label}</span>
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#4b5563" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div id="${prefix}-picker-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:2000;"></div>
+      </div>`;
+    },
+    pToggle: function(p) {
+      const s=this._inst[p], panel=document.getElementById(`${p}-picker-panel`); if(!panel) return;
+      if (s.open) { panel.style.display='none'; s.open=false; }
+      else {
+        const ref=s.endDate||new Date().toISOString().split('T')[0];
+        const [ry,rm]=ref.split('-').map(Number); s.viewYear=ry; s.viewMonth=rm;
+        panel.style.display='block'; s.open=true; render(p);
+      }
+    },
+    pPreset: function(p, key) {
+      const s=this._inst[p]; s.preset=key; s.selecting=false;
+      const n=new Date(), fmt=d=>d.toISOString().split('T')[0];
+      if (key==='hoy')     { const d=fmt(n); s.startDate=d; s.endDate=d; s.presetLabel='Hoy'; }
+      else if (key==='ayer'){ const d=fmt(new Date(n-864e5)); s.startDate=d; s.endDate=d; s.presetLabel='Ayer'; }
+      else if (key==='mes') { s.startDate=fmt(new Date(n.getFullYear(),n.getMonth(),1)); s.endDate=fmt(n); s.presetLabel='Este mes'; }
+      else if (key==='mes-ant') { s.startDate=fmt(new Date(n.getFullYear(),n.getMonth()-1,1)); s.endDate=fmt(new Date(n.getFullYear(),n.getMonth(),0)); s.presetLabel='Mes anterior'; }
+      else if (key==='personalizado') { s.presetLabel='Personalizado'; }
+      if (s.endDate) { const [ry,rm]=s.endDate.split('-').map(Number); s.viewYear=ry; s.viewMonth=rm; }
+      render(p);
+    },
+    pNav: function(p, dir) {
+      const s=this._inst[p]; s.viewMonth+=dir;
+      if (s.viewMonth>12){s.viewMonth=1;s.viewYear++;} if (s.viewMonth<1){s.viewMonth=12;s.viewYear--;}
+      render(p);
+    },
+    pDay: function(p, ds) {
+      const s=this._inst[p]; s.preset='personalizado'; s.presetLabel='Personalizado';
+      if (!s.selecting||!s.startDate) { s.startDate=ds; s.endDate=null; s.selecting=true; }
+      else { if (ds<s.startDate){s.endDate=s.startDate;s.startDate=ds;}else{s.endDate=ds;} s.selecting=false; }
+      render(p);
+    },
+    pHover: function(p, ds) {
+      const s=this._inst[p];
+      if (s.selecting && s.hoverDate!==ds) { s.hoverDate=ds; render(p); }
+    },
+    pClose: function(p) {
+      const panel=document.getElementById(`${p}-picker-panel`);
+      if (panel) panel.style.display='none';
+      if (this._inst[p]) this._inst[p].open=false;
+    },
+    pApply: function(p) {
+      const s=this._inst[p]; if (!s.startDate) return;
+      if (!s.endDate) s.endDate=s.startDate; s.selecting=false;
+      if (s._fromKey) localStorage.setItem(s._fromKey, s.startDate);
+      if (s._toKey)   localStorage.setItem(s._toKey,   s.endDate);
+      const fi=document.getElementById(`${p}-date-from`), ti=document.getElementById(`${p}-date-to`);
+      if (fi) fi.value=s.startDate; if (ti) ti.value=s.endDate;
+      const lbl=document.getElementById(`${p}-picker-label`); if (lbl) lbl.textContent=s.presetLabel;
+      this.pClose(p);
+      if (typeof s._applyFn==='function') s._applyFn();
+    }
+  };
+})();
+// ─────────────────────────────────────────────────────────────────────────────
+
 // public/js/app.js
 (() => {
 
@@ -1633,6 +1811,7 @@ if (id === "rentabilidad") {
   const fmtR = d => d.toISOString().split("T")[0];
   const savedFromR = localStorage.getItem("rent_from") || fmtR(firstDayR);
   const savedToR   = localStorage.getItem("rent_to")   || fmtR(nowR);
+  const savedRentLabel = localStorage.getItem("rent_from") ? 'Personalizado' : 'Este mes';
 
   box.className = "card metricas-box";
   box.innerHTML = `
@@ -1641,43 +1820,20 @@ if (id === "rentabilidad") {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
           <h3 style="margin:0;font-size:15px;font-weight:600;">Balance por tienda</h3>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;justify-content:flex-end;">
-            <button onclick="filtroRentabilidadHoy()"
-              id="btn-rent-hoy"
-              style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
-              onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
-              onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="16" r="1.5" fill="#6b7280" stroke="none"/></svg>
-              Hoy
-            </button>
-            <button onclick="filtroRentabilidadMes()"
-              id="btn-rent-mes"
-              style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
-              onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
-              onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M7 15h4M7 19h2"/></svg>
-              Mes actual
-            </button>
-            <button onclick="filtroRentabilidadMesAnterior()"
-              id="btn-rent-mes-ant"
-              style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#374151;transition:all .15s;"
-              onmouseover="this.style.borderColor='#16a34a';this.style.color='#16a34a';this.querySelector('svg').style.stroke='#16a34a';"
-              onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#374151';this.querySelector('svg').style.stroke='#6b7280';">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .15s;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M7 15h2M7 19h2"/></svg>
-              Mes anterior
-            </button>
-            <input type="date" id="rent-date-from" value="${savedFromR}"
-              onchange="aplicarFiltroRentabilidad()"
-              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-            <span style="color:#6b7280;font-size:13px;">—</span>
-            <input type="date" id="rent-date-to" value="${savedToR}"
-              onchange="aplicarFiltroRentabilidad()"
-              style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+            ${window.__DPF.triggerBtn('rent', savedRentLabel)}
+            <input type="date" id="rent-date-from" value="${savedFromR}" style="display:none;">
+            <input type="date" id="rent-date-to" value="${savedToR}" style="display:none;">
           </div>
         </div>
         <div id="rent-balance-wrap"></div>
       </div>
     </div>
   `;
+
+  window.__DPF.create('rent', savedFromR, savedToR,
+    localStorage.getItem("rent_from") ? 'personalizado' : 'mes',
+    savedRentLabel, 'rent_from', 'rent_to',
+    function() { window.loadRentabilidad(); });
 
   function filtroRentabilidadHoy() {
     const hoy = new Date().toISOString().split("T")[0];
@@ -2115,13 +2271,9 @@ if (id === "pedidos") {
 
             <!-- IZQUIERDA: filtros -->
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-              <input type="date" id="filter-date-from" value="${new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]}"
-                onchange="applyFilters()"
-                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-              <span style="color:#6b7280;font-size:13px;">—</span>
-              <input type="date" id="filter-date-to" value="${new Date().toISOString().split('T')[0]}"
-                onchange="applyFilters()"
-                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+              ${window.__DPF.triggerBtn('filter', 'Este mes')}
+              <input type="date" id="filter-date-from" value="${new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]}" style="display:none;">
+              <input type="date" id="filter-date-to" value="${new Date().toISOString().split('T')[0]}" style="display:none;">
               <select id="filter-shop-inline"
                 onchange="applyFilters()"
                 style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
@@ -2176,7 +2328,12 @@ if (id === "pedidos") {
       </div>
     `;
 
-    // Cargar pedidos reales
+    // Init date picker for orders
+    const _ordNow = new Date();
+    const _ordFrom = new Date(_ordNow.getFullYear(), _ordNow.getMonth(), 1).toISOString().split('T')[0];
+    const _ordTo   = _ordNow.toISOString().split('T')[0];
+    window.__DPF.create('filter', _ordFrom, _ordTo, 'mes', 'Este mes', null, null, function() { window.applyFilters(); });
+
     // Cargar pedidos reales
     fetchOrders();
     checkMRWIntegration();
@@ -3515,13 +3672,9 @@ function switchFacturasTab(key) {
               <span class="tab" onclick="filterReeByTab(this,'cobrado')">Pagado</span>
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <input type="date" id="ree-date-from" value=""
-                  onchange="renderReembolsos()"
-                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-                <span style="color:#6b7280;font-size:13px;">—</span>
-                <input type="date" id="ree-date-to" value=""
-                  onchange="renderReembolsos()"
-                  style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+                ${window.__DPF.triggerBtn('ree', 'Período')}
+                <input type="date" id="ree-date-from" value="" style="display:none;">
+                <input type="date" id="ree-date-to" value="" style="display:none;">
                 <select id="ree-shop" onchange="renderReembolsos()"
                   style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
                   <option value="">Todas las tiendas</option>
@@ -3554,6 +3707,7 @@ function switchFacturasTab(key) {
         </div>
       </div>
     `;
+    window.__DPF.create('ree', '', '', 'personalizado', 'Período', null, null, function() { window.renderReembolsos(); });
     fetch(`${API_BASE}/api/shopify/stores`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json()).then(stores => {
@@ -7221,11 +7375,9 @@ async function switchInformesTab(tab) {
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <input type="text" id="ree-q" placeholder="Buscar pedido..." oninput="renderReembolsos()"
                 style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);width:160px;"/>
-              <input type="date" id="ree-date-from" value="" onchange="renderReembolsos()"
-                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
-              <span style="color:#6b7280;font-size:13px;">—</span>
-              <input type="date" id="ree-date-to" value="" onchange="renderReembolsos()"
-                style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);"/>
+              ${window.__DPF.triggerBtn('ree', 'Período')}
+              <input type="date" id="ree-date-from" value="" style="display:none;">
+              <input type="date" id="ree-date-to" value="" style="display:none;">
               <select id="ree-shop" onchange="renderReembolsos()"
                 style="padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
                 <option value="">Todas las tiendas</option>
@@ -7249,6 +7401,7 @@ async function switchInformesTab(tab) {
         </div>
       </div>
     `;
+    window.__DPF.create('ree', '', '', 'personalizado', 'Período', null, null, function() { window.renderReembolsos(); });
     fetch(`${API_BASE}/api/shopify/stores`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json()).then(stores => {
@@ -8669,6 +8822,9 @@ function clearFiltersInline() {
   if (df) df.value = "";
   if (dt) dt.value = "";
   if (sh) sh.value = "";
+  const lbl = document.getElementById("filter-picker-label"); if (lbl) lbl.textContent = "Período";
+  const s = window.__DPF._inst["filter"];
+  if (s) { s.startDate=null; s.endDate=null; s.preset="personalizado"; s.presetLabel="Período"; }
   // Reset tabs: activate "Todos"
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelector(".tab")?.classList.add("active");
@@ -8935,6 +9091,9 @@ function clearReembolsosFilters() {
   if (dt) dt.value = "";
   if (sh) sh.value = "";
   if (q)  q.value  = "";
+  const lbl = document.getElementById("ree-picker-label"); if (lbl) lbl.textContent = "Período";
+  const s = window.__DPF._inst["ree"];
+  if (s) { s.startDate=null; s.endDate=null; s.preset="personalizado"; s.presetLabel="Período"; }
   window.__reeTabFilter = "";
   renderReembolsos();
 }
