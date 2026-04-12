@@ -6292,79 +6292,20 @@ async function loadProductos() {
       if (productoFiltrado) {
         const shopDom = productoFiltrado.shop_domain;
         const shopNom = productoFiltrado.shop_name;
+        const p = productoFiltrado;
+        const pid2 = String(p.id);
+        const stockInfo = stockMap[pid2] || { stock: 0, stock_minimo: 5 };
         wrap.innerHTML = `
-          <div style="margin-bottom:12px;">
-            <button onclick="loadProductos()" style="padding:6px 14px;background:#1f2937;border:1px solid #374151;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">← Volver a todos los productos</button>
+          <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+            <button onclick="loadProductos()" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--input);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text);">← Volver</button>
+            <span style="font-size:13px;color:var(--muted);">Mostrando producto desde notificación</span>
           </div>
-          <div style="margin-bottom:32px;">
-            <h3 style="font-size:15px;font-weight:700;color:#22c55e;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
-              🏪 ${escapeHtml(shopNom)}
-            </h3>
-            <table style="width:100%;border-collapse:collapse;font-size:13px;">
-              <thead>
-                <tr style="background:#1f2937;">
-                  <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;width:60px;">Imagen</th>
-                  <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Producto</th>
-                  <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Variantes & SKU</th>
-                  <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:120px;">Stock</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${(() => {
-                  const p = productoFiltrado;
-                  const pid2 = String(p.id);
-                  const stockInfo = stockMap[pid2] || { stock: 0, stock_minimo: 5 };
-                  const stockBajo = stockInfo.stock <= stockInfo.stock_minimo;
-                  return `
-                  <tr data-pid="${pid2}" style="background:#fef9c3;">
-                    <td style="padding:10px 14px;border:1px solid #374151;text-align:center;">
-                      ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #374151;">` : `<div style="width:48px;height:48px;border-radius:6px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
-                    </td>
-                    <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#f9fafb;vertical-align:top;">
-                      <span class="producto-nombre">${escapeHtml(p.title)}</span>
-                      <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
-                        <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">Costo compra:</span>
-                        <input type="number" min="0" step="0.01"
-                          value="${stockInfo.costo_compra || ''}"
-                          placeholder="0.00"
-                          style="width:80px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);"
-                          onchange="guardarCostoCompra('${shopDom}','${pid2}',this.value)">
-                        <span style="font-size:11px;color:#9ca3af;">€</span>
-                      </div>
-                    </td>
-                    </td>
-                    <td style="padding:10px 14px;border:1px solid #374151;vertical-align:top;">
-                      ${p.variants.map(v => {
-                        const vid = String(v.id);
-                        const uds = variantesMap[vid] || 1;
-                        return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f3f4f6;">
-                          <span style="font-size:12px;color:#e5e7eb;flex:1;">${escapeHtml(v.title)}</span>
-                          <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">uds/venta:</span>
-                          <input type="number" min="1" value="${uds}" style="width:52px;padding:3px 6px;border:1px solid #374151;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarVarianteConfig('${shopDom}','${vid}',this.value)">
-                        </div>`;
-                      }).join("")}
-                    </td>
-                    <td style="padding:10px 14px;border:1px solid #374151;text-align:center;vertical-align:middle;">
-                      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                        <div style="width:70px;padding:4px 8px;border:1px solid ${stockBajo?'#dc2626':'#e5e7eb'};border-radius:6px;font-size:15px;font-weight:700;text-align:center;background:${stockBajo?'#fef2f2':'#f9fafb'};color:${stockBajo?'#dc2626':(stockInfo.stock<0?'#b45309':'#111827')};">
-                          ${stockInfo.stock}
-                        </div>
-                        <div style="display:flex;align-items:center;gap:4px;">
-                          <span style="font-size:10px;color:#9ca3af;">mín:</span>
-                          <input type="number" min="0" value="${stockInfo.stock_minimo}" style="width:45px;padding:2px 4px;border:1px solid #374151;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:var(--card);color:var(--text);" onchange="guardarStockMinimo('${shopDom}','${pid2}',this.value)">
-                        </div>
-                        ${stockBajo ? `<span style="font-size:10px;color:#dc2626;font-weight:600;">⚠️ Bajo</span>` : ""}
-                        <button onclick="abrirHistoricoStock('${pid2}','${escapeHtml(p.title)}',${stockInfo.stock},${stockInfo.group_id||'null'})"
-                          style="margin-top:2px;padding:2px 8px;background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:5px;font-size:10px;color:#2563eb;font-weight:600;cursor:pointer;font-family:inherit;">
-                          Histórico
-                        </button>
-                        ${stockInfo.group_name ? `<div style="margin-top:2px;padding:2px 8px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:5px;font-size:10px;color:#22c55e;font-weight:600;text-align:center;">🔗 ${escapeHtml(stockInfo.group_name)}</div>` : ''}
-                      </div>
-                    </td>
-                  </tr>`;
-                })()}
-              </tbody>
-            </table>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--border);">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18"/><path d="M4.5 5h15l1.5 4"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/></svg>
+            <span style="font-size:14px;font-weight:700;color:var(--text);">${escapeHtml(shopNom)}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;">
+            ${renderProductoCard(p, stockInfo, variantesMap, shopDom)}
           </div>
         `;
         return;
@@ -6372,7 +6313,7 @@ async function loadProductos() {
     }
 
   } catch(e) {
-    wrap.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando productos</div>`;
+    wrap.innerHTML = `<div style="color:#dc2626;padding:16px;text-align:center;">Error cargando productos</div>`;
   }
   window.__hideLoadingBar?.();
 
@@ -9448,16 +9389,16 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
   modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;";
   modal.innerHTML = `
     <div style="background:var(--card);border-radius:12px;width:680px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-      <div style="padding:16px 20px;border-bottom:1px solid #1f2937;display:flex;align-items:center;justify-content:space-between;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="font-weight:700;font-size:15px;color:var(--text);">Histórico de stock</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:2px;">${escapeHtml(productName)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHtml(productName)}</div>
         </div>
         <button onclick="document.getElementById('historico-stock-modal').remove()"
-          style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1;">×</button>
+          style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;">×</button>
       </div>
       <div id="historico-stock-body" style="padding:16px;overflow-y:auto;flex:1;">
-        <div style="color:#9ca3af;text-align:center;padding:24px;">Cargando...</div>
+        <div style="color:var(--muted);text-align:center;padding:24px;">Cargando...</div>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -9471,7 +9412,7 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
     const body = document.getElementById("historico-stock-body");
     if (!body) return;
     if (!Array.isArray(rows) || rows.length === 0) {
-      body.innerHTML = `<div style="color:#9ca3af;text-align:center;padding:24px;">Sin movimientos registrados aún.<br><span style="font-size:12px;">Los movimientos se generan automáticamente al cargar esta sección.</span></div>`;
+      body.innerHTML = `<div style="color:var(--muted);text-align:center;padding:24px;">Sin movimientos registrados aún.<br><span style="font-size:12px;">Los movimientos se generan automáticamente al cargar esta sección.</span></div>`;
       return;
     }
 
@@ -9490,36 +9431,38 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
     });
 
     body.innerHTML = `
+      <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
-          <tr style="background:#1f2937;">
-            <th style="padding:8px 12px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Fecha</th>
-            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#dc2626;">Pedidos env.</th>
-            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#dc2626;">Uds. salida</th>
-            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#22c55e;">Devueltos</th>
-            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#22c55e;">Uds. devolución</th>
-            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#c4b5fd;">Entrada mercancía</th>
-            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;">Neto</th>
-            <th style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:700;color:#2563eb;background:rgba(59,130,246,.08);">Stock final día</th>
+          <tr style="background:var(--input);">
+            <th style="padding:8px 12px;border:1px solid var(--border);text-align:left;font-weight:600;color:var(--text);">Fecha</th>
+            <th style="padding:8px 12px;border:1px solid var(--border);text-align:center;font-weight:600;color:#dc2626;">Pedidos env.</th>
+            <th style="padding:8px 12px;border:1px solid var(--border);text-align:center;font-weight:600;color:#dc2626;">Uds. salida</th>
+            <th style="padding:8px 12px;border:1px solid var(--border);text-align:center;font-weight:600;color:#16a34a;">Devueltos</th>
+            <th style="padding:8px 12px;border:1px solid var(--border);text-align:center;font-weight:600;color:#16a34a;">Uds. devolución</th>
+            <th style="padding:8px 12px;border:1px solid var(--border);text-align:center;font-weight:600;color:#7c3aed;">Entrada mercancía</th>
+            <th style="padding:8px 12px;border:1px solid var(--border);text-align:center;font-weight:600;color:var(--text);">Neto</th>
+            <th style="padding:8px 12px;border:1px solid var(--border);text-align:center;font-weight:700;color:#2563eb;background:rgba(59,130,246,.08);">Stock final día</th>
           </tr>
         </thead>
         <tbody>
           ${rowsConSaldo.map(r => `
-            <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-              <td style="padding:8px 12px;border:1px solid #374151;font-weight:500;">${r.fecha}</td>
-              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#dc2626;">${r.pedidos_enviados || 0}</td>
-              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#dc2626;font-weight:600;">${r.salida > 0 ? '-'+r.salida : '0'}</td>
-              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#22c55e;">${r.pedidos_devueltos || 0}</td>
-              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#22c55e;font-weight:600;">${r.dev > 0 ? '+'+r.dev : '0'}</td>
-              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;color:#c4b5fd;font-weight:600;">${r.entrada > 0 ? '+'+r.entrada : '0'}</td>
-              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:600;color:${r.neto>=0?'#22c55e':'#dc2626'};">${r.neto>=0?'+':''}${r.neto}</td>
-              <td style="padding:8px 12px;border:1px solid #374151;text-align:center;font-weight:700;font-size:14px;background:rgba(59,130,246,.08);color:${r.saldoFin<0?'#dc2626':r.saldoFin===0?'#f59e0b':'#2563eb'};">${r.saldoFin}</td>
+            <tr onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+              <td style="padding:8px 12px;border:1px solid var(--border);font-weight:500;color:var(--text);">${r.fecha}</td>
+              <td style="padding:8px 12px;border:1px solid var(--border);text-align:center;color:#dc2626;">${r.pedidos_enviados || 0}</td>
+              <td style="padding:8px 12px;border:1px solid var(--border);text-align:center;color:#dc2626;font-weight:600;">${r.salida > 0 ? '-'+r.salida : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid var(--border);text-align:center;color:#16a34a;">${r.pedidos_devueltos || 0}</td>
+              <td style="padding:8px 12px;border:1px solid var(--border);text-align:center;color:#16a34a;font-weight:600;">${r.dev > 0 ? '+'+r.dev : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid var(--border);text-align:center;color:#7c3aed;font-weight:600;">${r.entrada > 0 ? '+'+r.entrada : '0'}</td>
+              <td style="padding:8px 12px;border:1px solid var(--border);text-align:center;font-weight:600;color:${r.neto>=0?'#16a34a':'#dc2626'};">${r.neto>=0?'+':''}${r.neto}</td>
+              <td style="padding:8px 12px;border:1px solid var(--border);text-align:center;font-weight:700;font-size:14px;background:rgba(59,130,246,.08);color:${r.saldoFin<0?'#dc2626':r.saldoFin===0?'#d97706':'#2563eb'};">${r.saldoFin}</td>
             </tr>`).join("")}
         </tbody>
-      </table>`;
+      </table>
+      </div>`;
   } catch(e) {
     const body = document.getElementById("historico-stock-body");
-    if (body) body.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando historial</div>`;
+    if (body) body.innerHTML = `<div style="color:#dc2626;padding:16px;text-align:center;">Error cargando historial</div>`;
   }
 }
 window.abrirHistoricoStock = abrirHistoricoStock;
@@ -9534,13 +9477,16 @@ async function abrirVincularStock() {
   modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
   modal.innerHTML = `
     <div style="background:var(--card);border-radius:12px;width:720px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.35);">
-      <div style="padding:16px 20px;border-bottom:1px solid #1f2937;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-        <div style="font-weight:700;font-size:15px;color:var(--text);">🔗 Vincular stock entre productos</div>
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <div style="font-weight:700;font-size:15px;color:var(--text);">Vincular stock entre productos</div>
+        </div>
         <button onclick="document.getElementById('vincular-stock-modal').remove()"
-          style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1;">×</button>
+          style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;">×</button>
       </div>
       <div id="vincular-stock-body" style="padding:16px;overflow-y:auto;flex:1;">
-        <div style="color:#9ca3af;text-align:center;padding:32px;">Cargando...</div>
+        <div style="color:var(--muted);text-align:center;padding:32px;">Cargando...</div>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -9566,51 +9512,52 @@ async function abrirVincularStock() {
     const selectedCount = selected.size;
     if (groups.length === 0) { el.innerHTML = ""; return; }
     el.innerHTML = `
-      <div style="font-size:12px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Grupos actuales</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Grupos actuales</div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
         ${groups.map(g => {
           const members = g.members || [];
           const isEditing = editingGroupId === g.id;
           return `
-          <div style="border:1px solid ${isEditing?'#c4b5fd':'#e5e7eb'};border-radius:8px;background:#1f2937;overflow:hidden;">
+          <div style="border:1px solid ${isEditing?'rgba(139,92,246,.4)':'var(--border)'};border-radius:8px;background:var(--input);overflow:hidden;">
             <!-- Group header row -->
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;gap:8px;">
-              <div style="font-size:13px;font-weight:700;color:#c4b5fd;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                🔗 ${escapeHtml(g.name)}
-                <span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:6px;">${members.length} producto${members.length!==1?'s':''}</span>
+              <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span style="font-size:13px;font-weight:700;color:#7c3aed;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(g.name)}</span>
+                <span style="font-size:11px;font-weight:400;color:var(--muted);flex-shrink:0;">${members.length} producto${members.length!==1?'s':''}</span>
               </div>
               <div style="display:flex;gap:5px;flex-shrink:0;">
                 ${selectedCount > 0 ? `<button onclick="window.__vincularAddToGroup(${g.id},'${escapeHtml(g.name)}')"
-                  style="padding:4px 10px;background:#7c3aed;border:none;border-radius:6px;font-size:12px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;">
+                  style="padding:4px 10px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);border-radius:6px;font-size:12px;color:#7c3aed;font-weight:600;cursor:pointer;font-family:inherit;">
                   + Añadir (${selectedCount})
                 </button>` : ''}
                 <button onclick="window.__vincularToggleEdit(${g.id})"
-                  style="padding:4px 10px;background:${isEditing?'#ede9fe':'#f3f4f6'};border:1px solid ${isEditing?'#c4b5fd':'#e5e7eb'};border-radius:6px;font-size:12px;color:${isEditing?'#7c3aed':'#374151'};font-weight:600;cursor:pointer;font-family:inherit;">
+                  style="padding:4px 10px;background:${isEditing?'rgba(139,92,246,.12)':'var(--card)'};border:1px solid ${isEditing?'rgba(139,92,246,.3)':'var(--border)'};border-radius:6px;font-size:12px;color:${isEditing?'#7c3aed':'var(--text)'};font-weight:600;cursor:pointer;font-family:inherit;">
                   ${isEditing ? 'Cerrar' : 'Editar'}
                 </button>
                 <button onclick="window.__vincularDeleteGroup(${g.id})"
-                  style="padding:4px 10px;background:rgba(239,68,68,.1);border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;">
+                  style="padding:4px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;">
                   Eliminar
                 </button>
               </div>
             </div>
             <!-- Members list (visible only when editing) -->
             ${isEditing ? `
-            <div style="border-top:1px solid #1f2937;">
-              ${members.length === 0 ? '<div style="padding:10px 12px;font-size:12px;color:#9ca3af;">Sin productos en este grupo</div>' :
+            <div style="border-top:1px solid var(--border);">
+              ${members.length === 0 ? '<div style="padding:10px 12px;font-size:12px;color:var(--muted);">Sin productos en este grupo</div>' :
                 members.map(m => {
                   const p = allProducts.find(x => String(x.id) === String(m.product_id));
                   const name = p ? p.title : m.product_id;
                   const si = stockMap[m.product_id] || {};
                   return `
-                  <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f3f4f6;">
+                  <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);">
                     <div style="flex:1;min-width:0;">
-                      <div style="font-size:12px;font-weight:600;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
-                      <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p?.shop_name||m.shop_domain||'')}</div>
+                      <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
+                      <div style="font-size:11px;color:var(--muted);">${escapeHtml(p?.shop_name||m.shop_domain||'')}</div>
                     </div>
-                    <div style="font-size:12px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#374151'};flex-shrink:0;white-space:nowrap;">Stock: ${si.stock??'—'}</div>
+                    <div style="font-size:12px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#d97706':'#16a34a'};flex-shrink:0;white-space:nowrap;">Stock: ${si.stock??'—'}</div>
                     <button onclick="window.__vincularRemoveMember(${g.id},'${escapeHtml(m.product_id)}')"
-                      style="padding:3px 8px;background:rgba(239,68,68,.1);border:1px solid #fca5a5;border-radius:5px;font-size:11px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">
+                      style="padding:3px 8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:5px;font-size:11px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">
                       Desvincular
                     </button>
                   </div>`;
@@ -9640,19 +9587,19 @@ async function abrirVincularStock() {
     if (countEl) countEl.textContent = `Productos (${filtered.length})`;
 
     el.innerHTML = filtered.length === 0
-      ? '<div style="color:#9ca3af;text-align:center;padding:16px;font-size:13px;">Sin resultados</div>'
+      ? '<div style="color:var(--muted);text-align:center;padding:16px;font-size:13px;">Sin resultados</div>'
       : filtered.map(p => {
           const pid = String(p.id);
           const si = stockMap[pid] || {};
           const isSel = selected.has(pid);
           return `
-          <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;background:${isSel?'#f5f3ff':'transparent'};border:1px solid ${isSel?'#c4b5fd':'transparent'};">
-            <input type="checkbox" data-pid="${pid}" data-shop="${escapeHtml(p.shop_domain||si.shop_domain||'')}" ${isSel?'checked':''} onchange="window.__vincularToggle(this)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;background:${isSel?'rgba(139,92,246,.08)':'transparent'};border:1px solid ${isSel?'rgba(139,92,246,.3)':'transparent'};">
+            <input type="checkbox" data-pid="${pid}" data-shop="${escapeHtml(p.shop_domain||si.shop_domain||'')}" ${isSel?'checked':''} onchange="window.__vincularToggle(this)" class="shop-check-input" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#7c3aed;">
             <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:600;color:#f9fafb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.title)}</div>
-              <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name||p.shop_domain||'')}${si.group_name?` · <span style="color:#c4b5fd;font-weight:600;">🔗 ${escapeHtml(si.group_name)}</span>`:''}</div>
+              <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.title)}</div>
+              <div style="font-size:11px;color:var(--muted);">${escapeHtml(p.shop_name||p.shop_domain||'')}${si.group_name?` · <span style="color:#7c3aed;font-weight:600;">${escapeHtml(si.group_name)}</span>`:''}</div>
             </div>
-            <div style="font-size:13px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#f59e0b':'#22c55e'};flex-shrink:0;">${si.stock??'—'}</div>
+            <div style="font-size:13px;font-weight:700;color:${(si.stock??1)<0?'#dc2626':(si.stock??1)===0?'#d97706':'#16a34a'};flex-shrink:0;">${si.stock??'—'}</div>
           </label>`;
         }).join("");
   }
@@ -9670,23 +9617,23 @@ async function abrirVincularStock() {
   body.innerHTML = `
     <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
       <input id="vincular-buscar" type="text" placeholder="Buscar producto..."
-        style="flex:1;padding:8px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
-      <span id="vincular-sel-count" style="font-size:12px;color:#6b7280;white-space:nowrap;">0 seleccionados</span>
+        style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--input);color:var(--text);outline:none;">
+      <span id="vincular-sel-count" style="font-size:12px;color:var(--muted);white-space:nowrap;">0 seleccionados</span>
     </div>
     <div id="vincular-groups-panel"></div>
-    <div style="margin-bottom:14px;padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#0d1117;">
-      <div style="font-size:12px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Crear nuevo grupo con la selección</div>
+    <div style="margin-bottom:14px;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--input);">
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">Crear nuevo grupo con la selección</div>
       <div style="display:flex;gap:8px;">
         <input id="nuevo-grupo-nombre" type="text" placeholder="Nombre del grupo..."
-          style="flex:1;padding:7px 10px;border:1px solid #374151;border-radius:7px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);">
+          style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);outline:none;">
         <button onclick="window.__vincularCrearGrupo()"
-          style="padding:7px 14px;background:#7c3aed;border:none;border-radius:7px;font-size:13px;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">
+          style="padding:7px 14px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);border-radius:7px;font-size:13px;color:#7c3aed;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">
           <span id="vincular-btn-crear-label">Crear grupo</span>
         </button>
       </div>
     </div>
-    <div id="vincular-product-count" style="font-size:12px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Productos (${allProducts.length})</div>
-    <div id="vincular-product-list" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;border:1px solid #374151;border-radius:8px;padding:6px;"></div>`;
+    <div id="vincular-product-count" style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Productos (${allProducts.length})</div>
+    <div id="vincular-product-list" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;"></div>`;
 
   // Wire search input — only updates product list, never replaces the input itself
   document.getElementById("vincular-buscar").addEventListener("input", e => {
@@ -9702,8 +9649,8 @@ async function abrirVincularStock() {
     // Update just this row's highlight without re-rendering the list
     const label = checkbox.closest("label");
     if (label) {
-      label.style.background = checkbox.checked ? "#f5f3ff" : "transparent";
-      label.style.border = `1px solid ${checkbox.checked ? "#c4b5fd" : "transparent"}`;
+      label.style.background = checkbox.checked ? "rgba(139,92,246,.08)" : "transparent";
+      label.style.border = `1px solid ${checkbox.checked ? "rgba(139,92,246,.3)" : "transparent"}`;
     }
   };
 
@@ -9854,17 +9801,20 @@ async function abrirEntradaMercancia() {
   modal.innerHTML = `
     <div class="modal" style="max-width:700px;width:95%;max-height:85vh;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <h3 style="margin:0;font-size:16px;font-weight:700;">📦 Entrada de mercancía</h3>
-        <span onclick="closeModal()" style="cursor:pointer;font-size:20px;color:#6b7280;">×</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--text);">Entrada de mercancía</h3>
+        </div>
+        <span onclick="closeModal()" style="cursor:pointer;font-size:22px;color:var(--muted);line-height:1;">×</span>
       </div>
 
-      <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <div style="display:flex;gap:6px;margin-bottom:16px;background:var(--input);padding:4px;border-radius:10px;border:1px solid var(--border);">
         <button onclick="switchEntradaTab('nueva')" id="tab-nueva"
-          style="padding:7px 16px;border-radius:8px;border:1px solid #22c55e;background:#22c55e;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          style="flex:1;padding:7px 16px;border-radius:7px;border:none;background:var(--card);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,.08);">
           Nueva entrada
         </button>
         <button onclick="switchEntradaTab('historial')" id="tab-historial"
-          style="padding:7px 16px;border-radius:8px;border:1px solid #374151;background:#111827;color:#e5e7eb;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          style="flex:1;padding:7px 16px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
           Historial
         </button>
       </div>
@@ -9881,13 +9831,15 @@ async function abrirEntradaMercancia() {
 async function switchEntradaTab(tab) {
   const btnNueva = document.getElementById("tab-nueva");
   const btnHist = document.getElementById("tab-historial");
+  const activeStyle = { background: "var(--card)", color: "var(--text)", boxShadow: "0 1px 4px rgba(0,0,0,.08)" };
+  const inactiveStyle = { background: "transparent", color: "var(--muted)", boxShadow: "none" };
   if (tab === "nueva") {
-    btnNueva.style.background = "#22c55e"; btnNueva.style.color = "#fff"; btnNueva.style.borderColor = "#22c55e";
-    btnHist.style.background = "#fff"; btnHist.style.color = "#374151"; btnHist.style.borderColor = "#e5e7eb";
+    Object.assign(btnNueva.style, activeStyle);
+    Object.assign(btnHist.style, inactiveStyle);
     await cargarTabNuevaEntrada();
   } else {
-    btnHist.style.background = "#22c55e"; btnHist.style.color = "#fff"; btnHist.style.borderColor = "#22c55e";
-    btnNueva.style.background = "#fff"; btnNueva.style.color = "#374151"; btnNueva.style.borderColor = "#e5e7eb";
+    Object.assign(btnHist.style, activeStyle);
+    Object.assign(btnNueva.style, inactiveStyle);
     await cargarTabHistorial();
   }
 }
@@ -9911,10 +9863,10 @@ async function cargarTabNuevaEntrada() {
 
   content.innerHTML = `
     <div style="margin-bottom:16px;">
-      <input id="entrada-search" type="text" placeholder="🔍 Buscar producto por nombre..."
+      <input id="entrada-search" type="text" placeholder="Buscar producto por nombre..."
         oninput="filtrarProductosEntrada()"
-        style="width:100%;padding:10px 14px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
-      <div id="entrada-search-results" style="margin-top:8px;border:1px solid #374151;border-radius:8px;overflow:hidden;display:none;"></div>
+        style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--input);color:var(--text);outline:none;">
+      <div id="entrada-search-results" style="margin-top:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden;display:none;"></div>
     </div>
     <div id="entrada-producto-seleccionado" style="display:none;">
       <div id="entrada-producto-card"></div>
@@ -9944,35 +9896,37 @@ async function cargarTabHistorial() {
     }
 
     content.innerHTML = `
+      <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
-          <tr style="background:#1f2937;">
-            <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Fecha</th>
-            <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;">Producto</th>
-            <th style="padding:10px 14px;border:1px solid #374151;text-align:left;font-weight:600;color:#e5e7eb;width:80px;">Tienda</th>
-            <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:80px;">Cantidad</th>
-            <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:80px;">Anterior</th>
-            <th style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:600;color:#e5e7eb;width:80px;">Nuevo</th>
+          <tr style="background:var(--input);">
+            <th style="padding:10px 14px;border:1px solid var(--border);text-align:left;font-weight:600;color:var(--text);">Fecha</th>
+            <th style="padding:10px 14px;border:1px solid var(--border);text-align:left;font-weight:600;color:var(--text);">Producto</th>
+            <th style="padding:10px 14px;border:1px solid var(--border);text-align:left;font-weight:600;color:var(--text);width:80px;">Tienda</th>
+            <th style="padding:10px 14px;border:1px solid var(--border);text-align:center;font-weight:600;color:#16a34a;width:80px;">Cantidad</th>
+            <th style="padding:10px 14px;border:1px solid var(--border);text-align:center;font-weight:600;color:var(--muted);width:80px;">Anterior</th>
+            <th style="padding:10px 14px;border:1px solid var(--border);text-align:center;font-weight:600;color:#2563eb;width:80px;">Nuevo stock</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map(r => `
-          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:10px 14px;border:1px solid #374151;color:#6b7280;white-space:nowrap;">
+          <tr onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+            <td style="padding:10px 14px;border:1px solid var(--border);color:var(--muted);white-space:nowrap;">
               ${r.created_at ? new Date(r.created_at).toLocaleString("es-ES") : "-"}
             </td>
-            <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#f9fafb;">
+            <td style="padding:10px 14px;border:1px solid var(--border);font-weight:600;color:var(--text);">
               ${escapeHtml(r.product_name)}
             </td>
-            <td style="padding:10px 14px;border:1px solid #374151;font-size:11px;color:#6b7280;">
+            <td style="padding:10px 14px;border:1px solid var(--border);font-size:11px;color:var(--muted);">
               ${escapeHtml(r.shop_domain)}
             </td>
-            <td style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:700;color:#22c55e;">+${r.cantidad}</td>
-            <td style="padding:10px 14px;border:1px solid #374151;text-align:center;color:#6b7280;">${r.stock_anterior}</td>
-            <td style="padding:10px 14px;border:1px solid #374151;text-align:center;font-weight:700;color:#22c55e;">${r.stock_nuevo}</td>
+            <td style="padding:10px 14px;border:1px solid var(--border);text-align:center;font-weight:700;color:#16a34a;">+${r.cantidad}</td>
+            <td style="padding:10px 14px;border:1px solid var(--border);text-align:center;color:var(--muted);">${r.stock_anterior}</td>
+            <td style="padding:10px 14px;border:1px solid var(--border);text-align:center;font-weight:700;color:#2563eb;">${r.stock_nuevo}</td>
           </tr>`).join("")}
         </tbody>
       </table>
+      </div>
     `;
   } catch(e) {
     content.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando historial</div>`;
@@ -9992,19 +9946,19 @@ function filtrarProductosEntrada() {
 
   if (!matches.length) {
     resultsEl.style.display = "block";
-    resultsEl.innerHTML = `<div style="padding:12px 14px;color:#6b7280;font-size:13px;">No se encontraron productos</div>`;
+    resultsEl.innerHTML = `<div style="padding:12px 14px;color:var(--muted);font-size:13px;">No se encontraron productos</div>`;
     return;
   }
 
   resultsEl.style.display = "block";
   resultsEl.innerHTML = matches.map(p => `
     <div onclick="seleccionarProductoEntrada('${String(p.id)}')"
-      style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:10px;"
-      onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-      ${p.image ? `<img src="${p.image}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;">` : `<div style="width:32px;height:32px;border-radius:4px;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📦</div>`}
+      style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;"
+      onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+      ${p.image ? `<img src="${p.image}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;">` : `<div style="width:32px;height:32px;border-radius:4px;background:var(--input);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--border)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>`}
       <div>
-        <div style="font-weight:600;color:#f9fafb;">${escapeHtml(p.title)}</div>
-        <div style="font-size:11px;color:#9ca3af;">${escapeHtml(p.shop_name || p.shop_domain)}</div>
+        <div style="font-weight:600;color:var(--text);">${escapeHtml(p.title)}</div>
+        <div style="font-size:11px;color:var(--muted);">${escapeHtml(p.shop_name || p.shop_domain)}</div>
       </div>
     </div>
   `).join("");
@@ -10029,36 +9983,37 @@ function seleccionarProductoEntrada(pid) {
   if (card) card.style.display = "block";
 
   cardContent.innerHTML = `
-    <div style="border:1px solid #374151;border-radius:12px;overflow:hidden;">
-      <div style="background:#22c55e;padding:14px 18px;display:flex;align-items:center;gap:12px;">
-        ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:2px solid rgba(255,255,255,0.3);">` : `<div style="width:48px;height:48px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;">📦</div>`}
+    <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+      <div style="background:rgba(34,197,94,.1);border-bottom:1px solid rgba(34,197,94,.2);padding:14px 18px;display:flex;align-items:center;gap:12px;">
+        ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:2px solid rgba(34,197,94,.3);">` : `<div style="width:48px;height:48px;border-radius:8px;background:rgba(34,197,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`}
         <div>
-          <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(p.title)}</div>
-          <div style="font-size:12px;color:#86efac;">${escapeHtml(p.shop_name || p.shop_domain)}</div>
+          <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(p.title)}</div>
+          <div style="font-size:12px;color:#16a34a;font-weight:500;">${escapeHtml(p.shop_name || p.shop_domain)}</div>
         </div>
       </div>
       <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:end;">
-        <div style="text-align:center;">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stock actual</div>
-          <div style="font-size:28px;font-weight:700;color:#e5e7eb;">${stockActual}</div>
-          <div style="font-size:11px;color:#9ca3af;">unidades</div>
+        <div style="text-align:center;padding:14px;background:var(--input);border-radius:10px;border:1px solid var(--border);">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stock actual</div>
+          <div style="font-size:28px;font-weight:700;color:var(--text);">${stockActual}</div>
+          <div style="font-size:11px;color:var(--muted);">unidades</div>
         </div>
-        <div style="text-align:center;">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Cantidad a ingresar</div>
+        <div style="text-align:center;padding:14px;background:rgba(34,197,94,.06);border-radius:10px;border:2px solid rgba(34,197,94,.25);">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Cantidad a ingresar</div>
           <input type="number" min="1" id="entrada-qty-selected" placeholder="0"
             oninput="actualizarPreviewNuevo(${stockActual})"
-            style="width:100%;padding:10px;border:2px solid #22c55e;border-radius:8px;font-size:18px;text-align:center;font-family:inherit;font-weight:700;color:#22c55e;background:var(--card);">
+            style="width:100%;padding:6px 4px;border:none;background:transparent;font-size:22px;text-align:center;font-family:inherit;font-weight:700;color:#16a34a;outline:none;">
         </div>
-        <div style="text-align:center;">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stock nuevo</div>
-          <div style="font-size:28px;font-weight:700;color:#22c55e;" id="entrada-preview-nuevo">${stockActual}</div>
-          <div style="font-size:11px;color:#9ca3af;">unidades</div>
+        <div style="text-align:center;padding:14px;background:rgba(37,99,235,.06);border-radius:10px;border:1px solid rgba(37,99,235,.15);">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stock nuevo</div>
+          <div style="font-size:28px;font-weight:700;color:#2563eb;" id="entrada-preview-nuevo">${stockActual}</div>
+          <div style="font-size:11px;color:var(--muted);">unidades</div>
         </div>
       </div>
       <div style="padding:0 20px 20px;">
         <button onclick="confirmarEntradaSeleccionada('${pid}','${escapeAttr(p.title)}','${p.shop_domain}',${stockActual})"
-          style="width:100%;padding:12px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
-          ✓ Registrar entrada de mercancía
+          style="width:100%;padding:12px;background:#22c55e;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 12px rgba(34,197,94,.25);transition:background .15s;"
+          onmouseover="this.style.background='#16a34a'" onmouseout="this.style.background='#22c55e'">
+          Registrar entrada de mercancía
         </button>
       </div>
     </div>
@@ -10070,7 +10025,7 @@ function actualizarPreviewNuevo(stockActual) {
   const el = document.getElementById("entrada-preview-nuevo");
   if (el) {
     el.textContent = stockActual + qty;
-    el.style.color = qty > 0 ? "#22c55e" : "#9ca3af";
+    el.style.color = qty > 0 ? "#2563eb" : "var(--muted)";
   }
 }
 
