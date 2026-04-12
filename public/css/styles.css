@@ -893,11 +893,57 @@ body:not(.dark) input::placeholder,
 body:not(.dark) textarea::placeholder { color: #9ca3af !important; }
 
 /* ── Picker siempre oscuro (modo claro Y oscuro) ── */
-.dpf-panel, .dpf-panel * {
-  color: inherit !important;
-  border-color: inherit !important;
-  background: inherit !important;
-}
+/* Usar ID selectors (mayor especificidad) para ganar a body:not(.dark) rules */
+#met-picker-panel .dpf-panel,
+#rent-picker-panel .dpf-panel,
+#filter-picker-panel .dpf-panel,
+#ree-picker-panel .dpf-panel { background: #111827 !important; color: #f9fafb !important; }
+
+#met-picker-panel .dpf-panel [style*="background:#0d1117"],
+#rent-picker-panel .dpf-panel [style*="background:#0d1117"],
+#filter-picker-panel .dpf-panel [style*="background:#0d1117"],
+#ree-picker-panel .dpf-panel [style*="background:#0d1117"] { background: #0d1117 !important; }
+
+#met-picker-panel .dpf-panel [style*="background:#1f2937"],
+#rent-picker-panel .dpf-panel [style*="background:#1f2937"],
+#filter-picker-panel .dpf-panel [style*="background:#1f2937"],
+#ree-picker-panel .dpf-panel [style*="background:#1f2937"] { background: #1f2937 !important; }
+
+#met-picker-panel .dpf-panel [style*="background:#111827"],
+#rent-picker-panel .dpf-panel [style*="background:#111827"],
+#filter-picker-panel .dpf-panel [style*="background:#111827"],
+#ree-picker-panel .dpf-panel [style*="background:#111827"] { background: #111827 !important; }
+
+#met-picker-panel .dpf-panel [style*="color:#f9fafb"],
+#rent-picker-panel .dpf-panel [style*="color:#f9fafb"],
+#filter-picker-panel .dpf-panel [style*="color:#f9fafb"],
+#ree-picker-panel .dpf-panel [style*="color:#f9fafb"] { color: #f9fafb !important; }
+
+#met-picker-panel .dpf-panel [style*="color:#9ca3af"],
+#rent-picker-panel .dpf-panel [style*="color:#9ca3af"],
+#filter-picker-panel .dpf-panel [style*="color:#9ca3af"],
+#ree-picker-panel .dpf-panel [style*="color:#9ca3af"] { color: #9ca3af !important; }
+
+#met-picker-panel .dpf-panel [style*="color:#6b7280"],
+#rent-picker-panel .dpf-panel [style*="color:#6b7280"],
+#filter-picker-panel .dpf-panel [style*="color:#6b7280"],
+#ree-picker-panel .dpf-panel [style*="color:#6b7280"] { color: #6b7280 !important; }
+
+#met-picker-panel .dpf-panel [style*="color:#d1d5db"],
+#rent-picker-panel .dpf-panel [style*="color:#d1d5db"],
+#filter-picker-panel .dpf-panel [style*="color:#d1d5db"],
+#ree-picker-panel .dpf-panel [style*="color:#d1d5db"] { color: #d1d5db !important; }
+
+#met-picker-panel .dpf-panel [style*="color:#e5e7eb"],
+#rent-picker-panel .dpf-panel [style*="color:#e5e7eb"],
+#filter-picker-panel .dpf-panel [style*="color:#e5e7eb"],
+#ree-picker-panel .dpf-panel [style*="color:#e5e7eb"] { color: #e5e7eb !important; }
+
+#met-picker-panel .dpf-panel input,
+#rent-picker-panel .dpf-panel input,
+#filter-picker-panel .dpf-panel input,
+#ree-picker-panel .dpf-panel input { background: #1f2937 !important; color: #f9fafb !important; border-color: #374151 !important; }
+
 [id$="-picker-panel"] { z-index: 2000; }
 
 /* Tabs border */
