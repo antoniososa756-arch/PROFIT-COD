@@ -6389,20 +6389,20 @@ async function loadAdsTable() {
 
   const fmt  = n => n != null ? n.toFixed(2)+" €" : "-";
   const fmt2 = n => n != null ? n.toFixed(2) : "-";
-  const td   = (content, extra="") => `<td style="padding:10px 14px;border:1px solid #374151;font-size:15px;${extra}">${content}</td>`;
-  const th   = (content, extra="") => `<th style="padding:11px 14px;border:1px solid #374151;font-weight:600;font-size:13px;${extra}">${content}</th>`;
+  const td   = (content, extra="") => `<td style="padding:10px 14px;border:1px solid var(--border);font-size:15px;color:var(--text);${extra}">${content}</td>`;
+  const th   = (content, extra="") => `<th style="padding:11px 14px;border:1px solid var(--border);font-weight:600;font-size:13px;${extra}">${content}</th>`;
 
   wrap.innerHTML = `
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
-        <tr style="background:#1f2937;">
-          ${th("Día","text-align:left;color:#e5e7eb;")}
-          ${th("Gasto Meta","text-align:right;background:#1877f2;color:#fff;")}
-          ${th("Gasto TikTok","text-align:right;background:#111;color:#fff;")}
-          ${th("Facturación","text-align:right;color:#e5e7eb;")}
-          ${th("Cantidad Pedidos","text-align:right;color:#e5e7eb;")}
-          ${th("CPA","text-align:right;color:#e5e7eb;")}
-          ${th("ROAS","text-align:right;color:#e5e7eb;")}
+        <tr style="background:var(--input);">
+          ${th("Día","text-align:left;color:var(--text);")}
+          ${th("Gasto Meta","text-align:right;background:#1877f2;color:#fff;border-color:#1565c0;")}
+          ${th("Gasto TikTok","text-align:right;background:#000;color:#fff;border-color:#333;")}
+          ${th("Facturación","text-align:right;color:var(--text);")}
+          ${th("Cantidad Pedidos","text-align:right;color:var(--text);")}
+          ${th("CPA","text-align:right;color:var(--text);")}
+          ${th("ROAS","text-align:right;color:var(--text);")}
         </tr>
         <tr style="background:#22c55e;">
           <td style="padding:13px 16px;font-weight:700;color:#fff;border:1px solid #16a34a;font-size:15px;">Balance del mes</td>
@@ -6416,14 +6416,24 @@ async function loadAdsTable() {
       </thead>
       <tbody>
         ${rows.map(r => `
-          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            ${td(r.label, "color:#e5e7eb;white-space:nowrap;")}
-            <td style="padding:10px 14px;border:1px solid #374151;font-size:15px;text-align:right;background:rgba(59,130,246,.1);"><input type="number" min="0" step="0.01" value="${r.meta||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="meta" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #3b82f6;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#111827;color:#93c5fd;font-weight:600;"></td>
-            <td style="padding:10px 14px;border:1px solid #374151;font-size:15px;text-align:right;background:#1a1a1a;"><input type="number" min="0" step="0.01" value="${r.tiktok||""}" placeholder="0.00" data-date="${r.dateStr}" data-shop="${shop}" data-type="tiktok" onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)" style="width:80px;padding:4px 8px;border:1px solid #fe2c55;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:#111;color:#fff;font-weight:600;"></td>
-            ${td(r.facturacion > 0 ? fmt(r.facturacion) : "0,00 €", "text-align:right;color:" + (r.facturacion > 0 ? "inherit" : "#9ca3af") + ";")}
-            ${td(r.pedidos > 0 ? r.pedidos : "0", "text-align:right;color:" + (r.pedidos > 0 ? "inherit" : "#9ca3af") + ";")}
+          <tr onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+            ${td(r.label, "color:var(--text);white-space:nowrap;")}
+            <td style="padding:10px 14px;border:1px solid var(--border);font-size:15px;text-align:right;background:rgba(24,119,242,.06);">
+              <input type="number" min="0" step="0.01" value="${r.meta||""}" placeholder="0.00"
+                data-date="${r.dateStr}" data-shop="${shop}" data-type="meta"
+                onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)"
+                style="width:80px;padding:4px 8px;border:1.5px solid rgba(24,119,242,.4);border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:#1877f2;font-weight:600;outline:none;">
+            </td>
+            <td style="padding:10px 14px;border:1px solid var(--border);font-size:15px;text-align:right;background:rgba(254,44,85,.05);">
+              <input type="number" min="0" step="0.01" value="${r.tiktok||""}" placeholder="0.00"
+                data-date="${r.dateStr}" data-shop="${shop}" data-type="tiktok"
+                onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)"
+                style="width:80px;padding:4px 8px;border:1.5px solid rgba(254,44,85,.4);border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:#fe2c55;font-weight:600;outline:none;">
+            </td>
+            ${td(r.facturacion > 0 ? fmt(r.facturacion) : "0,00 €", "text-align:right;color:" + (r.facturacion > 0 ? "var(--text)" : "var(--muted)") + ";")}
+            ${td(r.pedidos > 0 ? r.pedidos : "0", "text-align:right;color:" + (r.pedidos > 0 ? "var(--text)" : "var(--muted)") + ";")}
             ${td(fmt(r.cpa), "text-align:right;")}
-            ${td(fmt2(r.roas), `text-align:right;font-weight:${r.roas!=null&&r.roas>=2?'700':'400'};color:${r.roas!=null&&r.roas>=2?'#22c55e':r.roas!=null&&r.roas<1?'#dc2626':'inherit'};`)}
+            ${td(fmt2(r.roas), `text-align:right;font-weight:${r.roas!=null&&r.roas>=2?'700':'400'};color:${r.roas!=null&&r.roas>=2?'#16a34a':r.roas!=null&&r.roas<1?'#dc2626':'var(--text)'};`)}
           </tr>
         `).join("")}
       </tbody>
