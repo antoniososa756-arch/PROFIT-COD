@@ -558,9 +558,19 @@
     }
 
     .content h2{
-      margin:0 0 6px;
-      font-size:20px;
+      margin:0 0 4px;
+      font-size:22px;
+      font-weight:700;
       color:var(--text);
+      letter-spacing:-0.3px;
+    }
+
+    #subtitle{
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:20px;
+      padding-bottom:18px;
+      border-bottom:1px solid var(--border);
     }
 
     .muted{

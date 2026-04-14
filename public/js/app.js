@@ -1008,8 +1008,11 @@ function loadApp(section) {
           </div>
 
           <div class="content">
-            <h2 id="title"></h2>
-            <div class="muted" id="subtitle"></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+              <span style="display:inline-block;width:4px;height:22px;background:#22c55e;border-radius:3px;flex-shrink:0;"></span>
+              <h2 id="title" style="margin:0;"></h2>
+            </div>
+            <div id="subtitle"></div>
 
             <div class="card" id="cardBox">
               <div style="font-weight:600; margin-bottom:6px;" id="previewTitle">${d.ui.previewTitle}</div>
