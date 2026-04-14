@@ -1457,11 +1457,11 @@ const now = new Date();
       <div style="display:flex;gap:20px;align-items:flex-start;">
 
         <!-- Mitad izquierda: gráfica -->
-        <div style="flex:1;min-width:0;background:#0f1117;border-radius:16px;padding:20px 20px 16px;">
+        <div style="flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 20px 16px;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:10px;flex-wrap:wrap;">
             <div>
-              <div style="font-size:15px;font-weight:700;color:#f9fafb;letter-spacing:-.2px;">Pedidos por tienda</div>
-              <div style="font-size:12px;color:#6b7280;margin-top:3px;" id="chart-period-label">—</div>
+              <div style="font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;">Pedidos por tienda</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;" id="chart-period-label">—</div>
             </div>
             <div style="display:flex;gap:5px;">
               <button id="chart-btn-day"   onclick="setChartPeriod('day')"   class="chart-period-btn active">Día</button>
@@ -1470,7 +1470,7 @@ const now = new Date();
             </div>
           </div>
           <canvas id="orders-bar-chart" style="width:100%;display:block;"></canvas>
-          <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);"></div>
+          <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);"></div>
         </div>
 
         <!-- Mitad derecha: reservada -->
@@ -5635,29 +5635,38 @@ async function loadOrdersChart(period) {
     }
 
     if (legendEl) {
+      const isDark = document.body.classList.contains('dark');
       const shortName = s => s.replace(/\.myshopify\.com$/i,'').replace(/\.[^.]+\.[^.]+$/,'');
       const totalPorTienda = stores.map(s => ({ name: s, total: buckets.reduce((a,b) => a + ((data[s]||{})[b]||0), 0) }));
-      legendEl.innerHTML = totalPorTienda.map(({name,total},i) => `
-        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#9ca3af;">
-          <span style="width:8px;height:8px;border-radius:50%;background:${CHART_COLORS[i%CHART_COLORS.length]};flex-shrink:0;"></span>
-          <span style="color:#d1d5db;">${escapeHtml(shortName(name))}</span>
-          <span style="color:#22c55e;font-weight:700;">${total}</span>
-        </div>`).join('');
+      legendEl.innerHTML = totalPorTienda.map(({name,total},i) => {
+        const color = (STORE_PALETTE[i % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
+        return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);">
+          <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+          <span style="color:var(--text);">${escapeHtml(shortName(name))}</span>
+          <span style="color:${color};font-weight:700;">${total}</span>
+        </div>`;
+      }).join('');
     }
   } catch(e) { console.error('[CHART]', e); }
 }
 
-// Paleta glass para canvas (siempre sobre fondo oscuro)
-const GLASS = [
-  { top:'rgba(74,222,128,.95)',  mid:'rgba(34,197,94,.45)',  bot:'rgba(22,163,74,.05)',  shine:'rgba(187,247,208,.7)' },
-  { top:'rgba(96,165,250,.95)',  mid:'rgba(59,130,246,.45)', bot:'rgba(37,99,235,.05)',  shine:'rgba(191,219,254,.7)' },
-  { top:'rgba(251,191,36,.95)',  mid:'rgba(245,158,11,.45)', bot:'rgba(161,98,7,.05)',   shine:'rgba(254,240,138,.7)' },
-  { top:'rgba(244,114,182,.95)', mid:'rgba(236,72,153,.45)', bot:'rgba(157,23,77,.05)',  shine:'rgba(251,207,232,.7)' },
-  { top:'rgba(167,139,250,.95)', mid:'rgba(139,92,246,.45)', bot:'rgba(91,33,182,.05)',  shine:'rgba(221,214,254,.7)' },
-  { top:'rgba(34,211,238,.95)',  mid:'rgba(6,182,212,.45)',  bot:'rgba(14,116,144,.05)', shine:'rgba(165,243,252,.7)' },
+// Paleta: [light-color, dark-color] por tienda
+const STORE_PALETTE = [
+  { light:'#16a34a', dark:'#4ade80' },
+  { light:'#2563eb', dark:'#60a5fa' },
+  { light:'#d97706', dark:'#fbbf24' },
+  { light:'#db2777', dark:'#f472b6' },
+  { light:'#7c3aed', dark:'#a78bfa' },
+  { light:'#0891b2', dark:'#22d3ee' },
 ];
 
 function renderBarChart(canvas, data, buckets, stores, labelFn) {
+  const isDark   = document.body.classList.contains('dark');
+  const gridCol  = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+  const axisCol  = isDark ? 'rgba(255,255,255,.1)'  : 'rgba(0,0,0,.1)';
+  const labelCol = isDark ? '#6b7280' : '#9ca3af';
+  const numCol   = isDark ? '#f9fafb' : '#111827';
+
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.parentElement.clientWidth || 400;
   const H   = 230;
@@ -5679,11 +5688,11 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
 
   ctx.clearRect(0, 0, W, H);
 
-  // Grid lines horizontales — muy sutiles
+  // Grid lines sutiles
   for (let i = 1; i <= 3; i++) {
     const y = PT + cH - (i / 3) * cH;
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255,255,255,.05)';
+    ctx.strokeStyle = gridCol;
     ctx.lineWidth = 0.5;
     ctx.moveTo(PL, y); ctx.lineTo(PL + cW, y);
     ctx.stroke();
@@ -5691,14 +5700,14 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
 
   // Línea base
   ctx.beginPath();
-  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.strokeStyle = axisCol;
   ctx.lineWidth = 1;
   ctx.moveTo(PL, PT + cH); ctx.lineTo(PL + cW, PT + cH);
   ctx.stroke();
 
-  // Barras: padding mínimo para que sean anchas
+  // Barras anchas
   const groupW  = cW / buckets.length;
-  const padding = Math.max(1, groupW * 0.07);
+  const padding = Math.max(1, groupW * 0.08);
   const gap     = 1.5;
   const barW    = stores.length
     ? Math.max(5, (groupW - padding * 2 - gap * (stores.length - 1)) / stores.length)
@@ -5712,9 +5721,8 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
     const total        = stores.reduce((acc, s) => acc + ((data[s]||{})[bucket]||0), 0);
     const groupCenterX = gx + (stores.length * (barW + gap) - gap) / 2;
 
-    // Etiqueta X
     if (bi % skipX === 0) {
-      ctx.fillStyle = '#4b5563';
+      ctx.fillStyle = labelCol;
       ctx.font = '10px system-ui, sans-serif';
       ctx.fillText(labelFn(bucket), groupCenterX, H - 7);
     }
@@ -5726,35 +5734,35 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
       if (barH < 1) return;
       if (barH > maxBarH) maxBarH = barH;
 
-      const x  = gx + si * (barW + gap);
-      const y  = PT + cH - barH;
-      const r  = Math.min(5, barW / 2, barH);
-      const gc = GLASS[si % GLASS.length];
+      const x     = gx + si * (barW + gap);
+      const y     = PT + cH - barH;
+      const r     = Math.min(5, barW / 2, barH);
+      const color = (STORE_PALETTE[si % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
 
-      // Gradiente principal glass
+      // Gradiente: sólido arriba, desvanece abajo
       const grad = ctx.createLinearGradient(0, y, 0, PT + cH);
-      grad.addColorStop(0,   gc.top);
-      grad.addColorStop(0.5, gc.mid);
-      grad.addColorStop(1,   gc.bot);
+      grad.addColorStop(0,    color);
+      grad.addColorStop(0.65, color + (isDark ? 'aa' : 'cc'));
+      grad.addColorStop(1,    color + '22');
       ctx.fillStyle = grad;
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(x, y, barW, barH, [r, r, 0, 0]);
       else ctx.rect(x, y, barW, barH);
       ctx.fill();
 
-      // Reflejo izquierdo (inner shine)
-      const shineGrad = ctx.createLinearGradient(x, 0, x + barW * 0.5, 0);
-      shineGrad.addColorStop(0,   'rgba(255,255,255,.12)');
-      shineGrad.addColorStop(1,   'rgba(255,255,255,0)');
-      ctx.fillStyle = shineGrad;
+      // Reflejo lateral izquierdo (inner shine)
+      const shine = ctx.createLinearGradient(x, 0, x + barW * 0.55, 0);
+      shine.addColorStop(0, 'rgba(255,255,255,' + (isDark ? '.15' : '.25') + ')');
+      shine.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = shine;
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(x, y, barW, barH, [r, r, 0, 0]);
       else ctx.rect(x, y, barW, barH);
       ctx.fill();
 
-      // Línea brillante en el top
+      // Línea brillante en el top de la barra
       ctx.beginPath();
-      ctx.strokeStyle = gc.shine;
+      ctx.strokeStyle = isDark ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.8)';
       ctx.lineWidth   = 1.5;
       ctx.moveTo(x + r, y + 0.75);
       ctx.lineTo(x + barW - r, y + 0.75);
@@ -5763,7 +5771,7 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
 
     // Número total encima
     if (total > 0 && maxBarH > 0) {
-      ctx.fillStyle = '#e5e7eb';
+      ctx.fillStyle = numCol;
       ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.fillText(total, groupCenterX, PT + cH - maxBarH - 7);
     }
