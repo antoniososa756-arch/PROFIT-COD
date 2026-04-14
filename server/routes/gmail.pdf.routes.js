@@ -111,16 +111,11 @@ router.post("/sync-pdf", async (req, res) => {
           `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`
         );
         const msgData = await msgRes.json();
-        // Fecha del email (internalDate = epoch ms) — usar hora local para evitar desfase UTC
-        const toLocalDate = d => {
-          const y = d.getFullYear();
-          const m = String(d.getMonth() + 1).padStart(2, "0");
-          const day = String(d.getDate()).padStart(2, "0");
-          return `${y}-${m}-${day}`;
-        };
+        // Fecha del email en zona horaria española (el servidor corre en UTC)
+        const toMadridDate = d => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(d);
         const emailFecha = msgData.internalDate
-          ? toLocalDate(new Date(parseInt(msgData.internalDate)))
-          : toLocalDate(new Date());
+          ? toMadridDate(new Date(parseInt(msgData.internalDate)))
+          : toMadridDate(new Date());
 
         // 3. Encontrar adjuntos PDF (buscar también en partes anidadas)
         const todasPartes = [];
