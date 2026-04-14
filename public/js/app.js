@@ -884,11 +884,6 @@ function loadApp(section) {
 
       ${menuItem("plan", labels)}
 
-      <div class="toggle">
-        <span>${d.ui.night}</span>
-        <div class="switch" onclick="toggleTheme()"></div>
-      </div>
-
       <div class="spacer"></div>
 
       <div style="margin:0 8px 12px;border-top:1px solid #1f2937;padding-top:10px;">
@@ -978,10 +973,10 @@ function loadApp(section) {
 
                 <div class="dropdown" id="userDrop" style="right:0; width:260px;">
                   <div class="dropdown-title">${d.ui.accountTitle}</div>
-                  <div class="drop-item" onclick="openUserSection('profile')">${d.ui.profile}</div>
-                  <div class="drop-item" onclick="openUserSection('settings')">${d.ui.settings}</div>
-                  <div class="drop-item" onclick="toggleTheme()">${d.ui.theme}</div>
-                  <div class="drop-item" onclick="logout()">${d.ui.logout}</div>
+                  <div class="drop-item" onclick="openUserSection('profile')">👤 ${d.ui.profile}</div>
+                  <div class="drop-item" onclick="openUserSection('settings')">⚙️ ${d.ui.settings}</div>
+                  <div class="drop-item" onclick="toggleTheme()">${document.body.classList.contains('dark') ? '☀️ Modo día' : '🌙 Modo nocturno'}</div>
+                  <div class="drop-item" onclick="logout()">🚪 ${d.ui.logout}</div>
                 </div>
               </div>
 
