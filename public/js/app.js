@@ -3514,16 +3514,17 @@ function _renderSearchDrop(drop, results, loading) {
     return;
   }
 
+  const dark = document.body.classList.contains("dark");
   const statusColors = {
-    pendiente:      { bg: "rgba(234,179,8,.15)",    color: "#fbbf24", border: "rgba(234,179,8,.3)" },
-    en_preparacion: { bg: "rgba(59,130,246,.15)",   color: "#93c5fd", border: "rgba(59,130,246,.3)" },
-    enviado:        { bg: "rgba(59,130,246,.15)",   color: "#93c5fd", border: "rgba(59,130,246,.3)" },
-    en_transito:    { bg: "rgba(139,92,246,.15)",   color: "#c4b5fd", border: "rgba(139,92,246,.3)" },
-    franquicia:     { bg: "rgba(139,92,246,.15)",   color: "#c4b5fd", border: "rgba(139,92,246,.3)" },
-    entregado:      { bg: "rgba(34,197,94,.15)",    color: "#4ade80", border: "rgba(34,197,94,.3)" },
-    devuelto:       { bg: "rgba(239,68,68,.15)",    color: "#fca5a5", border: "rgba(239,68,68,.3)" },
-    destruido:      { bg: "rgba(107,114,128,.15)",  color: "#9ca3af", border: "rgba(107,114,128,.3)" },
-    cancelado:      { bg: "rgba(239,68,68,.15)",    color: "#fca5a5", border: "rgba(239,68,68,.3)" },
+    pendiente:      { bg: "rgba(234,179,8,.15)",    color: dark ? "#fbbf24" : "#92400e", border: dark ? "rgba(234,179,8,.3)"    : "rgba(234,179,8,.45)" },
+    en_preparacion: { bg: "rgba(59,130,246,.15)",   color: dark ? "#93c5fd" : "#1e40af", border: dark ? "rgba(59,130,246,.3)"   : "rgba(59,130,246,.45)" },
+    enviado:        { bg: "rgba(59,130,246,.15)",   color: dark ? "#93c5fd" : "#1e40af", border: dark ? "rgba(59,130,246,.3)"   : "rgba(59,130,246,.45)" },
+    en_transito:    { bg: "rgba(139,92,246,.15)",   color: dark ? "#c4b5fd" : "#5b21b6", border: dark ? "rgba(139,92,246,.3)"   : "rgba(139,92,246,.45)" },
+    franquicia:     { bg: "rgba(139,92,246,.15)",   color: dark ? "#c4b5fd" : "#5b21b6", border: dark ? "rgba(139,92,246,.3)"   : "rgba(139,92,246,.45)" },
+    entregado:      { bg: "rgba(34,197,94,.15)",    color: dark ? "#4ade80" : "#15803d", border: dark ? "rgba(34,197,94,.3)"    : "rgba(34,197,94,.4)" },
+    devuelto:       { bg: "rgba(239,68,68,.15)",    color: dark ? "#fca5a5" : "#991b1b", border: dark ? "rgba(239,68,68,.3)"    : "rgba(239,68,68,.45)" },
+    destruido:      { bg: "rgba(107,114,128,.15)",  color: dark ? "#9ca3af" : "#374151", border: dark ? "rgba(107,114,128,.3)"  : "rgba(107,114,128,.45)" },
+    cancelado:      { bg: "rgba(239,68,68,.15)",    color: dark ? "#fca5a5" : "#991b1b", border: dark ? "rgba(239,68,68,.3)"    : "rgba(239,68,68,.45)" },
   };
   const statusNames = {
     pendiente: "Pendiente", en_preparacion: "En preparación", enviado: "Enviado",
@@ -6455,11 +6456,11 @@ async function loadAdsTable() {
         cell.dataset.col = colIdx;
         cell.dataset.row = rowIdx;
         cell.style.cursor = "pointer";
-        cell.style.userSelect = "none";
         const input = cell.querySelector("input");
 
         cell.addEventListener("mousedown", function(e) {
           if (input && !e.ctrlKey && !e.metaKey && !e.shiftKey) return; // dejar input editable
+          if (!e.ctrlKey && !e.metaKey && !e.shiftKey) return; // permitir selección nativa de texto
           e.preventDefault();
           const col = parseInt(this.dataset.col);
           const row = parseInt(this.dataset.row);
@@ -8998,7 +8999,7 @@ async function fetchReembolsosFiltered() {
             ${estadoPago === "cobrado"
               ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(34,197,94,.12);border:1px solid #86efac;border-radius:999px;font-size:12px;font-weight:600;color:#22c55e;">✅ Pagado</span>
                  ${o.fecha_pago ? `<span style="font-size:11px;color:#6b7280;">${new Date(o.fecha_pago).toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>` : ""}`
-              : `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(234,179,8,.15);border:1px solid rgba(234,179,8,.4);border-radius:999px;font-size:12px;font-weight:700;color:#fbbf24;">⏳ Pendiente</span>
+              : `<span class="status yellow" style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">⏳ Pendiente</span>
                  <button onclick="confirmarPagadoReembolso(${o.id})" style="padding:4px 12px;font-size:12px;font-weight:600;background:#22c55e;color:#fff;border:none;border-radius:999px;cursor:pointer;">Marcar pagado</button>`
             }
           </div>
