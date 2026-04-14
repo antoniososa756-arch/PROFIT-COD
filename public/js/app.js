@@ -1470,7 +1470,7 @@ const now = new Date();
             </div>
           </div>
           <canvas id="orders-bar-chart" style="width:100%;display:block;"></canvas>
-          <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);"></div>
+          <div id="chart-legend" style="display:flex;flex-direction:column;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);"></div>
         </div>
 
         <!-- Mitad derecha: reservada -->
@@ -5610,13 +5610,22 @@ async function loadOrdersChart(period) {
   if (labelEl) labelEl.textContent = periodText;
 
   try {
-    const rows = await fetch(`${API_BASE}/api/orders?from=${from}&to=${to}&light=1&limit=5000`, {headers:h}).then(r=>r.json());
+    const [rows, storesRes] = await Promise.all([
+      fetch(`${API_BASE}/api/orders?from=${from}&to=${to}&light=1&limit=5000`, {headers:h}).then(r=>r.json()),
+      fetch(`${API_BASE}/api/shopify/stores`, {headers:h}).then(r=>r.json()).catch(()=>[]),
+    ]);
     const orders = (Array.isArray(rows) ? rows : (rows.orders||[])).filter(o => o.fulfillment_status !== 'cancelado' && o.created_at);
 
+    // Mapa dominio → nombre asignado por el usuario
+    const storeNameMap = {};
+    (Array.isArray(storesRes) ? storesRes : (storesRes.stores||[])).forEach(s => {
+      if (s.domain) storeNameMap[s.domain] = s.shop_name || s.domain;
+    });
+
     // Tiendas únicas
-    const storeNames = {};
-    orders.forEach(o => { if (o.shop_domain) storeNames[o.shop_domain] = true; });
-    const stores = Object.keys(storeNames).sort();
+    const storeDomains = {};
+    orders.forEach(o => { if (o.shop_domain) storeDomains[o.shop_domain] = true; });
+    const stores = Object.keys(storeDomains).sort();
 
     // Acumular datos: data[store][bucket] = count
     const data = {};
@@ -5636,28 +5645,30 @@ async function loadOrdersChart(period) {
 
     if (legendEl) {
       const isDark = document.body.classList.contains('dark');
-      const shortName = s => s.replace(/\.myshopify\.com$/i,'').replace(/\.[^.]+\.[^.]+$/,'');
-      const totalPorTienda = stores.map(s => ({ name: s, total: buckets.reduce((a,b) => a + ((data[s]||{})[b]||0), 0) }));
+      const displayName = domain => storeNameMap[domain] || domain.replace(/\.myshopify\.com$/i,'').replace(/\.[^.]+\.[^.]+$/,'').toUpperCase();
+      const totalPorTienda = stores.map(s => ({ domain: s, name: displayName(s), total: buckets.reduce((a,b) => a + ((data[s]||{})[b]||0), 0) }));
       legendEl.innerHTML = totalPorTienda.map(({name,total},i) => {
         const color = (STORE_PALETTE[i % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
-        return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);">
-          <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-          <span style="color:var(--text);">${escapeHtml(shortName(name))}</span>
-          <span style="color:${color};font-weight:700;">${total}</span>
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--input);border-radius:8px;">
+          <span style="width:10px;height:10px;border-radius:3px;background:${color};flex-shrink:0;"></span>
+          <span style="font-size:13px;font-weight:600;color:var(--text);letter-spacing:.3px;">${escapeHtml(name)}</span>
+          <span style="font-size:13px;font-weight:700;color:${color};margin-left:auto;">${total}</span>
         </div>`;
       }).join('');
     }
   } catch(e) { console.error('[CHART]', e); }
 }
 
-// Paleta: [light-color, dark-color] por tienda
+// Paleta: [light-color, dark-color] por tienda — coincide con colores de las tarjetas de métricas
 const STORE_PALETTE = [
-  { light:'#16a34a', dark:'#4ade80' },
-  { light:'#2563eb', dark:'#60a5fa' },
-  { light:'#d97706', dark:'#fbbf24' },
-  { light:'#db2777', dark:'#f472b6' },
-  { light:'#7c3aed', dark:'#a78bfa' },
-  { light:'#0891b2', dark:'#22d3ee' },
+  { light:'#3b82f6', dark:'#93c5fd' },  // azul
+  { light:'#22c55e', dark:'#4ade80' },  // verde
+  { light:'#f97316', dark:'#fdba74' },  // naranja
+  { light:'#ef4444', dark:'#fca5a5' },  // rojo
+  { light:'#8b5cf6', dark:'#c4b5fd' },  // morado
+  { light:'#06b6d4', dark:'#67e8f9' },  // cyan
+  { light:'#ec4899', dark:'#f9a8d4' },  // rosa
+  { light:'#eab308', dark:'#fde047' },  // amarillo
 ];
 
 function renderBarChart(canvas, data, buckets, stores, labelFn) {
