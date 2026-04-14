@@ -259,9 +259,10 @@ async function syncAllGmailPDF() {
               `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`
             );
             const msgData = await msgRes.json();
+            const toMadridDate = d => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(d);
             const emailFecha = msgData.internalDate
-              ? new Date(parseInt(msgData.internalDate)).toISOString().slice(0, 10)
-              : new Date().toISOString().slice(0, 10);
+              ? toMadridDate(new Date(parseInt(msgData.internalDate)))
+              : toMadridDate(new Date());
             const partes = msgData.payload?.parts || [];
             const pdfs = partes.filter(p =>
               p.mimeType === "application/pdf" || p.filename?.toLowerCase().endsWith(".pdf")
