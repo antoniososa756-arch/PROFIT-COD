@@ -886,21 +886,27 @@ function loadApp(section) {
 
       <div class="spacer"></div>
 
-      <div style="margin:0 8px 12px;border-top:1px solid #1f2937;padding-top:10px;">
-        <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.6px;padding:0 4px 6px;">Pendiente MRW</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;">
-          <span style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;">
-            <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0;"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h6"/></svg>
-            Pedidos
-          </span>
-          <span style="font-size:13px;font-weight:700;color:#e5e7eb;" id="sidebar-ree-count">—</span>
+      <div style="margin:0 8px 14px;border-top:1px solid var(--border);padding-top:12px;">
+        <div style="display:flex;align-items:center;gap:6px;padding:0 4px 10px;">
+          <span style="display:inline-block;width:3px;height:14px;background:#22c55e;border-radius:2px;flex-shrink:0;"></span>
+          <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;">Pendiente MRW</span>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;">
-          <span style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:6px;">
-            <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0;"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/></svg>
-            Importe
-          </span>
-          <span style="font-size:13px;font-weight:700;color:#e5e7eb;" id="sidebar-ree-total">—</span>
+        <div style="background:var(--input);border-radius:10px;padding:4px 2px;overflow:hidden;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;">
+            <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px;">
+              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0;stroke-linecap:round;stroke-linejoin:round;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1.5"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>
+              Pedidos
+            </span>
+            <span style="font-size:13px;font-weight:700;color:var(--text);" id="sidebar-ree-count">—</span>
+          </div>
+          <div style="height:1px;background:var(--border);margin:0 10px;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;">
+            <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px;">
+              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0;stroke-linecap:round;stroke-linejoin:round;"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M16 14h2"/></svg>
+              Importe
+            </span>
+            <span style="font-size:13px;font-weight:700;color:#22c55e;" id="sidebar-ree-total">—</span>
+          </div>
         </div>
       </div>
       <div style="padding:8px 4px;border-top:1px solid #f3f4f6;text-align:center;font-size:10px;color:#d1d5db;line-height:1.4;">
