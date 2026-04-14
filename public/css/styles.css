@@ -458,18 +458,22 @@
       width:240px;
       background:var(--card);
       border:1px solid var(--border);
+      border-top:3px solid #22c55e;
       border-radius:14px;
-      box-shadow:var(--shadow);
-      padding:10px;
+      box-shadow:0 8px 32px rgba(0,0,0,.13), 0 2px 8px rgba(0,0,0,.07);
+      padding:12px 10px 10px;
       display:none;
     }
 
     .dropdown.open{ display:block; }
 
     .dropdown-title{
-      font-size:11px;
+      font-size:10px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:0.7px;
       color:var(--muted);
-      margin:4px 8px 8px;
+      margin:2px 8px 10px;
     }
 
     .drop-item{
@@ -498,6 +502,10 @@
 
     .drop-item:hover{
       background:rgba(34,197,94,.10);
+      color:#16a34a;
+    }
+    .drop-item:hover svg{
+      stroke:#16a34a;
     }
 
     .drop-item small{
