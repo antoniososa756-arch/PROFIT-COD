@@ -5662,14 +5662,14 @@ const STORE_PALETTE = [
 
 function renderBarChart(canvas, data, buckets, stores, labelFn) {
   const isDark   = document.body.classList.contains('dark');
-  const gridCol  = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
-  const axisCol  = isDark ? 'rgba(255,255,255,.1)'  : 'rgba(0,0,0,.1)';
+  const gridCol  = isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
+  const axisCol  = isDark ? 'rgba(255,255,255,.1)'  : 'rgba(0,0,0,.08)';
   const labelCol = isDark ? '#6b7280' : '#9ca3af';
   const numCol   = isDark ? '#f9fafb' : '#111827';
 
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.parentElement.clientWidth || 400;
-  const H   = 230;
+  const H   = 240;
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width  = W + 'px';
@@ -5678,17 +5678,21 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const PL = 10, PR = 10, PT = 28, PB = 28;
+  const PL = 10, PR = 10, PT = 30, PB = 28;
   const cW = W - PL - PR;
   const cH = H - PT - PB;
 
-  let maxVal = 0;
-  stores.forEach(s => buckets.forEach(b => { if ((data[s]||{})[b] > maxVal) maxVal = (data[s]||{})[b]; }));
-  const nicMax = Math.max(1, Math.ceil((maxVal || 1) * 1.35));
+  // Para stacked: el max es la suma de todas las tiendas por bucket
+  let maxTotal = 0;
+  buckets.forEach(b => {
+    const t = stores.reduce((a, s) => a + ((data[s]||{})[b]||0), 0);
+    if (t > maxTotal) maxTotal = t;
+  });
+  const nicMax = Math.max(1, Math.ceil((maxTotal || 1) * 1.3));
 
   ctx.clearRect(0, 0, W, H);
 
-  // Grid lines sutiles
+  // Grid lines
   for (let i = 1; i <= 3; i++) {
     const y = PT + cH - (i / 3) * cH;
     ctx.beginPath();
@@ -5698,83 +5702,100 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
     ctx.stroke();
   }
 
-  // Línea base
+  // Eje X
   ctx.beginPath();
   ctx.strokeStyle = axisCol;
   ctx.lineWidth = 1;
   ctx.moveTo(PL, PT + cH); ctx.lineTo(PL + cW, PT + cH);
   ctx.stroke();
 
-  // Barras anchas
+  // Barras apiladas — 1 barra por bucket, mucho más anchas
   const groupW  = cW / buckets.length;
-  const padding = Math.max(1, groupW * 0.08);
-  const gap     = 1.5;
-  const barW    = stores.length
-    ? Math.max(5, (groupW - padding * 2 - gap * (stores.length - 1)) / stores.length)
-    : groupW - padding * 2;
-  const skipX = Math.ceil(buckets.length / (W > 500 ? 18 : 9));
+  const padding = Math.max(1.5, groupW * 0.15);
+  const bw      = Math.max(6, groupW - padding * 2);
+  const skipX   = Math.ceil(buckets.length / (W > 500 ? 18 : 9));
 
   ctx.textAlign = 'center';
 
   buckets.forEach((bucket, bi) => {
-    const gx           = PL + bi * groupW + padding;
-    const total        = stores.reduce((acc, s) => acc + ((data[s]||{})[bucket]||0), 0);
-    const groupCenterX = gx + (stores.length * (barW + gap) - gap) / 2;
+    const gx    = PL + bi * groupW + padding;
+    const cx    = gx + bw / 2;
+    const total = stores.reduce((acc, s) => acc + ((data[s]||{})[bucket]||0), 0);
 
+    // Etiqueta X
     if (bi % skipX === 0) {
       ctx.fillStyle = labelCol;
       ctx.font = '10px system-ui, sans-serif';
-      ctx.fillText(labelFn(bucket), groupCenterX, H - 7);
+      ctx.fillText(labelFn(bucket), cx, H - 7);
     }
 
-    let maxBarH = 0;
+    if (total === 0) return;
+
+    const totalBarH = (total / nicMax) * cH;
+
+    // Índice del segmento más alto (para redondear solo la cima)
+    let topIdx = -1;
+    for (let si = stores.length - 1; si >= 0; si--) {
+      if (((data[stores[si]]||{})[bucket]||0) > 0) { topIdx = si; break; }
+    }
+
+    // Dibujar segmentos apilados de abajo hacia arriba
+    let yOffset = PT + cH;
     stores.forEach((store, si) => {
       const val  = (data[store]||{})[bucket] || 0;
-      const barH = (val / nicMax) * cH;
-      if (barH < 1) return;
-      if (barH > maxBarH) maxBarH = barH;
-
-      const x     = gx + si * (barW + gap);
-      const y     = PT + cH - barH;
-      const r     = Math.min(5, barW / 2, barH);
+      if (val === 0) return;
+      const segH = (val / nicMax) * cH;
+      const y    = yOffset - segH;
+      const isTop = si === topIdx;
+      const r    = isTop ? Math.min(5, bw / 2, segH) : 0;
       const color = (STORE_PALETTE[si % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
 
-      // Gradiente: sólido arriba, desvanece abajo
-      const grad = ctx.createLinearGradient(0, y, 0, PT + cH);
-      grad.addColorStop(0,    color);
-      grad.addColorStop(0.65, color + (isDark ? 'aa' : 'cc'));
-      grad.addColorStop(1,    color + '22');
+      // Gradiente del segmento
+      const grad = ctx.createLinearGradient(0, y, 0, y + segH);
+      grad.addColorStop(0, color + (isDark ? 'ee' : 'dd'));
+      grad.addColorStop(1, color + (isDark ? 'bb' : '99'));
       ctx.fillStyle = grad;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x, y, barW, barH, [r, r, 0, 0]);
-      else ctx.rect(x, y, barW, barH);
+      if (isTop && ctx.roundRect) ctx.roundRect(gx, y, bw, segH, [r, r, 0, 0]);
+      else ctx.rect(gx, y, bw, segH);
       ctx.fill();
 
-      // Reflejo lateral izquierdo (inner shine)
-      const shine = ctx.createLinearGradient(x, 0, x + barW * 0.55, 0);
-      shine.addColorStop(0, 'rgba(255,255,255,' + (isDark ? '.15' : '.25') + ')');
-      shine.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = shine;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x, y, barW, barH, [r, r, 0, 0]);
-      else ctx.rect(x, y, barW, barH);
-      ctx.fill();
+      // Separador sutil entre segmentos
+      if (!isTop && yOffset < PT + cH) {
+        ctx.beginPath();
+        ctx.strokeStyle = isDark ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.6)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(gx, y + segH); ctx.lineTo(gx + bw, y + segH);
+        ctx.stroke();
+      }
 
-      // Línea brillante en el top de la barra
-      ctx.beginPath();
-      ctx.strokeStyle = isDark ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.8)';
-      ctx.lineWidth   = 1.5;
-      ctx.moveTo(x + r, y + 0.75);
-      ctx.lineTo(x + barW - r, y + 0.75);
-      ctx.stroke();
+      yOffset -= segH;
     });
 
+    // Reflejo izquierdo sobre toda la barra
+    const topY = PT + cH - totalBarH;
+    const r    = Math.min(5, bw / 2);
+    const shine = ctx.createLinearGradient(gx, 0, gx + bw * 0.5, 0);
+    shine.addColorStop(0, 'rgba(255,255,255,' + (isDark ? '.12' : '.2') + ')');
+    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = shine;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(gx, topY, bw, totalBarH, [r, r, 0, 0]);
+    else ctx.rect(gx, topY, bw, totalBarH);
+    ctx.fill();
+
+    // Línea brillante en el top
+    ctx.beginPath();
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.9)';
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(gx + r, topY + 0.75);
+    ctx.lineTo(gx + bw - r, topY + 0.75);
+    ctx.stroke();
+
     // Número total encima
-    if (total > 0 && maxBarH > 0) {
-      ctx.fillStyle = numCol;
-      ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.fillText(total, groupCenterX, PT + cH - maxBarH - 7);
-    }
+    ctx.fillStyle = numCol;
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.fillText(total, cx, topY - 6);
   });
 }
 
