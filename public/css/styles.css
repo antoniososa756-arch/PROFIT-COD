@@ -1377,6 +1377,29 @@ body.dark .status.orange { color: #fdba74; border-color: rgba(249,115,22,.35); }
 body.dark .status.blue   { color: #93c5fd; border-color: rgba(59,130,246,.35); }
 body.dark .status.purple { color: #c4b5fd; border-color: rgba(139,92,246,.35); }
 
+/* === GRÁFICA PEDIDOS === */
+.chart-period-btn {
+  padding: 5px 13px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--input);
+  color: var(--muted);
+  font-family: inherit;
+  transition: all .15s;
+}
+.chart-period-btn.active {
+  background: #22c55e;
+  color: #fff;
+  border-color: #22c55e;
+}
+.chart-period-btn:hover:not(.active) {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
 /* === BOTONES PEDIDOS === */
 .btn-filter {
   display: inline-flex; align-items: center; gap: 6px;

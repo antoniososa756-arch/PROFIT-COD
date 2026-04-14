@@ -1451,6 +1451,33 @@ const now = new Date();
         <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
       </div>
     </div>
+
+    <!-- ── GRÁFICA PEDIDOS POR TIENDA ── -->
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+      <div style="display:flex;gap:20px;align-items:flex-start;">
+
+        <!-- Mitad izquierda: gráfica -->
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--text);">Pedidos por tienda</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="chart-period-label">—</div>
+            </div>
+            <div style="display:flex;gap:5px;">
+              <button id="chart-btn-day"   onclick="setChartPeriod('day')"   class="chart-period-btn active">Día</button>
+              <button id="chart-btn-month" onclick="setChartPeriod('month')" class="chart-period-btn">Mes</button>
+              <button id="chart-btn-year"  onclick="setChartPeriod('year')"  class="chart-period-btn">Año</button>
+            </div>
+          </div>
+          <canvas id="orders-bar-chart" style="width:100%;display:block;"></canvas>
+          <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;"></div>
+        </div>
+
+        <!-- Mitad derecha: reservada -->
+        <div style="flex:1;min-width:0;" id="metricas-right-panel"></div>
+
+      </div>
+    </div>
     `;
   }
 // ===========================
@@ -1670,6 +1697,7 @@ function toggleAllMetricasFiltro(checked) {
 window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
 
   loadMetricas();
+  loadOrdersChart(window.__chartPeriod || 'day');
 
 // Cargar tiendas en el panel de filtro de métricas
   fetch(`${API_BASE}/api/shopify/stores`, {
@@ -5530,6 +5558,174 @@ function toggleAllMetricasBalance(checked) {
 }
 window.toggleAllMetricasBalance = toggleAllMetricasBalance;
 window.loadMetricasBalance = loadMetricasBalance;
+
+// =========================
+// GRÁFICA PEDIDOS POR TIENDA
+// =========================
+const CHART_COLORS = ['#22c55e','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#ef4444','#84cc16','#f97316','#14b8a6'];
+
+function toMadridPart(date, part) {
+  return parseInt(new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', [part]: 'numeric' }).format(date));
+}
+
+async function loadOrdersChart(period) {
+  const canvas    = document.getElementById('orders-bar-chart');
+  const legendEl  = document.getElementById('chart-legend');
+  const labelEl   = document.getElementById('chart-period-label');
+  if (!canvas) return;
+
+  const h   = { Authorization: 'Bearer ' + getActiveToken() };
+  const now = new Date();
+  const MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const MESES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  let from, to, buckets, bucketFn, bucketLabel;
+
+  if (period === 'day') {
+    const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0'), d = String(now.getDate()).padStart(2,'0');
+    from = to = `${y}-${m}-${d}`;
+    buckets    = Array.from({length:24}, (_,i) => i);
+    bucketFn   = o => toMadridPart(new Date(o.created_at), 'hour');
+    bucketLabel = h => `${String(h).padStart(2,'0')}h`;
+    if (labelEl) labelEl.textContent = `Hoy — ${d}/${m}/${y}`;
+  } else if (period === 'month') {
+    const y = now.getFullYear(), mo = now.getMonth();
+    const dim = new Date(y, mo+1, 0).getDate();
+    from = `${y}-${String(mo+1).padStart(2,'0')}-01`;
+    to   = `${y}-${String(mo+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`;
+    buckets    = Array.from({length:dim}, (_,i) => i+1);
+    bucketFn   = o => toMadridPart(new Date(o.created_at), 'day');
+    bucketLabel = d => d;
+    if (labelEl) labelEl.textContent = `${MESES_FULL[mo]} ${y}`;
+  } else {
+    const y = now.getFullYear();
+    from = `${y}-01-01`;
+    to   = `${y}-12-31`;
+    buckets    = Array.from({length:12}, (_,i) => i);
+    bucketFn   = o => toMadridPart(new Date(o.created_at), 'month') - 1;
+    bucketLabel = i => MES[i];
+    if (labelEl) labelEl.textContent = `Año ${y}`;
+  }
+
+  try {
+    const rows = await fetch(`${API_BASE}/api/orders?from=${from}&to=${to}&light=1&limit=5000`, {headers:h}).then(r=>r.json());
+    const orders = (Array.isArray(rows) ? rows : (rows.orders||[])).filter(o => o.fulfillment_status !== 'cancelado' && o.created_at);
+
+    // Tiendas únicas
+    const storeNames = {};
+    orders.forEach(o => { if (o.shop_domain) storeNames[o.shop_domain] = true; });
+    const stores = Object.keys(storeNames).sort();
+
+    // Acumular datos: data[store][bucket] = count
+    const data = {};
+    stores.forEach(s => { data[s] = {}; buckets.forEach(b => data[s][b] = 0); });
+    orders.forEach(o => {
+      if (!o.shop_domain || !data[o.shop_domain]) return;
+      const b = bucketFn(o);
+      if (data[o.shop_domain][b] !== undefined) data[o.shop_domain][b]++;
+    });
+
+    renderBarChart(canvas, data, buckets, stores, bucketLabel);
+
+    if (legendEl) {
+      legendEl.innerHTML = stores.map((s,i) => `
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text);">
+          <span style="width:10px;height:10px;border-radius:2px;background:${CHART_COLORS[i%CHART_COLORS.length]};flex-shrink:0;"></span>
+          ${escapeHtml(s)}
+        </div>`).join('');
+    }
+  } catch(e) { console.error('[CHART]', e); }
+}
+
+function renderBarChart(canvas, data, buckets, stores, labelFn) {
+  const isDark   = document.body.classList.contains('dark');
+  const gridCol  = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.07)';
+  const textCol  = isDark ? '#9ca3af' : '#6b7280';
+  const axisCol  = isDark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)';
+
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.parentElement.clientWidth || 400;
+  const H   = 200;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PL = 38, PR = 8, PT = 10, PB = 28;
+  const cW = W - PL - PR;
+  const cH = H - PT - PB;
+
+  // Max
+  let maxVal = 0;
+  stores.forEach(s => buckets.forEach(b => { if ((data[s]||{})[b] > maxVal) maxVal = (data[s]||{})[b]; }));
+  const nicMax = Math.max(5, Math.ceil((maxVal||1) / 5) * 5);
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = `10px system-ui, sans-serif`;
+
+  // Grid & Y labels
+  const LINES = 4;
+  for (let i = 0; i <= LINES; i++) {
+    const val = Math.round((nicMax / LINES) * i);
+    const y   = PT + cH - (val / nicMax) * cH;
+    ctx.fillStyle = textCol;
+    ctx.textAlign = 'right';
+    ctx.fillText(val, PL - 4, y + 3);
+    ctx.beginPath();
+    ctx.strokeStyle = i === 0 ? axisCol : gridCol;
+    ctx.lineWidth   = i === 0 ? 1 : 0.5;
+    ctx.moveTo(PL, y); ctx.lineTo(PL + cW, y);
+    ctx.stroke();
+  }
+
+  // Bars
+  const groupW  = cW / buckets.length;
+  const padding = Math.max(1, groupW * 0.18);
+  const barW    = stores.length ? Math.max(2, (groupW - padding * 2) / stores.length) : groupW - padding * 2;
+  const skipX   = Math.ceil(buckets.length / (W > 500 ? 18 : 10));
+
+  ctx.textAlign = 'center';
+  buckets.forEach((bucket, bi) => {
+    const gx = PL + bi * groupW + padding;
+
+    // X label
+    if (bi % skipX === 0) {
+      ctx.fillStyle = textCol;
+      ctx.fillText(labelFn(bucket), gx + (stores.length * barW) / 2, H - 6);
+    }
+
+    // Barras
+    stores.forEach((store, si) => {
+      const val  = (data[store]||{})[bucket] || 0;
+      const barH = (val / nicMax) * cH;
+      if (barH < 1) return;
+      const x = gx + si * barW;
+      const y = PT + cH - barH;
+      ctx.fillStyle = CHART_COLORS[si % CHART_COLORS.length];
+      const r = Math.min(3, barW / 2, barH / 2);
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x, y, Math.max(1, barW - 1), barH, [r, r, 0, 0]);
+      } else {
+        ctx.rect(x, y, Math.max(1, barW - 1), barH);
+      }
+      ctx.fill();
+    });
+  });
+}
+
+window.setChartPeriod = function(period) {
+  window.__chartPeriod = period;
+  ['day','month','year'].forEach(p => {
+    const btn = document.getElementById(`chart-btn-${p}`);
+    if (btn) btn.classList.toggle('active', p === period);
+  });
+  loadOrdersChart(period);
+};
+window.loadOrdersChart = loadOrdersChart;
 
 // =========================
 // RENTABILIDAD BALANCE
