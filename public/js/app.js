@@ -892,20 +892,20 @@ function loadApp(section) {
           <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;">Pendiente MRW</span>
         </div>
         <div style="background:var(--input);border-radius:10px;padding:4px 2px;overflow:hidden;">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;">
-            <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;gap:8px;">
+            <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-shrink:0;">
               <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0;stroke-linecap:round;stroke-linejoin:round;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1.5"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>
               Pedidos
             </span>
-            <span style="font-size:13px;font-weight:700;color:var(--text);" id="sidebar-ree-count">—</span>
+            <span style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;flex-shrink:0;" id="sidebar-ree-count">—</span>
           </div>
           <div style="height:1px;background:var(--border);margin:0 10px;"></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;">
-            <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;gap:8px;">
+            <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-shrink:0;">
               <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0;stroke-linecap:round;stroke-linejoin:round;"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M16 14h2"/></svg>
               Importe
             </span>
-            <span style="font-size:13px;font-weight:700;color:#22c55e;" id="sidebar-ree-total">—</span>
+            <span style="font-size:13px;font-weight:700;color:#22c55e;white-space:nowrap;flex-shrink:0;" id="sidebar-ree-total">—</span>
           </div>
         </div>
       </div>
