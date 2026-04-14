@@ -5647,14 +5647,20 @@ async function loadOrdersChart(period) {
   } catch(e) { console.error('[CHART]', e); }
 }
 
-function renderBarChart(canvas, data, buckets, stores, labelFn) {
-  const gridCol = 'rgba(255,255,255,.06)';
-  const textCol = '#4b5563';
-  const numCol  = '#e5e7eb';
+// Paleta glass para canvas (siempre sobre fondo oscuro)
+const GLASS = [
+  { top:'rgba(74,222,128,.95)',  mid:'rgba(34,197,94,.45)',  bot:'rgba(22,163,74,.05)',  shine:'rgba(187,247,208,.7)' },
+  { top:'rgba(96,165,250,.95)',  mid:'rgba(59,130,246,.45)', bot:'rgba(37,99,235,.05)',  shine:'rgba(191,219,254,.7)' },
+  { top:'rgba(251,191,36,.95)',  mid:'rgba(245,158,11,.45)', bot:'rgba(161,98,7,.05)',   shine:'rgba(254,240,138,.7)' },
+  { top:'rgba(244,114,182,.95)', mid:'rgba(236,72,153,.45)', bot:'rgba(157,23,77,.05)',  shine:'rgba(251,207,232,.7)' },
+  { top:'rgba(167,139,250,.95)', mid:'rgba(139,92,246,.45)', bot:'rgba(91,33,182,.05)',  shine:'rgba(221,214,254,.7)' },
+  { top:'rgba(34,211,238,.95)',  mid:'rgba(6,182,212,.45)',  bot:'rgba(14,116,144,.05)', shine:'rgba(165,243,252,.7)' },
+];
 
+function renderBarChart(canvas, data, buckets, stores, labelFn) {
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.parentElement.clientWidth || 400;
-  const H   = 240;
+  const H   = 230;
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width  = W + 'px';
@@ -5663,22 +5669,21 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const PL = 10, PR = 10, PT = 30, PB = 30;
+  const PL = 10, PR = 10, PT = 28, PB = 28;
   const cW = W - PL - PR;
   const cH = H - PT - PB;
 
-  // Max + margen superior para números
   let maxVal = 0;
   stores.forEach(s => buckets.forEach(b => { if ((data[s]||{})[b] > maxVal) maxVal = (data[s]||{})[b]; }));
-  const nicMax = Math.max(1, Math.ceil((maxVal || 1) * 1.3));
+  const nicMax = Math.max(1, Math.ceil((maxVal || 1) * 1.35));
 
   ctx.clearRect(0, 0, W, H);
 
-  // Grid lines horizontales (3, muy sutiles)
+  // Grid lines horizontales — muy sutiles
   for (let i = 1; i <= 3; i++) {
     const y = PT + cH - (i / 3) * cH;
     ctx.beginPath();
-    ctx.strokeStyle = gridCol;
+    ctx.strokeStyle = 'rgba(255,255,255,.05)';
     ctx.lineWidth = 0.5;
     ctx.moveTo(PL, y); ctx.lineTo(PL + cW, y);
     ctx.stroke();
@@ -5686,35 +5691,34 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
 
   // Línea base
   ctx.beginPath();
-  ctx.strokeStyle = 'rgba(255,255,255,.1)';
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
   ctx.lineWidth = 1;
   ctx.moveTo(PL, PT + cH); ctx.lineTo(PL + cW, PT + cH);
   ctx.stroke();
 
-  // Dimensiones de barras
+  // Barras: padding mínimo para que sean anchas
   const groupW  = cW / buckets.length;
-  const padding = Math.max(2, groupW * 0.2);
-  const gap     = 2;
+  const padding = Math.max(1, groupW * 0.07);
+  const gap     = 1.5;
   const barW    = stores.length
-    ? Math.max(4, (groupW - padding * 2 - gap * (stores.length - 1)) / stores.length)
+    ? Math.max(5, (groupW - padding * 2 - gap * (stores.length - 1)) / stores.length)
     : groupW - padding * 2;
-  const skipX = Math.ceil(buckets.length / (W > 500 ? 18 : 10));
+  const skipX = Math.ceil(buckets.length / (W > 500 ? 18 : 9));
 
   ctx.textAlign = 'center';
 
   buckets.forEach((bucket, bi) => {
-    const gx    = PL + bi * groupW + padding;
-    const total = stores.reduce((acc, s) => acc + ((data[s]||{})[bucket]||0), 0);
+    const gx           = PL + bi * groupW + padding;
+    const total        = stores.reduce((acc, s) => acc + ((data[s]||{})[bucket]||0), 0);
     const groupCenterX = gx + (stores.length * (barW + gap) - gap) / 2;
 
-    // Etiqueta eje X
+    // Etiqueta X
     if (bi % skipX === 0) {
-      ctx.fillStyle = textCol;
+      ctx.fillStyle = '#4b5563';
       ctx.font = '10px system-ui, sans-serif';
-      ctx.fillText(labelFn(bucket), groupCenterX, H - 8);
+      ctx.fillText(labelFn(bucket), groupCenterX, H - 7);
     }
 
-    // Dibujar barras
     let maxBarH = 0;
     stores.forEach((store, si) => {
       const val  = (data[store]||{})[bucket] || 0;
@@ -5722,25 +5726,44 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
       if (barH < 1) return;
       if (barH > maxBarH) maxBarH = barH;
 
-      const x = gx + si * (barW + gap);
-      const y = PT + cH - barH;
-      const r = Math.min(6, barW / 2, barH);
+      const x  = gx + si * (barW + gap);
+      const y  = PT + cH - barH;
+      const r  = Math.min(5, barW / 2, barH);
+      const gc = GLASS[si % GLASS.length];
 
-      const color = CHART_COLORS[si % CHART_COLORS.length];
-      const grad  = ctx.createLinearGradient(0, y, 0, PT + cH);
-      grad.addColorStop(0, color);
-      grad.addColorStop(1, color + '55');
+      // Gradiente principal glass
+      const grad = ctx.createLinearGradient(0, y, 0, PT + cH);
+      grad.addColorStop(0,   gc.top);
+      grad.addColorStop(0.5, gc.mid);
+      grad.addColorStop(1,   gc.bot);
       ctx.fillStyle = grad;
-
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(x, y, barW, barH, [r, r, 0, 0]);
       else ctx.rect(x, y, barW, barH);
       ctx.fill();
+
+      // Reflejo izquierdo (inner shine)
+      const shineGrad = ctx.createLinearGradient(x, 0, x + barW * 0.5, 0);
+      shineGrad.addColorStop(0,   'rgba(255,255,255,.12)');
+      shineGrad.addColorStop(1,   'rgba(255,255,255,0)');
+      ctx.fillStyle = shineGrad;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, barW, barH, [r, r, 0, 0]);
+      else ctx.rect(x, y, barW, barH);
+      ctx.fill();
+
+      // Línea brillante en el top
+      ctx.beginPath();
+      ctx.strokeStyle = gc.shine;
+      ctx.lineWidth   = 1.5;
+      ctx.moveTo(x + r, y + 0.75);
+      ctx.lineTo(x + barW - r, y + 0.75);
+      ctx.stroke();
     });
 
-    // Número total encima del grupo más alto
+    // Número total encima
     if (total > 0 && maxBarH > 0) {
-      ctx.fillStyle = numCol;
+      ctx.fillStyle = '#e5e7eb';
       ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.fillText(total, groupCenterX, PT + cH - maxBarH - 7);
     }
