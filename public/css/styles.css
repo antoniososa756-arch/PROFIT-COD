@@ -480,9 +480,20 @@
       color:var(--text);
       display:flex;
       align-items:center;
-      justify-content:space-between;
+      gap:9px;
+      justify-content:flex-start;
       user-select:none;
       transition:background .12s;
+    }
+    .drop-item svg{
+      width:15px;
+      height:15px;
+      stroke:var(--menuText);
+      fill:none;
+      stroke-width:1.7;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      flex-shrink:0;
     }
 
     .drop-item:hover{
