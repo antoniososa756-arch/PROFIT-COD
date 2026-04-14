@@ -1457,11 +1457,11 @@ const now = new Date();
       <div style="display:flex;gap:20px;align-items:flex-start;">
 
         <!-- Mitad izquierda: gráfica -->
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;background:#0f1117;border-radius:16px;padding:20px 20px 16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:10px;flex-wrap:wrap;">
             <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Pedidos por tienda</div>
-              <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="chart-period-label">—</div>
+              <div style="font-size:15px;font-weight:700;color:#f9fafb;letter-spacing:-.2px;">Pedidos por tienda</div>
+              <div style="font-size:12px;color:#6b7280;margin-top:3px;" id="chart-period-label">—</div>
             </div>
             <div style="display:flex;gap:5px;">
               <button id="chart-btn-day"   onclick="setChartPeriod('day')"   class="chart-period-btn active">Día</button>
@@ -1470,7 +1470,7 @@ const now = new Date();
             </div>
           </div>
           <canvas id="orders-bar-chart" style="width:100%;display:block;"></canvas>
-          <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;"></div>
+          <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);"></div>
         </div>
 
         <!-- Mitad derecha: reservada -->
@@ -5581,13 +5581,14 @@ async function loadOrdersChart(period) {
 
   let from, to, buckets, bucketFn, bucketLabel;
 
+  let periodText = '';
   if (period === 'day') {
     const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0'), d = String(now.getDate()).padStart(2,'0');
     from = to = `${y}-${m}-${d}`;
     buckets    = Array.from({length:24}, (_,i) => i);
     bucketFn   = o => toMadridPart(new Date(o.created_at), 'hour');
     bucketLabel = h => `${String(h).padStart(2,'0')}h`;
-    if (labelEl) labelEl.textContent = `Hoy — ${d}/${m}/${y}`;
+    periodText  = `Hoy — ${d}/${m}/${y}`;
   } else if (period === 'month') {
     const y = now.getFullYear(), mo = now.getMonth();
     const dim = new Date(y, mo+1, 0).getDate();
@@ -5596,7 +5597,7 @@ async function loadOrdersChart(period) {
     buckets    = Array.from({length:dim}, (_,i) => i+1);
     bucketFn   = o => toMadridPart(new Date(o.created_at), 'day');
     bucketLabel = d => d;
-    if (labelEl) labelEl.textContent = `${MESES_FULL[mo]} ${y}`;
+    periodText  = `${MESES_FULL[mo]} ${y}`;
   } else {
     const y = now.getFullYear();
     from = `${y}-01-01`;
@@ -5604,8 +5605,9 @@ async function loadOrdersChart(period) {
     buckets    = Array.from({length:12}, (_,i) => i);
     bucketFn   = o => toMadridPart(new Date(o.created_at), 'month') - 1;
     bucketLabel = i => MES[i];
-    if (labelEl) labelEl.textContent = `Año ${y}`;
+    periodText  = `Año ${y}`;
   }
+  if (labelEl) labelEl.textContent = periodText;
 
   try {
     const rows = await fetch(`${API_BASE}/api/orders?from=${from}&to=${to}&light=1&limit=5000`, {headers:h}).then(r=>r.json());
@@ -5627,26 +5629,32 @@ async function loadOrdersChart(period) {
 
     renderBarChart(canvas, data, buckets, stores, bucketLabel);
 
+    // Total global visible en el subtítulo
+    if (labelEl) {
+      labelEl.innerHTML = `${escapeHtml(periodText)} <span style="color:#22c55e;font-weight:700;">· ${orders.length} pedidos</span>`;
+    }
+
     if (legendEl) {
-      legendEl.innerHTML = stores.map((s,i) => `
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text);">
-          <span style="width:10px;height:10px;border-radius:2px;background:${CHART_COLORS[i%CHART_COLORS.length]};flex-shrink:0;"></span>
-          ${escapeHtml(s)}
+      const shortName = s => s.replace(/\.myshopify\.com$/i,'').replace(/\.[^.]+\.[^.]+$/,'');
+      const totalPorTienda = stores.map(s => ({ name: s, total: buckets.reduce((a,b) => a + ((data[s]||{})[b]||0), 0) }));
+      legendEl.innerHTML = totalPorTienda.map(({name,total},i) => `
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#9ca3af;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${CHART_COLORS[i%CHART_COLORS.length]};flex-shrink:0;"></span>
+          <span style="color:#d1d5db;">${escapeHtml(shortName(name))}</span>
+          <span style="color:#22c55e;font-weight:700;">${total}</span>
         </div>`).join('');
     }
   } catch(e) { console.error('[CHART]', e); }
 }
 
 function renderBarChart(canvas, data, buckets, stores, labelFn) {
-  const isDark  = document.body.classList.contains('dark');
-  const gridCol = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
-  const textCol = isDark ? '#6b7280' : '#9ca3af';
-  const axisCol = isDark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.08)';
-  const numCol  = isDark ? '#e5e7eb' : '#374151';
+  const gridCol = 'rgba(255,255,255,.06)';
+  const textCol = '#4b5563';
+  const numCol  = '#e5e7eb';
 
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.parentElement.clientWidth || 400;
-  const H   = 260;
+  const H   = 240;
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width  = W + 'px';
@@ -5655,66 +5663,58 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  // PT grande para dejar espacio a los números encima de las barras
-  const PL = 10, PR = 10, PT = 28, PB = 32;
+  const PL = 10, PR = 10, PT = 30, PB = 30;
   const cW = W - PL - PR;
   const cH = H - PT - PB;
 
-  // Max value — añadir 15% de margen para que los números no se corten
+  // Max + margen superior para números
   let maxVal = 0;
   stores.forEach(s => buckets.forEach(b => { if ((data[s]||{})[b] > maxVal) maxVal = (data[s]||{})[b]; }));
-  const nicMax = Math.max(1, Math.ceil((maxVal || 1) * 1.25));
+  const nicMax = Math.max(1, Math.ceil((maxVal || 1) * 1.3));
 
   ctx.clearRect(0, 0, W, H);
 
-  // Fondo suave del área del gráfico
-  ctx.fillStyle = isDark ? 'rgba(255,255,255,.02)' : 'rgba(0,0,0,.018)';
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(PL, PT, cW, cH, 8);
-  else ctx.rect(PL, PT, cW, cH);
-  ctx.fill();
-
-  // Líneas horizontales (solo 3, muy sutiles)
+  // Grid lines horizontales (3, muy sutiles)
   for (let i = 1; i <= 3; i++) {
     const y = PT + cH - (i / 3) * cH;
     ctx.beginPath();
-    ctx.strokeStyle = i === 0 ? axisCol : gridCol;
+    ctx.strokeStyle = gridCol;
     ctx.lineWidth = 0.5;
-    ctx.setLineDash([4, 4]);
     ctx.moveTo(PL, y); ctx.lineTo(PL + cW, y);
     ctx.stroke();
   }
-  ctx.setLineDash([]);
 
-  // Línea base del eje X
+  // Línea base
   ctx.beginPath();
-  ctx.strokeStyle = axisCol;
+  ctx.strokeStyle = 'rgba(255,255,255,.1)';
   ctx.lineWidth = 1;
   ctx.moveTo(PL, PT + cH); ctx.lineTo(PL + cW, PT + cH);
   ctx.stroke();
 
-  // Barras
+  // Dimensiones de barras
   const groupW  = cW / buckets.length;
-  const padding = Math.max(2, groupW * 0.22);
-  const gap     = 1;
-  const barW    = stores.length ? Math.max(3, (groupW - padding * 2 - gap * (stores.length - 1)) / stores.length) : groupW - padding * 2;
-  const skipX   = Math.ceil(buckets.length / (W > 500 ? 18 : 10));
+  const padding = Math.max(2, groupW * 0.2);
+  const gap     = 2;
+  const barW    = stores.length
+    ? Math.max(4, (groupW - padding * 2 - gap * (stores.length - 1)) / stores.length)
+    : groupW - padding * 2;
+  const skipX = Math.ceil(buckets.length / (W > 500 ? 18 : 10));
 
   ctx.textAlign = 'center';
-  ctx.font = '10px system-ui, sans-serif';
 
   buckets.forEach((bucket, bi) => {
     const gx    = PL + bi * groupW + padding;
     const total = stores.reduce((acc, s) => acc + ((data[s]||{})[bucket]||0), 0);
+    const groupCenterX = gx + (stores.length * (barW + gap) - gap) / 2;
 
-    // Etiqueta X
+    // Etiqueta eje X
     if (bi % skipX === 0) {
       ctx.fillStyle = textCol;
       ctx.font = '10px system-ui, sans-serif';
-      ctx.fillText(labelFn(bucket), gx + (stores.length * (barW + gap)) / 2 - gap / 2, H - 10);
+      ctx.fillText(labelFn(bucket), groupCenterX, H - 8);
     }
 
-    // Barras por tienda
+    // Dibujar barras
     let maxBarH = 0;
     stores.forEach((store, si) => {
       const val  = (data[store]||{})[bucket] || 0;
@@ -5724,13 +5724,12 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
 
       const x = gx + si * (barW + gap);
       const y = PT + cH - barH;
-      const r = Math.min(5, barW / 2, barH / 2);
+      const r = Math.min(6, barW / 2, barH);
 
-      // Barra con gradiente vertical
-      const grad = ctx.createLinearGradient(0, y, 0, y + barH);
       const color = CHART_COLORS[si % CHART_COLORS.length];
+      const grad  = ctx.createLinearGradient(0, y, 0, PT + cH);
       grad.addColorStop(0, color);
-      grad.addColorStop(1, color + (isDark ? '99' : 'cc'));
+      grad.addColorStop(1, color + '55');
       ctx.fillStyle = grad;
 
       ctx.beginPath();
@@ -5739,12 +5738,11 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
       ctx.fill();
     });
 
-    // Número total encima del grupo (si hay pedidos)
+    // Número total encima del grupo más alto
     if (total > 0 && maxBarH > 0) {
-      const topY = PT + cH - maxBarH - 6;
       ctx.fillStyle = numCol;
       ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.fillText(total, gx + (stores.length * (barW + gap)) / 2 - gap / 2, topY);
+      ctx.fillText(total, groupCenterX, PT + cH - maxBarH - 7);
     }
   });
 }
