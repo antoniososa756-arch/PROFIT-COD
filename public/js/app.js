@@ -5671,6 +5671,13 @@ const STORE_PALETTE = [
   { light:'#eab308', dark:'#fde047' },  // amarillo
 ];
 
+// Convierte hex (#rrggbb) a "r,g,b" para usar en rgba()
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  const n = parseInt(h, 16);
+  return `${(n>>16)&255},${(n>>8)&255},${n&255}`;
+}
+
 function renderBarChart(canvas, data, buckets, stores, labelFn) {
   const isDark   = document.body.classList.contains('dark');
   const gridCol  = isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
@@ -5760,21 +5767,30 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
       const isTop = si === topIdx;
       const r    = isTop ? Math.min(5, bw / 2, segH) : 0;
       const color = (STORE_PALETTE[si % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
+      const rgb   = hexToRgb(color);
 
-      // Gradiente del segmento
+      // Gradiente translúcido: arriba más opaco, abajo más transparente
       const grad = ctx.createLinearGradient(0, y, 0, y + segH);
-      grad.addColorStop(0, color + (isDark ? 'ee' : 'dd'));
-      grad.addColorStop(1, color + (isDark ? 'bb' : '99'));
+      grad.addColorStop(0, `rgba(${rgb},${isDark ? 0.75 : 0.85})`);
+      grad.addColorStop(1, `rgba(${rgb},${isDark ? 0.35 : 0.45})`);
       ctx.fillStyle = grad;
       ctx.beginPath();
       if (isTop && ctx.roundRect) ctx.roundRect(gx, y, bw, segH, [r, r, 0, 0]);
       else ctx.rect(gx, y, bw, segH);
       ctx.fill();
 
+      // Borde sutil del mismo color para darle definición
+      ctx.strokeStyle = `rgba(${rgb},${isDark ? 0.6 : 0.5})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      if (isTop && ctx.roundRect) ctx.roundRect(gx, y, bw, segH, [r, r, 0, 0]);
+      else ctx.rect(gx, y, bw, segH);
+      ctx.stroke();
+
       // Separador sutil entre segmentos
       if (!isTop && yOffset < PT + cH) {
         ctx.beginPath();
-        ctx.strokeStyle = isDark ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.6)';
+        ctx.strokeStyle = isDark ? 'rgba(0,0,0,.4)' : 'rgba(255,255,255,.7)';
         ctx.lineWidth = 1;
         ctx.moveTo(gx, y + segH); ctx.lineTo(gx + bw, y + segH);
         ctx.stroke();
@@ -5783,12 +5799,13 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
       yOffset -= segH;
     });
 
-    // Reflejo izquierdo sobre toda la barra
+    // Reflejo lateral izquierdo (cristal)
     const topY = PT + cH - totalBarH;
     const r    = Math.min(5, bw / 2);
-    const shine = ctx.createLinearGradient(gx, 0, gx + bw * 0.5, 0);
-    shine.addColorStop(0, 'rgba(255,255,255,' + (isDark ? '.12' : '.2') + ')');
-    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    const shine = ctx.createLinearGradient(gx, 0, gx + bw * 0.55, 0);
+    shine.addColorStop(0,   `rgba(255,255,255,${isDark ? .18 : .28})`);
+    shine.addColorStop(0.5, `rgba(255,255,255,${isDark ? .06 : .10})`);
+    shine.addColorStop(1,   'rgba(255,255,255,0)');
     ctx.fillStyle = shine;
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(gx, topY, bw, totalBarH, [r, r, 0, 0]);
@@ -5797,7 +5814,7 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
 
     // Línea brillante en el top
     ctx.beginPath();
-    ctx.strokeStyle = isDark ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.9)';
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.95)';
     ctx.lineWidth = 1.5;
     ctx.moveTo(gx + r, topY + 0.75);
     ctx.lineTo(gx + bw - r, topY + 0.75);
