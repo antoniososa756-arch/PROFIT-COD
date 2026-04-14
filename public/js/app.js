@@ -5750,47 +5750,52 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
     if (total === 0) return;
 
     const totalBarH = (total / nicMax) * cH;
+    const topY = PT + cH - totalBarH;
+    const r    = Math.min(5, bw / 2);
 
-    // Índice del segmento más alto (para redondear solo la cima)
+    // Índice del segmento más alto
     let topIdx = -1;
     for (let si = stores.length - 1; si >= 0; si--) {
       if (((data[stores[si]]||{})[bucket]||0) > 0) { topIdx = si; break; }
     }
+    const topColor = (STORE_PALETTE[topIdx % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
+    const topRgb   = hexToRgb(topColor);
 
-    // Dibujar segmentos apilados de abajo hacia arriba
+    // Dibujar segmentos apilados — cuerpo oscuro/translúcido
     let yOffset = PT + cH;
     stores.forEach((store, si) => {
       const val  = (data[store]||{})[bucket] || 0;
       if (val === 0) return;
-      const segH = (val / nicMax) * cH;
-      const y    = yOffset - segH;
+      const segH  = (val / nicMax) * cH;
+      const y     = yOffset - segH;
       const isTop = si === topIdx;
-      const r    = isTop ? Math.min(5, bw / 2, segH) : 0;
+      const segR  = isTop ? Math.min(5, bw / 2, segH) : 0;
       const color = (STORE_PALETTE[si % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
       const rgb   = hexToRgb(color);
 
-      // Gradiente translúcido: arriba más opaco, abajo más transparente
-      const grad = ctx.createLinearGradient(0, y, 0, y + segH);
-      grad.addColorStop(0, `rgba(${rgb},${isDark ? 0.75 : 0.85})`);
-      grad.addColorStop(1, `rgba(${rgb},${isDark ? 0.35 : 0.45})`);
-      ctx.fillStyle = grad;
+      // Cuerpo: muy oscuro con tinte del color
+      ctx.fillStyle = isDark
+        ? `rgba(${rgb}, 0.13)`
+        : `rgba(${rgb}, 0.14)`;
       ctx.beginPath();
-      if (isTop && ctx.roundRect) ctx.roundRect(gx, y, bw, segH, [r, r, 0, 0]);
+      if (isTop && ctx.roundRect) ctx.roundRect(gx, y, bw, segH, [segR, segR, 0, 0]);
       else ctx.rect(gx, y, bw, segH);
       ctx.fill();
 
-      // Borde sutil del mismo color para darle definición
-      ctx.strokeStyle = `rgba(${rgb},${isDark ? 0.6 : 0.5})`;
+      // Borde lateral sutil
+      ctx.strokeStyle = isDark
+        ? `rgba(${rgb}, 0.28)`
+        : `rgba(${rgb}, 0.30)`;
       ctx.lineWidth = 0.8;
       ctx.beginPath();
-      if (isTop && ctx.roundRect) ctx.roundRect(gx, y, bw, segH, [r, r, 0, 0]);
+      if (isTop && ctx.roundRect) ctx.roundRect(gx, y, bw, segH, [segR, segR, 0, 0]);
       else ctx.rect(gx, y, bw, segH);
       ctx.stroke();
 
-      // Separador sutil entre segmentos
-      if (!isTop && yOffset < PT + cH) {
+      // Separador entre segmentos
+      if (!isTop) {
         ctx.beginPath();
-        ctx.strokeStyle = isDark ? 'rgba(0,0,0,.4)' : 'rgba(255,255,255,.7)';
+        ctx.strokeStyle = isDark ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.6)';
         ctx.lineWidth = 1;
         ctx.moveTo(gx, y + segH); ctx.lineTo(gx + bw, y + segH);
         ctx.stroke();
@@ -5799,26 +5804,19 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
       yOffset -= segH;
     });
 
-    // Reflejo lateral izquierdo (cristal)
-    const topY = PT + cH - totalBarH;
-    const r    = Math.min(5, bw / 2);
-    const shine = ctx.createLinearGradient(gx, 0, gx + bw * 0.55, 0);
-    shine.addColorStop(0,   `rgba(255,255,255,${isDark ? .18 : .28})`);
-    shine.addColorStop(0.5, `rgba(255,255,255,${isDark ? .06 : .10})`);
-    shine.addColorStop(1,   'rgba(255,255,255,0)');
-    ctx.fillStyle = shine;
+    // Línea brillante con glow en el tope (estilo segunda foto)
+    ctx.save();
+    ctx.shadowColor  = `rgba(${topRgb}, ${isDark ? 0.85 : 0.55})`;
+    ctx.shadowBlur   = isDark ? 10 : 6;
+    ctx.strokeStyle  = isDark
+      ? `rgba(${topRgb}, 1)`
+      : `rgba(${topRgb}, 0.85)`;
+    ctx.lineWidth = isDark ? 2 : 1.8;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(gx, topY, bw, totalBarH, [r, r, 0, 0]);
-    else ctx.rect(gx, topY, bw, totalBarH);
-    ctx.fill();
-
-    // Línea brillante en el top
-    ctx.beginPath();
-    ctx.strokeStyle = isDark ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.95)';
-    ctx.lineWidth = 1.5;
-    ctx.moveTo(gx + r, topY + 0.75);
-    ctx.lineTo(gx + bw - r, topY + 0.75);
+    ctx.moveTo(gx + r, topY + 1);
+    ctx.lineTo(gx + bw - r, topY + 1);
     ctx.stroke();
+    ctx.restore();
 
     // Número total encima
     ctx.fillStyle = numCol;
