@@ -5638,14 +5638,15 @@ async function loadOrdersChart(period) {
 }
 
 function renderBarChart(canvas, data, buckets, stores, labelFn) {
-  const isDark   = document.body.classList.contains('dark');
-  const gridCol  = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.07)';
-  const textCol  = isDark ? '#9ca3af' : '#6b7280';
-  const axisCol  = isDark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)';
+  const isDark  = document.body.classList.contains('dark');
+  const gridCol = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
+  const textCol = isDark ? '#6b7280' : '#9ca3af';
+  const axisCol = isDark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.08)';
+  const numCol  = isDark ? '#e5e7eb' : '#374151';
 
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.parentElement.clientWidth || 400;
-  const H   = 200;
+  const H   = 260;
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width  = W + 'px';
@@ -5654,66 +5655,97 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const PL = 38, PR = 8, PT = 10, PB = 28;
+  // PT grande para dejar espacio a los números encima de las barras
+  const PL = 10, PR = 10, PT = 28, PB = 32;
   const cW = W - PL - PR;
   const cH = H - PT - PB;
 
-  // Max
+  // Max value — añadir 15% de margen para que los números no se corten
   let maxVal = 0;
   stores.forEach(s => buckets.forEach(b => { if ((data[s]||{})[b] > maxVal) maxVal = (data[s]||{})[b]; }));
-  const nicMax = Math.max(5, Math.ceil((maxVal||1) / 5) * 5);
+  const nicMax = Math.max(1, Math.ceil((maxVal || 1) * 1.25));
 
   ctx.clearRect(0, 0, W, H);
-  ctx.font = `10px system-ui, sans-serif`;
 
-  // Grid & Y labels
-  const LINES = 4;
-  for (let i = 0; i <= LINES; i++) {
-    const val = Math.round((nicMax / LINES) * i);
-    const y   = PT + cH - (val / nicMax) * cH;
-    ctx.fillStyle = textCol;
-    ctx.textAlign = 'right';
-    ctx.fillText(val, PL - 4, y + 3);
+  // Fondo suave del área del gráfico
+  ctx.fillStyle = isDark ? 'rgba(255,255,255,.02)' : 'rgba(0,0,0,.018)';
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(PL, PT, cW, cH, 8);
+  else ctx.rect(PL, PT, cW, cH);
+  ctx.fill();
+
+  // Líneas horizontales (solo 3, muy sutiles)
+  for (let i = 1; i <= 3; i++) {
+    const y = PT + cH - (i / 3) * cH;
     ctx.beginPath();
     ctx.strokeStyle = i === 0 ? axisCol : gridCol;
-    ctx.lineWidth   = i === 0 ? 1 : 0.5;
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([4, 4]);
     ctx.moveTo(PL, y); ctx.lineTo(PL + cW, y);
     ctx.stroke();
   }
+  ctx.setLineDash([]);
 
-  // Bars
+  // Línea base del eje X
+  ctx.beginPath();
+  ctx.strokeStyle = axisCol;
+  ctx.lineWidth = 1;
+  ctx.moveTo(PL, PT + cH); ctx.lineTo(PL + cW, PT + cH);
+  ctx.stroke();
+
+  // Barras
   const groupW  = cW / buckets.length;
-  const padding = Math.max(1, groupW * 0.18);
-  const barW    = stores.length ? Math.max(2, (groupW - padding * 2) / stores.length) : groupW - padding * 2;
+  const padding = Math.max(2, groupW * 0.22);
+  const gap     = 1;
+  const barW    = stores.length ? Math.max(3, (groupW - padding * 2 - gap * (stores.length - 1)) / stores.length) : groupW - padding * 2;
   const skipX   = Math.ceil(buckets.length / (W > 500 ? 18 : 10));
 
   ctx.textAlign = 'center';
-  buckets.forEach((bucket, bi) => {
-    const gx = PL + bi * groupW + padding;
+  ctx.font = '10px system-ui, sans-serif';
 
-    // X label
+  buckets.forEach((bucket, bi) => {
+    const gx    = PL + bi * groupW + padding;
+    const total = stores.reduce((acc, s) => acc + ((data[s]||{})[bucket]||0), 0);
+
+    // Etiqueta X
     if (bi % skipX === 0) {
       ctx.fillStyle = textCol;
-      ctx.fillText(labelFn(bucket), gx + (stores.length * barW) / 2, H - 6);
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.fillText(labelFn(bucket), gx + (stores.length * (barW + gap)) / 2 - gap / 2, H - 10);
     }
 
-    // Barras
+    // Barras por tienda
+    let maxBarH = 0;
     stores.forEach((store, si) => {
       const val  = (data[store]||{})[bucket] || 0;
       const barH = (val / nicMax) * cH;
       if (barH < 1) return;
-      const x = gx + si * barW;
+      if (barH > maxBarH) maxBarH = barH;
+
+      const x = gx + si * (barW + gap);
       const y = PT + cH - barH;
-      ctx.fillStyle = CHART_COLORS[si % CHART_COLORS.length];
-      const r = Math.min(3, barW / 2, barH / 2);
+      const r = Math.min(5, barW / 2, barH / 2);
+
+      // Barra con gradiente vertical
+      const grad = ctx.createLinearGradient(0, y, 0, y + barH);
+      const color = CHART_COLORS[si % CHART_COLORS.length];
+      grad.addColorStop(0, color);
+      grad.addColorStop(1, color + (isDark ? '99' : 'cc'));
+      ctx.fillStyle = grad;
+
       ctx.beginPath();
-      if (ctx.roundRect) {
-        ctx.roundRect(x, y, Math.max(1, barW - 1), barH, [r, r, 0, 0]);
-      } else {
-        ctx.rect(x, y, Math.max(1, barW - 1), barH);
-      }
+      if (ctx.roundRect) ctx.roundRect(x, y, barW, barH, [r, r, 0, 0]);
+      else ctx.rect(x, y, barW, barH);
       ctx.fill();
     });
+
+    // Número total encima del grupo (si hay pedidos)
+    if (total > 0 && maxBarH > 0) {
+      const topY = PT + cH - maxBarH - 6;
+      ctx.fillStyle = numCol;
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.fillText(total, gx + (stores.length * (barW + gap)) / 2 - gap / 2, topY);
+    }
   });
 }
 
