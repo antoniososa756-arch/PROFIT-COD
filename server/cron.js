@@ -390,15 +390,13 @@ function startCrons() {
     } catch(e) { console.error("[BILLING] Error cierre de mes:", e.message); }
   }, 60 * 60 * 1000); // cada hora
 
-  // Sync Gmail PDF MRW: cada hora comprobamos si son las 3am para ejecutar
+  // Sync Gmail PDF MRW: a las 8:00 y 20:00 hora España
   setInterval(async () => {
     const now = new Date();
-    if (now.getHours() !== 3) return; // Solo a las 3:00am
+    const horaEspaña = parseInt(new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", hour: "numeric", hour12: false }).format(now));
+    if (horaEspaña !== 8 && horaEspaña !== 20) return;
     await syncAllGmailPDF();
-  }, 60 * 60 * 1000); // cada hora
-
-  // También ejecutar una vez al arrancar (después de 90s)
-  setTimeout(syncAllGmailPDF, 90 * 1000);
+  }, 60 * 60 * 1000); // comprueba cada hora
 
   // Keep-alive: ping cada 10 min para que Render no duerma el servidor
   const APP_URL = process.env.APP_URL || "https://profit-cod.onrender.com";
