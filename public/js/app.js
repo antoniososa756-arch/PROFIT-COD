@@ -1433,8 +1433,8 @@ const now = new Date();
             <span id="donut-base" style="font-size:12px;color:#6b7280;font-weight:500;letter-spacing:.2px;"></span>
           </div>
           <div style="display:flex;align-items:center;gap:28px;width:100%;flex-wrap:wrap;justify-content:center;">
-            <div style="position:relative;width:180px;height:180px;flex-shrink:0;">
-              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:180px;height:180px;">
+            <div style="position:relative;width:155px;height:155px;flex-shrink:0;">
+              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:155px;height:155px;">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" stroke-width="3.8"/>
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
@@ -1444,21 +1444,27 @@ const now = new Date();
                   stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
-                <span style="font-size:28px;font-weight:900;letter-spacing:-.5px;line-height:1;" id="donut-pct">0%</span>
-                <span style="font-size:10px;font-weight:500;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;">entregado</span>
+                <span style="font-size:24px;font-weight:900;letter-spacing:-.5px;line-height:1;" id="donut-pct">0%</span>
+                <span style="font-size:9px;font-weight:500;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;">entregado</span>
               </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;">
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
               <div style="display:flex;align-items:center;gap:10px;">
-                <span style="width:12px;height:12px;border-radius:3px;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
+                <span style="width:30px;height:26px;border-radius:7px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></span>
+                </span>
                 <span id="legend-entregado" style="color:var(--text);">Entregado 0%</span>
               </div>
               <div style="display:flex;align-items:center;gap:10px;">
-                <span style="width:12px;height:12px;border-radius:3px;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
+                <span style="width:30px;height:26px;border-radius:7px;background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#dc2626;"></span>
+                </span>
                 <span id="legend-rojo" style="color:var(--text);">Dev+Dest 0%</span>
               </div>
               <div style="display:flex;align-items:center;gap:10px;">
-                <span style="width:12px;height:12px;border-radius:3px;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
+                <span style="width:30px;height:26px;border-radius:7px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></span>
+                </span>
                 <span id="legend-pendiente" style="color:var(--text);">En tránsito 0%</span>
               </div>
             </div>
