@@ -1436,11 +1436,11 @@ const now = new Date();
             <div style="position:relative;width:155px;height:155px;flex-shrink:0;">
               <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:155px;height:155px;">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3.8"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(34,197,94,0.65)" stroke-width="3.8"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(239,68,68,0.65)" stroke-width="3.8"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#ef4444" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-rojo" stroke-linecap="butt"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(245,158,11,0.65)" stroke-width="3.8"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
