@@ -1289,18 +1289,34 @@ const now = new Date();
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
-        <div style="position:relative;" id="met-picker-wrap">
-          <button id="met-picker-trigger" onclick="toggleMetDatePicker()"
-            style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
-            onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-            <span id="met-picker-label">Mes actual</span>
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div id="met-picker-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:2000;"></div>
-          <input type="date" id="metrics-date-from" value="${savedFrom}" style="display:none;">
-          <input type="date" id="metrics-date-to" value="${savedTo}" style="display:none;">
-          <select id="metrics-shop" style="display:none;"><option value="">Todas las tiendas</option></select>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div style="position:relative;" id="met-picker-wrap">
+            <button id="met-picker-trigger" onclick="toggleMetDatePicker()"
+              style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
+              onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <span id="met-picker-label">Mes actual</span>
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div id="met-picker-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:2000;"></div>
+            <input type="date" id="metrics-date-from" value="${savedFrom}" style="display:none;">
+            <input type="date" id="metrics-date-to" value="${savedTo}" style="display:none;">
+            <select id="metrics-shop" style="display:none;"><option value="">Todas las tiendas</option></select>
+          </div>
+          <div style="position:relative;">
+            <button id="met-filter-trigger" onclick="toggleMetShopFilter()"
+              style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
+              onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+              <span id="met-filter-label">Filtrar tiendas</span>
+              <svg id="met-filter-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div id="met-shop-filter-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:1500;background:var(--card);border:1px solid #374151;border-radius:12px;padding:12px;min-width:180px;">
+              <div id="met-filter-body">
+                <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1410,15 +1426,15 @@ const now = new Date();
 
     </div>
       </div>
-      <div style="flex:35;min-width:200px;display:flex;flex-direction:column;">
-        <div class="stat-card" style="flex-direction:column;align-items:center;justify-content:center;gap:10px;flex:1;height:100%;box-sizing:border-box;">
+      <div style="flex:30;min-width:200px;display:flex;flex-direction:column;">
+        <div class="stat-card" style="flex-direction:column;align-items:center;justify-content:center;gap:12px;flex:1;height:100%;box-sizing:border-box;">
           <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;text-align:center;">
-            <span style="font-size:14px;font-weight:700;color:var(--text);">Tasa de entrega</span>
+            <span style="font-size:15px;font-weight:700;color:var(--text);">Tasa de entrega</span>
             <span id="donut-base" style="font-size:12px;color:#9ca3af;font-weight:400;"></span>
           </div>
-          <div style="display:flex;align-items:center;gap:20px;width:100%;flex-wrap:wrap;justify-content:center;margin-top:4px;">
-            <div style="position:relative;width:120px;height:120px;flex-shrink:0;">
-              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:120px;height:120px;">
+          <div style="display:flex;align-items:center;gap:24px;width:100%;flex-wrap:wrap;justify-content:center;">
+            <div style="position:relative;width:150px;height:150px;flex-shrink:0;">
+              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:150px;height:150px;">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="transparent" stroke-width="3.5"/>
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" stroke-width="3.5"
                   stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
@@ -1428,33 +1444,24 @@ const now = new Date();
                   stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
               </svg>
               <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
-                <span style="font-size:17px;font-weight:800;" id="donut-pct">0%</span>
+                <span style="font-size:22px;font-weight:800;" id="donut-pct">0%</span>
               </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
-              <div style="display:flex;align-items:center;gap:7px;">
-                <span style="width:12px;height:12px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="width:13px;height:13px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
                 <span id="legend-entregado">Entregado 0%</span>
               </div>
-              <div style="display:flex;align-items:center;gap:7px;">
-                <span style="width:12px;height:12px;border-radius:50%;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="width:13px;height:13px;border-radius:50%;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
                 <span id="legend-rojo">Dev+Dest 0%</span>
               </div>
-              <div style="display:flex;align-items:center;gap:7px;">
-                <span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="width:13px;height:13px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
                 <span id="legend-pendiente">Pendiente 0%</span>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      <div id="met-shop-filter-panel" style="flex:0 0 200px;overflow:hidden;transition:flex-basis .25s;background:var(--card);border:1px solid #374151;border-radius:12px;padding:12px;align-self:flex-start;position:sticky;top:0;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none;" onclick="toggleMetShopFilter()">
-          <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;" id="met-filter-label">Filtrar tiendas</div>
-          <svg id="met-filter-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
-        </div>
-        <div id="met-filter-body" style="margin-top:10px;">
-          <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
         </div>
       </div>
       </div>
@@ -1691,18 +1698,26 @@ const now = new Date();
 })();
 
 window.toggleMetShopFilter = function() {
-  const body  = document.getElementById('met-filter-body');
-  const chev  = document.getElementById('met-filter-chevron');
-  const label = document.getElementById('met-filter-label');
   const panel = document.getElementById('met-shop-filter-panel');
-  if (!body || !panel) return;
-  const open = body.style.display === 'none';
-  body.style.display = open ? '' : 'none';
-  if (label) label.style.display = open ? '' : 'none';
-  if (chev) chev.style.transform = open ? '' : 'rotate(-90deg)';
-  panel.style.flexBasis = open ? '200px' : '38px';
+  const chev  = document.getElementById('met-filter-chevron');
+  if (!panel) return;
+  const open = panel.style.display === 'none' || panel.style.display === '';
+  panel.style.display = open ? 'block' : 'none';
+  if (chev) chev.style.transform = open ? 'rotate(-180deg)' : '';
   localStorage.setItem('met_filter_open', open ? '1' : '0');
 };
+document.addEventListener('click', function(e) {
+  const wrap = e.target.closest('#met-shop-filter-wrap, [onclick*="toggleMetShopFilter"]');
+  if (!wrap) {
+    const panel = document.getElementById('met-shop-filter-panel');
+    const chev  = document.getElementById('met-filter-chevron');
+    if (panel && panel.style.display === 'block') {
+      panel.style.display = 'none';
+      if (chev) chev.style.transform = '';
+      localStorage.setItem('met_filter_open', '0');
+    }
+  }
+}, true);
 
 function recalcMetricasFiltro() {
   const checks = document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]");
@@ -1733,29 +1748,15 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
           ${escapeHtml(s.shop_name || s.domain)}
         </label>`
       ).join("");
-      panel.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none;" onclick="toggleMetShopFilter()">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;" id="met-filter-label">Filtrar tiendas</div>
-          <svg id="met-filter-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
-        </div>
-        <div id="met-filter-body" style="margin-top:10px;">
+      const _filterBody = document.getElementById('met-filter-body');
+      if (_filterBody) {
+        _filterBody.innerHTML = `
           <label class="shop-check-label all">
             <input type="checkbox" id="met-shop-check-all" checked onchange="toggleAllMetricasFiltro(this.checked)">
             Todas las tiendas
           </label>
           ${checkboxes}
-        </div>
-      `;
-      const _isOpen = localStorage.getItem('met_filter_open') !== '0';
-      const _body  = document.getElementById('met-filter-body');
-      const _chev  = document.getElementById('met-filter-chevron');
-      const _label = document.getElementById('met-filter-label');
-      const _panel = document.getElementById('met-shop-filter-panel');
-      if (!_isOpen && _body) {
-        _body.style.display = 'none';
-        if (_chev)  _chev.style.transform = 'rotate(-90deg)';
-        if (_label) _label.style.display = 'none';
-        if (_panel) _panel.style.flexBasis = '38px';
+        `;
       }
     } else if (panel) {
       panel.innerHTML = `<div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div><div style="color:#9ca3af;font-size:12px;">Sin tiendas</div>`;
