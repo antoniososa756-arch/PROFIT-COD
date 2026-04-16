@@ -1436,11 +1436,11 @@ const now = new Date();
             <div style="position:relative;width:155px;height:155px;flex-shrink:0;">
               <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:155px;height:155px;">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3.8"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#4ade80" stroke-width="3.8"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(34,197,94,0.65)" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f87171" stroke-width="3.8"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(239,68,68,0.65)" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-rojo" stroke-linecap="butt"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#fcd34d" stroke-width="3.8"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(245,158,11,0.65)" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
@@ -1450,20 +1450,20 @@ const now = new Date();
             </div>
             <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
               <div style="display:flex;align-items:center;gap:10px;">
-                <span style="width:30px;height:26px;border-radius:7px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
-                  <span style="width:8px;height:8px;border-radius:50%;background:#4ade80;"></span>
+                <span style="width:30px;height:26px;border-radius:7px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></span>
                 </span>
                 <span id="legend-entregado" style="color:var(--text);">Entregado 0%</span>
               </div>
               <div style="display:flex;align-items:center;gap:10px;">
-                <span style="width:30px;height:26px;border-radius:7px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
-                  <span style="width:8px;height:8px;border-radius:50%;background:#f87171;"></span>
+                <span style="width:30px;height:26px;border-radius:7px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></span>
                 </span>
                 <span id="legend-rojo" style="color:var(--text);">Dev+Dest 0%</span>
               </div>
               <div style="display:flex;align-items:center;gap:10px;">
-                <span style="width:30px;height:26px;border-radius:7px;background:rgba(252,211,77,0.12);border:1px solid rgba(252,211,77,0.3);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
-                  <span style="width:8px;height:8px;border-radius:50%;background:#fcd34d;"></span>
+                <span style="width:30px;height:26px;border-radius:7px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></span>
                 </span>
                 <span id="legend-pendiente" style="color:var(--text);">En tránsito 0%</span>
               </div>
