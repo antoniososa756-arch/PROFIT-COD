@@ -1410,14 +1410,14 @@ const now = new Date();
 
     </div>
       <div style="flex-shrink:0;display:flex;flex-direction:column;">
-        <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:8px;flex:1;">
+        <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:10px;flex:1;min-width:220px;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span class="stat-label" style="font-weight:600;">Tasa de entrega</span>
-            <span id="donut-base" style="font-size:11px;color:#9ca3af;font-weight:400;"></span>
+            <span style="font-size:14px;font-weight:700;color:var(--text);">Tasa de entrega</span>
+            <span id="donut-base" style="font-size:12px;color:#9ca3af;font-weight:400;"></span>
           </div>
-          <div style="display:flex;align-items:center;gap:16px;width:100%;flex-wrap:wrap;justify-content:center;margin-top:4px;">
-            <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
-              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:80px;height:80px;">
+          <div style="display:flex;align-items:center;gap:20px;width:100%;flex-wrap:wrap;justify-content:center;margin-top:4px;">
+            <div style="position:relative;width:120px;height:120px;flex-shrink:0;">
+              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:120px;height:120px;">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="transparent" stroke-width="3.5"/>
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" stroke-width="3.5"
                   stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
@@ -1427,20 +1427,20 @@ const now = new Date();
                   stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
               </svg>
               <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
-                <span style="font-size:12px;font-weight:700;" id="donut-pct">0%</span>
+                <span style="font-size:17px;font-weight:800;" id="donut-pct">0%</span>
               </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;">
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="width:12px;height:12px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
                 <span id="legend-entregado">Entregado 0%</span>
               </div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="width:12px;height:12px;border-radius:50%;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
                 <span id="legend-rojo">Dev+Dest 0%</span>
               </div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
                 <span id="legend-pendiente">Pendiente 0%</span>
               </div>
             </div>
@@ -1449,9 +1449,14 @@ const now = new Date();
       </div>
       </div>
       </div>
-      <div id="met-shop-filter-panel" style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
-        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
-        <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
+      <div id="met-shop-filter-panel" style="flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:12px;position:sticky;top:0px;align-self:flex-start;min-width:44px;transition:min-width .2s;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none;" onclick="toggleMetShopFilter()">
+          <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;" id="met-filter-label">Filtrar tiendas</div>
+          <svg id="met-filter-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div id="met-filter-body" style="margin-top:10px;">
+          <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
+        </div>
       </div>
     </div>
 
@@ -1685,6 +1690,16 @@ const now = new Date();
   };
 })();
 
+window.toggleMetShopFilter = function() {
+  const body  = document.getElementById('met-filter-body');
+  const chev  = document.getElementById('met-filter-chevron');
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  if (chev) chev.style.transform = open ? '' : 'rotate(-90deg)';
+  localStorage.setItem('met_filter_open', open ? '1' : '0');
+};
+
 function recalcMetricasFiltro() {
   const checks = document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]");
   const allCheck = document.getElementById("met-shop-check-all");
@@ -1715,13 +1730,22 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
         </label>`
       ).join("");
       panel.innerHTML = `
-        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
-        <label class="shop-check-label all">
-          <input type="checkbox" id="met-shop-check-all" checked onchange="toggleAllMetricasFiltro(this.checked)">
-          Todas las tiendas
-        </label>
-        ${checkboxes}
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none;" onclick="toggleMetShopFilter()">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;" id="met-filter-label">Filtrar tiendas</div>
+          <svg id="met-filter-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div id="met-filter-body" style="margin-top:10px;">
+          <label class="shop-check-label all">
+            <input type="checkbox" id="met-shop-check-all" checked onchange="toggleAllMetricasFiltro(this.checked)">
+            Todas las tiendas
+          </label>
+          ${checkboxes}
+        </div>
       `;
+      const _isOpen = localStorage.getItem('met_filter_open') !== '0';
+      const _body = document.getElementById('met-filter-body');
+      const _chev = document.getElementById('met-filter-chevron');
+      if (!_isOpen && _body) { _body.style.display = 'none'; if (_chev) _chev.style.transform = 'rotate(-90deg)'; }
     } else if (panel) {
       panel.innerHTML = `<div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div><div style="color:#9ca3af;font-size:12px;">Sin tiendas</div>`;
     }
