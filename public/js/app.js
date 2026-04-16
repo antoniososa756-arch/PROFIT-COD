@@ -1352,7 +1352,7 @@ const now = new Date();
             <span class="stat-label" style="font-weight:600;">Tasa de entrega</span>
             <span id="donut-base" style="font-size:11px;color:#9ca3af;font-weight:400;"></span>
           </div>
-          <div style="display:flex;align-items:center;gap:16px;width:100%;">
+          <div style="display:flex;align-items:center;gap:16px;width:100%;flex-wrap:wrap;">
             <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
               <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:80px;height:80px;">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="transparent" stroke-width="3.5"/>
