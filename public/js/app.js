@@ -1286,8 +1286,7 @@ const now = new Date();
   if (box) {
     box.className = "card metricas-box";
     box.innerHTML = `
-      <div style="display:flex;gap:20px;align-items:stretch;">
-        <div style="flex:55;min-width:0;">
+      <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
         <div style="position:relative;" id="met-picker-wrap">
@@ -1305,6 +1304,8 @@ const now = new Date();
         </div>
       </div>
 
+      <div style="display:flex;gap:20px;align-items:stretch;">
+      <div style="flex:55;min-width:0;">
       <div class="stats-grid" id="statsGrid" style="flex:1;align-content:flex-start;">
 
         <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:6px;justify-content:center;">
@@ -1455,6 +1456,7 @@ const now = new Date();
         <div id="met-filter-body" style="margin-top:10px;">
           <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
         </div>
+      </div>
       </div>
     </div>
 
