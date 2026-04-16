@@ -1303,7 +1303,7 @@ const now = new Date();
             <input type="date" id="metrics-date-to" value="${savedTo}" style="display:none;">
             <select id="metrics-shop" style="display:none;"><option value="">Todas las tiendas</option></select>
           </div>
-          <div id="met-shop-filter-wrap" style="position:relative;" onmouseleave="(function(){const p=document.getElementById('met-shop-filter-panel');const c=document.getElementById('met-filter-chevron');if(p&&p.style.display==='block'){p.style.display='none';if(c)c.style.transform='';localStorage.setItem('met_filter_open','0');}})()">
+          <div id="met-shop-filter-wrap" style="position:relative;" onmouseleave="window.__metFT=setTimeout(function(){var p=document.getElementById('met-shop-filter-panel');var c=document.getElementById('met-filter-chevron');if(p&&p.style.display==='block'){p.style.display='none';if(c)c.style.transform='';localStorage.setItem('met_filter_open','0');}},250)" onmouseenter="clearTimeout(window.__metFT)">
             <button id="met-filter-trigger" onclick="toggleMetShopFilter()"
               style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
               onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
@@ -1311,7 +1311,7 @@ const now = new Date();
               <span id="met-filter-label">Filtrar tiendas</span>
               <svg id="met-filter-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
             </button>
-            <div id="met-shop-filter-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:1500;background:var(--card);border:1px solid #374151;border-radius:12px;padding:12px;min-width:180px;">
+            <div id="met-shop-filter-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:1500;background:var(--card);border:1px solid #374151;border-radius:12px;padding:12px;min-width:180px;" onmouseenter="clearTimeout(window.__metFT)" onmouseleave="window.__metFT=setTimeout(function(){var p=document.getElementById('met-shop-filter-panel');var c=document.getElementById('met-filter-chevron');if(p&&p.style.display==='block'){p.style.display='none';if(c)c.style.transform='';localStorage.setItem('met_filter_open','0');}},250)">
               <div id="met-filter-body">
                 <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
               </div>
