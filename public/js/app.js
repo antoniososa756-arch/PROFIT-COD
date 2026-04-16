@@ -903,7 +903,7 @@ function loadApp(section) {
           <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;gap:8px;min-width:0;">
             <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-shrink:1;min-width:0;overflow:hidden;">
               <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;flex-shrink:0;stroke-linecap:round;stroke-linejoin:round;"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M16 14h2"/></svg>
-              Importe
+              Total
             </span>
             <span style="font-size:13px;font-weight:700;color:#22c55e;white-space:nowrap;flex-shrink:0;" id="sidebar-ree-total">—</span>
           </div>
