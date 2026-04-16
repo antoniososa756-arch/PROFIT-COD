@@ -1287,7 +1287,7 @@ const now = new Date();
     box.className = "card metricas-box";
     box.innerHTML = `
       <div style="display:flex;gap:20px;align-items:stretch;">
-        <div style="flex:1;min-width:0;">
+        <div style="flex:55;min-width:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
         <div style="position:relative;" id="met-picker-wrap">
@@ -1409,7 +1409,7 @@ const now = new Date();
 
     </div>
       </div>
-      <div style="flex:1;min-width:200px;display:flex;flex-direction:column;">
+      <div style="flex:35;min-width:200px;display:flex;flex-direction:column;">
         <div class="stat-card" style="flex-direction:column;align-items:center;justify-content:center;gap:10px;flex:1;height:100%;box-sizing:border-box;">
           <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;text-align:center;">
             <span style="font-size:14px;font-weight:700;color:var(--text);">Tasa de entrega</span>
