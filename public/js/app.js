@@ -1454,10 +1454,10 @@ const now = new Date();
 
     <!-- ── GRÁFICA PEDIDOS POR TIENDA ── -->
     <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
-      <div style="display:flex;gap:20px;align-items:flex-start;">
+      <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
 
         <!-- Mitad izquierda: gráfica -->
-        <div style="flex:1;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 20px 16px;">
+        <div style="flex:1;min-width:260px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 20px 16px;overflow:hidden;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:10px;flex-wrap:wrap;">
             <div>
               <div style="font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;">Pedidos por tienda</div>
@@ -5834,6 +5834,28 @@ window.setChartPeriod = function(period) {
   loadOrdersChart(period);
 };
 window.loadOrdersChart = loadOrdersChart;
+
+// Redibujar gráfica al cambiar tamaño del contenedor
+(function() {
+  let _chartResizeTimer = null;
+  const observer = new ResizeObserver(() => {
+    clearTimeout(_chartResizeTimer);
+    _chartResizeTimer = setTimeout(() => {
+      const period = window.__chartPeriod || 'day';
+      if (document.getElementById('orders-bar-chart')) loadOrdersChart(period);
+    }, 120);
+  });
+  const _origLoad = window.loadOrdersChart;
+  window.loadOrdersChart = function(period) {
+    const result = _origLoad(period);
+    const canvas = document.getElementById('orders-bar-chart');
+    if (canvas?.parentElement && !canvas.parentElement.__chartObserved) {
+      canvas.parentElement.__chartObserved = true;
+      observer.observe(canvas.parentElement);
+    }
+    return result;
+  };
+})();
 
 // =========================
 // RENTABILIDAD BALANCE
