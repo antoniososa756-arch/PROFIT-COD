@@ -1309,17 +1309,17 @@ const now = new Date();
       <div class="stats-grid" id="statsGrid" style="flex:1;">
 
         <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:6px;justify-content:center;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div class="stat-icon blue">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;">
+            <div class="stat-icon blue" style="flex-shrink:0;">
               <svg viewBox="0 0 24 24"><path d="M3 7l9 5 9-5M3 7v10l9 5 9-5V7" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
-            <div class="stat-info">
+            <div class="stat-info" style="min-width:0;">
               <span class="stat-num" id="stat-total">0</span>
               <span class="stat-label">Total Pedidos</span>
             </div>
-            <div style="border-left:1px solid #1f2937;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;">
+            <div style="border-left:1px solid #1f2937;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;min-width:0;">
               <span class="stat-num" id="stat-sin-cancelados">0</span>
-              <span class="stat-label" style="white-space:nowrap;">Sin cancelados</span>
+              <span class="stat-label">Sin cancelados</span>
             </div>
           </div>
           <div style="border-top:1px solid #1f2937;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;">
