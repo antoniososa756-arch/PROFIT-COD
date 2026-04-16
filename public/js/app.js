@@ -1427,38 +1427,39 @@ const now = new Date();
     </div>
       </div>
       <div style="flex:30;min-width:200px;display:flex;flex-direction:column;">
-        <div class="stat-card" style="flex-direction:column;align-items:center;justify-content:center;gap:12px;flex:1;height:100%;box-sizing:border-box;">
-          <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;text-align:center;">
-            <span style="font-size:15px;font-weight:700;color:var(--text);">Tasa de entrega</span>
-            <span id="donut-base" style="font-size:12px;color:#9ca3af;font-weight:400;"></span>
+        <div class="stat-card" style="flex-direction:column;align-items:center;justify-content:center;gap:18px;flex:1;height:100%;box-sizing:border-box;padding:24px;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;">
+            <span style="font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;">Tasa de entrega</span>
+            <span id="donut-base" style="font-size:12px;color:#6b7280;font-weight:500;letter-spacing:.2px;"></span>
           </div>
-          <div style="display:flex;align-items:center;gap:24px;width:100%;flex-wrap:wrap;justify-content:center;">
-            <div style="position:relative;width:150px;height:150px;flex-shrink:0;">
-              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:150px;height:150px;">
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="transparent" stroke-width="3.5"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" stroke-width="3.5"
+          <div style="display:flex;align-items:center;gap:28px;width:100%;flex-wrap:wrap;justify-content:center;">
+            <div style="position:relative;width:180px;height:180px;flex-shrink:0;">
+              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:180px;height:180px;">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" stroke-width="3.8"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#dc2626" stroke-width="3.5"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#dc2626" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-rojo" stroke-linecap="butt"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.5"
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.8"
                   stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
               </svg>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
-                <span style="font-size:22px;font-weight:800;" id="donut-pct">0%</span>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+                <span style="font-size:28px;font-weight:900;letter-spacing:-.5px;line-height:1;" id="donut-pct">0%</span>
+                <span style="font-size:10px;font-weight:500;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;">entregado</span>
               </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span style="width:13px;height:13px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
-                <span id="legend-entregado">Entregado 0%</span>
+            <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="width:12px;height:12px;border-radius:3px;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
+                <span id="legend-entregado" style="color:var(--text);">Entregado 0%</span>
               </div>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span style="width:13px;height:13px;border-radius:50%;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
-                <span id="legend-rojo">Dev+Dest 0%</span>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="width:12px;height:12px;border-radius:3px;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
+                <span id="legend-rojo" style="color:var(--text);">Dev+Dest 0%</span>
               </div>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span style="width:13px;height:13px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
-                <span id="legend-pendiente">Pendiente 0%</span>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="width:12px;height:12px;border-radius:3px;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
+                <span id="legend-pendiente" style="color:var(--text);">En tránsito 0%</span>
               </div>
             </div>
           </div>
