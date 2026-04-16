@@ -1305,7 +1305,8 @@ const now = new Date();
         </div>
       </div>
 
-      <div class="stats-grid" id="statsGrid">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div class="stats-grid" id="statsGrid" style="flex:1;">
 
         <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:6px;justify-content:center;">
           <div style="display:flex;align-items:center;gap:10px;">
@@ -1344,43 +1345,6 @@ const now = new Date();
           <div class="stat-info">
             <span class="stat-num" id="stat-transito">0</span>
             <span class="stat-label">En tránsito</span>
-          </div>
-        </div>
-
-        <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:8px;">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span class="stat-label" style="font-weight:600;">Tasa de entrega</span>
-            <span id="donut-base" style="font-size:11px;color:#9ca3af;font-weight:400;"></span>
-          </div>
-          <div style="display:flex;align-items:center;gap:16px;width:100%;flex-wrap:wrap;">
-            <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
-              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:80px;height:80px;">
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="transparent" stroke-width="3.5"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" stroke-width="3.5"
-                  stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#dc2626" stroke-width="3.5"
-                  stroke-dasharray="0 100" id="donut-rojo" stroke-linecap="butt"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.5"
-                  stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
-              </svg>
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
-                <span style="font-size:12px;font-weight:700;" id="donut-pct">0%</span>
-              </div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;">
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
-                <span id="legend-entregado">Entregado 0%</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
-                <span id="legend-rojo">Dev+Dest 0%</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
-                <span id="legend-pendiente">Pendiente 0%</span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -1445,6 +1409,45 @@ const now = new Date();
         </div>
 
     </div>
+      <div style="flex-shrink:0;display:flex;flex-direction:column;">
+        <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:8px;flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="stat-label" style="font-weight:600;">Tasa de entrega</span>
+            <span id="donut-base" style="font-size:11px;color:#9ca3af;font-weight:400;"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;width:100%;flex-wrap:wrap;justify-content:center;margin-top:4px;">
+            <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
+              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:80px;height:80px;">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="transparent" stroke-width="3.5"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" stroke-width="3.5"
+                  stroke-dasharray="0 100" id="donut-entregado" stroke-linecap="butt"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#dc2626" stroke-width="3.5"
+                  stroke-dasharray="0 100" id="donut-rojo" stroke-linecap="butt"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.5"
+                  stroke-dasharray="0 100" id="donut-pendiente" stroke-linecap="butt"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:12px;font-weight:700;" id="donut-pct">0%</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>
+                <span id="legend-entregado">Entregado 0%</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
+                <span id="legend-rojo">Dev+Dest 0%</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
+                <span id="legend-pendiente">Pendiente 0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
       </div>
       <div id="met-shop-filter-panel" style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
         <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
