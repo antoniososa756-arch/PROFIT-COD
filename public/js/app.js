@@ -1305,8 +1305,8 @@ const now = new Date();
         </div>
       </div>
 
-      <div style="display:flex;gap:12px;align-items:flex-start;">
-      <div class="stats-grid" id="statsGrid" style="flex:1;">
+      <div style="display:flex;gap:12px;align-items:stretch;">
+      <div class="stats-grid" id="statsGrid" style="flex:1;align-content:flex-start;">
 
         <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:6px;justify-content:center;">
           <div class="stat-icon blue" style="flex-shrink:0;">
@@ -1410,8 +1410,8 @@ const now = new Date();
 
     </div>
       <div style="flex-shrink:0;display:flex;flex-direction:column;">
-        <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:10px;flex:1;min-width:220px;">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div class="stat-card" style="flex-direction:column;align-items:center;justify-content:center;gap:10px;flex:1;min-width:220px;height:100%;box-sizing:border-box;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;text-align:center;">
             <span style="font-size:14px;font-weight:700;color:var(--text);">Tasa de entrega</span>
             <span id="donut-base" style="font-size:12px;color:#9ca3af;font-weight:400;"></span>
           </div>
