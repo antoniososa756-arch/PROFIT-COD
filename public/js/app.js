@@ -6325,8 +6325,11 @@ window.loadRentabilidadBalance = loadRentabilidadBalance;
 
 function recalcRentabilidadBalance() {
   const data = window.__rentabilidadBalanceData || [];
-  const checks = document.querySelectorAll("#rent-balance-wrap input[type='checkbox'][value]");
-  const sel = new Set([...checks].filter(c=>c.checked).map(c=>c.value));
+  // Checkboxes están en el panel del dropdown (#rent-shop-filter-panel), no dentro del wrap
+  const checks = document.querySelectorAll("#rent-shop-filter-panel input[type='checkbox'][value]");
+  const sel = checks.length > 0
+    ? new Set([...checks].filter(c=>c.checked).map(c=>c.value))
+    : new Set(data.map(d=>d.domain)); // sin checkboxes → mostrar todas
   const filtradas = data.filter(d=>sel.has(d.domain));
   const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2});
   document.querySelectorAll("#rent-bal-cols > div[data-domain]").forEach(card => { card.style.display = sel.has(card.dataset.domain) ? "" : "none"; });
