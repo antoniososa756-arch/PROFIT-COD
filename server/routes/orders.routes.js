@@ -173,7 +173,7 @@ router.post("/reembolso-estado", auth, async (req, res) => {
      `INSERT INTO reembolsos_estado (user_id, order_id, tracking_number, estado, fecha_pago)
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT(user_id, order_id) DO UPDATE SET estado = EXCLUDED.estado, tracking_number = EXCLUDED.tracking_number, fecha_pago = COALESCE(reembolsos_estado.fecha_pago, EXCLUDED.fecha_pago)`,
-      [req.user.id, order_id, req.body.tracking_number || null, estado, new Date().toISOString().slice(0,10)]
+      [req.user.id, order_id, req.body.tracking_number || null, estado, new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid'}).format(new Date())]
     );
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: "Error" }); }

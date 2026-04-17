@@ -482,8 +482,7 @@ router.post("/variantes-config", auth, async (req, res) => {
 // from: YYYY-MM-DD, defaults to first day of current month
 router.post("/sync-stock-movements", auth, async (req, res) => {
   const userId = req.user.id;
-  const now = new Date();
-  const defaultFrom = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-01`;
+  const defaultFrom = new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid'}).format(new Date()).slice(0,8) + '01';
   const from = req.body.from || defaultFrom;
 
   const SHIPPED = ['enviado','en_transito','entregado','franquicia','en_preparacion','destruido','devuelto'];

@@ -28,7 +28,7 @@ window.__DPF = (function () {
   function renderMonth(s, year, month) {
     const dim  = new Date(year, month, 0).getDate();
     const fdow = new Date(year, month-1, 1).getDay();
-    const today = new Date().toISOString().split('T')[0];
+    const today = madridHoy();
     const p = s._prefix;
     let cells = [];
     for (let i=0;i<fdow;i++) cells.push(null);
@@ -146,7 +146,7 @@ window.__DPF = (function () {
   return {
     _inst: {},
     create: function(prefix, from, to, preset, presetLabel, fromKey, toKey, applyFn) {
-      const ref = to || new Date().toISOString().split('T')[0];
+      const ref = to || madridHoy();
       const [ry,rm] = ref.split('-').map(Number);
       this._inst[prefix] = { _prefix:prefix, _fromKey:fromKey, _toKey:toKey, _applyFn:applyFn,
         open:false, startDate:from||null, endDate:to||null, hoverDate:null, selecting:false,
@@ -177,18 +177,18 @@ window.__DPF = (function () {
       const s=this._inst[p], panel=document.getElementById(`${p}-picker-panel`); if(!panel) return;
       if (s.open) { panel.style.display='none'; s.open=false; }
       else {
-        const ref=s.endDate||new Date().toISOString().split('T')[0];
+        const ref=s.endDate||madridHoy();
         const [ry,rm]=ref.split('-').map(Number); s.viewYear=ry; s.viewMonth=rm;
         panel.style.display='block'; s.open=true; render(p);
       }
     },
     pPreset: function(p, key) {
       const s=this._inst[p]; s.preset=key; s.selecting=false;
-      const n=new Date(), fmt=d=>d.toISOString().split('T')[0];
-      if (key==='hoy')     { const d=fmt(n); s.startDate=d; s.endDate=d; s.presetLabel='Hoy'; }
-      else if (key==='ayer'){ const d=fmt(new Date(n-864e5)); s.startDate=d; s.endDate=d; s.presetLabel='Ayer'; }
-      else if (key==='mes') { s.startDate=fmt(new Date(n.getFullYear(),n.getMonth(),1)); s.endDate=fmt(n); s.presetLabel='Este mes'; }
-      else if (key==='mes-ant') { s.startDate=fmt(new Date(n.getFullYear(),n.getMonth()-1,1)); s.endDate=fmt(new Date(n.getFullYear(),n.getMonth(),0)); s.presetLabel='Mes anterior'; }
+      const n=new Date(), hoy=madridHoy(), myY=toMadridPart(n,'year'), myM=toMadridPart(n,'month');
+      if (key==='hoy')     { s.startDate=hoy; s.endDate=hoy; s.presetLabel='Hoy'; }
+      else if (key==='ayer'){ const d=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid'}).format(new Date(n-864e5)); s.startDate=d; s.endDate=d; s.presetLabel='Ayer'; }
+      else if (key==='mes') { s.startDate=`${myY}-${String(myM).padStart(2,'0')}-01`; s.endDate=hoy; s.presetLabel='Este mes'; }
+      else if (key==='mes-ant') { const pm=myM===1?12:myM-1, py=myM===1?myY-1:myY, ld=new Date(myY,myM-1,0).getDate(); s.startDate=`${py}-${String(pm).padStart(2,'0')}-01`; s.endDate=`${py}-${String(pm).padStart(2,'0')}-${String(ld).padStart(2,'0')}`; s.presetLabel='Mes anterior'; }
       else if (key==='personalizado') { s.presetLabel='Personalizado'; }
       if (s.endDate) { const [ry,rm]=s.endDate.split('-').map(Number); s.viewYear=ry; s.viewMonth=rm; }
       render(p);
@@ -1278,10 +1278,9 @@ if (id === "metricas") {
   if (c) c.textContent = "Métricas";
 
 const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const fmt = d => d.toISOString().split("T")[0];
-  const savedFrom = localStorage.getItem("met_from") || fmt(firstDay);
-  const savedTo   = localStorage.getItem("met_to")   || fmt(now);
+  const _mY = toMadridPart(now,'year'), _mM = toMadridPart(now,'month');
+  const savedFrom = localStorage.getItem("met_from") || `${_mY}-${String(_mM).padStart(2,'0')}-01`;
+  const savedTo   = localStorage.getItem("met_to")   || madridHoy();
 
   if (box) {
     box.className = "card metricas-box";
@@ -1530,7 +1529,7 @@ const now = new Date();
     const s = window.__metPicker;
     const dim = new Date(year, month, 0).getDate();
     const fdow = new Date(year, month-1, 1).getDay();
-    const today = new Date().toISOString().split('T')[0];
+    const today = madridHoy();
     let cells = [];
     for (let i=0;i<fdow;i++) cells.push(null);
     for (let d=1;d<=dim;d++) cells.push(d);
@@ -1641,7 +1640,7 @@ const now = new Date();
     if (s.open) { panel.style.display='none'; s.open=false; }
     else {
       // Set view to month of endDate or current month
-      const ref = s.endDate || new Date().toISOString().split('T')[0];
+      const ref = s.endDate || madridHoy();
       const [ry,rm] = ref.split('-').map(Number);
       s.viewYear=ry; s.viewMonth=rm;
       panel.style.display='block'; s.open=true; renderPicker();
@@ -1975,7 +1974,7 @@ if (id === "rentabilidad") {
     function() { window.loadRentabilidad(); });
 
   function filtroRentabilidadHoy() {
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = madridHoy();
     const from = document.getElementById("rent-date-from");
     const to   = document.getElementById("rent-date-to");
     if (from) from.value = hoy;
@@ -5177,11 +5176,10 @@ async function disableStore(storeId) {
 // =========================
 async function loadMetricas() {
   const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const fmt = d => d.toISOString().split("T")[0];
+  const _lmY = toMadridPart(now,'year'), _lmM = toMadridPart(now,'month');
 
-  const dateFrom = document.getElementById("metrics-date-from")?.value || fmt(firstDay);
-  const dateTo   = document.getElementById("metrics-date-to")?.value   || fmt(now);
+  const dateFrom = document.getElementById("metrics-date-from")?.value || `${_lmY}-${String(_lmM).padStart(2,'0')}-01`;
+  const dateTo   = document.getElementById("metrics-date-to")?.value   || madridHoy();
   const shop     = document.getElementById("metrics-shop")?.value       || "";
 
   // Leer tiendas seleccionadas por checkbox del panel de filtro
@@ -5680,6 +5678,9 @@ const CHART_COLORS = ['#22c55e','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#06b6d4
 function toMadridPart(date, part) {
   return parseInt(new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', [part]: 'numeric' }).format(date));
 }
+function madridHoy() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date());
+}
 
 async function loadOrdersChart(period) {
   const canvas    = document.getElementById('orders-bar-chart');
@@ -5696,14 +5697,14 @@ async function loadOrdersChart(period) {
 
   let periodText = '';
   if (period === 'day') {
-    const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0'), d = String(now.getDate()).padStart(2,'0');
+    const y = toMadridPart(now,'year'), m = String(toMadridPart(now,'month')).padStart(2,'0'), d = String(toMadridPart(now,'day')).padStart(2,'0');
     from = to = `${y}-${m}-${d}`;
     buckets    = Array.from({length:24}, (_,i) => i);
     bucketFn   = o => toMadridPart(new Date(o.created_at), 'hour');
     bucketLabel = h => `${String(h).padStart(2,'0')}h`;
     periodText  = `Hoy — ${d}/${m}/${y}`;
   } else if (period === 'month') {
-    const y = now.getFullYear(), mo = now.getMonth();
+    const y = toMadridPart(now,'year'), mo = toMadridPart(now,'month') - 1;
     const dim = new Date(y, mo+1, 0).getDate();
     from = `${y}-${String(mo+1).padStart(2,'0')}-01`;
     to   = `${y}-${String(mo+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`;
@@ -5712,7 +5713,7 @@ async function loadOrdersChart(period) {
     bucketLabel = d => d;
     periodText  = `${MESES_FULL[mo]} ${y}`;
   } else {
-    const y = now.getFullYear();
+    const y = toMadridPart(now,'year');
     from = `${y}-01-01`;
     to   = `${y}-12-31`;
     buckets    = Array.from({length:12}, (_,i) => i);
@@ -6491,10 +6492,9 @@ window.verDetalleProductosRent = verDetalleProductosRent;
 
 async function actualizarMetricasSinBalance() {
   const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const fmtD = d => d.toISOString().split("T")[0];
-  const dateFrom = document.getElementById("metrics-date-from")?.value || fmtD(firstDay);
-  const dateTo   = document.getElementById("metrics-date-to")?.value   || fmtD(now);
+  const _amY = toMadridPart(now,'year'), _amM = toMadridPart(now,'month');
+  const dateFrom = document.getElementById("metrics-date-from")?.value || `${_amY}-${String(_amM).padStart(2,'0')}-01`;
+  const dateTo   = document.getElementById("metrics-date-to")?.value   || madridHoy();
   const shopFiltro = document.getElementById("met-bal-shop-filter-val")?.value || "";
 
   // Leer checkboxes para filtro de tiendas
