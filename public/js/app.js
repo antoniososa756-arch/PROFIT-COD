@@ -6926,76 +6926,77 @@ async function loadAdsTable() {
   `;
   window.__hideLoadingBar?.();
 
-  // ── Selección de celdas estilo Excel para copiar ──────────────────────────
-  // Limpiar listener previo si se recarga la tabla
-  if (wrap._adsKeydown) document.removeEventListener("keydown", wrap._adsKeydown);
+  // ── Selección de celdas estilo Excel (click y drag sin modificadores) ────
+  if (wrap._adsKeydown)   document.removeEventListener("keydown",   wrap._adsKeydown);
+  if (wrap._adsMousemove) document.removeEventListener("mousemove", wrap._adsMousemove);
+  if (wrap._adsMouseup)   document.removeEventListener("mouseup",   wrap._adsMouseup);
 
   const table = wrap.querySelector("table");
   if (table) {
-    let lastSelected = null;
-    const tbodyRows = table.querySelectorAll("tbody tr");
-
-    tbodyRows.forEach((tr, rowIdx) => {
-      tr.querySelectorAll("td").forEach((cell, colIdx) => {
-        cell.dataset.col = colIdx;
-        cell.dataset.row = rowIdx;
-        cell.style.cursor = "pointer";
-        const input = cell.querySelector("input");
-
-        cell.addEventListener("mousedown", function(e) {
-          if (input && !e.ctrlKey && !e.metaKey && !e.shiftKey) return; // dejar input editable
-          if (!e.ctrlKey && !e.metaKey && !e.shiftKey) return; // permitir selección nativa de texto
-          e.preventDefault();
-          const col = parseInt(this.dataset.col);
-          const row = parseInt(this.dataset.row);
-
-          if (e.shiftKey && lastSelected && lastSelected.col === col) {
-            const from = Math.min(lastSelected.row, row);
-            const to   = Math.max(lastSelected.row, row);
-            if (!e.ctrlKey && !e.metaKey) clearAdsSelection(table);
-            tbodyRows.forEach((tr2, r) => {
-              if (r >= from && r <= to) {
-                const c = tr2.querySelectorAll("td")[col];
-                if (c) c.classList.add("ads-sel");
-              }
-            });
-          } else {
-            if (!e.ctrlKey && !e.metaKey) clearAdsSelection(table);
-            this.classList.toggle("ads-sel");
-            lastSelected = { col, row };
-          }
-        });
-      });
+    // Asignar índices a celdas del tbody
+    [...table.querySelectorAll("tbody tr")].forEach((tr, r) => {
+      [...tr.querySelectorAll("td")].forEach((td, c) => { td.dataset.row = r; td.dataset.col = c; });
     });
+
+    table.style.userSelect = "none";
+    table.style.webkitUserSelect = "none";
+
+    let selStart = null, selEnd = null, isDragging = false;
+
+    function cellAt(el) {
+      const td = el.closest("td[data-row]");
+      return td ? { row: +td.dataset.row, col: +td.dataset.col } : null;
+    }
+    function applySelection() {
+      if (!selStart || !selEnd) return;
+      const r1 = Math.min(selStart.row, selEnd.row), r2 = Math.max(selStart.row, selEnd.row);
+      const c1 = Math.min(selStart.col, selEnd.col), c2 = Math.max(selStart.col, selEnd.col);
+      table.querySelectorAll("td[data-row]").forEach(td => {
+        td.classList.toggle("ads-sel", +td.dataset.row >= r1 && +td.dataset.row <= r2 && +td.dataset.col >= c1 && +td.dataset.col <= c2);
+      });
+    }
+
+    table.addEventListener("mousedown", function(e) {
+      if (e.target.tagName === "INPUT") return; // dejar inputs editables
+      const coords = cellAt(e.target);
+      if (!coords) return;
+      e.preventDefault();
+      isDragging = true;
+      selStart = selEnd = coords;
+      applySelection();
+    });
+
+    wrap._adsMousemove = function(e) {
+      if (!isDragging) return;
+      const coords = cellAt(e.target);
+      if (coords) { selEnd = coords; applySelection(); }
+    };
+    wrap._adsMouseup = function() { isDragging = false; };
+    document.addEventListener("mousemove", wrap._adsMousemove);
+    document.addEventListener("mouseup",   wrap._adsMouseup);
 
     wrap._adsKeydown = function(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-        const selected = table.querySelectorAll("td.ads-sel");
+        const selected = [...table.querySelectorAll("td.ads-sel")];
         if (!selected.length) return;
-        const byRow = {};
-        selected.forEach(cell => {
-          const r = cell.dataset.row;
-          const c = cell.dataset.col;
-          if (!byRow[r]) byRow[r] = {};
-          const inp = cell.querySelector("input");
-          const raw = inp ? (inp.value || "0") : cell.textContent.trim().replace(/\s*€/g,"").trim();
-          byRow[r][c] = raw.replace(".", ","); // Excel español usa coma como decimal
+        e.preventDefault();
+        const map = {};
+        selected.forEach(td => {
+          const r = td.dataset.row, c = td.dataset.col;
+          if (!map[r]) map[r] = {};
+          const inp = td.querySelector("input");
+          const raw = inp ? (inp.value || "0") : td.textContent.trim().replace(/\u00a0/g," ").replace(/\s*€/g,"").trim();
+          map[r][c] = raw.replace(".", ",");
         });
-        const text = Object.keys(byRow).sort((a,b)=>a-b)
-          .map(r => Object.keys(byRow[r]).sort((a,b)=>a-b).map(c => byRow[r][c]).join("\t"))
+        const text = Object.keys(map).sort((a,b)=>+a-+b)
+          .map(r => Object.keys(map[r]).sort((a,b)=>+a-+b).map(c => map[r][c]).join("\t"))
           .join("\n");
-        // Copiar usando textarea (funciona en todos los browsers sin permisos)
         const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0;";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        // Flash verde para confirmar
-        table.querySelectorAll("td.ads-sel").forEach(c => {
-          c.style.outline = "2px solid #22c55e";
-          setTimeout(() => { c.style.outline = ""; c.classList.remove("ads-sel"); }, 600);
+        ta.value = text; ta.style.cssText = "position:fixed;top:-9999px;opacity:0;";
+        document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+        selected.forEach(td => {
+          td.style.outline = "2px solid #22c55e";
+          setTimeout(() => { td.style.outline = ""; td.classList.remove("ads-sel"); }, 600);
         });
       }
       if (e.key === "Escape") clearAdsSelection(table);
