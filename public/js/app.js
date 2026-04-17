@@ -6306,32 +6306,15 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       </div>`;
   }).join("");
 
-  const storeCheckboxes = balanceData.map(d =>
-    `<label class="shop-check-label shop-check-row">
-      <input type="checkbox" checked value="${d.domain}" onchange="recalcRentabilidadBalance()">
-      ${escapeHtml(d.name)}
-    </label>`
-  ).join("");
-
   wrap.innerHTML = `
-    <div style="display:flex;gap:20px;align-items:flex-start;">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Estimado basado en el rango de fecha seleccionado)</span></div>
-        <div id="rent-bal-kpis" style="margin-bottom:20px;"></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;" id="rent-bal-cols">${cols}</div>
-        <div id="rent-bal-sumatoria" style="margin-top:20px;padding:12px 20px;background:rgba(34,197,94,.08);border:2px solid #22c55e;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-weight:700;font-size:15px;color:#e5e7eb;">TOTAL</span>
-          <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
-          <div id="rent-bal-filas" style="display:none;"></div>
-        </div>
-      </div>
-      <div style="width:200px;flex-shrink:0;background:var(--card);border:1px solid #374151;border-radius:12px;padding:14px;position:sticky;top:0px;align-self:flex-start;">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div>
-        <label class="shop-check-label all">
-          <input type="checkbox" id="rent-bal-check-all" checked onchange="toggleAllRentabilidadBalance(this.checked)">
-          Todas las tiendas
-        </label>
-        ${storeCheckboxes}
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Estimado basado en el rango de fecha seleccionado)</span></div>
+      <div id="rent-bal-kpis" style="margin-bottom:20px;"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;" id="rent-bal-cols">${cols}</div>
+      <div id="rent-bal-sumatoria" style="margin-top:20px;padding:12px 20px;background:rgba(34,197,94,.08);border:2px solid #22c55e;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;font-size:15px;color:#e5e7eb;">TOTAL</span>
+        <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
+        <div id="rent-bal-filas" style="display:none;"></div>
       </div>
     </div>
   `;
