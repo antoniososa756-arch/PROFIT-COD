@@ -1945,10 +1945,9 @@ if (id === "rentabilidad") {
   if (c) c.textContent = "Rentabilidad";
 
   const nowR = new Date();
-  const firstDayR = new Date(nowR.getFullYear(), nowR.getMonth(), 1);
-  const fmtR = d => d.toISOString().split("T")[0];
-  const savedFromR = localStorage.getItem("rent_from") || fmtR(firstDayR);
-  const savedToR   = localStorage.getItem("rent_to")   || fmtR(nowR);
+  const _rY0 = toMadridPart(nowR,'year'), _rM0 = toMadridPart(nowR,'month');
+  const savedFromR = localStorage.getItem("rent_from") || `${_rY0}-${String(_rM0).padStart(2,'0')}-01`;
+  const savedToR   = localStorage.getItem("rent_to")   || madridHoy();
   const savedRentLabel = localStorage.getItem("rent_from") ? 'Personalizado' : 'Este mes';
 
   box.className = "card metricas-box";
@@ -1961,6 +1960,18 @@ if (id === "rentabilidad") {
             ${window.__DPF.triggerBtn('rent', savedRentLabel)}
             <input type="date" id="rent-date-from" value="${savedFromR}" style="display:none;">
             <input type="date" id="rent-date-to" value="${savedToR}" style="display:none;">
+            <div id="rent-shop-filter-wrap" style="position:relative;" onmouseleave="window.__rentFT=setTimeout(function(){var p=document.getElementById('rent-shop-filter-panel');var c=document.getElementById('rent-filter-chevron');if(p&&p.style.display==='block'){p.style.display='none';if(c)c.style.transform='';localStorage.setItem('rent_filter_open','0');}},250)" onmouseenter="clearTimeout(window.__rentFT)">
+              <button id="rent-filter-trigger" onclick="toggleRentShopFilter()"
+                style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
+                onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+                <span id="rent-filter-label">Filtrar tiendas</span>
+                <svg id="rent-filter-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div id="rent-shop-filter-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:1500;background:var(--card);border:1px solid #374151;border-radius:12px;padding:12px;min-width:180px;" onmouseenter="clearTimeout(window.__rentFT)" onmouseleave="window.__rentFT=setTimeout(function(){var p=document.getElementById('rent-shop-filter-panel');var c=document.getElementById('rent-filter-chevron');if(p&&p.style.display==='block'){p.style.display='none';if(c)c.style.transform='';localStorage.setItem('rent_filter_open','0');}},250)">
+                <div id="rent-filter-body"><div style="color:#9ca3af;font-size:12px;">Cargando...</div></div>
+              </div>
+            </div>
           </div>
         </div>
         <div id="rent-balance-wrap"></div>
@@ -1972,6 +1983,45 @@ if (id === "rentabilidad") {
     localStorage.getItem("rent_from") ? 'personalizado' : 'mes',
     savedRentLabel, 'rent_from', 'rent_to',
     function() { window.loadRentabilidad(); });
+
+  window.toggleRentShopFilter = function() {
+    const panel = document.getElementById('rent-shop-filter-panel');
+    const chev  = document.getElementById('rent-filter-chevron');
+    if (!panel) return;
+    const open = panel.style.display === 'block';
+    panel.style.display = open ? 'none' : 'block';
+    if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+    localStorage.setItem('rent_filter_open', open ? '0' : '1');
+  };
+  window.recalcRentFiltro = function() {
+    const checks = document.querySelectorAll("#rent-shop-filter-panel input[type='checkbox'][value]");
+    const allCheck = document.getElementById("rent-shop-check-all");
+    if (allCheck) allCheck.checked = [...checks].every(c => c.checked);
+  };
+  window.toggleAllRentFiltro = function(checked) {
+    document.querySelectorAll("#rent-shop-filter-panel input[type='checkbox'][value]").forEach(c => c.checked = checked);
+    loadRentabilidad();
+  };
+
+  // Cargar tiendas en el panel de filtro de rentabilidad
+  fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+    .then(r => r.json()).then(storesR => {
+      const bodyEl = document.getElementById("rent-filter-body");
+      if (bodyEl && Array.isArray(storesR) && storesR.length > 0) {
+        const chks = storesR.map(s =>
+          `<label class="shop-check-label shop-check-row">
+            <input type="checkbox" checked value="${s.domain}" onchange="recalcRentFiltro();loadRentabilidad();">
+            ${escapeHtml(s.shop_name || s.domain)}
+          </label>`
+        ).join("");
+        bodyEl.innerHTML = `
+          <label class="shop-check-label all">
+            <input type="checkbox" id="rent-shop-check-all" checked onchange="toggleAllRentFiltro(this.checked)">
+            Todas las tiendas
+          </label>
+          ${chks}`;
+      }
+    }).catch(() => {});
 
   function filtroRentabilidadHoy() {
     const hoy = madridHoy();
@@ -1987,8 +2037,9 @@ if (id === "rentabilidad") {
 
   function filtroRentabilidadMes() {
     const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-    const today    = now.toISOString().split("T")[0];
+    const myY = toMadridPart(now,'year'), myM = toMadridPart(now,'month');
+    const firstDay = `${myY}-${String(myM).padStart(2,'0')}-01`;
+    const today    = madridHoy();
     const from = document.getElementById("rent-date-from");
     const to   = document.getElementById("rent-date-to");
     if (from) from.value = firstDay;
@@ -2001,10 +2052,11 @@ if (id === "rentabilidad") {
 
   function filtroRentabilidadMesAnterior() {
     const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastDay  = new Date(now.getFullYear(), now.getMonth(), 0);
-    const firstStr = firstDay.toISOString().split("T")[0];
-    const lastStr  = lastDay.toISOString().split("T")[0];
+    const myY = toMadridPart(now,'year'), myM = toMadridPart(now,'month');
+    const pm = myM === 1 ? 12 : myM - 1, py = myM === 1 ? myY - 1 : myY;
+    const ld = new Date(myY, myM - 1, 0).getDate();
+    const firstStr = `${py}-${String(pm).padStart(2,'0')}-01`;
+    const lastStr  = `${py}-${String(pm).padStart(2,'0')}-${String(ld).padStart(2,'0')}`;
     const from = document.getElementById("rent-date-from");
     const to   = document.getElementById("rent-date-to");
     if (from) from.value = firstStr;
@@ -2030,11 +2082,13 @@ if (id === "rentabilidad") {
 
   async function loadRentabilidad() {
     const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const fmt = d => d.toISOString().split("T")[0];
-    const dateFrom = document.getElementById("rent-date-from")?.value || fmt(firstDay);
-    const dateTo   = document.getElementById("rent-date-to")?.value   || fmt(now);
-    await loadRentabilidadBalance(dateFrom, dateTo);
+    const _rY = toMadridPart(now,'year'), _rM = toMadridPart(now,'month');
+    const dateFrom = document.getElementById("rent-date-from")?.value || `${_rY}-${String(_rM).padStart(2,'0')}-01`;
+    const dateTo   = document.getElementById("rent-date-to")?.value   || madridHoy();
+    const checkboxes = document.querySelectorAll("#rent-shop-filter-panel input[type='checkbox'][value]");
+    let shopsFiltro = [...checkboxes].filter(c => c.checked).map(c => c.value);
+    if (shopsFiltro.length === checkboxes.length) shopsFiltro = [];
+    await loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro);
   }
   window.loadRentabilidad = loadRentabilidad;
 
@@ -5974,7 +6028,7 @@ window.loadOrdersChart = loadOrdersChart;
 // =========================
 // RENTABILIDAD BALANCE
 // =========================
-async function loadRentabilidadBalance(dateFrom, dateTo) {
+async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
   const wrap = document.getElementById("rent-balance-wrap");
   if (!wrap) return;
   window.__showLoadingBar?.("Cargando rentabilidad...");
@@ -5995,6 +6049,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
       cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(d => Array.isArray(d) ? d : []),
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
+    if (shopsFiltro.length > 0) stores = stores.filter(s => shopsFiltro.includes(s.domain));
     // Facturación exacta por tienda (mismo cálculo que Gastos Ads: bruto - cancelados por cancelled_at)
     await Promise.all(stores.map(async store => {
       try {
@@ -6007,7 +6062,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo) {
     }));
   } catch {}
 
-  const ordersRango = orders;
+  const ordersRango = shopsFiltro.length > 0 ? orders.filter(o => shopsFiltro.includes(o.shop_domain)) : orders;
 
   const now = new Date();
   const mesActual = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
