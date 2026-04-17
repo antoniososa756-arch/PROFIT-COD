@@ -5289,6 +5289,85 @@ async function loadMetricas() {
     console.error("Error cargando métricas:", e);
   }
 
+  loadTopProductos();
+}
+
+async function loadTopProductos() {
+  const panel = document.getElementById("metricas-right-panel");
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;min-height:220px;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;">Top 5 productos</div>
+        <span style="font-size:11px;color:var(--muted);background:var(--hover);padding:3px 9px;border-radius:20px;border:1px solid var(--border);">Mes actual</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${[1,2,3,4,5].map(()=>`<div style="height:50px;border-radius:10px;background:var(--hover);opacity:.5;"></div>`).join("")}
+      </div>
+    </div>`;
+
+  try {
+    const checkboxes = document.querySelectorAll('#met-shop-filter-panel input[type="checkbox"][value]');
+    let dominios = [...checkboxes].filter(c => c.checked).map(c => c.value);
+    if (dominios.length === checkboxes.length) dominios = [];
+    const params = new URLSearchParams();
+    if (dominios.length) params.set("shops", dominios.join(","));
+
+    const resp = await fetch(`${API_BASE}/api/metrics/top-products?${params}`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await resp.json();
+
+    if (!Array.isArray(data) || !data.length) {
+      panel.innerHTML = `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;min-height:220px;display:flex;align-items:center;justify-content:center;">
+          <div style="text-align:center;color:var(--muted);">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.4;margin-bottom:8px;"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            <div style="font-size:13px;">Sin ventas este mes</div>
+            <div style="font-size:11px;margin-top:3px;opacity:.7;">Sincroniza movimientos de stock para ver el ranking</div>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const stockClr = s => s <= 0 ? "#ef4444" : s <= 5 ? "#f59e0b" : "#22c55e";
+    const stockBg  = s => s <= 0 ? "rgba(239,68,68,.1)" : s <= 5 ? "rgba(245,158,11,.1)" : "rgba(34,197,94,.1)";
+    const medals = ["🥇","🥈","🥉"];
+
+    const rows = data.map((p, i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--hover);cursor:default;transition:filter .15s;"
+           onmouseover="this.style.filter='brightness(1.08)'" onmouseout="this.style.filter=''">
+        <span style="font-size:${i<3?'17px':'12px'};width:22px;text-align:center;flex-shrink:0;${i>=3?'font-weight:800;color:var(--muted);':''}">${i<3?medals[i]:i+1}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${p.display_name}">${p.display_name}</div>
+          ${p.group_id ? `<div style="font-size:10px;color:var(--muted);margin-top:1px;display:flex;align-items:center;gap:3px;"><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Grupo vinculado</div>` : ""}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <div style="text-align:right;">
+            <div style="font-size:14px;font-weight:700;color:var(--text);">${p.units_sold}</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1;">uds vendidas</div>
+          </div>
+          <div style="width:1px;height:26px;background:var(--border);"></div>
+          <div style="text-align:center;background:${stockBg(p.stock)};border-radius:8px;padding:4px 9px;min-width:42px;">
+            <div style="font-size:14px;font-weight:700;color:${stockClr(p.stock)};line-height:1.2;">${p.stock}</div>
+            <div style="font-size:10px;color:${stockClr(p.stock)};opacity:.8;line-height:1;">stock</div>
+          </div>
+        </div>
+      </div>`).join("");
+
+    panel.innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;">Top 5 productos</div>
+          <span style="font-size:11px;color:var(--muted);background:var(--hover);padding:3px 9px;border-radius:20px;border:1px solid var(--border);">Mes actual</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">${rows}</div>
+      </div>`;
+  } catch(e) {
+    console.error("loadTopProductos:", e);
+    panel.innerHTML = "";
+  }
 }
 
 async function loadMetricasBalance(dateFrom, dateTo) {
