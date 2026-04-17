@@ -6957,12 +6957,18 @@ async function loadAdsTable() {
     }
 
     table.addEventListener("mousedown", function(e) {
-      if (e.target.tagName === "INPUT") return; // dejar inputs editables
+      if (e.target.tagName === "INPUT") return;
       const coords = cellAt(e.target);
       if (!coords) return;
       e.preventDefault();
       isDragging = true;
-      selStart = selEnd = coords;
+      if (e.shiftKey && selStart) {
+        // Shift+Click: extender rango desde selStart existente
+        selEnd = coords;
+      } else {
+        // Click normal: nueva selección desde esta celda
+        selStart = selEnd = coords;
+      }
       applySelection();
     });
 
