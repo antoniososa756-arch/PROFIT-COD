@@ -2781,170 +2781,431 @@ if (id === "ayuda") {
 
   box.innerHTML = `
   <style>
-    .help-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:28px; }
-    .help-tab-btn { padding:9px 20px; border-radius:10px; border:1.5px solid #374151; font-size:13px; font-weight:600; cursor:pointer; background:var(--card,#fff); color:var(--text,#111827); transition:all .15s; }
-    .help-tab-btn.active, .help-tab-btn:hover { background:#22c55e; color:#fff; border-color:#22c55e; }
-    .help-panel { display:none; }
-    .help-panel.active { display:block; }
-    .help-section { background:var(--card,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; padding:24px 28px; margin-bottom:18px; }
-    .help-section h2 { font-size:17px; font-weight:700; color:var(--text,#111827); margin:0 0 8px 0; }
-    .help-section h3 { font-size:14px; font-weight:700; color:#22c55e; margin:18px 0 6px 0; }
-    .help-section p, .help-section li { font-size:14px; color:var(--muted,#4b5563); line-height:1.7; margin:0 0 6px 0; }
-    .help-section ul { padding-left:20px; margin:0 0 10px 0; }
-    .help-tip { background:rgba(34,197,94,.08); border-left:3px solid #22c55e; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#16a34a; margin-top:12px; }
-    .help-warning { background:rgba(234,179,8,.1); border-left:3px solid #fbbf24; border-radius:0 8px 8px 0; padding:10px 16px; font-size:13px; color:#fde047; margin-top:12px; }
+    .hc-wrap { max-width:860px; }
+    /* Nav cards */
+    .hc-nav { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-bottom:32px; }
+    .hc-nav-card { display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:12px;border:1.5px solid var(--border,#e5e7eb);background:var(--card,#fff);cursor:pointer;transition:all .15s;font-size:12px;font-weight:600;color:var(--muted,#6b7280);text-align:center; }
+    .hc-nav-card:hover,.hc-nav-card.active { border-color:#22c55e;background:rgba(34,197,94,.07);color:#16a34a; }
+    .hc-nav-card .hc-icon { font-size:24px;line-height:1; }
+    /* Panels */
+    .hc-panel { display:none; }
+    .hc-panel.active { display:block; }
+    /* Accordion */
+    .hc-accordion { border:1px solid var(--border,#e5e7eb);border-radius:12px;overflow:hidden;margin-bottom:12px; }
+    .hc-acc-head { display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;background:var(--card,#fff);user-select:none;gap:12px; }
+    .hc-acc-head:hover { background:rgba(34,197,94,.04); }
+    .hc-acc-title { font-size:14px;font-weight:700;color:var(--text,#111827); }
+    .hc-acc-arrow { font-size:12px;color:var(--muted);transition:transform .2s;flex-shrink:0; }
+    .hc-accordion.open .hc-acc-arrow { transform:rotate(180deg); }
+    .hc-acc-body { display:none;padding:0 20px 18px 20px;border-top:1px solid var(--border,#e5e7eb); }
+    .hc-accordion.open .hc-acc-body { display:block; }
+    .hc-acc-body p,.hc-acc-body li { font-size:13.5px;color:var(--muted,#4b5563);line-height:1.75;margin:8px 0 0 0; }
+    .hc-acc-body ul { padding-left:18px;margin:8px 0 0 0; }
+    .hc-acc-body ul li { margin:4px 0; }
+    /* Badges */
+    .hc-tip { display:flex;gap:10px;align-items:flex-start;background:rgba(34,197,94,.07);border-left:3px solid #22c55e;border-radius:0 8px 8px 0;padding:10px 14px;margin-top:14px;font-size:13px;color:#15803d;line-height:1.6; }
+    .hc-warn { display:flex;gap:10px;align-items:flex-start;background:rgba(234,179,8,.08);border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:10px 14px;margin-top:14px;font-size:13px;color:#ca8a04;line-height:1.6; }
+    .hc-info { display:flex;gap:10px;align-items:flex-start;background:rgba(59,130,246,.07);border-left:3px solid #3b82f6;border-radius:0 8px 8px 0;padding:10px 14px;margin-top:14px;font-size:13px;color:#2563eb;line-height:1.6; }
+    /* Steps */
+    .hc-steps { display:flex;flex-direction:column;gap:10px;margin-top:12px; }
+    .hc-step { display:flex;gap:12px;align-items:flex-start; }
+    .hc-step-num { width:24px;height:24px;border-radius:50%;background:#22c55e;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px; }
+    .hc-step-text { font-size:13.5px;color:var(--muted,#4b5563);line-height:1.7; }
+    /* Status pills */
+    .hc-pill { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;margin:2px 3px; }
+    .hc-pill-gray { background:rgba(107,114,128,.12);color:#6b7280; }
+    .hc-pill-blue { background:rgba(59,130,246,.12);color:#3b82f6; }
+    .hc-pill-green { background:rgba(34,197,94,.12);color:#16a34a; }
+    .hc-pill-red { background:rgba(239,68,68,.12);color:#dc2626; }
+    .hc-pill-orange { background:rgba(249,115,22,.12);color:#ea580c; }
+    .hc-pill-yellow { background:rgba(234,179,8,.12);color:#ca8a04; }
   </style>
 
-  <div class="help-tabs">
-    <button class="help-tab-btn active" onclick="helpTab(event,'metricas')">📊 Métricas</button>
-    <button class="help-tab-btn" onclick="helpTab(event,'tiendas')">🏪 Tiendas</button>
-    <button class="help-tab-btn" onclick="helpTab(event,'productos')">📦 Productos</button>
-    <button class="help-tab-btn" onclick="helpTab(event,'pedidos')">🛒 Pedidos</button>
-    <button class="help-tab-btn" onclick="helpTab(event,'facturas')">🧾 Facturas</button>
-    <button class="help-tab-btn" onclick="helpTab(event,'informes')">📈 Informes</button>
-  </div>
+  <div class="hc-wrap">
 
-  <div id="help-panel-metricas" class="help-panel active">
-    <div class="help-section">
-      <h2>📊 ¿Qué son las Métricas?</h2>
-      <p>Las Métricas son el panel principal de control de tu negocio. Te muestran de un solo vistazo cómo están funcionando todos tus pedidos dentro del rango de fechas que tú elijas.</p>
+    <!-- Navegación rápida -->
+    <div class="hc-nav">
+      <div class="hc-nav-card active" onclick="hcTab('metricas',this)"><span class="hc-icon">📊</span>Métricas</div>
+      <div class="hc-nav-card" onclick="hcTab('pedidos',this)"><span class="hc-icon">🛒</span>Pedidos</div>
+      <div class="hc-nav-card" onclick="hcTab('productos',this)"><span class="hc-icon">📦</span>Productos</div>
+      <div class="hc-nav-card" onclick="hcTab('rentabilidad',this)"><span class="hc-icon">💰</span>Rentabilidad</div>
+      <div class="hc-nav-card" onclick="hcTab('gastos',this)"><span class="hc-icon">🧾</span>Gastos</div>
+      <div class="hc-nav-card" onclick="hcTab('ingresos',this)"><span class="hc-icon">📈</span>Ingresos</div>
+      <div class="hc-nav-card" onclick="hcTab('integraciones',this)"><span class="hc-icon">🔗</span>Integraciones</div>
     </div>
-    <div class="help-section">
-      <h2>📅 Filtro de fechas y tienda</h2>
-      <p>En la parte superior encontrarás dos campos de fecha: <strong>Desde</strong> y <strong>Hasta</strong>. Elige cualquier rango y pulsa <strong>Filtrar</strong> para actualizar todos los datos. También puedes filtrar por una tienda específica. Por defecto muestra siempre el mes en curso.</p>
-      <div class="help-tip">💡 Por defecto el sistema muestra siempre el mes en curso, desde el día 1 hasta hoy.</div>
-    </div>
-    <div class="help-section">
-      <h2>📦 Tarjetas de estado de pedidos</h2>
-      <p>Cada tarjeta representa el estado en que se encuentran tus pedidos:</p>
-      <ul>
-        <li><strong>Total:</strong> todos los pedidos dentro del rango seleccionado.</li>
-        <li><strong>Enviados:</strong> pedidos que ya tienen número de seguimiento MRW asignado.</li>
-        <li><strong>Pendientes:</strong> pedidos recibidos pero aún no procesados.</li>
-        <li><strong>En tránsito:</strong> pedidos que ya salieron pero no llegaron al cliente.</li>
-        <li><strong>Entregados:</strong> pedidos que el cliente recibió correctamente.</li>
-        <li><strong>Devueltos:</strong> pedidos que el cliente rechazó o no recogió.</li>
-        <li><strong>Destruidos:</strong> pedidos que MRW destruyó tras no poder entregarlos.</li>
-      </ul>
-      <div class="help-tip">💡 El gráfico circular (donut) muestra el porcentaje de entregados, devueltos+destruidos y en tránsito sobre el total enviado.</div>
-    </div>
-    <div class="help-section">
-      <h2>💰 Balance aproximado por tienda</h2>
-      <p>Debajo de las tarjetas está el panel de Balance. El sistema calcula para cada tienda un resumen financiero del período seleccionado.</p>
-      <h3>Ingresos que se tienen en cuenta:</h3>
-      <ul>
-        <li><strong>COD (contra reembolso):</strong> se descuenta automáticamente la comisión MRW (0,67€ por pedido).</li>
-        <li><strong>Tarjeta/Online:</strong> se descuenta automáticamente el 4% de comisión bancaria.</li>
-        <li><strong>Ingresos manuales:</strong> puedes añadir ingresos adicionales que no vengan de Shopify.</li>
-      </ul>
-      <h3>Gastos que se tienen en cuenta:</h3>
-      <ul>
-        <li><strong>Meta Ads y TikTok Ads:</strong> el gasto en publicidad introducido para ese mes.</li>
-        <li><strong>Coste de productos:</strong> calculado según el coste de compra × unidades vendidas.</li>
-        <li><strong>MRW:</strong> precio por envío × número de envíos + devoluciones.</li>
-        <li><strong>Logística:</strong> precio por gestión × número de envíos.</li>
-        <li><strong>Shopify:</strong> cuota mensual introducida en Gastos Varios.</li>
-        <li><strong>Gastos fijos prorrateados:</strong> divididos entre el número de tiendas activas.</li>
-      </ul>
-      <div class="help-warning">⚠️ Este balance es una estimación. Para mayor precisión asegúrate de tener bien configurados los costes de productos, gastos fijos y publicidad.</div>
-    </div>
-  </div>
 
-  <div id="help-panel-tiendas" class="help-panel">
-    <div class="help-section">
-      <h2>🏪 ¿Qué es la sección Tiendas?</h2>
-      <p>Aquí gestionas todas las conexiones entre PROFITCOD y tus tiendas de Shopify. Cada tienda conectada sincronizará automáticamente sus pedidos y productos.</p>
-    </div>
-    <div class="help-section">
-      <h2>➕ Conectar una nueva tienda</h2>
-      <p>Pulsa <strong>+ Conectar tienda Shopify</strong>. Necesitarás introducir:</p>
-      <ul>
-        <li><strong>Dominio:</strong> formato tutienda.myshopify.com</li>
-        <li><strong>Access Token:</strong> comienza por shpat_, encuéntralo en Shopify → Apps → Tu app → Credenciales API.</li>
-        <li><strong>App Secret:</strong> también en la misma pantalla de credenciales de la app.</li>
-      </ul>
-      <div class="help-tip">💡 PROFITCOD nunca te pedirá la contraseña de tu cuenta de Shopify.</div>
-    </div>
-    <div class="help-section">
-      <h2>🔄 Sincronización automática</h2>
-      <p>Los pedidos nuevos se sincronizan automáticamente mediante webhooks. Si necesitas forzar una sincronización puedes usar el botón <strong>Sincronizar</strong> en la sección de Pedidos.</p>
-    </div>
-    <div class="help-section">
-      <h2>💸 Gastos Fijos y Gastos Varios</h2>
-      <ul>
-        <li><strong>Gastos Fijos:</strong> costes fijos mensuales (oficina, herramientas, etc.). Se distribuyen automáticamente entre todas tus tiendas activas.</li>
-        <li><strong>Gastos Varios:</strong> costes variables por tienda como la cuota mensual de Shopify. Se asignan individualmente por tienda y por mes.</li>
-      </ul>
-      <p>Los precios de MRW y Logística se configuran en Gastos Fijos y se aplican automáticamente según los envíos de cada tienda.</p>
-    </div>
-  </div>
+    <!-- ══════════ MÉTRICAS ══════════ -->
+    <div id="hcp-metricas" class="hc-panel active">
 
-  <div id="help-panel-productos" class="help-panel">
-    <div class="help-section">
-      <h2>📦 Productos</h2>
-      <p>Catálogo completo de artículos sincronizados desde Shopify. Desde aquí puedes:</p>
-      <ul>
-        <li>Ver el stock disponible por producto y tienda.</li>
-        <li>Introducir el <strong>coste de compra</strong> de cada producto (clave para el balance).</li>
-        <li>Configurar <strong>unidades por venta</strong> si un pack incluye varias unidades.</li>
-        <li>Registrar <strong>entradas de mercancía</strong> cuando recibes nuevo stock.</li>
-      </ul>
-      <div class="help-tip">💡 Cuanto más exacto sea el coste de compra, más preciso será el cálculo de rentabilidad en Métricas.</div>
-    </div>
-  </div>
+      <div class="hc-accordion open">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué muestra el panel de Métricas?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Es tu panel de mando principal. De un vistazo ves el estado real de todos los pedidos del período seleccionado: cuántos están en camino, cuántos se entregaron, cuántos volvieron y cuánto has facturado.</p>
+          <p>Debajo del resumen hay un <strong>gráfico de barras diario/mensual</strong> con la evolución de pedidos y una <strong>gráfica donut</strong> con el porcentaje de entregados, en tránsito y devueltos/destruidos.</p>
+          <div class="hc-tip">💡 Por defecto siempre muestra el mes en curso (del día 1 a hoy). Puedes cambiar el rango con el selector de fechas.</div>
+        </div>
+      </div>
 
-  <div id="help-panel-pedidos" class="help-panel">
-    <div class="help-section">
-      <h2>🛒 Pedidos</h2>
-      <p>Centraliza todos los pedidos de todas tus tiendas en una sola vista. Puedes filtrar por tienda, estado, fecha o buscar por número de pedido o nombre de cliente.</p>
-      <h3>Estados de un pedido:</h3>
-      <ul>
-        <li><strong>Pendiente:</strong> recibido pero sin procesar todavía.</li>
-        <li><strong>En preparación / Enviado / En tránsito / Franquicia:</strong> en camino al cliente.</li>
-        <li><strong>Entregado:</strong> el cliente lo recibió correctamente.</li>
-        <li><strong>Devuelto:</strong> el cliente lo rechazó o no estaba en casa.</li>
-        <li><strong>Destruido:</strong> MRW no pudo entregarlo y lo destruyó.</li>
-        <li><strong>Cancelado:</strong> el pedido fue anulado.</li>
-      </ul>
-      <h3>Importar pagados desde PDF de MRW:</h3>
-      <p>Si MRW te envía un PDF con los comprobantes de liquidación, súbelo al sistema. PROFITCOD extrae automáticamente los números de seguimiento y marca esos pedidos como pagados.</p>
-      <div class="help-tip">💡 Los pedidos cancelados y pendientes no se cuentan en el balance de Métricas.</div>
-    </div>
-  </div>
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué significa cada tarjeta de estado?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <ul>
+            <li><span class="hc-pill hc-pill-gray">Total</span> — Todos los pedidos del rango, incluidos cancelados.</li>
+            <li><span class="hc-pill hc-pill-blue">Enviados</span> — Pedidos que ya salieron (en preparación, enviado, en tránsito, franquicia).</li>
+            <li><span class="hc-pill hc-pill-yellow">Pendientes</span> — Recibidos pero aún no procesados.</li>
+            <li><span class="hc-pill hc-pill-blue">En tránsito</span> — En camino al cliente.</li>
+            <li><span class="hc-pill hc-pill-green">Entregados</span> — El cliente los recibió correctamente.</li>
+            <li><span class="hc-pill hc-pill-orange">Devueltos</span> — El cliente rechazó el pedido o no estaba.</li>
+            <li><span class="hc-pill hc-pill-red">Destruidos</span> — MRW no pudo entregarlos y los destruyó.</li>
+          </ul>
+          <div class="hc-info">ℹ️ Los pedidos cancelados no cuentan en las tarjetas de estado ni en la facturación.</div>
+        </div>
+      </div>
 
-  <div id="help-panel-facturas" class="help-panel">
-    <div class="help-section">
-      <h2>🧾 Facturas</h2>
-      <p>Gestiona los documentos de facturación. Dentro encontrarás varias pestañas:</p>
-      <ul>
-        <li><strong>Reembolsos:</strong> pedidos COD entregados pendientes de cobro. Puedes importar el PDF de MRW para marcarlos automáticamente como pagados.</li>
-        <li><strong>Gastos Ads:</strong> introduce el gasto diario de Meta y TikTok por tienda.</li>
-        <li><strong>Gastos Fijos:</strong> configura los gastos fijos mensuales.</li>
-        <li><strong>Gastos por Tienda:</strong> resumen de todos los gastos variables por tienda.</li>
-        <li><strong>Nómina:</strong> próximamente.</li>
-      </ul>
-      <div class="help-tip">💡 Las notificaciones te avisarán cuando tengas reembolsos pendientes de cobro.</div>
-    </div>
-  </div>
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo filtrar por tienda o fechas?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>En la parte superior tienes el selector de fechas (atajos: <strong>Hoy</strong>, <strong>Este mes</strong>, <strong>Mes anterior</strong> o rango personalizado) y el botón <strong>Filtrar tiendas</strong> para ver solo una o varias tiendas.</p>
+          <div class="hc-tip">💡 Si tienes muchas tiendas puedes usar "Seleccionar todo / Ninguno" para cambiar rápidamente el filtro.</div>
+        </div>
+      </div>
 
-  <div id="help-panel-informes" class="help-panel">
-    <div class="help-section">
-      <h2>📈 Informes</h2>
-      <p>Resúmenes consolidados organizados en dos pestañas:</p>
-      <ul>
-        <li><strong>Ingresos:</strong> detalle de ingresos por tienda y mes — COD, tarjeta y totales netos tras comisiones.</li>
-        <li><strong>Balance Final:</strong> rentabilidad mensual completa por tienda con ingresos, gastos desglosados y resultado final.</li>
-      </ul>
-      <div class="help-warning">⚠️ Los informes se recalculan automáticamente cada vez que los abres, reflejando los datos actuales del sistema.</div>
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué son los Top 5 productos más vendidos?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>En el lado derecho de la gráfica aparece el ranking de los 5 productos más vendidos del mes en curso. Si un producto pertenece a un <strong>grupo vinculado</strong>, sus ventas se suman bajo el nombre del grupo para evitar duplicados.</p>
+          <p>Cada fila muestra las <strong>unidades vendidas</strong> este mes y el <strong>stock real disponible</strong> actualmente.</p>
+          <div class="hc-warn">⚠️ El ranking solo cuenta el mes en curso, no se ve afectado por el filtro de fechas.</div>
+        </div>
+      </div>
+
     </div>
+
+    <!-- ══════════ PEDIDOS ══════════ -->
+    <div id="hcp-pedidos" class="hc-panel">
+
+      <div class="hc-accordion open">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué es la sección de Pedidos?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Vista centralizada de todos los pedidos de todas tus tiendas en una sola tabla. Puedes filtrar por <strong>tienda</strong>, <strong>estado</strong>, <strong>fecha</strong> o buscar por número de pedido, nombre de cliente o número de seguimiento.</p>
+          <div class="hc-tip">💡 Los pedidos se sincronizan automáticamente desde Shopify. Si falta alguno, usa el botón Sincronizar.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">Estados de un pedido explicados</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <ul>
+            <li><span class="hc-pill hc-pill-yellow">Pendiente</span> — Recibido, aún sin procesar.</li>
+            <li><span class="hc-pill hc-pill-blue">En preparación</span> — Se está preparando para enviar.</li>
+            <li><span class="hc-pill hc-pill-blue">Enviado</span> — Entregado a MRW, tiene tracking.</li>
+            <li><span class="hc-pill hc-pill-blue">En tránsito</span> — Circulando hacia el destino.</li>
+            <li><span class="hc-pill hc-pill-blue">Franquicia</span> — En la oficina MRW local.</li>
+            <li><span class="hc-pill hc-pill-green">Entregado</span> — El cliente lo recibió.</li>
+            <li><span class="hc-pill hc-pill-orange">Devuelto</span> — Rechazado o ausente.</li>
+            <li><span class="hc-pill hc-pill-red">Destruido</span> — MRW lo destruyó.</li>
+            <li><span class="hc-pill hc-pill-gray">Cancelado</span> — Pedido anulado.</li>
+          </ul>
+          <div class="hc-info">ℹ️ Puedes cambiar el estado manualmente desde el menú de cada pedido si MRW no actualiza automáticamente.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo funciona la sincronización con MRW?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Si tienes la integración MRW activa (en <strong>Integraciones → Agencia de envío</strong>), el sistema consulta automáticamente el estado de cada número de seguimiento y actualiza los pedidos.</p>
+          <div class="hc-steps">
+            <div class="hc-step"><span class="hc-step-num">1</span><span class="hc-step-text">MRW recoge el paquete → estado pasa a <strong>Enviado</strong>.</span></div>
+            <div class="hc-step"><span class="hc-step-num">2</span><span class="hc-step-text">El paquete llega a la delegación destino → <strong>Franquicia</strong>.</span></div>
+            <div class="hc-step"><span class="hc-step-num">3</span><span class="hc-step-text">Se entrega al cliente → <strong>Entregado</strong>.</span></div>
+            <div class="hc-step"><span class="hc-step-num">4</span><span class="hc-step-text">Si el cliente no lo acepta → <strong>Devuelto</strong>.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué son los Reembolsos COD?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Los pedidos COD (contra reembolso) que están <strong>entregados</strong> pero cuyo pago aún no has recibido de MRW aparecen en la sección <strong>Reembolsos</strong> (dentro de Pedidos o Facturas).</p>
+          <p>Puedes marcarlos como <strong>Cobrado</strong> manualmente o importar el PDF de liquidación que MRW te envía por email para que el sistema los marque automáticamente.</p>
+          <div class="hc-tip">💡 Conecta el correo Gmail donde recibes los PDFs de MRW en Integraciones → Reembolsos para que la importación sea automática.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════ PRODUCTOS ══════════ -->
+    <div id="hcp-productos" class="hc-panel">
+
+      <div class="hc-accordion open">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué puedo hacer en la sección Productos?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Esta sección es el almacén virtual de tu negocio. Puedes:</p>
+          <ul>
+            <li>Ver el <strong>stock disponible</strong> de cada producto y tienda.</li>
+            <li>Asignar el <strong>coste de compra</strong> por producto (usado para calcular rentabilidad).</li>
+            <li>Configurar <strong>unidades por venta</strong> cuando un pedido incluye varios artículos.</li>
+            <li>Registrar <strong>entradas de stock</strong> cuando recibes nueva mercancía.</li>
+            <li>Crear <strong>grupos de productos</strong> para agrupar variantes o packs bajo un mismo nombre.</li>
+          </ul>
+          <div class="hc-warn">⚠️ Sin el coste de compra configurado, el balance de rentabilidad no será preciso.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo se calcula el stock disponible?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>El stock se calcula como:</p>
+          <p style="background:var(--input,#f9fafb);padding:10px 14px;border-radius:8px;font-family:monospace;margin-top:10px;">
+            Stock inicial + Entradas − Ventas + Devoluciones
+          </p>
+          <p>Cada vez que se marca un pedido como <strong>enviado o entregado</strong>, el sistema descuenta las unidades automáticamente. Las <strong>devoluciones</strong> vuelven a sumarse al stock.</p>
+          <div class="hc-info">ℹ️ Si tienes el mismo producto en varias tiendas y los vinculas con un <strong>grupo</strong>, el stock se suma y muestra unificado.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué son los grupos de productos?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Si vendes el mismo producto en varias tiendas o con distintos nombres, puedes crear un grupo y vincular esos productos. El grupo <strong>suma el stock de todos los vinculados</strong> y agrupa las ventas en los rankings.</p>
+          <div class="hc-steps">
+            <div class="hc-step"><span class="hc-step-num">1</span><span class="hc-step-text">Ve a Productos → pestaña <strong>Grupos</strong>.</span></div>
+            <div class="hc-step"><span class="hc-step-num">2</span><span class="hc-step-text">Crea un nuevo grupo con el nombre que quieras.</span></div>
+            <div class="hc-step"><span class="hc-step-num">3</span><span class="hc-step-text">Vincula los productos de cada tienda al grupo.</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════ RENTABILIDAD ══════════ -->
+    <div id="hcp-rentabilidad" class="hc-panel">
+
+      <div class="hc-accordion open">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué muestra la sección Rentabilidad?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Es el balance financiero detallado de tu negocio para el período que elijas. Muestra por cada tienda: <strong>ingresos netos, gastos desglosados y resultado final</strong>. Al final suma el total de todas las tiendas.</p>
+          <div class="hc-warn">⚠️ Es una estimación. Para que sea precisa necesitas tener configurados los costes de productos, gastos fijos, precios MRW/Logística y gastos publicitarios.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo se calculan los ingresos?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <ul>
+            <li><strong>COD (contra reembolso):</strong> importe de pedidos entregados − 0,67€ por pedido (comisión MRW).</li>
+            <li><strong>Tarjeta / Online:</strong> importe de pedidos pagados online − 4% de comisión bancaria.</li>
+            <li><strong>Ingresos extra:</strong> cantidades manuales que puedes añadir (ej. ventas fuera de Shopify).</li>
+          </ul>
+          <div class="hc-tip">💡 Solo se cuentan los pedidos entregados para COD y los pedidos pagados para tarjeta.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo se calculan los gastos?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <ul>
+            <li><strong>Meta Ads / TikTok Ads:</strong> gasto introducido en la tabla de Gastos Ads para ese período.</li>
+            <li><strong>Coste productos:</strong> coste de compra × unidades vendidas (descontando devoluciones).</li>
+            <li><strong>MRW:</strong> precio por envío × (envíos + devoluciones).</li>
+            <li><strong>Logística:</strong> precio logística × total de envíos.</li>
+            <li><strong>Gastos fijos:</strong> total de gastos fijos del mes ÷ número de tiendas activas.</li>
+            <li><strong>Nómina:</strong> total de nómina del mes ÷ número de tiendas activas.</li>
+            <li><strong>Shopify:</strong> cuota mensual configurada en Gastos por Tienda.</li>
+            <li><strong>IVA:</strong> se aplica sobre los pedidos entregados según el % configurado.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo ver el desglose de una tienda?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Cada tarjeta de tienda tiene un botón <strong>Ver desglose</strong>. Al pulsarlo se abre un panel con todos los conceptos de ingresos y gastos desglosados línea a línea para esa tienda y período.</p>
+          <p>También puedes pulsar en <strong>Productos ▶ ver detalle</strong> dentro del desglose para ver qué productos se vendieron y cuánto costaron.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════ GASTOS ══════════ -->
+    <div id="hcp-gastos" class="hc-panel">
+
+      <div class="hc-accordion open">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué tipos de gastos puedo registrar?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <ul>
+            <li><strong>Gastos Ads:</strong> gasto diario de publicidad en Meta y TikTok, por tienda y mes.</li>
+            <li><strong>Gastos Fijos:</strong> costes fijos mensuales (oficina, herramientas, suministros…). Se reparten entre todas las tiendas.</li>
+            <li><strong>Gastos por Tienda:</strong> cuota mensual de Shopify y otros variables por tienda.</li>
+            <li><strong>Nómina:</strong> nóminas mensuales. Se reparten entre todas las tiendas.</li>
+            <li><strong>Precios MRW y Logística:</strong> se configuran en Gastos Fijos y aplican automáticamente.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo funciona la tabla de Gastos Ads?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Selecciona la tienda y el mes. Verás una fila por cada día con columnas para <strong>Meta</strong> y <strong>TikTok</strong>. Escribe el gasto de cada día directamente en la celda — se guarda automáticamente al salir de la celda.</p>
+          <div class="hc-tip">💡 Puedes seleccionar un rango de celdas haciendo click y arrastrando (o Shift+Click) y copiarlas con Ctrl+C para pegarlas en Excel.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Los gastos fijos se aplican a todas las tiendas?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Sí. Los <strong>Gastos Fijos</strong> (oficina, herramientas, etc.) se suman y se dividen automáticamente entre el número de tiendas activas. Así cada tienda asume su parte proporcional del coste fijo total.</p>
+          <p>Lo mismo ocurre con la <strong>Nómina</strong>. Los gastos de Shopify (cuota por tienda) se asignan directamente a cada tienda sin repartirse.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════ INGRESOS ══════════ -->
+    <div id="hcp-ingresos" class="hc-panel">
+
+      <div class="hc-accordion open">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué muestra la sección Ingresos?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Resúmenes consolidados mes a mes. Hay dos pestañas:</p>
+          <ul>
+            <li><strong>Ingresos:</strong> desglose por tienda y mes — COD cobrado, tarjeta y totales netos tras comisiones.</li>
+            <li><strong>Balance Final:</strong> rentabilidad mensual completa con ingresos, todos los gastos desglosados y resultado final.</li>
+          </ul>
+          <div class="hc-info">ℹ️ Los datos se recalculan cada vez que abres la sección, reflejando siempre la información más reciente.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Para qué sirven los ingresos manuales?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Son importes que puedes añadir manualmente por tienda y mes para reflejar ingresos que no vienen de Shopify (ventas en efectivo, marketplaces externos, etc.).</p>
+          <p>Se suman directamente al total de ingresos de esa tienda en el cálculo de rentabilidad.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════ INTEGRACIONES ══════════ -->
+    <div id="hcp-integraciones" class="hc-panel">
+
+      <div class="hc-accordion open">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo conecto una tienda Shopify?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <div class="hc-steps">
+            <div class="hc-step"><span class="hc-step-num">1</span><span class="hc-step-text">Ve a <strong>Integraciones → Tiendas</strong> y pulsa <strong>+ Conectar tienda Shopify</strong>.</span></div>
+            <div class="hc-step"><span class="hc-step-num">2</span><span class="hc-step-text">Introduce el <strong>dominio</strong> (formato: tutienda.myshopify.com).</span></div>
+            <div class="hc-step"><span class="hc-step-num">3</span><span class="hc-step-text">Introduce el <strong>Access Token</strong> (empieza por <code>shpat_</code>). Lo encuentras en Shopify → Configuración → Apps → Tu app → Credenciales API.</span></div>
+            <div class="hc-step"><span class="hc-step-num">4</span><span class="hc-step-text">Introduce el <strong>App Secret</strong> de la misma pantalla.</span></div>
+            <div class="hc-step"><span class="hc-step-num">5</span><span class="hc-step-text">Guarda. Los pedidos y productos comenzarán a sincronizarse automáticamente.</span></div>
+          </div>
+          <div class="hc-tip">💡 PROFITCOD nunca te pedirá la contraseña de tu cuenta Shopify.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo configuro la integración MRW?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Ve a <strong>Integraciones → Agencia de envío</strong>. Introduce tus credenciales MRW (usuario, contraseña y código de franquicia). Una vez guardadas, el sistema actualizará el estado de los envíos automáticamente.</p>
+          <div class="hc-warn">⚠️ Si las credenciales MRW caducan o cambian, los estados de envío dejarán de actualizarse. Revisa el badge de estado en esa pantalla.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo conecto el correo para importar PDFs de reembolsos?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <div class="hc-steps">
+            <div class="hc-step"><span class="hc-step-num">1</span><span class="hc-step-text">Ve a <strong>Integraciones → Reembolsos</strong>.</span></div>
+            <div class="hc-step"><span class="hc-step-num">2</span><span class="hc-step-text">Introduce el correo Gmail donde MRW te envía los PDFs de liquidación COD.</span></div>
+            <div class="hc-step"><span class="hc-step-num">3</span><span class="hc-step-text">Pulsa <strong>Conectar con Google</strong> y autoriza el acceso.</span></div>
+            <div class="hc-step"><span class="hc-step-num">4</span><span class="hc-step-text">Una vez conectado, el sistema detectará automáticamente los emails con PDFs y marcará los reembolsos como cobrados.</span></div>
+          </div>
+          <div class="hc-info">ℹ️ Solo se accede a los emails de MRW — nunca a conversaciones personales.</div>
+        </div>
+      </div>
+
+    </div>
+
   </div>
   `;
 
-  window.helpTab = function(event, tab) {
-    document.querySelectorAll(".help-panel").forEach(p => p.classList.remove("active"));
-    document.querySelectorAll(".help-tab-btn").forEach(b => b.classList.remove("active"));
-    document.getElementById("help-panel-" + tab)?.classList.add("active");
-    event.target.classList.add("active");
+  window.hcTab = function(tab, el) {
+    document.querySelectorAll(".hc-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".hc-nav-card").forEach(c => c.classList.remove("active"));
+    document.getElementById("hcp-" + tab)?.classList.add("active");
+    el.classList.add("active");
+  };
+  window.hcToggle = function(head) {
+    head.closest(".hc-accordion").classList.toggle("open");
   };
 
   closeAllDrops();
