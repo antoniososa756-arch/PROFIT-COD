@@ -66,7 +66,7 @@ router.patch("/users/:id/permissions", auth, async (req, res) => {
   const isClient = req.user.role === "cliente";
   if (!isAdmin && !isClient) return res.status(403).json({ error: "Sin permisos" });
 
-  const VALID = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"];
+  const VALID = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda","reembolsos_widget"];
   const { permissions } = req.body || {};
   if (!Array.isArray(permissions)) return res.status(400).json({ error: "permissions debe ser un array" });
   const clean = permissions.filter(p => VALID.includes(p));

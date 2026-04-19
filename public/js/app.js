@@ -899,6 +899,7 @@ function loadApp(section) {
 
       <div class="spacer"></div>
 
+      ${(currentUser.role !== "Apoyo" || (currentUser.permissions && currentUser.permissions.includes("reembolsos_widget"))) ? `
       <div style="margin:0 8px 14px;border-top:1px solid var(--border);padding-top:12px;">
         <div style="display:flex;align-items:center;gap:6px;padding:0 4px 10px;">
           <span style="display:inline-block;width:3px;height:14px;background:#22c55e;border-radius:2px;flex-shrink:0;"></span>
@@ -921,7 +922,7 @@ function loadApp(section) {
             <span style="font-size:13px;font-weight:700;color:#22c55e;white-space:nowrap;flex-shrink:0;" id="sidebar-ree-total">—</span>
           </div>
         </div>
-      </div>
+      </div>` : ""}
       <div style="padding:8px 4px;border-top:1px solid #f3f4f6;text-align:center;font-size:10px;color:#d1d5db;line-height:1.4;">
         © 2026 <a href="https://profitcod.com" style="color:#22c55e;text-decoration:none;font-weight:600;">ProfitCOD</a>
       </div>
@@ -1988,14 +1989,15 @@ if (id === "gestion-clientes") {
   }
 
   const PERMS_LABELS = {
-    metricas:     "📊 Métricas",
-    rentabilidad: "💰 Rentabilidad",
-    tiendas:      "🔗 Integraciones",
-    productos:    "📦 Productos",
-    pedidos:      "🛒 Pedidos",
-    facturas:     "🧾 Gastos",
-    informes:     "📈 Ingresos",
-    ayuda:        "❓ Centro de ayuda",
+    metricas:          "📊 Métricas",
+    rentabilidad:      "💰 Rentabilidad",
+    tiendas:           "🔗 Integraciones",
+    productos:         "📦 Productos",
+    pedidos:           "🛒 Pedidos",
+    facturas:          "🧾 Gastos",
+    informes:          "📈 Ingresos",
+    ayuda:             "❓ Centro de ayuda",
+    reembolsos_widget: "💳 Widget Pendiente MRW",
   };
   const ALL_PERMS = Object.keys(PERMS_LABELS);
 
@@ -2064,14 +2066,15 @@ if (id === "mi-equipo") {
   box.className = "card";
 
   const PERMS_LABELS_EQ = {
-    metricas:     "📊 Métricas",
-    rentabilidad: "💰 Rentabilidad",
-    tiendas:      "🔗 Integraciones",
-    productos:    "📦 Productos",
-    pedidos:      "🛒 Pedidos",
-    facturas:     "🧾 Gastos",
-    informes:     "📈 Ingresos",
-    ayuda:        "❓ Centro de ayuda",
+    metricas:          "📊 Métricas",
+    rentabilidad:      "💰 Rentabilidad",
+    tiendas:           "🔗 Integraciones",
+    productos:         "📦 Productos",
+    pedidos:           "🛒 Pedidos",
+    facturas:          "🧾 Gastos",
+    informes:          "📈 Ingresos",
+    ayuda:             "❓ Centro de ayuda",
+    reembolsos_widget: "💳 Widget Pendiente MRW",
   };
   const ALL_PERMS_EQ = Object.keys(PERMS_LABELS_EQ);
 
