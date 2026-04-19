@@ -1787,10 +1787,17 @@ if (id === "crear-cliente") {
 
         <div class="form-group">
           <label>Tipo de cuenta</label>
-          <select id="clientRole" style="width:100%;padding:9px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);cursor:pointer;">
+          <select id="clientRole" onchange="toggleParentSelector()" style="width:100%;padding:9px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);cursor:pointer;">
             <option value="cliente">Cliente</option>
             <option value="apoyo">Apoyo</option>
             <option value="admin">Administrador</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="parentSelectorWrap" style="display:none;">
+          <label>Cliente al que pertenece</label>
+          <select id="clientParentId" style="width:100%;padding:9px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);cursor:pointer;">
+            <option value="">Cargando clientes…</option>
           </select>
         </div>
       </div>
@@ -1814,6 +1821,7 @@ if (id === "crear-cliente") {
     const email = document.getElementById("clientEmail").value.trim();
     const password = document.getElementById("clientPassword").value.trim();
     const role = document.getElementById("clientRole").value;
+    const parent_user_id = role === "apoyo" ? (document.getElementById("clientParentId").value || null) : null;
 
     try {
       const res = await fetch(`${API_BASE}/api/auth/create-user`, {
@@ -1822,7 +1830,7 @@ if (id === "crear-cliente") {
           "Content-Type": "application/json",
           "Authorization": "Bearer " + getActiveToken()
         },
-        body: JSON.stringify({ email, password, role })
+        body: JSON.stringify({ email, password, role, parent_user_id: parent_user_id ? parseInt(parent_user_id) : null })
       });
 
       const data = await res.json();
@@ -1836,11 +1844,30 @@ if (id === "crear-cliente") {
       msg.style.color = "#22c55e";
       msg.textContent = "Cuenta creada correctamente";
       form.reset();
+      document.getElementById("parentSelectorWrap").style.display = "none";
 
     } catch {
       msg.style.color = "#dc2626";
       msg.textContent = "Error de conexión";
     }
+  };
+
+  window.toggleParentSelector = async function() {
+    const role = document.getElementById("clientRole").value;
+    const wrap = document.getElementById("parentSelectorWrap");
+    const sel  = document.getElementById("clientParentId");
+    if (role !== "apoyo") { wrap.style.display = "none"; return; }
+    wrap.style.display = "";
+    sel.innerHTML = `<option value="">Cargando…</option>`;
+    try {
+      const users = await fetch(`${API_BASE}/api/admin/users`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      }).then(r => r.json());
+      const clientes = Array.isArray(users) ? users.filter(u => u.role === "cliente" || u.role === "admin") : [];
+      sel.innerHTML = clientes.length
+        ? clientes.map(u => `<option value="${u.id}">${escapeHtml(u.email)}${u.display_name ? " — " + escapeHtml(u.display_name) : ""}</option>`).join("")
+        : `<option value="">Sin clientes registrados</option>`;
+    } catch { sel.innerHTML = `<option value="">Error cargando clientes</option>`; }
   };
 
   closeAllDrops();

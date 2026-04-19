@@ -11,7 +11,11 @@ if (!JWT_SECRET) { console.error("❌ JWT_SECRET no definido"); process.exit(1);
 const router = express.Router();
 
 function isValidEmail(e) { return typeof e === "string" && e.includes("@") && e.length <= 200; }
-function signToken(user) { return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "7d" }); }
+function signToken(user) {
+  const payload = { id: user.id, email: user.email, role: user.role };
+  if (user.parent_user_id) payload.parent_user_id = user.parent_user_id;
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+}
 
 router.post("/create-admin", async (req, res) => {
   try {
@@ -45,14 +49,14 @@ router.post("/login", async (req, res) => {
   if (typeof password !== "string") return res.status(400).json({ error: "Contraseña inválida" });
 
   try {
-    const row = await db.get("SELECT id, email, password_hash, role, active FROM users WHERE email = ?", [email]);
+    const row = await db.get("SELECT id, email, password_hash, role, active, parent_user_id FROM users WHERE email = ?", [email]);
     if (!row) return res.status(401).json({ error: "Credenciales inválidas" });
 
     const ok = await bcrypt.compare(password, row.password_hash);
     if (!ok) return res.status(401).json({ error: "Credenciales inválidas" });
     if (row.active === 0) return res.status(403).json({ error: "Cuenta desactivada. Contacta al administrador." });
 
-    const user = { id: row.id, email: row.email, role: row.role };
+    const user = { id: row.id, email: row.email, role: row.role, parent_user_id: row.parent_user_id || null };
     return res.json({ token: signToken(user), user });
   } catch (e) {
     return res.status(500).json({ error: "Error DB" });
@@ -132,20 +136,31 @@ router.delete("/account", auth, async (req, res) => {
 
 router.post("/create-user", auth, async (req, res) => {
   if (req.user.role !== "admin") return res.sendStatus(403);
-  const { email, password, role } = req.body || {};
+  const { email, password, role, parent_user_id } = req.body || {};
   if (!isValidEmail(email)) return res.status(400).json({ error: "Email inválido" });
   if (typeof password !== "string" || password.length < 6) return res.status(400).json({ error: "Contraseña mínima 6 caracteres" });
   const ROLES_PERMITIDOS = ["cliente", "apoyo", "admin"];
   const assignedRole = ROLES_PERMITIDOS.includes(role) ? role : "cliente";
 
+  // Apoyo requiere un cliente padre
+  if (assignedRole === "apoyo" && !parent_user_id)
+    return res.status(400).json({ error: "Selecciona el cliente al que pertenece esta cuenta de apoyo" });
+
+  let resolvedParent = null;
+  if (assignedRole === "apoyo") {
+    const parent = await db.get("SELECT id, role FROM users WHERE id = ?", [parent_user_id]);
+    if (!parent) return res.status(400).json({ error: "Cliente padre no encontrado" });
+    resolvedParent = parent.id;
+  }
+
   try {
     const password_hash = await bcrypt.hash(password, 12);
     const created_at = new Date().toISOString();
     const result = await db.run(
-      "INSERT INTO users (email, password_hash, role, created_at) VALUES (?, ?, ?, ?) RETURNING id",
-      [email.toLowerCase(), password_hash, assignedRole, created_at]
+      "INSERT INTO users (email, password_hash, role, created_at, parent_user_id) VALUES (?, ?, ?, ?, ?) RETURNING id",
+      [email.toLowerCase(), password_hash, assignedRole, created_at, resolvedParent]
     );
-    return res.json({ id: result.lastID, email: email.toLowerCase(), role: assignedRole });
+    return res.json({ id: result.lastID, email: email.toLowerCase(), role: assignedRole, parent_user_id: resolvedParent });
   } catch (e) {
     if (String(e.message).includes("unique") || String(e.message).includes("UNIQUE"))
       return res.status(409).json({ error: "Email ya registrado" });
