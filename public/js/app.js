@@ -349,7 +349,14 @@ if (location.pathname.includes("login")) {
 
       // Cargar estado del plan para clientes
       window.__userPlan = {};
-      if (data.user.role !== "admin") {
+      const _isAdmin  = data.user.role === "admin";
+      const _isApoyo  = data.user.role === "apoyo";
+      const _apoyoDeAdmin = _isApoyo && (data.user.parent_role === "admin");
+
+      if (_isAdmin || _apoyoDeAdmin) {
+        // Admin y apoyo de admin: acceso total sin restricción de plan
+        window.__userPlan = { plan: "admin", status: "active", expires_at: null };
+      } else {
         fetch(`${API_BASE}/api/billing/plan`, { headers: { Authorization: "Bearer " + token } })
           .then(r => r.json()).then(p => {
             window.__userPlan = p;
@@ -363,8 +370,6 @@ if (location.pathname.includes("login")) {
               if (cur !== "plan") setSection(cur);
             }
           }).catch(() => {});
-      } else {
-        window.__userPlan = { plan: "admin", status: "active", expires_at: null };
       }
 
       // 🚀 Cargar app UNA sola vez

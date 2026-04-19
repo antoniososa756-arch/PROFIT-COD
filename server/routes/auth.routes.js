@@ -14,6 +14,7 @@ function isValidEmail(e) { return typeof e === "string" && e.includes("@") && e.
 function signToken(user) {
   const payload = { id: user.id, email: user.email, role: user.role };
   if (user.parent_user_id) payload.parent_user_id = user.parent_user_id;
+  if (user.parent_role)    payload.parent_role    = user.parent_role;
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
 }
 
@@ -57,10 +58,15 @@ router.post("/login", async (req, res) => {
     if (row.active === 0) return res.status(403).json({ error: "Cuenta desactivada. Contacta al administrador." });
 
     let permissions = null;
+    let parent_role = null;
     if (row.role === "apoyo") {
       try { permissions = row.permissions ? JSON.parse(row.permissions) : null; } catch { permissions = null; }
+      if (row.parent_user_id) {
+        const parent = await db.get("SELECT role FROM users WHERE id = ?", [row.parent_user_id]);
+        parent_role = parent?.role || null;
+      }
     }
-    const user = { id: row.id, email: row.email, role: row.role, parent_user_id: row.parent_user_id || null, permissions };
+    const user = { id: row.id, email: row.email, role: row.role, parent_user_id: row.parent_user_id || null, parent_role, permissions };
     return res.json({ token: signToken(user), user });
   } catch (e) {
     return res.status(500).json({ error: "Error DB" });
