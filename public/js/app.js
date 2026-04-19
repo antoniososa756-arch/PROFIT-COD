@@ -327,6 +327,10 @@ if (location.pathname.includes("login")) {
       return res.json();
     })
     .then((data) => {
+      let _perms = null;
+      if (data.user.role === "apoyo") {
+        try { _perms = data.user.permissions ? (Array.isArray(data.user.permissions) ? data.user.permissions : JSON.parse(data.user.permissions)) : null; } catch { _perms = null; }
+      }
       currentUser = {
         id: data.user.id,
         name: data.user.display_name || data.user.email,
@@ -334,6 +338,7 @@ if (location.pathname.includes("login")) {
         display_name: data.user.display_name || "",
         role: data.user.role === "admin" ? "Administrador" : data.user.role === "apoyo" ? "Apoyo" : "Cliente",
         avatar_url: data.user.avatar_url || null,
+        permissions: _perms,
       };
 
       // 🎨 CLASE DE ROL EN EL BODY (ADMIN / CLIENTE)

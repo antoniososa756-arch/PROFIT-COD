@@ -69,12 +69,20 @@ router.post("/login", async (req, res) => {
 
 router.get("/me", auth, async (req, res) => {
   try {
+    // Para cuentas apoyo: own_id es su propio ID, id ya apunta al padre
+    const profileId = req.user.own_id || req.user.id;
     const row = await db.get(
-      "SELECT id, email, role, display_name, avatar_url, billing_name, billing_nif, billing_address, billing_city, billing_zip, billing_country FROM users WHERE id = ?",
-      [req.user.id]
+      "SELECT id, email, role, display_name, avatar_url, billing_name, billing_nif, billing_address, billing_city, billing_zip, billing_country, permissions FROM users WHERE id = ?",
+      [profileId]
     );
     if (!row) return res.status(404).json({ error: "Usuario no encontrado" });
-    return res.json({ user: { ...req.user, ...row } });
+    // Preservar role y permissions del token (middleware ya los resolvió correctamente)
+    return res.json({ user: {
+      ...req.user,
+      ...row,
+      role:        req.user.role,
+      permissions: req.user.permissions ?? null,
+    }});
   } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
 });
 
