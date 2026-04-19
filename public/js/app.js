@@ -906,7 +906,7 @@ function loadApp(section) {
 
       <div class="divider"></div>
 
-      ${menuItem("plan", labels)}
+      ${currentUser.role !== "Apoyo" ? menuItem("plan", labels) : ""}
 
       <div class="spacer"></div>
 
@@ -1162,6 +1162,11 @@ window.startTrialAndReload = async function() {
 };
 
 function setSection(id) {
+  // Cuentas apoyo nunca pueden ver el plan de facturación
+  if (currentUser?.role === "Apoyo" && id === "plan") {
+    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"];
+    id = (currentUser.permissions ? PERM_SECTIONS.find(s => currentUser.permissions.includes(s)) : null) || "metricas";
+  }
   // Bloquear acceso a secciones sin permiso para cuentas apoyo
   const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"];
   if (currentUser?.role === "Apoyo" && currentUser.permissions && PERM_SECTIONS.includes(id)) {
