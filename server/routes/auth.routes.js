@@ -135,22 +135,33 @@ router.delete("/account", auth, async (req, res) => {
 });
 
 router.post("/create-user", auth, async (req, res) => {
-  if (req.user.role !== "admin") return res.sendStatus(403);
+  const isAdmin  = req.user.role === "admin";
+  const isClient = req.user.role === "cliente";
+  if (!isAdmin && !isClient) return res.sendStatus(403);
+
   const { email, password, role, parent_user_id } = req.body || {};
   if (!isValidEmail(email)) return res.status(400).json({ error: "Email inválido" });
   if (typeof password !== "string" || password.length < 6) return res.status(400).json({ error: "Contraseña mínima 6 caracteres" });
-  const ROLES_PERMITIDOS = ["cliente", "apoyo", "admin"];
-  const assignedRole = ROLES_PERMITIDOS.includes(role) ? role : "cliente";
 
-  // Apoyo requiere un cliente padre
-  if (assignedRole === "apoyo" && !parent_user_id)
-    return res.status(400).json({ error: "Selecciona el cliente al que pertenece esta cuenta de apoyo" });
+  // Clientes solo pueden crear cuentas de apoyo
+  if (isClient && role !== "apoyo")
+    return res.status(403).json({ error: "Solo puedes crear cuentas de apoyo" });
 
+  const ROLES_PERMITIDOS = isAdmin ? ["cliente", "apoyo", "admin"] : ["apoyo"];
+  const assignedRole = ROLES_PERMITIDOS.includes(role) ? role : (isClient ? "apoyo" : "cliente");
+
+  // Resolver padre: clientes se vinculan a sí mismos, admin elige
   let resolvedParent = null;
   if (assignedRole === "apoyo") {
-    const parent = await db.get("SELECT id, role FROM users WHERE id = ?", [parent_user_id]);
-    if (!parent) return res.status(400).json({ error: "Cliente padre no encontrado" });
-    resolvedParent = parent.id;
+    if (isClient) {
+      resolvedParent = req.user.id;
+    } else {
+      if (!parent_user_id)
+        return res.status(400).json({ error: "Selecciona el cliente al que pertenece esta cuenta de apoyo" });
+      const parent = await db.get("SELECT id FROM users WHERE id = ?", [parent_user_id]);
+      if (!parent) return res.status(400).json({ error: "Cliente padre no encontrado" });
+      resolvedParent = parent.id;
+    }
   }
 
   try {

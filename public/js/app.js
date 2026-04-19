@@ -877,6 +877,13 @@ function loadApp(section) {
               💳 Configuración de pagos
             </div>
           `
+          : currentUser.role === "Cliente"
+          ? `
+            <div class="divider"></div>
+            <div class="menu-item" data-id="crear-cliente">
+              ➕ Crear cuenta
+            </div>
+          `
           : ""
       }
 
@@ -1785,12 +1792,15 @@ if (id === "crear-cliente") {
           <input id="clientPassword" type="password" placeholder="••••••••" required>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" ${currentUser.role === "Cliente" ? 'style="display:none;"' : ''}>
           <label>Tipo de cuenta</label>
           <select id="clientRole" onchange="toggleParentSelector()" style="width:100%;padding:9px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);cursor:pointer;">
-            <option value="cliente">Cliente</option>
-            <option value="apoyo">Apoyo</option>
-            <option value="admin">Administrador</option>
+            ${currentUser.role === "Cliente"
+              ? `<option value="apoyo">Apoyo</option>`
+              : `<option value="cliente">Cliente</option>
+                 <option value="apoyo">Apoyo</option>
+                 <option value="admin">Administrador</option>`
+            }
           </select>
         </div>
 
