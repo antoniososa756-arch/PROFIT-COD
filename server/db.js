@@ -317,6 +317,7 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_cycle_start
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_cache INTEGER DEFAULT 0`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_month TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"]'`);
 await pool.query(`
   CREATE TABLE IF NOT EXISTS billing_invoices (
     id SERIAL PRIMARY KEY,

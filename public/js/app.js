@@ -851,14 +851,12 @@ function loadApp(section) {
         </div>
       </div>
 
-      ${menuItem("metricas", labels)}
-      ${menuItem("rentabilidad", labels)}
-      ${menuItem("tiendas", labels)}
-      ${menuItem("productos", labels)}
-      ${menuItem("pedidos", labels)}
-      ${menuItem("facturas", labels)}
-      ${menuItem("informes", labels)}
-      ${menuItem("ayuda", labels)}
+      ${(["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"]).filter(sec => {
+        if (currentUser.role !== "Apoyo") return true;
+        const perms = currentUser.permissions;
+        if (!perms) return true;
+        return perms.includes(sec);
+      }).map(sec => menuItem(sec, labels)).join("")}
 
       ${
         currentUser.role === "Administrador"
@@ -882,6 +880,9 @@ function loadApp(section) {
             <div class="divider"></div>
             <div class="menu-item" data-id="crear-cliente">
               ➕ Crear cuenta
+            </div>
+            <div class="menu-item" data-id="mi-equipo">
+              👥 Mi equipo
             </div>
           `
           : ""
@@ -1947,7 +1948,10 @@ if (id === "gestion-clientes") {
               </button>
             </div>
 
-            <div>${u.role === "admin" ? "Administrador" : u.role === "apoyo" ? "Apoyo" : "Cliente"}</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              ${u.role === "admin" ? "Administrador" : u.role === "apoyo" ? "Apoyo" : "Cliente"}
+              ${u.role === "apoyo" ? `<button onclick="openPermisosModal(${u.id},'${escapeHtml(u.email)}')" title="Editar permisos" style="padding:2px 8px;font-size:11px;border-radius:5px;border:1px solid #374151;background:var(--card);color:#6b7280;cursor:pointer;font-family:inherit;">Permisos</button>` : ""}
+            </div>
 
             <div class="view-eye" onclick="viewClient('${u.id}')">
               <svg viewBox="0 0 24 24">
@@ -1978,11 +1982,172 @@ if (id === "gestion-clientes") {
       });
   }
 
+  const PERMS_LABELS = {
+    metricas:     "📊 Métricas",
+    rentabilidad: "💰 Rentabilidad",
+    tiendas:      "🔗 Integraciones",
+    productos:    "📦 Productos",
+    pedidos:      "🛒 Pedidos",
+    facturas:     "🧾 Gastos",
+    informes:     "📈 Ingresos",
+    ayuda:        "❓ Centro de ayuda",
+  };
+  const ALL_PERMS = Object.keys(PERMS_LABELS);
+
+  window.openPermisosModal = async function(userId, email) {
+    // Obtener permisos actuales
+    let currentPerms = [...ALL_PERMS];
+    try {
+      const users = await fetch(`${API_BASE}/api/admin/users`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+      const u = Array.isArray(users) ? users.find(x => x.id == userId) : null;
+      if (u?.permissions) {
+        try { currentPerms = JSON.parse(u.permissions); } catch { currentPerms = [...ALL_PERMS]; }
+      }
+    } catch {}
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;";
+    overlay.innerHTML = `
+      <div style="background:var(--card);border:1px solid #374151;border-radius:14px;padding:28px;width:340px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">Permisos de acceso</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:18px;">${escapeHtml(email)}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+          ${ALL_PERMS.map(p => `
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px;color:var(--text);">
+              <input type="checkbox" value="${p}" ${currentPerms.includes(p) ? "checked" : ""}
+                style="width:16px;height:16px;accent-color:#22c55e;cursor:pointer;">
+              ${PERMS_LABELS[p]}
+            </label>
+          `).join("")}
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button id="perms-cancel" style="padding:8px 18px;border-radius:7px;border:1px solid #374151;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+          <button id="perms-save" style="padding:8px 18px;border-radius:7px;border:none;background:#22c55e;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Guardar</button>
+        </div>
+        <div id="perms-msg" style="margin-top:10px;font-size:12px;text-align:center;"></div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector("#perms-cancel").onclick = () => overlay.remove();
+    overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector("#perms-save").onclick = async () => {
+      const checked = [...overlay.querySelectorAll("input[type='checkbox']:checked")].map(c => c.value);
+      const msgEl = overlay.querySelector("#perms-msg");
+      try {
+        const r = await fetch(`${API_BASE}/api/admin/users/${userId}/permissions`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+          body: JSON.stringify({ permissions: checked })
+        });
+        if (r.ok) { msgEl.style.color = "#22c55e"; msgEl.textContent = "Permisos guardados"; setTimeout(() => overlay.remove(), 800); }
+        else { const d = await r.json(); msgEl.style.color = "#dc2626"; msgEl.textContent = d.error || "Error"; }
+      } catch { msgEl.style.color = "#dc2626"; msgEl.textContent = "Error de conexión"; }
+    };
+  };
+
   closeAllDrops();
   closeSearchDrop();
   return;
+}
 
-  }
+// =========================
+// SECCIÓN MI EQUIPO (clientes)
+// =========================
+if (id === "mi-equipo") {
+  if (t) t.textContent = "Mi equipo";
+  if (s) s.textContent = "Gestiona las cuentas de apoyo de tu equipo";
+  if (c) c.textContent = "Mi equipo";
+  box.className = "card";
+
+  const PERMS_LABELS_EQ = {
+    metricas:     "📊 Métricas",
+    rentabilidad: "💰 Rentabilidad",
+    tiendas:      "🔗 Integraciones",
+    productos:    "📦 Productos",
+    pedidos:      "🛒 Pedidos",
+    facturas:     "🧾 Gastos",
+    informes:     "📈 Ingresos",
+    ayuda:        "❓ Centro de ayuda",
+  };
+  const ALL_PERMS_EQ = Object.keys(PERMS_LABELS_EQ);
+
+  box.innerHTML = `<div id="equipo-wrap"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>`;
+
+  const wrap = document.getElementById("equipo-wrap");
+
+  const renderEquipo = async () => {
+    const users = await fetch(`${API_BASE}/api/admin/my-apoyo`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json()).catch(() => []);
+    if (!Array.isArray(users) || users.length === 0) {
+      wrap.innerHTML = `<div style="color:#6b7280;font-size:13px;padding:20px 0;">No tienes cuentas de apoyo creadas aún. Usa <strong>Crear cuenta</strong> para añadir trabajadores.</div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <div class="client-table">
+        <div class="client-row client-head"><div>Email</div><div>Estado</div><div>Permisos</div></div>
+        ${users.map(u => {
+          let perms = ALL_PERMS_EQ;
+          try { if (u.permissions) perms = JSON.parse(u.permissions); } catch {}
+          return `
+          <div class="client-row">
+            <div style="font-size:13px;">${escapeHtml(u.email)}</div>
+            <div><span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${u.active!==0?'rgba(34,197,94,.12)':'rgba(239,68,68,.12)'};color:${u.active!==0?'#16a34a':'#dc2626'};">${u.active!==0?"Activa":"Inactiva"}</span></div>
+            <div><button onclick="openEquipoPermisos(${u.id},'${escapeHtml(u.email)}')" style="padding:5px 12px;font-size:12px;border-radius:6px;border:1px solid #374151;background:var(--card);color:var(--text);cursor:pointer;font-family:inherit;">✏️ Editar permisos</button></div>
+          </div>`;
+        }).join("")}
+      </div>`;
+  };
+
+  window.openEquipoPermisos = async function(userId, email) {
+    let currentPerms = [...ALL_PERMS_EQ];
+    try {
+      const users = await fetch(`${API_BASE}/api/admin/my-apoyo`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+      const u = Array.isArray(users) ? users.find(x => x.id == userId) : null;
+      if (u?.permissions) { try { currentPerms = JSON.parse(u.permissions); } catch {} }
+    } catch {}
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;";
+    overlay.innerHTML = `
+      <div style="background:var(--card);border:1px solid #374151;border-radius:14px;padding:28px;width:340px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">Permisos de acceso</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:18px;">${escapeHtml(email)}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+          ${ALL_PERMS_EQ.map(p => `
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px;color:var(--text);">
+              <input type="checkbox" value="${p}" ${currentPerms.includes(p) ? "checked" : ""}
+                style="width:16px;height:16px;accent-color:#22c55e;cursor:pointer;">
+              ${PERMS_LABELS_EQ[p]}
+            </label>`).join("")}
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button id="eq-cancel" style="padding:8px 18px;border-radius:7px;border:1px solid #374151;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+          <button id="eq-save" style="padding:8px 18px;border-radius:7px;border:none;background:#22c55e;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Guardar</button>
+        </div>
+        <div id="eq-msg" style="margin-top:10px;font-size:12px;text-align:center;"></div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector("#eq-cancel").onclick = () => overlay.remove();
+    overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector("#eq-save").onclick = async () => {
+      const checked = [...overlay.querySelectorAll("input[type='checkbox']:checked")].map(c => c.value);
+      const msgEl = overlay.querySelector("#eq-msg");
+      try {
+        const r = await fetch(`${API_BASE}/api/admin/users/${userId}/permissions`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+          body: JSON.stringify({ permissions: checked })
+        });
+        if (r.ok) { msgEl.style.color = "#22c55e"; msgEl.textContent = "Guardado"; setTimeout(() => { overlay.remove(); renderEquipo(); }, 700); }
+        else { const d = await r.json(); msgEl.style.color = "#dc2626"; msgEl.textContent = d.error || "Error"; }
+      } catch { msgEl.style.color = "#dc2626"; msgEl.textContent = "Error de conexión"; }
+    };
+  };
+
+  renderEquipo();
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
 // =========================
 // SECCIÓN RENTABILIDAD
 // =========================

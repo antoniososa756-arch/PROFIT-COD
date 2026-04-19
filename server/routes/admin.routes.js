@@ -59,6 +59,46 @@ router.patch("/users/:id/status", auth, admin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error DB" }); }
 });
 
+// ── Permisos de cuentas apoyo ──────────────────────────────────
+// Accesible por admin (cualquier apoyo) o por el cliente padre del apoyo
+router.patch("/users/:id/permissions", auth, async (req, res) => {
+  const isAdmin  = req.user.role === "admin";
+  const isClient = req.user.role === "cliente";
+  if (!isAdmin && !isClient) return res.status(403).json({ error: "Sin permisos" });
+
+  const VALID = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"];
+  const { permissions } = req.body || {};
+  if (!Array.isArray(permissions)) return res.status(400).json({ error: "permissions debe ser un array" });
+  const clean = permissions.filter(p => VALID.includes(p));
+
+  try {
+    const target = await db.get("SELECT id, role, parent_user_id FROM users WHERE id = ?", [req.params.id]);
+    if (!target) return res.status(404).json({ error: "Usuario no encontrado" });
+    if (target.role !== "apoyo") return res.status(400).json({ error: "Solo se pueden editar permisos de cuentas apoyo" });
+    if (isClient && target.parent_user_id !== req.user.id)
+      return res.status(403).json({ error: "No es tu cuenta de apoyo" });
+
+    await db.run("UPDATE users SET permissions = ? WHERE id = ?", [JSON.stringify(clean), target.id]);
+    res.json({ ok: true, permissions: clean });
+  } catch (e) { res.status(500).json({ error: "Error DB" }); }
+});
+
+// Listar apoyo de un cliente (para Mi equipo)
+router.get("/my-apoyo", auth, async (req, res) => {
+  const isAdmin  = req.user.role === "admin";
+  const isClient = req.user.role === "cliente";
+  if (!isAdmin && !isClient) return res.status(403).json({ error: "Sin permisos" });
+  try {
+    const parentId = isAdmin ? (req.query.parent_id || null) : req.user.id;
+    if (!parentId) return res.json([]);
+    const rows = await db.all(
+      "SELECT id, email, role, active, permissions FROM users WHERE role = 'apoyo' AND parent_user_id = ? ORDER BY created_at DESC",
+      [parentId]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: "Error DB" }); }
+});
+
 // ── Configuración de pagos (Stripe + PayPal) ──────────────────
 router.get("/payment-config", auth, admin, async (req, res) => {
   try {

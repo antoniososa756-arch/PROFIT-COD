@@ -39,6 +39,10 @@ module.exports = async (req, res, next) => {
         decoded.plan            = parent.plan || "free";
         decoded.plan_status     = parent.plan_status || "inactive";
         decoded.plan_expires_at = parent.plan_expires_at || null;
+        try {
+          const permsRaw = row.permissions;
+          decoded.permissions = permsRaw ? JSON.parse(permsRaw) : null;
+        } catch { decoded.permissions = null; }
       }
     }
 
