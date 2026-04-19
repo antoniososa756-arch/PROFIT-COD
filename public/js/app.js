@@ -861,12 +861,18 @@ function loadApp(section) {
         </div>
       </div>
 
-      ${(["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"]).filter(sec => {
-        if (currentUser.role !== "Apoyo") return true;
-        const perms = currentUser.permissions;
-        if (!perms) return true;
-        return perms.includes(sec);
-      }).map(sec => menuItem(sec, labels)).join("")}
+      ${(["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"]).map(sec => {
+        const isApoyo = currentUser.role === "Apoyo";
+        const perms   = currentUser.permissions;
+        const allowed = !isApoyo || !perms || perms.includes(sec);
+        if (allowed) return menuItem(sec, labels);
+        // Sección sin permiso: visible pero deshabilitada
+        return `<div class="menu-item menu-item-disabled" title="Sin acceso"
+          style="opacity:0.35;cursor:not-allowed;pointer-events:none;filter:grayscale(1);">
+          ${icons[sec] || ""}${labels[sec] || sec}
+          <span style="margin-left:auto;font-size:10px;background:rgba(107,114,128,.15);color:#9ca3af;padding:1px 6px;border-radius:10px;font-weight:600;">🔒</span>
+        </div>`;
+      }).join("")}
 
       ${
         currentUser.role === "Administrador"
@@ -1156,6 +1162,15 @@ window.startTrialAndReload = async function() {
 };
 
 function setSection(id) {
+  // Bloquear acceso a secciones sin permiso para cuentas apoyo
+  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"];
+  if (currentUser?.role === "Apoyo" && currentUser.permissions && PERM_SECTIONS.includes(id)) {
+    if (!currentUser.permissions.includes(id)) {
+      // Redirigir a la primera sección permitida
+      const fallback = PERM_SECTIONS.find(s => currentUser.permissions.includes(s)) || "ayuda";
+      id = fallback;
+    }
+  }
   const d = dict();
   localStorage.setItem("section", id);
 
