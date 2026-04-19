@@ -1200,6 +1200,30 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
     && (!up.expires_at || new Date(up.expires_at) > new Date());
 
   if (!planOk) {
+    // Cuentas apoyo: no pagan ellos, el problema es del cliente padre
+    if (currentUser.role === "Apoyo") {
+      if (t) t.textContent = "Acceso no disponible";
+      if (s) s.textContent = "";
+      if (c) c.textContent = "Acceso no disponible";
+      if (box) {
+        box.className = "card";
+        box.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;text-align:center;gap:16px;">
+            <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="#f59e0b" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <div style="font-size:20px;font-weight:800;color:#f9fafb;">Membresía inactiva</div>
+            <div style="font-size:14px;color:#6b7280;max-width:400px;line-height:1.7;">
+              La cuenta principal no tiene una membresía activa o ha caducado.<br>
+              Contacta con el administrador de tu cuenta para que renueve su suscripción.
+            </div>
+          </div>`;
+      }
+      closeAllDrops();
+      closeSearchDrop();
+      return;
+    }
+
     if (t) t.textContent = "Plan requerido";
     if (s) s.textContent = "";
     if (c) c.textContent = "Plan requerido";

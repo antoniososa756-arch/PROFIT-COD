@@ -21,6 +21,10 @@ module.exports = async (req, res, next) => {
   const expired   = expiresAt ? expiresAt < new Date() : true;
 
   if (plan === "free" || (status !== "active" && status !== "trial") || expired) {
+    // Cuentas apoyo: mensaje diferenciado — el problema es del cliente padre
+    if (user.role === "apoyo") {
+      return res.status(402).json({ error: "PLAN_PADRE_REQUERIDO", message: "La cuenta principal no tiene una membresía activa. Contacta con el administrador de tu cuenta." });
+    }
     return res.status(402).json({ error: "PLAN_REQUERIDO", message: "Tu plan ha caducado. Renueva para continuar." });
   }
 
