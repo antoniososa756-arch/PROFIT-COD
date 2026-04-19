@@ -132,18 +132,20 @@ router.delete("/account", auth, async (req, res) => {
 
 router.post("/create-user", auth, async (req, res) => {
   if (req.user.role !== "admin") return res.sendStatus(403);
-  const { email, password } = req.body || {};
+  const { email, password, role } = req.body || {};
   if (!isValidEmail(email)) return res.status(400).json({ error: "Email inválido" });
   if (typeof password !== "string" || password.length < 6) return res.status(400).json({ error: "Contraseña mínima 6 caracteres" });
+  const ROLES_PERMITIDOS = ["cliente", "apoyo", "admin"];
+  const assignedRole = ROLES_PERMITIDOS.includes(role) ? role : "cliente";
 
   try {
     const password_hash = await bcrypt.hash(password, 12);
     const created_at = new Date().toISOString();
     const result = await db.run(
-      "INSERT INTO users (email, password_hash, role, created_at) VALUES (?, ?, 'cliente', ?) RETURNING id",
-      [email.toLowerCase(), password_hash, created_at]
+      "INSERT INTO users (email, password_hash, role, created_at) VALUES (?, ?, ?, ?) RETURNING id",
+      [email.toLowerCase(), password_hash, assignedRole, created_at]
     );
-    return res.json({ id: result.lastID, email: email.toLowerCase(), role: "cliente" });
+    return res.json({ id: result.lastID, email: email.toLowerCase(), role: assignedRole });
   } catch (e) {
     if (String(e.message).includes("unique") || String(e.message).includes("UNIQUE"))
       return res.status(409).json({ error: "Email ya registrado" });

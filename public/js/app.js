@@ -866,7 +866,7 @@ function loadApp(section) {
             <div class="divider"></div>
 
             <div class="menu-item" data-id="crear-cliente">
-              ➕ Crear cliente
+              ➕ Crear cuenta
             </div>
 
             <div class="menu-item" data-id="gestion-clientes">
@@ -1767,9 +1767,9 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
 
 if (id === "crear-cliente") {
 
-  if (t) t.textContent = "Crear cliente";
-  if (s) s.textContent = "Alta de nuevo cliente";
-  if (c) c.textContent = "Crear cliente";
+  if (t) t.textContent = "Crear cuenta";
+  if (s) s.textContent = "Alta de nueva cuenta";
+  if (c) c.textContent = "Crear cuenta";
 
   box.className = "card";
   if (box) box.innerHTML = `
@@ -1784,12 +1784,21 @@ if (id === "crear-cliente") {
           <label>Contraseña</label>
           <input id="clientPassword" type="password" placeholder="••••••••" required>
         </div>
+
+        <div class="form-group">
+          <label>Tipo de cuenta</label>
+          <select id="clientRole" style="width:100%;padding:9px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);cursor:pointer;">
+            <option value="cliente">Cliente</option>
+            <option value="apoyo">Apoyo</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
       </div>
 
       <div id="clientMsg" style="margin-top:10px;font-size:13px;"></div>
 
       <div class="form-actions">
-        <button class="btn-primary" type="submit">Crear cliente</button>
+        <button class="btn-primary" type="submit">Crear cuenta</button>
       </div>
     </form>
   `;
@@ -1804,6 +1813,7 @@ if (id === "crear-cliente") {
 
     const email = document.getElementById("clientEmail").value.trim();
     const password = document.getElementById("clientPassword").value.trim();
+    const role = document.getElementById("clientRole").value;
 
     try {
       const res = await fetch(`${API_BASE}/api/auth/create-user`, {
@@ -1812,19 +1822,19 @@ if (id === "crear-cliente") {
           "Content-Type": "application/json",
           "Authorization": "Bearer " + getActiveToken()
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, role })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         msg.style.color = "#dc2626";
-        msg.textContent = data.error || "Error al crear cliente";
+        msg.textContent = data.error || "Error al crear cuenta";
         return;
       }
 
       msg.style.color = "#22c55e";
-      msg.textContent = "Cliente creado correctamente";
+      msg.textContent = "Cuenta creada correctamente";
       form.reset();
 
     } catch {
