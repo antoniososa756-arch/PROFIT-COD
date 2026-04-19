@@ -332,7 +332,7 @@ if (location.pathname.includes("login")) {
         name: data.user.display_name || data.user.email,
         email: data.user.email,
         display_name: data.user.display_name || "",
-        role: data.user.role === "admin" ? "Administrador" : "Cliente",
+        role: data.user.role === "admin" ? "Administrador" : data.user.role === "apoyo" ? "Apoyo" : "Cliente",
         avatar_url: data.user.avatar_url || null,
       };
 
@@ -1947,7 +1947,7 @@ if (id === "gestion-clientes") {
               </button>
             </div>
 
-            <div>${u.role === "admin" ? "Administrador" : "Cliente"}</div>
+            <div>${u.role === "admin" ? "Administrador" : u.role === "apoyo" ? "Apoyo" : "Cliente"}</div>
 
             <div class="view-eye" onclick="viewClient('${u.id}')">
               <svg viewBox="0 0 24 24">
