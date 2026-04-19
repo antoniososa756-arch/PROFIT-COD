@@ -2861,7 +2861,7 @@ if (id === "ayuda") {
             <li><span class="hc-pill hc-pill-yellow">Pendientes</span> — Recibidos pero aún no procesados.</li>
             <li><span class="hc-pill hc-pill-blue">En tránsito</span> — En camino al cliente.</li>
             <li><span class="hc-pill hc-pill-green">Entregados</span> — El cliente los recibió correctamente.</li>
-            <li><span class="hc-pill hc-pill-orange">Devueltos</span> — El cliente rechazó el pedido o no estaba.</li>
+            <li><span class="hc-pill hc-pill-orange">Devueltos</span> — MRW confirmó la devolución formal del paquete.</li>
             <li><span class="hc-pill hc-pill-red">Destruidos</span> — MRW no pudo entregarlos y los destruyó.</li>
           </ul>
           <div class="hc-info">ℹ️ Los pedidos cancelados no cuentan en las tarjetas de estado ni en la facturación.</div>
@@ -2920,7 +2920,7 @@ if (id === "ayuda") {
             <li><span class="hc-pill hc-pill-blue">En tránsito</span> — Circulando hacia el destino.</li>
             <li><span class="hc-pill hc-pill-blue">Franquicia</span> — En la oficina MRW local.</li>
             <li><span class="hc-pill hc-pill-green">Entregado</span> — El cliente lo recibió.</li>
-            <li><span class="hc-pill hc-pill-orange">Devuelto</span> — Rechazado o ausente.</li>
+            <li><span class="hc-pill hc-pill-orange">Devuelto</span> — MRW confirmó la devolución formal del paquete.</li>
             <li><span class="hc-pill hc-pill-red">Destruido</span> — MRW lo destruyó.</li>
             <li><span class="hc-pill hc-pill-gray">Cancelado</span> — Pedido anulado.</li>
           </ul>
