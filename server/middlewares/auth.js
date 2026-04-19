@@ -14,7 +14,7 @@ module.exports = async (req, res, next) => {
     // Si NO es impersonación, verificar que el usuario sigue activo en BD
     if (!decoded.isImpersonated) {
       const row = await db.get(
-        "SELECT active, role, plan, plan_status, plan_expires_at, parent_user_id FROM users WHERE id = ?",
+        "SELECT active, role, plan, plan_status, plan_expires_at, parent_user_id, permissions FROM users WHERE id = ?",
         [decoded.id]
       );
       if (!row || row.active === 0) {
@@ -41,7 +41,7 @@ module.exports = async (req, res, next) => {
         if (parent.role === "admin") {
           decoded.plan            = "business";
           decoded.plan_status     = "active";
-          decoded.plan_expires_at = null;
+          decoded.plan_expires_at = "2099-12-31T23:59:59.000Z";
         } else {
           decoded.plan            = parent.plan || "free";
           decoded.plan_status     = parent.plan_status || "inactive";

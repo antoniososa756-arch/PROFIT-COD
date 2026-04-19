@@ -2089,7 +2089,7 @@ if (id === "gestion-clientes") {
           headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
           body: JSON.stringify({ permissions: checked })
         });
-        if (r.ok) { msgEl.style.color = "#22c55e"; msgEl.textContent = "Permisos guardados"; setTimeout(() => overlay.remove(), 800); }
+        if (r.ok) { msgEl.style.color = "#22c55e"; msgEl.textContent = "Permisos guardados. El usuario debe volver a iniciar sesión para que los cambios surtan efecto."; setTimeout(() => overlay.remove(), 2200); }
         else { const d = await r.json(); msgEl.style.color = "#dc2626"; msgEl.textContent = d.error || "Error"; }
       } catch { msgEl.style.color = "#dc2626"; msgEl.textContent = "Error de conexión"; }
     };
@@ -2188,7 +2188,7 @@ if (id === "mi-equipo") {
           headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
           body: JSON.stringify({ permissions: checked })
         });
-        if (r.ok) { msgEl.style.color = "#22c55e"; msgEl.textContent = "Guardado"; setTimeout(() => { overlay.remove(); renderEquipo(); }, 700); }
+        if (r.ok) { msgEl.style.color = "#22c55e"; msgEl.textContent = "Guardado. El usuario debe volver a iniciar sesión para que los cambios surtan efecto."; setTimeout(() => { overlay.remove(); renderEquipo(); }, 2200); }
         else { const d = await r.json(); msgEl.style.color = "#dc2626"; msgEl.textContent = d.error || "Error"; }
       } catch { msgEl.style.color = "#dc2626"; msgEl.textContent = "Error de conexión"; }
     };
