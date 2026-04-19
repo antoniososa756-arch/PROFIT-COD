@@ -28,7 +28,7 @@ module.exports = async (req, res, next) => {
       // Cuentas de apoyo: redirigir al usuario padre para todas las consultas
       if (row.role === "apoyo" && row.parent_user_id) {
         const parent = await db.get(
-          "SELECT active, plan, plan_status, plan_expires_at FROM users WHERE id = ?",
+          "SELECT active, role, plan, plan_status, plan_expires_at FROM users WHERE id = ?",
           [row.parent_user_id]
         );
         if (!parent || parent.active === 0) {
@@ -36,9 +36,17 @@ module.exports = async (req, res, next) => {
         }
         decoded.own_id          = decoded.id;
         decoded.id              = row.parent_user_id;
-        decoded.plan            = parent.plan || "free";
-        decoded.plan_status     = parent.plan_status || "inactive";
-        decoded.plan_expires_at = parent.plan_expires_at || null;
+        decoded.parent_role     = parent.role;
+        // Si el padre es admin, el apoyo hereda acceso sin restricción de plan
+        if (parent.role === "admin") {
+          decoded.plan            = "business";
+          decoded.plan_status     = "active";
+          decoded.plan_expires_at = null;
+        } else {
+          decoded.plan            = parent.plan || "free";
+          decoded.plan_status     = parent.plan_status || "inactive";
+          decoded.plan_expires_at = parent.plan_expires_at || null;
+        }
         try {
           const permsRaw = row.permissions;
           decoded.permissions = permsRaw ? JSON.parse(permsRaw) : null;
