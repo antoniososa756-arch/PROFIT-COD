@@ -2122,12 +2122,16 @@ if (id === "tiendas") {
         style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
         Reembolsos
       </button>
+      <button id="int-tab-btn-fiscalidad" onclick="switchIntegracionesTab('fiscalidad')"
+        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
+        Fiscalidad
+      </button>
     </div>
     <div id="integraciones-content"></div>
   `;
 
   window.switchIntegracionesTab = function(tab) {
-    ["tiendas","agencia","reembolsos"].forEach(k => {
+    ["tiendas","agencia","reembolsos","fiscalidad"].forEach(k => {
       const btn = document.getElementById("int-tab-btn-" + k);
       if (!btn) return;
       if (k === tab) {
@@ -2205,6 +2209,25 @@ if (id === "tiendas") {
         </div>
       `;
       cargarConfigGmail();
+    }
+
+    if (tab === "fiscalidad") {
+      content.innerHTML = `
+        <div class="card" style="padding:28px;max-width:560px;">
+          <div style="font-size:16px;font-weight:700;color:#f9fafb;margin-bottom:6px;">🧾 Fiscalidad</div>
+          <div style="font-size:13px;color:#6b7280;margin-bottom:24px;">Configura las opciones fiscales de tu negocio.</div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <button onclick=""
+              style="padding:12px 20px;border-radius:8px;border:1.5px solid #374151;background:var(--card);font-size:14px;font-weight:600;color:#e5e7eb;cursor:pointer;font-family:inherit;text-align:left;">
+              Opción 1
+            </button>
+            <button onclick=""
+              style="padding:12px 20px;border-radius:8px;border:1.5px solid #374151;background:var(--card);font-size:14px;font-weight:600;color:#e5e7eb;cursor:pointer;font-family:inherit;text-align:left;">
+              Opción 2
+            </button>
+          </div>
+        </div>
+      `;
     }
   };
 
