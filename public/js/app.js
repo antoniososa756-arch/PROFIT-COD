@@ -10900,15 +10900,26 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
   } catch(e) { console.error(e); }
 }
 
-function abrirModalCostoCompra(shopDomain, productId, costoActual) {
+async function abrirModalCostoCompra(shopDomain, productId, costoActual) {
   const existing = document.getElementById("modal-costo-compra");
   if (existing) existing.remove();
 
+  // Leer IVA configurado en Gastos Fijos
+  let ivaPct = 21;
+  try {
+    const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const impData = await impRes.json();
+    if (Array.isArray(impData) && impData.length > 0 && impData[0].porcentaje != null)
+      ivaPct = parseFloat(impData[0].porcentaje) || 21;
+  } catch {}
+  const ivaFactor = 1 + ivaPct / 100;
+
   const sinIva = parseFloat(costoActual) || 0;
-  const conIva = parseFloat((sinIva * 1.21).toFixed(4));
+  const conIva = parseFloat((sinIva * ivaFactor).toFixed(4));
 
   const overlay = document.createElement("div");
   overlay.id = "modal-costo-compra";
+  overlay.setAttribute("data-iva-factor", ivaFactor);
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999;";
   overlay.innerHTML = `
     <div style="background:var(--card);border-radius:12px;padding:24px;width:340px;max-width:94vw;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.4);" onclick="event.stopPropagation()">
@@ -10920,17 +10931,17 @@ function abrirModalCostoCompra(shopDomain, productId, costoActual) {
           <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--input);">
             <input id="mcc-sin-iva" type="number" min="0" step="0.01" value="${sinIva > 0 ? sinIva : ''}" placeholder="0.00"
               style="flex:1;border:none;background:transparent;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;outline:none;min-width:0;"
-              oninput="const v=parseFloat(this.value)||0;const c=document.getElementById('mcc-con-iva');if(c)c.value=v>0?(v*1.21).toFixed(2):'';">
+              oninput="(function(el){const f=parseFloat(document.getElementById('modal-costo-compra').getAttribute('data-iva-factor'))||1;const v=parseFloat(el.value)||0;const c=document.getElementById('mcc-con-iva');if(c)c.value=v>0?(v*f).toFixed(2):'';})(this)">
             <span style="font-size:12px;color:var(--muted);">€</span>
           </div>
         </div>
-        <div style="font-size:12px;font-weight:700;color:#22c55e;text-align:center;padding-top:18px;">21%<br>IVA</div>
+        <div style="font-size:12px;font-weight:700;color:#22c55e;text-align:center;padding-top:18px;">${ivaPct}%<br>IVA</div>
         <div style="flex:1;">
           <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Precio con IVA</div>
           <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--input);">
             <input id="mcc-con-iva" type="number" min="0" step="0.01" value="${conIva > 0 ? conIva : ''}" placeholder="0.00"
               style="flex:1;border:none;background:transparent;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;outline:none;min-width:0;"
-              oninput="const v=parseFloat(this.value)||0;const s=document.getElementById('mcc-sin-iva');if(s)s.value=v>0?(v/1.21).toFixed(4):'';">
+              oninput="(function(el){const f=parseFloat(document.getElementById('modal-costo-compra').getAttribute('data-iva-factor'))||1;const v=parseFloat(el.value)||0;const s=document.getElementById('mcc-sin-iva');if(s)s.value=v>0?(v/f).toFixed(4):'';})(this)">
             <span style="font-size:12px;color:var(--muted);">€</span>
           </div>
         </div>
