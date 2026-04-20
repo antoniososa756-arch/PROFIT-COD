@@ -2947,6 +2947,7 @@ if (id === "facturas") {
           ["gastos-ads","Gastos Ads"],
           ["gastos-fijos","Gastos Fijos"],
           ["gastos-tienda","Gastos por Tienda"],
+          ["fiscalidad-iva","Fiscalidad (IVA)"],
           ["nomina","Nómina"]
         ].map(([key, label]) => `
           <button id="tab-btn-${key}" onclick="switchFacturasTab('${key}')"
@@ -4462,7 +4463,7 @@ function closeModal() {
 }
 
 function switchFacturasTab(key) {
-  ["reembolsos","gastos-ads","gastos-fijos","gastos-tienda","nomina"].forEach(k => {
+  ["reembolsos","gastos-ads","gastos-fijos","gastos-tienda","fiscalidad-iva","nomina"].forEach(k => {
     const btn = document.getElementById("tab-btn-" + k);
     if (!btn) return;
     if (k === key) {
@@ -4593,6 +4594,20 @@ function switchFacturasTab(key) {
       <div id="gv-content"></div>
     `;
     loadGastosVarios();
+    return;
+  }
+
+  if (key === "fiscalidad-iva") {
+    content.innerHTML = `
+      <div class="card" style="padding:28px;max-width:560px;">
+        <div style="font-size:16px;font-weight:700;color:#f9fafb;margin-bottom:6px;">🧾 Fiscalidad (IVA)</div>
+        <div style="font-size:13px;color:#6b7280;margin-bottom:24px;">Configura el tipo de fiscalidad de tu negocio.</div>
+        <div id="fiscalidad-content">
+          <div style="color:#6b7280;font-size:13px;">Cargando...</div>
+        </div>
+      </div>
+    `;
+    cargarFiscalidad();
     return;
   }
 
