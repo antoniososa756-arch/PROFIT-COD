@@ -8519,7 +8519,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                   id="gv-shopify-disp-${store.domain.replace(/\./g,'-')}"
                   style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;"
                   onmouseover="this.style.borderColor='#93c5fd'" onmouseout="this.style.borderColor='transparent'">
-                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${_fmtConIva(shopify)}</span>
+                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${fmt(shopify)}</span>
                   <span style="font-size:11px;color:#93c5fd;">€ ✏️</span>
                 </div>
               </td>
@@ -8537,7 +8537,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                   id="gv-extra-disp-${g.id}"
                   style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;flex:1;"
                   onmouseover="this.style.borderColor='#93c5fd'" onmouseout="this.style.borderColor='transparent'">
-                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${_fmtConIva(g.valor||0)}</span>
+                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${fmt(g.valor||0)}</span>
                   <span style="font-size:11px;color:#93c5fd;">€ ✏️</span>
                 </div>
                 <button onclick="deleteGastoExtra(${g.id})"
@@ -8574,12 +8574,11 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
 
 async function abrirModalGastoTienda(tipo, shop, mes, valorActual, extraId) {
   await _abrirModalGF(valorActual, tipo === "shopify" ? "Shopify" : "Concepto extra", async (sinIva) => {
-    const ivaF = 1 + (window.__ivaPct || 0) / 100;
-    const conIva = (sinIva * ivaF).toFixed(2);
+    const sinIvaStr = sinIva.toFixed(2);
     if (tipo === "shopify") {
       const dispId = "gv-shopify-disp-" + shop.replace(/\./g, "-");
       const disp = document.getElementById(dispId);
-      if (disp) disp.querySelector("span:first-child").textContent = conIva;
+      if (disp) disp.querySelector("span:first-child").textContent = sinIvaStr;
       try {
         await fetch(`${API_BASE}/api/gastos-varios/shopify`, {
           method: "PUT",
@@ -8591,7 +8590,7 @@ async function abrirModalGastoTienda(tipo, shop, mes, valorActual, extraId) {
       } catch(e) { console.error(e); }
     } else {
       const disp = document.getElementById("gv-extra-disp-" + extraId);
-      if (disp) disp.querySelector("span:first-child").textContent = conIva;
+      if (disp) disp.querySelector("span:first-child").textContent = sinIvaStr;
       const nom = disp?.closest("tr")?.querySelector("input[type='text']")?.value || "";
       try {
         await fetch(`${API_BASE}/api/gastos-varios/extras/${extraId}`, {
