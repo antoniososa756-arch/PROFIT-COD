@@ -8351,6 +8351,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
       fetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(r => r.json()),
     ]);
     ivaPct = (Array.isArray(imp) && imp.length > 0 && imp[0].porcentaje != null) ? parseFloat(imp[0].porcentaje) : 0;
+    window.__ivaPct = ivaPct;
     const allStores = Array.isArray(storesRes) ? storesRes : [];
     stores = allStores.filter(s => s.active || s.status === "active" || s.is_active);
     if (stores.length === 0) stores = allStores;
@@ -8554,7 +8555,6 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
       <tr${i%2===1?' style="background:#1f2937;"':''}>
         <td style="padding:9px 14px;border:1px solid #374151;color:#e5e7eb;font-size:13px;">${r.label}</td>
         <td style="padding:9px 14px;border:1px solid #374151;text-align:right;color:#6b7280;font-size:13px;">${fmt(r.base)} €</td>
-        <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#f59e0b;font-size:13px;">${fmt(r.base * ivaFactor)} €</td>
         <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-size:13px;">
           <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
             <span id="rec-val-${domainSlug}-${i}" style="font-weight:600;color:${active?'#22c55e':'#4b5563'};">${active ? fmt(togVal)+' €' : '—'}</span>
@@ -8579,14 +8579,13 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
             <tr style="background:#1f2937;">
               <th style="padding:8px 14px;border:1px solid #374151;text-align:left;font-size:11px;color:#9ca3af;font-weight:600;">Concepto</th>
               <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#9ca3af;font-weight:600;">Base (sin IVA)</th>
-              <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#f59e0b;font-weight:600;">IVA (${ivaPct}%)</th>
               <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#22c55e;font-weight:600;">${toggleLabel}</th>
             </tr>
           </thead>
           <tbody>
             ${rowsHtml}
             <tr style="background:rgba(34,197,94,.1);">
-              <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;" colspan="3">TOTAL ${esSL_card ? 'IVA DEDUCIBLE' : 'RECARGO'}</td>
+              <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;" colspan="2">TOTAL ${esSL_card ? 'IVA DEDUCIBLE' : 'RECARGO'}</td>
               <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;font-size:15px;" id="total-rec-${domainSlug}">${fmt(totalToggle)} €</td>
             </tr>
           </tbody>
