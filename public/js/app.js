@@ -8322,19 +8322,35 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
   const ivaFactor = ivaPct / 100;
   const fmt = n => (parseFloat(n)||0).toFixed(2);
 
-  // Config card
-  const opts = [
+  // Config card — renderizar directamente con tipoFiscal ya conocido
+  const _fivaOpts = [
     { value: "recargo_equivalencia", label: "Autónomo (Recargo de equivalencia)" },
     { value: "sociedad_limitada",    label: "Sociedad Limitada" }
   ];
-  const tipoLabel = opts.find(o => o.value === tipoFiscal)?.label || null;
+  const tipoLabel = _fivaOpts.find(o => o.value === tipoFiscal)?.label || null;
+
+  const configCardContent = tipoFiscal
+    ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:8px;border:1.5px solid #22c55e;background:rgba(34,197,94,.06);">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#22c55e;margin-bottom:3px;">Tipo fiscal seleccionado</div>
+          <div style="font-size:15px;font-weight:700;color:#f9fafb;">${tipoLabel}</div>
+        </div>
+        <button onclick="renderFiscalidadUI('${tipoFiscal}',true);document.getElementById('fiscalidad-iva-wrap').querySelector('.card').querySelector('div[id]')?.remove();"
+          style="padding:8px 18px;background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid #3b82f6;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          ✏️ Editar
+        </button>
+      </div>`
+    : `<div style="display:flex;flex-direction:column;gap:12px;" id="fiscalidad-opciones">
+        ${_fivaOpts.map(o => `<button onclick="seleccionarTipoFiscal('${o.value}')"
+          style="padding:12px 20px;border-radius:8px;border:1.5px solid #374151;background:var(--card);font-size:14px;font-weight:600;color:#e5e7eb;cursor:pointer;font-family:inherit;text-align:left;">
+          ${o.label}</button>`).join('')}
+      </div>`;
+
   const configHtml = `
     <div class="card" style="padding:20px 24px;max-width:560px;margin-bottom:24px;">
       <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">🧾 Fiscalidad</div>
       <div style="font-size:12px;color:#6b7280;margin-bottom:14px;">Tipo fiscal configurado</div>
-      <div id="fiscalidad-content">
-        <div style="color:#6b7280;font-size:13px;">Cargando...</div>
-      </div>
+      <div id="fiscalidad-content">${configCardContent}</div>
     </div>
   `;
 
@@ -8344,7 +8360,6 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
         Configura tu tipo fiscal arriba para ver el desglose de IVA.
       </div>
     `;
-    window.renderFiscalidadUI?.(tipoFiscal, false);
     return;
   }
 
@@ -8551,7 +8566,6 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
       </div>
     `}
   `;
-  window.renderFiscalidadUI?.(tipoFiscal, false);
 }
 window.loadFiscalidadIva = loadFiscalidadIva;
 
