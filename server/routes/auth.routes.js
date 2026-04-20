@@ -130,7 +130,7 @@ router.put("/password", auth, async (req, res) => {
 
 router.put("/tipo-fiscal", auth, async (req, res) => {
   const { tipo_fiscal } = req.body || {};
-  const allowed = ["autonomo", "sociedad_limitada"];
+  const allowed = ["iva_general", "recargo_equivalencia"];
   if (!allowed.includes(tipo_fiscal)) return res.status(400).json({ error: "Valor inválido" });
   try {
     await db.run("UPDATE users SET tipo_fiscal = ? WHERE id = ?", [tipo_fiscal, req.user.id]);
