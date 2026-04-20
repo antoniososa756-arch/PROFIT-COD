@@ -8379,7 +8379,8 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
 
   // Construir mapas desde datos ya cargados
   const stockMap = {};
-  stockData2.forEach(s => { stockMap[s.product_id] = s.costo_compra || 0; });
+  const stockInfoMap = {};
+  stockData2.forEach(s => { stockMap[s.product_id] = s.costo_compra || 0; stockInfoMap[s.product_id] = s; });
   const variantesMap = {};
   varData2.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta || 1; });
 
@@ -8412,13 +8413,18 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
         raw.line_items.forEach(item => {
           const pid = String(item.product_id);
           const costo = parseFloat(stockMap[pid] || 0);
+          const stockInfo = stockInfoMap[pid];
           const uds = parseInt(variantesMap[String(item.variant_id)] || 1);
           const qty = parseInt(item.quantity || 1);
           const lineCost = costo * uds * qty;
           costoProductos += lineCost;
-          if (!desgloseProd[pid]) desgloseProd[pid] = { title: item.title || pid, uds: 0, costoUnit: costo, costoTotal: 0 };
-          desgloseProd[pid].uds += qty * uds;
-          desgloseProd[pid].costoTotal += lineCost;
+          // Agrupar por grupo si existe, si no por producto
+          const groupId = stockInfo?.group_id;
+          const key = groupId ? `g_${groupId}` : pid;
+          const label = groupId ? (stockInfo?.group_name || `Grupo ${groupId}`) : (item.title || pid);
+          if (!desgloseProd[key]) desgloseProd[key] = { title: label, uds: 0, costoUnit: costo, costoTotal: 0, isGroup: !!groupId };
+          desgloseProd[key].uds += qty * uds;
+          desgloseProd[key].costoTotal += lineCost;
         });
       } catch {}
     });
@@ -8489,7 +8495,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                 <div style="margin-top:6px;border-top:1px solid #374151;padding-top:6px;display:flex;flex-direction:column;gap:3px;">
                   ${Object.values(desgloseProd).map(p => `
                     <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;">
-                      <span style="color:#9ca3af;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</span>
+                      <span style="color:#9ca3af;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;" title="${escapeHtml(p.title)}">${p.isGroup ? '🔗 ' : ''}${escapeHtml(p.title)}</span>
                       <span style="color:#6b7280;white-space:nowrap;flex-shrink:0;">${p.uds} uds × ${fmt(p.costoUnit)}€ = <strong style="color:#9ca3af;">${fmt(p.costoTotal)}€</strong></span>
                     </div>
                   `).join('')}
