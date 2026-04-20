@@ -8602,6 +8602,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
     return { cardHtml, liq: { name: escapeHtml(store.shop_name||store.domain), ingresoBruto, ivaRepercutido, ivaDeducible: totalToggle, ivaAPagar } };
   });
 
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const tiendaCards    = storeResults.map(r => r.cardHtml).join("");
   const liquidaciones  = storeResults.map(r => r.liq);
   const totLiqRepercutido = liquidaciones.reduce((s,l) => s + l.ivaRepercutido, 0);
@@ -8659,7 +8660,6 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
     </div>
   `;
 
-  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const desglose = document.getElementById("fiscalidad-iva-desglose");
   const desgloseMsg = tipoFiscal === "recargo_equivalencia"
     ? "Como autónomo en recargo de equivalencia no puedes deducir el IVA de tus compras. Este es el IVA que has pagado en cada concepto."
