@@ -7837,12 +7837,10 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
               </td>
               <td style="padding:7px 12px;border:1px solid #374151;">
                 ${esFijo
-                  ? `<div onclick="abrirModalGFPrecioUnit('${item.id}','${mes}',${parseFloat(item.precio_unit)||0})"
-                      id="gf-pu-disp-${item.id}"
-                      style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;"
-                      onmouseover="this.style.borderColor='#374151'" onmouseout="this.style.borderColor='transparent'">
+                  ? `<div id="gf-pu-disp-${item.id}"
+                      style="display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:4px 6px;">
                       <span style="font-size:13px;font-weight:600;color:var(--text);">${fmtIva(item.precio_unit)}</span>
-                      <span style="font-size:11px;color:var(--muted);">€ ✏️</span>
+                      <span style="font-size:11px;color:var(--muted);">€</span>
                     </div>`
                   : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
                 }
