@@ -78,7 +78,7 @@ router.get("/me", auth, async (req, res) => {
     // Para cuentas apoyo: own_id es su propio ID, id ya apunta al padre
     const profileId = req.user.own_id || req.user.id;
     const row = await db.get(
-      "SELECT id, email, role, display_name, avatar_url, billing_name, billing_nif, billing_address, billing_city, billing_zip, billing_country, permissions FROM users WHERE id = ?",
+      "SELECT id, email, role, display_name, avatar_url, billing_name, billing_nif, billing_address, billing_city, billing_zip, billing_country, permissions, tipo_fiscal FROM users WHERE id = ?",
       [profileId]
     );
     if (!row) return res.status(404).json({ error: "Usuario no encontrado" });
@@ -124,6 +124,16 @@ router.put("/password", auth, async (req, res) => {
     if (!ok) return res.status(401).json({ error: "Contraseña actual incorrecta" });
     const hash = await bcrypt.hash(new_password, 12);
     await db.run("UPDATE users SET password_hash = ? WHERE id = ?", [hash, req.user.id]);
+    return res.json({ ok: true });
+  } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
+});
+
+router.put("/tipo-fiscal", auth, async (req, res) => {
+  const { tipo_fiscal } = req.body || {};
+  const allowed = ["autonomo", "sociedad_limitada"];
+  if (!allowed.includes(tipo_fiscal)) return res.status(400).json({ error: "Valor inválido" });
+  try {
+    await db.run("UPDATE users SET tipo_fiscal = ? WHERE id = ?", [tipo_fiscal, req.user.id]);
     return res.json({ ok: true });
   } catch(e) { return res.status(500).json({ error: "Error servidor" }); }
 });

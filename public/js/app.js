@@ -2485,18 +2485,83 @@ if (id === "tiendas") {
         <div class="card" style="padding:28px;max-width:560px;">
           <div style="font-size:16px;font-weight:700;color:#f9fafb;margin-bottom:6px;">🧾 Fiscalidad</div>
           <div style="font-size:13px;color:#6b7280;margin-bottom:24px;">Configura las opciones fiscales de tu negocio.</div>
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <button onclick=""
-              style="padding:12px 20px;border-radius:8px;border:1.5px solid #374151;background:var(--card);font-size:14px;font-weight:600;color:#e5e7eb;cursor:pointer;font-family:inherit;text-align:left;">
-              Opción 1
-            </button>
-            <button onclick=""
-              style="padding:12px 20px;border-radius:8px;border:1.5px solid #374151;background:var(--card);font-size:14px;font-weight:600;color:#e5e7eb;cursor:pointer;font-family:inherit;text-align:left;">
-              Opción 2
-            </button>
+          <div id="fiscalidad-content">
+            <div style="color:#6b7280;font-size:13px;">Cargando...</div>
           </div>
         </div>
       `;
+      cargarFiscalidad();
+    }
+  };
+
+  window.cargarFiscalidad = async function() {
+    const wrap = document.getElementById("fiscalidad-content");
+    if (!wrap) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      });
+      const data = await res.json();
+      const actual = data.user?.tipo_fiscal || null;
+      renderFiscalidadUI(actual, false);
+    } catch(e) {
+      wrap.innerHTML = `<div style="color:#ef4444;font-size:13px;">Error al cargar</div>`;
+    }
+  };
+
+  function renderFiscalidadUI(actual, editando) {
+    const wrap = document.getElementById("fiscalidad-content");
+    if (!wrap) return;
+    const opts = [
+      { value: "autonomo", label: "Autónomo" },
+      { value: "sociedad_limitada", label: "Sociedad Limitada" }
+    ];
+    if (actual && !editando) {
+      const label = opts.find(o => o.value === actual)?.label || actual;
+      wrap.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:8px;border:1.5px solid #22c55e;background:rgba(34,197,94,.06);">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#22c55e;margin-bottom:3px;">Tipo fiscal seleccionado</div>
+            <div style="font-size:15px;font-weight:700;color:#f9fafb;">${label}</div>
+          </div>
+          <button onclick="renderFiscalidadUI('${actual}', true)"
+            style="padding:8px 18px;background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid #3b82f6;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+            ✏️ Editar
+          </button>
+        </div>
+      `;
+    } else {
+      wrap.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:12px;" id="fiscalidad-opciones">
+          ${opts.map(o => `
+            <button onclick="seleccionarTipoFiscal('${o.value}')"
+              style="padding:12px 20px;border-radius:8px;border:1.5px solid ${actual === o.value ? '#22c55e' : '#374151'};background:${actual === o.value ? 'rgba(34,197,94,.08)' : 'var(--card)'};font-size:14px;font-weight:600;color:${actual === o.value ? '#22c55e' : '#e5e7eb'};cursor:pointer;font-family:inherit;text-align:left;transition:all .15s;">
+              ${o.label}
+            </button>
+          `).join('')}
+          ${actual ? `<button onclick="renderFiscalidadUI('${actual}', false)" style="padding:7px 16px;background:transparent;color:#6b7280;border:1px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>` : ''}
+        </div>
+      `;
+    }
+  }
+
+  window.renderFiscalidadUI = renderFiscalidadUI;
+
+  window.seleccionarTipoFiscal = async function(valor) {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/tipo-fiscal`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({ tipo_fiscal: valor })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        renderFiscalidadUI(valor, false);
+      } else {
+        alert("Error al guardar: " + (data.error || "desconocido"));
+      }
+    } catch(e) {
+      alert("Error de conexión");
     }
   };
 

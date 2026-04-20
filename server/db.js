@@ -285,6 +285,7 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_address TEX
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_city TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_zip TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_country TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tipo_fiscal TEXT`);
 await pool.query(`
     CREATE TABLE IF NOT EXISTS payment_config (
       id SERIAL PRIMARY KEY,
