@@ -4598,7 +4598,18 @@ function switchFacturasTab(key) {
   }
 
   if (key === "fiscalidad-iva") {
-    content.innerHTML = `<div id="fiscalidad-iva-wrap" style="color:#6b7280;font-size:13px;padding:16px;">Cargando...</div>`;
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+        <select id="fiva-month-sel" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"].map((m,i)=>`<option value="${i+1}" ${i===new Date().getMonth()?"selected":""}>${m}</option>`).join("")}
+        </select>
+        <select id="fiva-year-sel" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+          ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
+        </select>
+        <button onclick="loadFiscalidadIva()" style="padding:7px 16px;background:#f59e0b;color:#1c1917;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Ver</button>
+      </div>
+      <div id="fiscalidad-iva-wrap" style="color:#6b7280;font-size:13px;">Cargando...</div>
+    `;
     loadFiscalidadIva();
     return;
   }
@@ -8270,8 +8281,8 @@ window.pegarDesdeExcel = pegarDesdeExcel;
 async function loadFiscalidadIva(forzarMonth, forzarYear) {
   const wrap = document.getElementById("fiscalidad-iva-wrap");
 
-  const month = forzarMonth || document.getElementById("gv-month-sel")?.value || (new Date().getMonth()+1);
-  const year  = forzarYear  || document.getElementById("gv-year-sel")?.value  || new Date().getFullYear();
+  const month = forzarMonth || document.getElementById("fiva-month-sel")?.value || (new Date().getMonth()+1);
+  const year  = forzarYear  || document.getElementById("fiva-year-sel")?.value  || new Date().getFullYear();
   const mes   = `${year}-${String(month).padStart(2,"0")}`;
 
   const h = { Authorization: "Bearer " + getActiveToken() };
