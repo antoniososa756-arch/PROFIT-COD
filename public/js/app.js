@@ -8515,12 +8515,13 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
             <tr style="background:rgba(59,130,246,.08);">
               <td style="padding:10px 14px;border:1px solid #bfdbfe;font-weight:700;color:#2563eb;">Shopify</td>
               <td style="padding:10px 14px;border:1px solid #bfdbfe;">
-                <input type="number" min="0" step="0.01"
-                  value="${fmt(shopify)}"
-                  data-shop="${store.domain}" data-mes="${mes}"
-                  onchange="saveGastoVarioShopify(this)"
-                  onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
-                  style="${inp}background:rgba(59,130,246,.08);color:#2563eb;font-weight:600;">
+                <div onclick="abrirModalGastoTienda('shopify','${store.domain}','${mes}',${shopify})"
+                  id="gv-shopify-disp-${store.domain.replace(/\./g,'-')}"
+                  style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;"
+                  onmouseover="this.style.borderColor='#93c5fd'" onmouseout="this.style.borderColor='transparent'">
+                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${_fmtConIva(shopify)}</span>
+                  <span style="font-size:11px;color:#93c5fd;">€ ✏️</span>
+                </div>
               </td>
             </tr>
             ${(gastosExtras[store.domain]||[]).map((g) => `
@@ -8532,10 +8533,13 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                   style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:#2563eb;font-family:inherit;">
               </td>
               <td style="padding:7px 14px;border:1px solid #bfdbfe;display:flex;align-items:center;gap:6px;">
-                <input type="number" min="0" step="0.01" value="${fmt(g.valor||0)}" placeholder="0.00"
-                  data-id="${g.id}" data-shop="${store.domain}" data-mes="${mes}"
-                  onchange="updateGastoExtraValor(this)"
-                  style="${inp}background:rgba(59,130,246,.08);color:#2563eb;font-weight:600;flex:1;">
+                <div onclick="abrirModalGastoTienda('extra','${store.domain}','${mes}',${g.valor||0},'${g.id}')"
+                  id="gv-extra-disp-${g.id}"
+                  style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;flex:1;"
+                  onmouseover="this.style.borderColor='#93c5fd'" onmouseout="this.style.borderColor='transparent'">
+                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${_fmtConIva(g.valor||0)}</span>
+                  <span style="font-size:11px;color:#93c5fd;">€ ✏️</span>
+                </div>
                 <button onclick="deleteGastoExtra(${g.id})"
                   style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px;font-weight:700;padding:0;flex-shrink:0;">✕</button>
               </td>
@@ -8567,6 +8571,41 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
   }
   window.__hideLoadingBar?.();
 }
+
+async function abrirModalGastoTienda(tipo, shop, mes, valorActual, extraId) {
+  await _abrirModalGF(valorActual, tipo === "shopify" ? "Shopify" : "Concepto extra", async (sinIva) => {
+    const ivaF = 1 + (window.__ivaPct || 0) / 100;
+    const conIva = (sinIva * ivaF).toFixed(2);
+    if (tipo === "shopify") {
+      const dispId = "gv-shopify-disp-" + shop.replace(/\./g, "-");
+      const disp = document.getElementById(dispId);
+      if (disp) disp.querySelector("span:first-child").textContent = conIva;
+      try {
+        await fetch(`${API_BASE}/api/gastos-varios/shopify`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+          body: JSON.stringify({ shop_domain: shop, mes, shopify: sinIva })
+        });
+        invalidateCache("gastos-varios");
+        await loadGastosVarios();
+      } catch(e) { console.error(e); }
+    } else {
+      const disp = document.getElementById("gv-extra-disp-" + extraId);
+      if (disp) disp.querySelector("span:first-child").textContent = conIva;
+      const nom = disp?.closest("tr")?.querySelector("input[type='text']")?.value || "";
+      try {
+        await fetch(`${API_BASE}/api/gastos-varios/extras/${extraId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+          body: JSON.stringify({ nombre: nom, valor: sinIva })
+        });
+        invalidateCache("gastos-varios");
+        await loadGastosVarios();
+      } catch(e) { console.error(e); }
+    }
+  });
+}
+window.abrirModalGastoTienda = abrirModalGastoTienda;
 
 async function saveGastoVarioShopify(input) {
   const shop    = input.dataset.shop;
