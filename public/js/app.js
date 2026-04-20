@@ -7281,10 +7281,10 @@ function renderProductoCard(p, stockInfo, variantesMap, shopDomain) {
     </div>
     <div style="padding:14px;flex:1;display:flex;flex-direction:column;gap:10px;">
       <div style="font-weight:600;font-size:13px;color:var(--text);line-height:1.35;min-height:36px;" class="producto-nombre">${escapeHtml(p.title)}</div>
-      <div onclick="abrirModalCostoCompra('${shopDomain}','${pid}',${stockInfo.costo_compra||0})"
+      <div onclick="abrirModalCostoCompra('${shopDomain}','${pid}',${stockInfo.costo_compra||0},${stockInfo.group_id||'null'})"
         style="display:flex;align-items:center;gap:6px;background:var(--input);padding:6px 10px;border-radius:7px;border:1px solid var(--border);cursor:pointer;" title="Editar costo de compra">
         <span style="font-size:11px;color:var(--muted);flex:1;">Costo compra</span>
-        <span id="costo-display-${pid}" style="font-size:13px;font-weight:600;color:var(--text);">${stockInfo.costo_compra ? parseFloat(stockInfo.costo_compra).toFixed(2) : '0.00'}</span>
+        <span id="costo-display-${pid}" data-sin-iva="${stockInfo.costo_compra||0}" style="font-size:13px;font-weight:600;color:var(--text);">${((parseFloat(stockInfo.costo_compra)||0) * (1 + (window.__ivaPct||0)/100)).toFixed(2)}</span>
         <span style="font-size:11px;color:var(--muted);">€</span>
         <span style="font-size:10px;color:var(--muted);">✏️</span>
       </div>
@@ -7348,11 +7348,16 @@ async function loadProductos() {
   try {
     const token = getActiveToken();
     const h = { Authorization: "Bearer " + token };
-    const [data, stockData, variantesData] = await Promise.all([
+    const [data, stockData, variantesData, impData] = await Promise.all([
       cachedFetch(`${API_BASE}/api/shopify/products`, { headers: h }),
       cachedFetch(`${API_BASE}/api/shopify/stock`, { headers: h }),
-      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h })
+      cachedFetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/impuestos`, { headers: h })
     ]);
+    if (Array.isArray(impData) && impData.length > 0 && impData[0].porcentaje != null)
+      window.__ivaPct = parseFloat(impData[0].porcentaje) || 0;
+    else if (!window.__ivaPct) window.__ivaPct = 0;
+    window.__stockData = Array.isArray(stockData) ? stockData : [];
 
     const variantesMap = {};
     if (Array.isArray(variantesData)) {
@@ -11026,59 +11031,68 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
   } catch(e) { console.error(e); }
 }
 
-async function abrirModalCostoCompra(shopDomain, productId, costoActual) {
+async function abrirModalCostoCompra(shopDomain, productId, costoActual, groupId) {
   const existing = document.getElementById("modal-costo-compra");
   if (existing) existing.remove();
 
-  // Leer IVA configurado en Gastos Fijos
-  let ivaPct = 21;
-  try {
-    const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    const impData = await impRes.json();
-    if (Array.isArray(impData) && impData.length > 0 && impData[0].porcentaje != null)
-      ivaPct = parseFloat(impData[0].porcentaje) || 21;
-  } catch {}
+  // Usar IVA ya cacheado o volver a leer
+  let ivaPct = window.__ivaPct ?? 0;
+  if (!ivaPct) {
+    try {
+      const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+      const impData = await impRes.json();
+      if (Array.isArray(impData) && impData.length > 0 && impData[0].porcentaje != null)
+        ivaPct = parseFloat(impData[0].porcentaje) || 0;
+      window.__ivaPct = ivaPct;
+    } catch {}
+  }
   const ivaFactor = 1 + ivaPct / 100;
 
   const sinIva = parseFloat(costoActual) || 0;
-  const conIva = parseFloat((sinIva * ivaFactor).toFixed(4));
+  const conIva = (sinIva * ivaFactor).toFixed(2);
 
   const overlay = document.createElement("div");
   overlay.id = "modal-costo-compra";
   overlay.setAttribute("data-iva-factor", ivaFactor);
+  overlay.setAttribute("data-group-id", groupId || "");
+  overlay.setAttribute("data-shop", shopDomain);
+  overlay.setAttribute("data-pid", productId);
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999;";
   overlay.innerHTML = `
-    <div style="background:var(--card);border-radius:12px;padding:24px;width:340px;max-width:94vw;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.4);" onclick="event.stopPropagation()">
+    <div style="background:var(--card);border-radius:14px;padding:28px;width:420px;max-width:96vw;border:1px solid var(--border);box-shadow:0 12px 40px rgba(0,0,0,.45);" onclick="event.stopPropagation()">
       <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">Costo de compra</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Introduce el precio sin o con IVA — el otro se calcula automáticamente.</div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="flex:1;">
-          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Precio sin IVA</div>
-          <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--input);">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:22px;">Introduce el precio sin o con IVA — el otro se calcula automáticamente.</div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:14px;">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;white-space:nowrap;">Precio sin IVA</div>
+          <div style="display:flex;align-items:center;gap:4px;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;background:var(--input);">
             <input id="mcc-sin-iva" type="number" min="0" step="0.01" value="${sinIva > 0 ? sinIva : ''}" placeholder="0.00"
-              style="flex:1;border:none;background:transparent;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;outline:none;min-width:0;"
+              style="flex:1;border:none;background:transparent;font-size:15px;font-weight:700;color:var(--text);font-family:inherit;outline:none;min-width:0;width:100%;"
               oninput="(function(el){const f=parseFloat(document.getElementById('modal-costo-compra').getAttribute('data-iva-factor'))||1;const v=parseFloat(el.value)||0;const c=document.getElementById('mcc-con-iva');if(c)c.value=v>0?(v*f).toFixed(2):'';})(this)">
-            <span style="font-size:12px;color:var(--muted);">€</span>
+            <span style="font-size:12px;color:var(--muted);flex-shrink:0;">€</span>
           </div>
         </div>
-        <div style="font-size:12px;font-weight:700;color:#22c55e;text-align:center;padding-top:18px;">${ivaPct}%<br>IVA</div>
-        <div style="flex:1;">
-          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Precio con IVA</div>
-          <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--input);">
-            <input id="mcc-con-iva" type="number" min="0" step="0.01" value="${conIva > 0 ? conIva : ''}" placeholder="0.00"
-              style="flex:1;border:none;background:transparent;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;outline:none;min-width:0;"
-              oninput="(function(el){const f=parseFloat(document.getElementById('modal-costo-compra').getAttribute('data-iva-factor'))||1;const v=parseFloat(el.value)||0;const s=document.getElementById('mcc-sin-iva');if(s)s.value=v>0?(v/f).toFixed(4):'';})(this)">
-            <span style="font-size:12px;color:var(--muted);">€</span>
+        <div style="text-align:center;padding-bottom:10px;">
+          <div style="background:rgba(34,197,94,.12);border:1.5px solid #22c55e;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:800;color:#22c55e;white-space:nowrap;">${ivaPct}%<br><span style="font-size:10px;font-weight:600;">IVA</span></div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;white-space:nowrap;">Precio con IVA</div>
+          <div style="display:flex;align-items:center;gap:4px;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;background:var(--input);">
+            <input id="mcc-con-iva" type="number" min="0" step="0.01" value="${parseFloat(conIva) > 0 ? conIva : ''}" placeholder="0.00"
+              style="flex:1;border:none;background:transparent;font-size:15px;font-weight:700;color:var(--text);font-family:inherit;outline:none;min-width:0;width:100%;"
+              oninput="(function(el){const f=parseFloat(document.getElementById('modal-costo-compra').getAttribute('data-iva-factor'))||1;const v=parseFloat(el.value)||0;const s=document.getElementById('mcc-sin-iva');if(s)s.value=v>0?(v/f).toFixed(2):'';})(this)">
+            <span style="font-size:12px;color:var(--muted);flex-shrink:0;">€</span>
           </div>
         </div>
       </div>
+      ${groupId ? `<div style="margin-top:14px;padding:8px 12px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);border-radius:8px;font-size:12px;color:#7c3aed;">⚡ Se actualizará en todos los productos del grupo vinculado</div>` : ''}
       <div style="display:flex;gap:10px;margin-top:20px;">
         <button onclick="document.getElementById('modal-costo-compra').remove()"
-          style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
           Cancelar
         </button>
-        <button onclick="guardarCostoCompraMod('${shopDomain}','${productId}')"
-          style="flex:1;padding:9px;border-radius:8px;border:none;background:#22c55e;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+        <button onclick="guardarCostoCompraMod()"
+          style="flex:1;padding:10px;border-radius:8px;border:none;background:#22c55e;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
           Guardar
         </button>
       </div>
@@ -11090,13 +11104,33 @@ async function abrirModalCostoCompra(shopDomain, productId, costoActual) {
 }
 window.abrirModalCostoCompra = abrirModalCostoCompra;
 
-async function guardarCostoCompraMod(shopDomain, productId) {
+async function guardarCostoCompraMod() {
+  const overlay = document.getElementById("modal-costo-compra");
   const sinIvaEl = document.getElementById("mcc-sin-iva");
-  const costo = parseFloat(sinIvaEl?.value) || 0;
-  await guardarCostoCompra(shopDomain, productId, costo);
+  const sinIva = parseFloat(sinIvaEl?.value) || 0;
+  const ivaFactor = parseFloat(overlay?.getAttribute("data-iva-factor")) || 1;
+  const conIva = sinIva * ivaFactor;
+  const shopDomain = overlay?.getAttribute("data-shop");
+  const productId = overlay?.getAttribute("data-pid");
+  const groupId = overlay?.getAttribute("data-group-id") || "";
+
+  // Guardar producto actual
+  await guardarCostoCompra(shopDomain, productId, sinIva);
   const display = document.getElementById("costo-display-" + productId);
-  if (display) display.textContent = costo.toFixed(2);
-  document.getElementById("modal-costo-compra")?.remove();
+  if (display) { display.textContent = conIva.toFixed(2); display.setAttribute("data-sin-iva", sinIva); }
+
+  // Si tiene grupo, actualizar todos los miembros del grupo
+  if (groupId) {
+    const stockData = window.__stockData || [];
+    const miembros = stockData.filter(s => String(s.group_id) === String(groupId) && String(s.product_id) !== String(productId));
+    for (const m of miembros) {
+      await guardarCostoCompra(m.shop_domain, m.product_id, sinIva);
+      const d = document.getElementById("costo-display-" + m.product_id);
+      if (d) { d.textContent = conIva.toFixed(2); d.setAttribute("data-sin-iva", sinIva); }
+    }
+  }
+
+  overlay?.remove();
 }
 window.guardarCostoCompraMod = guardarCostoCompraMod;
 
