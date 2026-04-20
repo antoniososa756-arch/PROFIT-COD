@@ -8766,8 +8766,9 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
     const logisticaUnitaria = totalPedidosGlobales > 0 ? totalLogistica / totalPedidosGlobales : 0;
     const logistica = logisticaUnitaria * enviosTiendaMRW.length;
     const extrasTotal = (gastosExtras[store.domain]||[]).reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
-    const entregadosTienda = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
-    const ivaTotal = entregadosTienda.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
+    // IVA soportado sobre la base de gastos (sin nómina, que no lleva IVA)
+    const baseGastos = ads.meta + ads.tiktok + costoProductosNeto + mrw + logistica + fijoXTienda + shopify + extrasTotal;
+    const ivaTotal = baseGastos * ivaPorcentaje;
     const total = ads.meta + ads.tiktok + shopify + costoProductosNeto + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
     if (!window.__gastosPorTienda) window.__gastosPorTienda = {};
     window.__gastosPorTienda[store.domain] = total;
@@ -8832,7 +8833,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
             <tr style="background:#fefce8;">
               <td style="padding:10px 14px;border:1px solid #fef08a;font-weight:600;color:#854d0e;">IVA (${(ivaPorcentaje*100).toFixed(0)}%)</td>
               <td style="padding:10px 14px;border:1px solid #fef08a;text-align:right;color:#854d0e;font-weight:600;">${fmt(ivaTotal)} €
-                <div style="font-size:10px;color:#a16207;">${entregadosTienda.length} pedidos entregados × ${(ivaPorcentaje*100).toFixed(0)}%</div>
+                <div style="font-size:10px;color:#a16207;">IVA soportado en gastos × ${(ivaPorcentaje*100).toFixed(0)}%</div>
               </td>
             </tr>
             <tr style="background:rgba(59,130,246,.08);">
