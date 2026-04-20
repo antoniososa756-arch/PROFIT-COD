@@ -8404,15 +8404,21 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
 
     const ESTADOS_COSTO_GV = ["enviado","en_transito","en_preparacion","franquicia","entregado","destruido"];
     let costoProductos = 0;
+    const desgloseProd = {}; // product_id → { title, uds, costoUnit, costoTotal }
     pedidosTienda.filter(o => ESTADOS_COSTO_GV.includes(o.fulfillment_status)).forEach(o => {
       try {
         const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
         if (!raw?.line_items) return;
         raw.line_items.forEach(item => {
-          const costo = parseFloat(stockMap[String(item.product_id)] || 0);
+          const pid = String(item.product_id);
+          const costo = parseFloat(stockMap[pid] || 0);
           const uds = parseInt(variantesMap[String(item.variant_id)] || 1);
           const qty = parseInt(item.quantity || 1);
-          costoProductos += costo * uds * qty;
+          const lineCost = costo * uds * qty;
+          costoProductos += lineCost;
+          if (!desgloseProd[pid]) desgloseProd[pid] = { title: item.title || pid, uds: 0, costoUnit: costo, costoTotal: 0 };
+          desgloseProd[pid].uds += qty * uds;
+          desgloseProd[pid].costoTotal += lineCost;
         });
       } catch {}
     });
@@ -8475,10 +8481,19 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
               <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
             </tr>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Productos</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(costoProductosNeto)} €
-                <div style="font-size:10px;color:#9ca3af;">${fmt(costoProductos)}€ bruto${costoRecuperadoGV>0?` − ${fmt(costoRecuperadoGV)}€ recuperado (${numDevGV} dev.)`:''}
-                </div>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;vertical-align:top;">Productos</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">
+                <div style="font-weight:700;color:#e5e7eb;">${fmt(costoProductosNeto)} €</div>
+                ${costoRecuperadoGV > 0 ? `<div style="font-size:10px;color:#9ca3af;margin-bottom:6px;">${fmt(costoProductos)}€ bruto − ${fmt(costoRecuperadoGV)}€ (${numDevGV} dev.)</div>` : ''}
+                ${Object.values(desgloseProd).length > 0 ? `
+                <div style="margin-top:6px;border-top:1px solid #374151;padding-top:6px;display:flex;flex-direction:column;gap:3px;">
+                  ${Object.values(desgloseProd).map(p => `
+                    <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;">
+                      <span style="color:#9ca3af;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</span>
+                      <span style="color:#6b7280;white-space:nowrap;flex-shrink:0;">${p.uds} uds × ${fmt(p.costoUnit)}€ = <strong style="color:#9ca3af;">${fmt(p.costoTotal)}€</strong></span>
+                    </div>
+                  `).join('')}
+                </div>` : ''}
               </td>
             </tr>
             <tr>
