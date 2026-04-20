@@ -8585,10 +8585,9 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
           </thead>
           <tbody>
             ${rowsHtml}
-            <tr style="background:rgba(245,158,11,.1);">
-              <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:#f59e0b;" colspan="2">TOTAL</td>
-              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#f59e0b;" id="total-iva-${domainSlug}">${fmt(totalIva)} €</td>
-              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;" id="total-rec-${domainSlug}">${fmt(totalToggle)} €</td>
+            <tr style="background:rgba(34,197,94,.1);">
+              <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;" colspan="3">TOTAL ${esSL_card ? 'IVA DEDUCIBLE' : 'RECARGO'}</td>
+              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;font-size:15px;" id="total-rec-${domainSlug}">${fmt(totalToggle)} €</td>
             </tr>
           </tbody>
         </table>
