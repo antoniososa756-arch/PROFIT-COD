@@ -7802,7 +7802,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
           </tr>
           <tr style="background:rgba(34,197,94,.08);">
             <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;">TOTAL</td>
-            <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;text-align:right;">${fmt(totalValor)} €</td>
+            <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;text-align:right;">${fmtIva(totalValor)} €</td>
             <td style="padding:10px 14px;border:1px solid #374151;"></td>
             <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;text-align:right;">— €</td>
             <td style="padding:10px 14px;border:1px solid #374151;"></td>
