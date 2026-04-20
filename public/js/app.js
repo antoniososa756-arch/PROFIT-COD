@@ -7281,12 +7281,12 @@ function renderProductoCard(p, stockInfo, variantesMap, shopDomain) {
     </div>
     <div style="padding:14px;flex:1;display:flex;flex-direction:column;gap:10px;">
       <div style="font-weight:600;font-size:13px;color:var(--text);line-height:1.35;min-height:36px;" class="producto-nombre">${escapeHtml(p.title)}</div>
-      <div style="display:flex;align-items:center;gap:6px;background:var(--input);padding:6px 10px;border-radius:7px;border:1px solid var(--border);">
+      <div onclick="abrirModalCostoCompra('${shopDomain}','${pid}',${stockInfo.costo_compra||0})"
+        style="display:flex;align-items:center;gap:6px;background:var(--input);padding:6px 10px;border-radius:7px;border:1px solid var(--border);cursor:pointer;" title="Editar costo de compra">
         <span style="font-size:11px;color:var(--muted);flex:1;">Costo compra</span>
-        <input type="number" min="0" step="0.01" value="${stockInfo.costo_compra||''}" placeholder="0.00"
-          style="width:58px;border:none;background:transparent;font-size:13px;text-align:right;font-family:inherit;color:var(--text);outline:none;font-weight:600;"
-          onchange="guardarCostoCompra('${shopDomain}','${pid}',this.value)">
+        <span id="costo-display-${pid}" style="font-size:13px;font-weight:600;color:var(--text);">${stockInfo.costo_compra ? parseFloat(stockInfo.costo_compra).toFixed(2) : '0.00'}</span>
         <span style="font-size:11px;color:var(--muted);">€</span>
+        <span style="font-size:10px;color:var(--muted);">✏️</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:3px;">
         <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Variantes</div>
@@ -10899,6 +10899,69 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
     if (inputStock) inputStock.style.borderColor = stockNum <= minimoNum ? "#dc2626" : "#e5e7eb";
   } catch(e) { console.error(e); }
 }
+
+function abrirModalCostoCompra(shopDomain, productId, costoActual) {
+  const existing = document.getElementById("modal-costo-compra");
+  if (existing) existing.remove();
+
+  const sinIva = parseFloat(costoActual) || 0;
+  const conIva = parseFloat((sinIva * 1.21).toFixed(4));
+
+  const overlay = document.createElement("div");
+  overlay.id = "modal-costo-compra";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999;";
+  overlay.innerHTML = `
+    <div style="background:var(--card);border-radius:12px;padding:24px;width:340px;max-width:94vw;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.4);" onclick="event.stopPropagation()">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">Costo de compra</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Introduce el precio sin o con IVA — el otro se calcula automáticamente.</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Precio sin IVA</div>
+          <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--input);">
+            <input id="mcc-sin-iva" type="number" min="0" step="0.01" value="${sinIva > 0 ? sinIva : ''}" placeholder="0.00"
+              style="flex:1;border:none;background:transparent;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;outline:none;min-width:0;"
+              oninput="const v=parseFloat(this.value)||0;const c=document.getElementById('mcc-con-iva');if(c)c.value=v>0?(v*1.21).toFixed(2):'';">
+            <span style="font-size:12px;color:var(--muted);">€</span>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:#22c55e;text-align:center;padding-top:18px;">21%<br>IVA</div>
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Precio con IVA</div>
+          <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--input);">
+            <input id="mcc-con-iva" type="number" min="0" step="0.01" value="${conIva > 0 ? conIva : ''}" placeholder="0.00"
+              style="flex:1;border:none;background:transparent;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;outline:none;min-width:0;"
+              oninput="const v=parseFloat(this.value)||0;const s=document.getElementById('mcc-sin-iva');if(s)s.value=v>0?(v/1.21).toFixed(4):'';">
+            <span style="font-size:12px;color:var(--muted);">€</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button onclick="document.getElementById('modal-costo-compra').remove()"
+          style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          Cancelar
+        </button>
+        <button onclick="guardarCostoCompraMod('${shopDomain}','${productId}')"
+          style="flex:1;padding:9px;border-radius:8px;border:none;background:#22c55e;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          Guardar
+        </button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener("click", () => overlay.remove());
+  document.body.appendChild(overlay);
+  setTimeout(() => { const el = document.getElementById("mcc-sin-iva"); if(el) el.focus(); }, 50);
+}
+window.abrirModalCostoCompra = abrirModalCostoCompra;
+
+async function guardarCostoCompraMod(shopDomain, productId) {
+  const sinIvaEl = document.getElementById("mcc-sin-iva");
+  const costo = parseFloat(sinIvaEl?.value) || 0;
+  await guardarCostoCompra(shopDomain, productId, costo);
+  const display = document.getElementById("costo-display-" + productId);
+  if (display) display.textContent = costo.toFixed(2);
+  document.getElementById("modal-costo-compra")?.remove();
+}
+window.guardarCostoCompraMod = guardarCostoCompraMod;
 
 async function guardarCostoCompra(shopDomain, productId, costo) {
   try {
