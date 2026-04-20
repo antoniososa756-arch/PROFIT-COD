@@ -8311,13 +8311,13 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
             <div style="font-size:12px;font-weight:600;color:#22c55e;margin-bottom:3px;">Tipo fiscal seleccionado</div>
             <div style="font-size:15px;font-weight:700;color:#f9fafb;">${_label}</div>
           </div>
-          <button onclick="renderFiscalidadUI('${tipoFiscal}',true)"
+          <button onclick="editarFiscalidadIva()"
             style="padding:8px 18px;background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid #3b82f6;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
             ✏️ Editar
           </button>
         </div>`
-      : `<div style="display:flex;flex-direction:column;gap:12px;" id="fiscalidad-opciones">
-          ${_opts.map(o=>`<button onclick="seleccionarTipoFiscal('${o.value}')"
+      : `<div style="display:flex;flex-direction:column;gap:12px;">
+          ${_opts.map(o=>`<button onclick="guardarFiscalidadIva('${o.value}')"
             style="padding:12px 20px;border-radius:8px;border:1.5px solid #374151;background:var(--card);font-size:14px;font-weight:600;color:#e5e7eb;cursor:pointer;font-family:inherit;text-align:left;">${o.label}</button>`).join('')}
         </div>`;
     wrap.innerHTML = `
@@ -8610,6 +8610,43 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
   `;
 }
 window.loadFiscalidadIva = loadFiscalidadIva;
+
+window.editarFiscalidadIva = function() {
+  const content = document.getElementById("fiscalidad-content");
+  if (!content) return;
+  const opts = [
+    { value: "recargo_equivalencia", label: "Autónomo (Recargo de equivalencia)" },
+    { value: "sociedad_limitada",    label: "Sociedad Limitada" }
+  ];
+  const actual = window.__cachedTipoFiscal;
+  content.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      ${opts.map(o => `<button onclick="guardarFiscalidadIva('${o.value}')"
+        style="padding:12px 20px;border-radius:8px;border:1.5px solid ${actual===o.value?'#22c55e':'#374151'};background:${actual===o.value?'rgba(34,197,94,.08)':'var(--card)'};font-size:14px;font-weight:600;color:${actual===o.value?'#22c55e':'#e5e7eb'};cursor:pointer;font-family:inherit;text-align:left;">
+        ${o.label}</button>`).join('')}
+      <button onclick="loadFiscalidadIva()"
+        style="padding:7px 16px;background:transparent;color:#6b7280;border:1px solid #374151;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+        Cancelar
+      </button>
+    </div>`;
+};
+
+window.guardarFiscalidadIva = async function(valor) {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/tipo-fiscal`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ tipo_fiscal: valor })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      window.__cachedTipoFiscal = valor;
+      loadFiscalidadIva();
+    } else {
+      alert("Error al guardar: " + (data.error || "desconocido"));
+    }
+  } catch { alert("Error de conexión"); }
+};
 
 window.toggleRecargoRow = function(domain, rowIdx, base) {
   const storageKey = `recargo_toggles_${domain}`;
