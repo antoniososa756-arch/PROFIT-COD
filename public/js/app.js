@@ -6144,11 +6144,11 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   } catch {}
 
   // IVA desde base de datos
-  let ivaPorcentaje = 0.21;
+  let ivaPorcentaje = 0;
   try {
     const impData = await cachedFetch(`${API_BASE}/api/impuestos`, { headers: h2 });
-    if (Array.isArray(impData) && impData.length > 0) {
-      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
+    if (Array.isArray(impData) && impData.length > 0 && impData[0].porcentaje != null) {
+      ivaPorcentaje = parseFloat(impData[0].porcentaje) / 100;
     }
   } catch {}
 
@@ -6756,11 +6756,11 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     nominaTotales.forEach(n => { nominaXTienda += (parseFloat(n.total) || 0) / numTiendas; });
   } catch {}
 
-  let ivaPorcentaje = 0.21;
+  let ivaPorcentaje = 0;
   try {
     const impData = await cachedFetch(`${API_BASE}/api/impuestos`, { headers: h2 });
-    if (Array.isArray(impData) && impData.length > 0) {
-      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
+    if (Array.isArray(impData) && impData.length > 0 && impData[0].porcentaje != null) {
+      ivaPorcentaje = parseFloat(impData[0].porcentaje) / 100;
     }
   } catch {}
 
@@ -7773,10 +7773,10 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
       const r = await fetch(`${API_BASE}/api/impuestos`, {
         method: "POST",
         headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
-        body: JSON.stringify({ nombre:"IVA", porcentaje:21, fijo:1, orden:0 })
+        body: JSON.stringify({ nombre:"IVA", porcentaje:0, fijo:1, orden:0 })
       });
       const saved = await r.json();
-      impuestos = [{ id: saved.id, nombre:"IVA", porcentaje:21, fijo:1 }];
+      impuestos = [{ id: saved.id, nombre:"IVA", porcentaje:0, fijo:1 }];
     } catch {}
   }
 
@@ -8361,9 +8361,9 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
   const fijoXTienda    = totalOtrosFijos / numTiendas;
 
   // Calcular IVA y nómina desde datos ya cargados en paralelo
-  let ivaPorcentaje = 0.21;
-  if (impuestosData.length > 0) {
-    ivaPorcentaje = (impuestosData[0].porcentaje != null ? parseFloat(impuestosData[0].porcentaje) : 21) / 100;
+  let ivaPorcentaje = 0;
+  if (impuestosData.length > 0 && impuestosData[0].porcentaje != null) {
+    ivaPorcentaje = parseFloat(impuestosData[0].porcentaje) / 100;
   }
   const nominaXTienda = (parseFloat(nominaData.total) || 0) / numTiendas;
 
@@ -9203,8 +9203,8 @@ async function calcularGastosPorTienda(mes, month, year, stores) {
   const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
   const fijoXTienda = totalOtrosFijos / numTiendas;
 
-  let ivaPorcentaje = 0.21;
-  if (impuestosData.length > 0) ivaPorcentaje = (parseFloat(impuestosData[0].porcentaje)||21) / 100;
+  let ivaPorcentaje = 0;
+  if (impuestosData.length > 0 && impuestosData[0].porcentaje != null) ivaPorcentaje = parseFloat(impuestosData[0].porcentaje) / 100;
   const nominaXTienda = (parseFloat(nominaData.total)||0) / numTiendas;
 
   const gastosExtras = {};
