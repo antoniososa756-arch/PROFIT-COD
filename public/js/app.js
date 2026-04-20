@@ -7947,54 +7947,61 @@ async function _abrirModalGF(valorActual, label, onSaveFn) {
   const existing = document.getElementById("modal-gf-iva");
   if (existing) existing.remove();
 
-  let ivaPct = 21;
-  try {
-    const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    const impData = await impRes.json();
-    if (Array.isArray(impData) && impData.length > 0 && impData[0].porcentaje != null)
-      ivaPct = parseFloat(impData[0].porcentaje) || 21;
-  } catch {}
+  // Usar caché o leer IVA — NO defaultear a 21 si está configurado a 0
+  let ivaPct = window.__ivaPct ?? null;
+  if (ivaPct === null) {
+    try {
+      const impRes = await fetch(`${API_BASE}/api/impuestos`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+      const impData = await impRes.json();
+      ivaPct = (Array.isArray(impData) && impData.length > 0 && impData[0].porcentaje != null)
+        ? parseFloat(impData[0].porcentaje)
+        : 0;
+      window.__ivaPct = ivaPct;
+    } catch { ivaPct = 0; }
+  }
   const ivaFactor = 1 + ivaPct / 100;
 
   const sinIva = parseFloat(valorActual) || 0;
-  const conIva = parseFloat((sinIva * ivaFactor).toFixed(4));
+  const conIva = (sinIva * ivaFactor).toFixed(2);
 
   const overlay = document.createElement("div");
   overlay.id = "modal-gf-iva";
   overlay.setAttribute("data-iva-factor", ivaFactor);
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999;";
   overlay.innerHTML = `
-    <div style="background:var(--card);border-radius:12px;padding:24px;width:340px;max-width:94vw;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.4);" onclick="event.stopPropagation()">
+    <div style="background:var(--card);border-radius:14px;padding:28px;width:420px;max-width:96vw;border:1px solid var(--border);box-shadow:0 12px 40px rgba(0,0,0,.45);" onclick="event.stopPropagation()">
       <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">${label}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Introduce el precio sin o con IVA — el otro se calcula automáticamente.</div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="flex:1;">
-          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Precio sin IVA</div>
-          <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--input);">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:22px;">Introduce el precio sin o con IVA — el otro se calcula automáticamente.</div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:14px;">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;white-space:nowrap;">Precio sin IVA</div>
+          <div style="display:flex;align-items:center;gap:4px;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;background:var(--input);">
             <input id="mgf-sin-iva" type="number" min="0" step="0.01" value="${sinIva > 0 ? sinIva : ''}" placeholder="0.00"
-              style="flex:1;border:none;background:transparent;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;outline:none;min-width:0;"
+              style="flex:1;border:none;background:transparent;font-size:15px;font-weight:700;color:var(--text);font-family:inherit;outline:none;min-width:0;width:100%;"
               oninput="(function(el){const f=parseFloat(document.getElementById('modal-gf-iva').getAttribute('data-iva-factor'))||1;const v=parseFloat(el.value)||0;const c=document.getElementById('mgf-con-iva');if(c)c.value=v>0?(v*f).toFixed(2):'';})(this)">
-            <span style="font-size:12px;color:var(--muted);">€</span>
+            <span style="font-size:12px;color:var(--muted);flex-shrink:0;">€</span>
           </div>
         </div>
-        <div style="font-size:12px;font-weight:700;color:#22c55e;text-align:center;padding-top:18px;">${ivaPct}%<br>IVA</div>
-        <div style="flex:1;">
-          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Precio con IVA</div>
-          <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--input);">
-            <input id="mgf-con-iva" type="number" min="0" step="0.01" value="${conIva > 0 ? conIva : ''}" placeholder="0.00"
-              style="flex:1;border:none;background:transparent;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;outline:none;min-width:0;"
-              oninput="(function(el){const f=parseFloat(document.getElementById('modal-gf-iva').getAttribute('data-iva-factor'))||1;const v=parseFloat(el.value)||0;const s=document.getElementById('mgf-sin-iva');if(s)s.value=v>0?(v/f).toFixed(4):'';})(this)">
-            <span style="font-size:12px;color:var(--muted);">€</span>
+        <div style="text-align:center;padding-bottom:10px;">
+          <div style="background:rgba(34,197,94,.12);border:1.5px solid #22c55e;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:800;color:#22c55e;white-space:nowrap;">${ivaPct}%<br><span style="font-size:10px;font-weight:600;">IVA</span></div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;white-space:nowrap;">Precio con IVA</div>
+          <div style="display:flex;align-items:center;gap:4px;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;background:var(--input);">
+            <input id="mgf-con-iva" type="number" min="0" step="0.01" value="${parseFloat(conIva) > 0 ? conIva : ''}" placeholder="0.00"
+              style="flex:1;border:none;background:transparent;font-size:15px;font-weight:700;color:var(--text);font-family:inherit;outline:none;min-width:0;width:100%;"
+              oninput="(function(el){const f=parseFloat(document.getElementById('modal-gf-iva').getAttribute('data-iva-factor'))||1;const v=parseFloat(el.value)||0;const s=document.getElementById('mgf-sin-iva');if(s)s.value=v>0?(v/f).toFixed(2):'';})(this)">
+            <span style="font-size:12px;color:var(--muted);flex-shrink:0;">€</span>
           </div>
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px;">
         <button onclick="document.getElementById('modal-gf-iva').remove()"
-          style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
           Cancelar
         </button>
         <button id="mgf-save-btn"
-          style="flex:1;padding:9px;border-radius:8px;border:none;background:#22c55e;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          style="flex:1;padding:10px;border-radius:8px;border:none;background:#22c55e;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
           Guardar
         </button>
       </div>
