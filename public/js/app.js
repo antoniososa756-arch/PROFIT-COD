@@ -8522,10 +8522,12 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
 
     const extrasTotal = extras.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
 
-    // IVA + Recargo de equivalencia por categoría
-    const RECARGO_PCT = 5.2;
-    const recargoFactor = RECARGO_PCT / 100;
-    const storageKey = `recargo_toggles_${store.domain}`;
+    // IVA + toggle (Recargo para RE, IVA deducible para SL)
+    const esSL_card = tipoFiscal === "sociedad_limitada";
+    const TOGGLE_PCT  = esSL_card ? ivaPct : 5.2;
+    const toggleFactor = TOGGLE_PCT / 100;
+    const toggleLabel  = esSL_card ? `IVA deducible (${ivaPct}%)` : `Recargo (5.2%)`;
+    const storageKey   = esSL_card ? `sl_iva_toggles_${store.domain}` : `recargo_toggles_${store.domain}`;
     let toggles = {};
     try { toggles = JSON.parse(localStorage.getItem(storageKey) || "{}"); } catch {}
 
@@ -8540,13 +8542,14 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
       ...extras.map(g => ({ label: escapeHtml(g.nombre || "Extra"), base: parseFloat(g.valor)||0 })),
     ];
 
-    const domainSlug = store.domain.replace(/\./g,"-");
+    const domainSlug   = store.domain.replace(/\./g,"-");
     const totalIva     = rows.reduce((s,r) => s + r.base * ivaFactor, 0);
-    const totalRecargo = rows.reduce((s,r,i) => s + (toggles[i] ? r.base * recargoFactor : 0), 0);
+    const totalToggle  = rows.reduce((s,r,i) => s + (toggles[i] ? r.base * toggleFactor : 0), 0);
 
     const rowsHtml = rows.map((r, i) => {
-      const active = !!toggles[i];
-      const recVal = active ? r.base * recargoFactor : 0;
+      const active   = !!toggles[i];
+      const togVal   = active ? r.base * toggleFactor : 0;
+      const toggleFn = esSL_card ? `toggleSLIva` : `toggleRecargoRow`;
       return `
       <tr${i%2===1?' style="background:#1f2937;"':''}>
         <td style="padding:9px 14px;border:1px solid #374151;color:#e5e7eb;font-size:13px;">${r.label}</td>
@@ -8554,10 +8557,10 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
         <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#f59e0b;font-size:13px;">${fmt(r.base * ivaFactor)} €</td>
         <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-size:13px;">
           <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
-            <span id="rec-val-${domainSlug}-${i}" style="font-weight:600;color:${active?'#22c55e':'#4b5563'};">${active ? fmt(recVal)+' €' : '—'}</span>
+            <span id="rec-val-${domainSlug}-${i}" style="font-weight:600;color:${active?'#22c55e':'#4b5563'};">${active ? fmt(togVal)+' €' : '—'}</span>
             <span id="rec-tog-${domainSlug}-${i}"
-              onclick="toggleRecargoRow('${store.domain}',${i},${r.base})"
-              title="${active?'Quitar recargo':'Aplicar recargo'}"
+              onclick="${toggleFn}('${store.domain}',${i},${r.base})"
+              title="${active?'Quitar':'Activar'}"
               style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${active?'#22c55e':'#374151'};border:2px solid ${active?'#16a34a':'#6b7280'};cursor:pointer;flex-shrink:0;transition:background .2s;">
             </span>
           </div>
@@ -8577,7 +8580,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
               <th style="padding:8px 14px;border:1px solid #374151;text-align:left;font-size:11px;color:#9ca3af;font-weight:600;">Concepto</th>
               <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#9ca3af;font-weight:600;">Base (sin IVA)</th>
               <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#f59e0b;font-weight:600;">IVA (${ivaPct}%)</th>
-              <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#22c55e;font-weight:600;">Recargo (${RECARGO_PCT}%)</th>
+              <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#22c55e;font-weight:600;">${toggleLabel}</th>
             </tr>
           </thead>
           <tbody>
@@ -8585,7 +8588,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
             <tr style="background:rgba(245,158,11,.1);">
               <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:#f59e0b;" colspan="2">TOTAL</td>
               <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#f59e0b;" id="total-iva-${domainSlug}">${fmt(totalIva)} €</td>
-              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;" id="total-rec-${domainSlug}">${fmt(totalRecargo)} €</td>
+              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;" id="total-rec-${domainSlug}">${fmt(totalToggle)} €</td>
             </tr>
           </tbody>
         </table>
@@ -8595,17 +8598,16 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
 
   const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const desglose = document.getElementById("fiscalidad-iva-desglose");
-  if (desglose) desglose.innerHTML = tipoFiscal === "recargo_equivalencia" ? `
+  const desgloseMsg = tipoFiscal === "recargo_equivalencia"
+    ? "Como autónomo en recargo de equivalencia no puedes deducir el IVA de tus compras. Este es el IVA que has pagado en cada concepto."
+    : "Marca en verde el IVA que ya has pagado que forma parte de tu actividad comercial.";
+  if (desglose) desglose.innerHTML = `
     <div style="margin-bottom:16px;">
       <div style="font-size:14px;font-weight:700;color:#f9fafb;margin-bottom:4px;">IVA soportado en gastos — ${monthNames[parseInt(month)-1].toUpperCase()} ${year}</div>
-      <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">Como autónomo en recargo de equivalencia no puedes deducir el IVA de tus compras. Este es el IVA que has pagado en cada concepto.</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">${desgloseMsg}</div>
       <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
         ${tiendaCards || `<div style="color:#6b7280;font-size:13px;">No hay tiendas activas.</div>`}
       </div>
-    </div>
-  ` : `
-    <div class="card" style="padding:20px 24px;max-width:560px;color:#6b7280;font-size:13px;">
-      El desglose de IVA para Sociedad Limitada estará disponible próximamente.
     </div>
   `;
 }
@@ -8646,6 +8648,33 @@ window.guardarFiscalidadIva = async function(valor) {
       alert("Error al guardar: " + (data.error || "desconocido"));
     }
   } catch { alert("Error de conexión"); }
+};
+
+window.toggleSLIva = function(domain, rowIdx, base) {
+  const ivaPct = window.__ivaPct || 0;
+  const storageKey = `sl_iva_toggles_${domain}`;
+  let toggles = {};
+  try { toggles = JSON.parse(localStorage.getItem(storageKey) || "{}"); } catch {}
+  toggles[rowIdx] = !toggles[rowIdx];
+  localStorage.setItem(storageKey, JSON.stringify(toggles));
+
+  const active = toggles[rowIdx];
+  const domainSlug = domain.replace(/\./g,"-");
+  const fmt = n => (parseFloat(n)||0).toFixed(2);
+  const val = document.getElementById(`rec-val-${domainSlug}-${rowIdx}`);
+  const tog = document.getElementById(`rec-tog-${domainSlug}-${rowIdx}`);
+  if (tog) { tog.style.background = active ? "#22c55e" : "#374151"; tog.style.borderColor = active ? "#16a34a" : "#6b7280"; }
+  if (val) { val.textContent = active ? fmt(base * ivaPct / 100) + " €" : "—"; val.style.color = active ? "#22c55e" : "#4b5563"; }
+
+  const totalCell = document.getElementById(`total-rec-${domainSlug}`);
+  if (totalCell) {
+    let total = 0;
+    document.querySelectorAll(`[id^="rec-val-${domainSlug}-"]`).forEach(el => {
+      const v = parseFloat(el.textContent);
+      if (!isNaN(v)) total += v;
+    });
+    totalCell.textContent = fmt(total) + " €";
+  }
 };
 
 window.toggleRecargoRow = function(domain, rowIdx, base) {
