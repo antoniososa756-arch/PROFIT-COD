@@ -8333,7 +8333,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
         Configura tu tipo fiscal arriba para ver el desglose de IVA.
       </div>
     `;
-    cargarFiscalidad();
+    window.renderFiscalidadUI?.(tipoFiscal, false);
     return;
   }
 
@@ -8517,7 +8517,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
       </div>
     `}
   `;
-  cargarFiscalidad();
+  window.renderFiscalidadUI?.(tipoFiscal, false);
 }
 window.loadFiscalidadIva = loadFiscalidadIva;
 
