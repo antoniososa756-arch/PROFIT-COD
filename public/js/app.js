@@ -8461,7 +8461,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
 
   const allOrders = window.__allOrdersCache || [];
 
-  const tiendaCards = stores.map(store => {
+  const storeResults = stores.map(store => {
     const ads     = adsSpends[store.domain] || { meta: 0, tiktok: 0 };
     const shopify = gastosVarios[store.domain] || 0;
     const extras  = gastosExtras[store.domain] || [];
@@ -8547,6 +8547,13 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
     const totalIva     = rows.reduce((s,r) => s + r.base * ivaFactor, 0);
     const totalToggle  = rows.reduce((s,r,i) => s + (toggles[i] ? r.base * toggleFactor : 0), 0);
 
+    // IVA repercutido: extraer IVA del bruto de ventas del mes
+    const pedEntFiva = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
+    const ingresoBruto = pedEntFiva.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+    // Extraer IVA de precio con IVA incluido: IVA = bruto * IVA% / (100 + IVA%)
+    const ivaRepercutido = ingresoBruto * ivaPct / (100 + ivaPct);
+    const ivaAPagar = ivaRepercutido - totalToggle;
+
     const rowsHtml = rows.map((r, i) => {
       const active   = !!toggles[i];
       const togVal   = active ? r.base * toggleFactor : 0;
@@ -8568,7 +8575,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
       </tr>`;
     }).join("");
 
-    return `
+    const cardHtml = `
       <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;min-width:300px;flex:1;">
         <div style="background:#f59e0b;padding:12px 16px;">
           <div style="font-weight:700;color:#1c1917;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
@@ -8592,7 +8599,65 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
         </table>
       </div>
     `;
-  }).join("");
+    return { cardHtml, liq: { name: escapeHtml(store.shop_name||store.domain), ingresoBruto, ivaRepercutido, ivaDeducible: totalToggle, ivaAPagar } };
+  });
+
+  const tiendaCards    = storeResults.map(r => r.cardHtml).join("");
+  const liquidaciones  = storeResults.map(r => r.liq);
+  const totLiqRepercutido = liquidaciones.reduce((s,l) => s + l.ivaRepercutido, 0);
+  const totLiqDeducible   = liquidaciones.reduce((s,l) => s + l.ivaDeducible, 0);
+  const totLiqAPagar      = liquidaciones.reduce((s,l) => s + l.ivaAPagar, 0);
+
+  const liqHtml = `
+    <div style="margin-top:32px;">
+      <div style="font-size:14px;font-weight:700;color:#f9fafb;margin-bottom:4px;">Liquidación IVA — ${monthNames[parseInt(month)-1].toUpperCase()} ${year}</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">IVA repercutido (de ventas) − IVA deducible (de gastos marcados) = IVA a pagar/recuperar</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:start;">
+        ${liquidaciones.map(l => `
+          <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;min-width:220px;flex:1;">
+            <div style="background:#1e40af;padding:10px 16px;">
+              <div style="font-weight:700;color:#fff;font-size:13px;">${l.name}</div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <tr>
+                <td style="padding:9px 14px;border:1px solid #374151;color:#9ca3af;">Ingresos brutos (ventas)</td>
+                <td style="padding:9px 14px;border:1px solid #374151;text-align:right;color:#e5e7eb;font-weight:600;">${fmt(l.ingresoBruto)} €</td>
+              </tr>
+              <tr style="background:#1f2937;">
+                <td style="padding:9px 14px;border:1px solid #374151;color:#f59e0b;font-weight:600;">IVA repercutido (${ivaPct}%)</td>
+                <td style="padding:9px 14px;border:1px solid #374151;text-align:right;color:#f59e0b;font-weight:700;">${fmt(l.ivaRepercutido)} €</td>
+              </tr>
+              <tr>
+                <td style="padding:9px 14px;border:1px solid #374151;color:#22c55e;font-weight:600;">(−) IVA deducible</td>
+                <td style="padding:9px 14px;border:1px solid #374151;text-align:right;color:#22c55e;font-weight:700;">− ${fmt(l.ivaDeducible)} €</td>
+              </tr>
+              <tr style="background:${l.ivaAPagar >= 0 ? 'rgba(239,68,68,.1)' : 'rgba(34,197,94,.1)'};">
+                <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:${l.ivaAPagar >= 0 ? '#ef4444' : '#22c55e'};">IVA A PAGAR</td>
+                <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;font-size:15px;color:${l.ivaAPagar >= 0 ? '#ef4444' : '#22c55e'};">${fmt(l.ivaAPagar)} €</td>
+              </tr>
+            </table>
+          </div>
+        `).join("")}
+      </div>
+      <div style="margin-top:16px;background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;max-width:400px;">
+        <div style="background:#1e40af;padding:10px 16px;font-weight:700;color:#fff;font-size:13px;">TOTAL TODAS LAS TIENDAS</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tr>
+            <td style="padding:9px 14px;border:1px solid #374151;color:#f59e0b;font-weight:600;">IVA repercutido total</td>
+            <td style="padding:9px 14px;border:1px solid #374151;text-align:right;color:#f59e0b;font-weight:700;">${fmt(totLiqRepercutido)} €</td>
+          </tr>
+          <tr style="background:#1f2937;">
+            <td style="padding:9px 14px;border:1px solid #374151;color:#22c55e;font-weight:600;">(−) IVA deducible total</td>
+            <td style="padding:9px 14px;border:1px solid #374151;text-align:right;color:#22c55e;font-weight:700;">− ${fmt(totLiqDeducible)} €</td>
+          </tr>
+          <tr style="background:${totLiqAPagar >= 0 ? 'rgba(239,68,68,.15)' : 'rgba(34,197,94,.15)'};">
+            <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:${totLiqAPagar >= 0 ? '#ef4444' : '#22c55e'};">IVA A PAGAR TOTAL</td>
+            <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;font-size:16px;color:${totLiqAPagar >= 0 ? '#ef4444' : '#22c55e'};">${fmt(totLiqAPagar)} €</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  `;
 
   const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const desglose = document.getElementById("fiscalidad-iva-desglose");
@@ -8607,6 +8672,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
         ${tiendaCards || `<div style="color:#6b7280;font-size:13px;">No hay tiendas activas.</div>`}
       </div>
     </div>
+    ${liqHtml}
   `;
 }
 window.loadFiscalidadIva = loadFiscalidadIva;
