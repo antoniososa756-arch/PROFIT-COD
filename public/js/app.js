@@ -4598,16 +4598,8 @@ function switchFacturasTab(key) {
   }
 
   if (key === "fiscalidad-iva") {
-    content.innerHTML = `
-      <div class="card" style="padding:28px;max-width:560px;">
-        <div style="font-size:16px;font-weight:700;color:#f9fafb;margin-bottom:6px;">🧾 Fiscalidad (IVA)</div>
-        <div style="font-size:13px;color:#6b7280;margin-bottom:24px;">Configura el tipo de fiscalidad de tu negocio.</div>
-        <div id="fiscalidad-content">
-          <div style="color:#6b7280;font-size:13px;">Cargando...</div>
-        </div>
-      </div>
-    `;
-    cargarFiscalidad();
+    content.innerHTML = `<div id="fiscalidad-iva-wrap" style="color:#6b7280;font-size:13px;padding:16px;">Cargando...</div>`;
+    loadFiscalidadIva();
     return;
   }
 
@@ -8271,6 +8263,263 @@ async function pegarDesdeExcel(e, inputOrigen) {
 window.loadAdsTable    = loadAdsTable;
 window.saveAdsSpend    = saveAdsSpend;
 window.pegarDesdeExcel = pegarDesdeExcel;
+
+// =========================
+// FISCALIDAD IVA
+// =========================
+async function loadFiscalidadIva(forzarMonth, forzarYear) {
+  const wrap = document.getElementById("fiscalidad-iva-wrap");
+
+  const month = forzarMonth || document.getElementById("gv-month-sel")?.value || (new Date().getMonth()+1);
+  const year  = forzarYear  || document.getElementById("gv-year-sel")?.value  || new Date().getFullYear();
+  const mes   = `${year}-${String(month).padStart(2,"0")}`;
+
+  const h = { Authorization: "Bearer " + getActiveToken() };
+
+  // Cargar tipo fiscal + datos de gastos en paralelo
+  let tipoFiscal = null, ivaPct = 0;
+  let stores = [], adsSpends = {}, gastosFijos = [], gastosVarios = {}, gastosExtrasRaw = [], stockData = [], varData = [], nominaData = { total: 0 };
+  try {
+    const [meRes, gf, gv, ge, nom, imp, st, vr, storesRes] = await Promise.all([
+      fetch(`${API_BASE}/api/auth/me`, { headers: h }).then(r => r.json()),
+      fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h }).then(r => r.json()),
+      fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h }).then(r => r.json()),
+      fetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h }).then(r => r.json()),
+      fetch(`${API_BASE}/api/nomina/total?mes=${mes}`, { headers: h }).then(r => r.json()),
+      fetch(`${API_BASE}/api/impuestos`, { headers: h }).then(r => r.json()),
+      fetch(`${API_BASE}/api/shopify/stock`, { headers: h }).then(r => r.json()),
+      fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h }).then(r => r.json()),
+      fetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(r => r.json()),
+    ]);
+    tipoFiscal = meRes.user?.tipo_fiscal || null;
+    ivaPct = (Array.isArray(imp) && imp.length > 0 && imp[0].porcentaje != null) ? parseFloat(imp[0].porcentaje) : 0;
+    const allStores = Array.isArray(storesRes) ? storesRes : [];
+    stores = allStores.filter(s => s.active || s.status === "active" || s.is_active);
+    if (stores.length === 0) stores = allStores;
+    gastosFijos = Array.isArray(gf) ? gf : [];
+    if (Array.isArray(gv)) gv.forEach(r => { gastosVarios[r.shop_domain] = r.shopify||0; });
+    gastosExtrasRaw = Array.isArray(ge) ? ge : [];
+    nominaData = nom || { total: 0 };
+    stockData = Array.isArray(st) ? st : [];
+    varData = Array.isArray(vr) ? vr : [];
+  } catch(e) {
+    if (wrap) wrap.innerHTML = `<div style="color:#ef4444;font-size:13px;padding:16px;">Error al cargar datos.</div>`;
+    return;
+  }
+
+  if (!wrap) return;
+  const ivaFactor = ivaPct / 100;
+  const fmt = n => (parseFloat(n)||0).toFixed(2);
+
+  // Config card
+  const opts = [
+    { value: "recargo_equivalencia", label: "Autónomo (Recargo de equivalencia)" },
+    { value: "sociedad_limitada",    label: "Sociedad Limitada" }
+  ];
+  const tipoLabel = opts.find(o => o.value === tipoFiscal)?.label || null;
+  const configHtml = `
+    <div class="card" style="padding:20px 24px;max-width:560px;margin-bottom:24px;">
+      <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">🧾 Fiscalidad</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:14px;">Tipo fiscal configurado</div>
+      <div id="fiscalidad-content">
+        <div style="color:#6b7280;font-size:13px;">Cargando...</div>
+      </div>
+    </div>
+  `;
+
+  if (!tipoFiscal) {
+    wrap.innerHTML = configHtml + `
+      <div class="card" style="padding:24px;max-width:560px;color:#6b7280;font-size:13px;">
+        Configura tu tipo fiscal arriba para ver el desglose de IVA.
+      </div>
+    `;
+    cargarFiscalidad();
+    return;
+  }
+
+  // Calcular mismos valores que Gastos por Tienda
+  const numTiendas = stores.length || 1;
+  const gastosMRW       = gastosFijos.filter(g => g.nombre === "MRW");
+  const gastosLogistica = gastosFijos.filter(g => g.nombre === "LOGÍSTICA");
+  const gastosOtros     = gastosFijos.filter(g => !["MRW","LOGÍSTICA"].includes(g.nombre));
+  const totalMRW        = gastosMRW.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const totalLogistica  = gastosLogistica.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const totalOtrosFijos = gastosOtros.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+  const fijoXTienda     = totalOtrosFijos / numTiendas;
+  const nominaXTienda   = (parseFloat(nominaData.total)||0) / numTiendas;
+
+  const stockMap    = {};
+  const variantesMap = {};
+  stockData.forEach(s => { stockMap[s.product_id] = parseFloat(s.costo_compra)||0; });
+  varData.forEach(v => { variantesMap[v.variant_id] = v.unidades_por_venta||1; });
+
+  const gastosExtras = {};
+  gastosExtrasRaw.forEach(r => {
+    if (!gastosExtras[r.shop_domain]) gastosExtras[r.shop_domain] = [];
+    gastosExtras[r.shop_domain].push(r);
+  });
+
+  // Cargar pedidos si no están en cache
+  if (!window.__allOrdersCache || window.__allOrdersCacheMes !== mes) {
+    try {
+      const _monthStr = String(month).padStart(2,"0");
+      const from = `${year}-${_monthStr}-01`;
+      const to   = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
+      const r = await fetch(`${API_BASE}/api/orders?from=${from}&to=${to}`, { headers: h }).then(r => r.json());
+      window.__allOrdersCache    = Array.isArray(r) ? r : (r?.orders || []);
+      window.__allOrdersCacheMes = mes;
+    } catch {}
+  }
+
+  // Cargar ads por tienda
+  try {
+    const adsResults = await Promise.all(stores.map(store =>
+      fetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${month}&year=${year}`, { headers: h })
+        .then(r => r.json()).then(rows => ({ domain: store.domain, rows: Array.isArray(rows) ? rows : [] }))
+    ));
+    adsResults.forEach(({ domain, rows }) => {
+      let meta = 0, tiktok = 0;
+      rows.forEach(r => { meta += r.meta||0; tiktok += r.tiktok||0; });
+      adsSpends[domain] = { meta, tiktok };
+    });
+  } catch {}
+
+  const allOrders = window.__allOrdersCache || [];
+
+  const tiendaCards = stores.map(store => {
+    const ads     = adsSpends[store.domain] || { meta: 0, tiktok: 0 };
+    const shopify = gastosVarios[store.domain] || 0;
+    const extras  = gastosExtras[store.domain] || [];
+
+    const pedidosTienda = allOrders.filter(o => {
+      if (!o.created_at) return false;
+      if (["cancelado","pendiente"].includes(o.fulfillment_status)) return false;
+      const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
+      return d.startsWith(mes) && o.shop_domain === store.domain;
+    });
+    const pedidosTodas = allOrders.filter(o => {
+      if (!o.created_at) return false;
+      if (["cancelado","pendiente"].includes(o.fulfillment_status)) return false;
+      const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
+      return d.startsWith(mes);
+    });
+
+    // Costo productos (sin-IVA)
+    const ESTADOS = ["enviado","en_transito","en_preparacion","franquicia","entregado","destruido"];
+    let costoProductos = 0;
+    pedidosTienda.filter(o => ESTADOS.includes(o.fulfillment_status)).forEach(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json==="string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        if (!raw?.line_items) return;
+        raw.line_items.forEach(item => {
+          const costo = stockMap[String(item.product_id)] || 0;
+          const uds   = variantesMap[String(item.variant_id)] || 1;
+          costoProductos += costo * uds * (item.quantity||1);
+        });
+      } catch {}
+    });
+    let costoDevuelto = 0;
+    pedidosTienda.filter(o => o.fulfillment_status==="devuelto").forEach(o => {
+      try {
+        const raw = o.raw_json ? (typeof o.raw_json==="string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+        if (!raw?.line_items) return;
+        raw.line_items.forEach(item => {
+          costoDevuelto += (stockMap[String(item.product_id)]||0) * (variantesMap[String(item.variant_id)]||1) * (item.quantity||1);
+        });
+      } catch {}
+    });
+    const costoProductosNeto = costoProductos - costoDevuelto;
+
+    // MRW
+    const estadosEnvio = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
+    const enviosGlobalesMRW = pedidosTodas.filter(o => estadosEnvio.includes(o.fulfillment_status));
+    const devueltosTodas    = enviosGlobalesMRW.filter(o => o.fulfillment_status==="devuelto").length;
+    const totalEnviosGlobales = enviosGlobalesMRW.length + devueltosTodas;
+    const enviosTiendaMRW     = pedidosTienda.filter(o => estadosEnvio.includes(o.fulfillment_status));
+    const devueltosTienda     = enviosTiendaMRW.filter(o => o.fulfillment_status==="devuelto").length;
+    const enviosTienda        = enviosTiendaMRW.length + devueltosTienda;
+    const mrwUnitario         = totalEnviosGlobales > 0 ? totalMRW / totalEnviosGlobales : 0;
+    const mrw                 = mrwUnitario * enviosTienda;
+
+    // Logística
+    const totalPedidosGlobales = pedidosTodas.filter(o => estadosEnvio.includes(o.fulfillment_status)).length;
+    const logisticaUnitaria    = totalPedidosGlobales > 0 ? totalLogistica / totalPedidosGlobales : 0;
+    const logistica            = logisticaUnitaria * enviosTiendaMRW.length;
+
+    const extrasTotal = extras.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
+
+    // IVA por categoría (base sin-IVA × ivaPct/100)
+    const rows = [
+      { label: "Meta Ads",      base: ads.meta },
+      { label: "TikTok Ads",    base: ads.tiktok },
+      { label: "Productos",     base: costoProductosNeto },
+      { label: "MRW",           base: mrw },
+      { label: "Logística",     base: logistica },
+      { label: "Gastos Fijos",  base: fijoXTienda },
+      { label: "Shopify",       base: shopify },
+      ...extras.map(g => ({ label: escapeHtml(g.nombre || "Extra"), base: parseFloat(g.valor)||0 })),
+    ];
+
+    const totalIva = rows.reduce((s,r) => s + r.base * ivaFactor, 0);
+
+    const rowsHtml = rows.map((r, i) => `
+      <tr${i%2===1?' style="background:#1f2937;"':''}>
+        <td style="padding:9px 14px;border:1px solid #374151;color:#e5e7eb;font-size:13px;">${r.label}</td>
+        <td style="padding:9px 14px;border:1px solid #374151;text-align:right;color:#6b7280;font-size:13px;">${fmt(r.base)} €</td>
+        <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#f59e0b;font-size:13px;">${fmt(r.base * ivaFactor)} €</td>
+      </tr>
+    `).join("");
+
+    return `
+      <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;min-width:260px;flex:1;">
+        <div style="background:#f59e0b;padding:12px 16px;">
+          <div style="font-weight:700;color:#1c1917;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
+          <div style="font-size:11px;color:#44403c;margin-top:2px;">${store.domain}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:#1f2937;">
+              <th style="padding:8px 14px;border:1px solid #374151;text-align:left;font-size:11px;color:#9ca3af;font-weight:600;">Concepto</th>
+              <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#9ca3af;font-weight:600;">Base (sin IVA)</th>
+              <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#f59e0b;font-weight:600;">IVA (${ivaPct}%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+            <tr style="background:rgba(245,158,11,.1);">
+              <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:#f59e0b;" colspan="2">TOTAL IVA SOPORTADO</td>
+              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">${fmt(totalIva)} €</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
+
+  const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  wrap.innerHTML = `
+    <div class="card" style="padding:20px 24px;max-width:560px;margin-bottom:24px;">
+      <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">🧾 Fiscalidad</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:14px;">Tipo fiscal configurado</div>
+      <div id="fiscalidad-content"><div style="color:#6b7280;font-size:13px;">Cargando...</div></div>
+    </div>
+    ${tipoFiscal === "recargo_equivalencia" ? `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:700;color:#f9fafb;margin-bottom:4px;">IVA soportado en gastos — ${monthNames[parseInt(month)-1].toUpperCase()} ${year}</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">Como autónomo en recargo de equivalencia no puedes deducir el IVA de tus compras. Este es el IVA que has pagado en cada concepto.</div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
+          ${tiendaCards || `<div style="color:#6b7280;font-size:13px;">No hay tiendas activas.</div>`}
+        </div>
+      </div>
+    ` : `
+      <div class="card" style="padding:20px 24px;max-width:560px;color:#6b7280;font-size:13px;">
+        El desglose de IVA para Sociedad Limitada estará disponible próximamente.
+      </div>
+    `}
+  `;
+  cargarFiscalidad();
+}
+window.loadFiscalidadIva = loadFiscalidadIva;
 
 // =========================
 // GASTOS VARIOS
