@@ -8448,7 +8448,13 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
 
     const extrasTotal = extras.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
 
-    // IVA por categoría (base sin-IVA × ivaPct/100)
+    // IVA + Recargo de equivalencia por categoría
+    const RECARGO_PCT = 5.2;
+    const recargoFactor = RECARGO_PCT / 100;
+    const storageKey = `recargo_toggles_${store.domain}`;
+    let toggles = {};
+    try { toggles = JSON.parse(localStorage.getItem(storageKey) || "{}"); } catch {}
+
     const rows = [
       { label: "Meta Ads",      base: ads.meta },
       { label: "TikTok Ads",    base: ads.tiktok },
@@ -8460,18 +8466,33 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
       ...extras.map(g => ({ label: escapeHtml(g.nombre || "Extra"), base: parseFloat(g.valor)||0 })),
     ];
 
-    const totalIva = rows.reduce((s,r) => s + r.base * ivaFactor, 0);
+    const domainSlug = store.domain.replace(/\./g,"-");
+    const totalIva     = rows.reduce((s,r) => s + r.base * ivaFactor, 0);
+    const totalRecargo = rows.reduce((s,r,i) => s + (toggles[i] ? r.base * recargoFactor : 0), 0);
 
-    const rowsHtml = rows.map((r, i) => `
+    const rowsHtml = rows.map((r, i) => {
+      const active = !!toggles[i];
+      const recVal = active ? r.base * recargoFactor : 0;
+      return `
       <tr${i%2===1?' style="background:#1f2937;"':''}>
         <td style="padding:9px 14px;border:1px solid #374151;color:#e5e7eb;font-size:13px;">${r.label}</td>
         <td style="padding:9px 14px;border:1px solid #374151;text-align:right;color:#6b7280;font-size:13px;">${fmt(r.base)} €</td>
         <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#f59e0b;font-size:13px;">${fmt(r.base * ivaFactor)} €</td>
-      </tr>
-    `).join("");
+        <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-size:13px;">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+            <span id="rec-val-${domainSlug}-${i}" style="font-weight:600;color:${active?'#22c55e':'#4b5563'};">${active ? fmt(recVal)+' €' : '—'}</span>
+            <span id="rec-tog-${domainSlug}-${i}"
+              onclick="toggleRecargoRow('${store.domain}',${i},${r.base})"
+              title="${active?'Quitar recargo':'Aplicar recargo'}"
+              style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${active?'#22c55e':'#374151'};border:2px solid ${active?'#16a34a':'#6b7280'};cursor:pointer;flex-shrink:0;transition:background .2s;">
+            </span>
+          </div>
+        </td>
+      </tr>`;
+    }).join("");
 
     return `
-      <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;min-width:260px;flex:1;">
+      <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;min-width:300px;flex:1;">
         <div style="background:#f59e0b;padding:12px 16px;">
           <div style="font-weight:700;color:#1c1917;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
           <div style="font-size:11px;color:#44403c;margin-top:2px;">${store.domain}</div>
@@ -8482,13 +8503,15 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
               <th style="padding:8px 14px;border:1px solid #374151;text-align:left;font-size:11px;color:#9ca3af;font-weight:600;">Concepto</th>
               <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#9ca3af;font-weight:600;">Base (sin IVA)</th>
               <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#f59e0b;font-weight:600;">IVA (${ivaPct}%)</th>
+              <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#22c55e;font-weight:600;">Recargo (${RECARGO_PCT}%)</th>
             </tr>
           </thead>
           <tbody>
             ${rowsHtml}
             <tr style="background:rgba(245,158,11,.1);">
-              <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:#f59e0b;" colspan="2">TOTAL IVA SOPORTADO</td>
-              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#f59e0b;font-size:14px;">${fmt(totalIva)} €</td>
+              <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:#f59e0b;" colspan="2">TOTAL</td>
+              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#f59e0b;" id="total-iva-${domainSlug}">${fmt(totalIva)} €</td>
+              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;" id="total-rec-${domainSlug}">${fmt(totalRecargo)} €</td>
             </tr>
           </tbody>
         </table>
@@ -8520,6 +8543,36 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
   window.renderFiscalidadUI?.(tipoFiscal, false);
 }
 window.loadFiscalidadIva = loadFiscalidadIva;
+
+window.toggleRecargoRow = function(domain, rowIdx, base) {
+  const storageKey = `recargo_toggles_${domain}`;
+  let toggles = {};
+  try { toggles = JSON.parse(localStorage.getItem(storageKey) || "{}"); } catch {}
+  toggles[rowIdx] = !toggles[rowIdx];
+  localStorage.setItem(storageKey, JSON.stringify(toggles));
+
+  const RECARGO_PCT = 5.2;
+  const active = toggles[rowIdx];
+  const domainSlug = domain.replace(/\./g,"-");
+  const fmt = n => (parseFloat(n)||0).toFixed(2);
+
+  // Actualizar círculo y valor de esta fila
+  const tog = document.getElementById(`rec-tog-${domainSlug}-${rowIdx}`);
+  const val = document.getElementById(`rec-val-${domainSlug}-${rowIdx}`);
+  if (tog) { tog.style.background = active ? "#22c55e" : "#374151"; tog.style.borderColor = active ? "#16a34a" : "#6b7280"; }
+  if (val) { val.textContent = active ? fmt(base * RECARGO_PCT / 100) + " €" : "—"; val.style.color = active ? "#22c55e" : "#4b5563"; }
+
+  // Recalcular total de recargo
+  const totalCell = document.getElementById(`total-rec-${domainSlug}`);
+  if (totalCell) {
+    let total = 0;
+    document.querySelectorAll(`[id^="rec-val-${domainSlug}-"]`).forEach(el => {
+      const v = parseFloat(el.textContent);
+      if (!isNaN(v)) total += v;
+    });
+    totalCell.textContent = fmt(total) + " €";
+  }
+};
 
 // =========================
 // GASTOS VARIOS
