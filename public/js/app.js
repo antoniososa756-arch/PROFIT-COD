@@ -2513,8 +2513,8 @@ if (id === "tiendas") {
     const wrap = document.getElementById("fiscalidad-content");
     if (!wrap) return;
     const opts = [
-      { value: "iva_general", label: "Fiscalidad (IVA)" },
-      { value: "recargo_equivalencia", label: "Autónomo (Recargo de equivalencia)" }
+      { value: "recargo_equivalencia", label: "Autónomo (Recargo de equivalencia)" },
+      { value: "sociedad_limitada", label: "Sociedad Limitada" }
     ];
     if (actual && !editando) {
       const label = opts.find(o => o.value === actual)?.label || actual;
