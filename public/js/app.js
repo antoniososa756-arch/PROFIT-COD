@@ -7776,7 +7776,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   const ivaPct = (impuestos.length > 0 && impuestos[0].porcentaje != null) ? parseFloat(impuestos[0].porcentaje) : 0;
   window.__ivaPct = ivaPct;
   const ivaFactor = 1 + ivaPct / 100;
-  const fmtIva = n => ((parseFloat(n)||0) * ivaFactor).toFixed(2);
+  const fmtIva = n => (Math.round((parseFloat(n)||0) * ivaFactor * 100) / 100).toFixed(2);
   const inp = `width:100%;padding:6px 8px;border:1px solid #374151;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
   const totalValor = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
   const thStyle = `padding:11px 14px;border:1px solid #d1fae5;font-weight:600;color:#fff;text-align:`;
