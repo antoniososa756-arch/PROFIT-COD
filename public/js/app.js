@@ -7781,6 +7781,10 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   }
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
+  const ivaPct = (impuestos.length > 0 && impuestos[0].porcentaje != null) ? parseFloat(impuestos[0].porcentaje) : 0;
+  window.__ivaPct = ivaPct;
+  const ivaFactor = 1 + ivaPct / 100;
+  const fmtIva = n => ((parseFloat(n)||0) * ivaFactor).toFixed(2);
   const inp = `width:100%;padding:6px 8px;border:1px solid #374151;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
   const totalValor = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
   const thStyle = `padding:11px 14px;border:1px solid #d1fae5;font-weight:600;color:#fff;text-align:`;
@@ -7827,7 +7831,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
                   id="gf-val-disp-${item.id}"
                   style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;"
                   onmouseover="this.style.borderColor='#374151'" onmouseout="this.style.borderColor='transparent'">
-                  <span style="font-size:13px;font-weight:600;color:var(--text);">${fmt(item.valor)}</span>
+                  <span style="font-size:13px;font-weight:600;color:var(--text);">${fmtIva(item.valor)}</span>
                   <span style="font-size:11px;color:var(--muted);">€ ✏️</span>
                 </div>
               </td>
@@ -7837,7 +7841,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
                       id="gf-pu-disp-${item.id}"
                       style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;"
                       onmouseover="this.style.borderColor='#374151'" onmouseout="this.style.borderColor='transparent'">
-                      <span style="font-size:13px;font-weight:600;color:var(--text);">${fmt(item.precio_unit)}</span>
+                      <span style="font-size:13px;font-weight:600;color:var(--text);">${fmtIva(item.precio_unit)}</span>
                       <span style="font-size:11px;color:var(--muted);">€ ✏️</span>
                     </div>`
                   : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
@@ -7906,7 +7910,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
                 id="gf-global-disp-mrw"
                 style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;"
                 onmouseover="this.style.borderColor='#374151'" onmouseout="this.style.borderColor='transparent'">
-                <span style="font-size:13px;font-weight:600;color:var(--text);">${fmt(preciosGlobales.precio_mrw)}</span>
+                <span style="font-size:13px;font-weight:600;color:var(--text);">${fmtIva(preciosGlobales.precio_mrw)}</span>
                 <span style="font-size:11px;color:var(--muted);">€ ✏️</span>
               </div>
             </td>
@@ -7918,7 +7922,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
                 id="gf-global-disp-logistica"
                 style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;"
                 onmouseover="this.style.borderColor='#374151'" onmouseout="this.style.borderColor='transparent'">
-                <span style="font-size:13px;font-weight:600;color:var(--text);">${fmt(preciosGlobales.precio_logistica)}</span>
+                <span style="font-size:13px;font-weight:600;color:var(--text);">${fmtIva(preciosGlobales.precio_logistica)}</span>
                 <span style="font-size:11px;color:var(--muted);">€ ✏️</span>
               </div>
             </td>
@@ -8018,10 +8022,15 @@ async function _abrirModalGF(valorActual, label, onSaveFn) {
   setTimeout(() => { const el = document.getElementById("mgf-sin-iva"); if(el) el.focus(); }, 50);
 }
 
+function _fmtConIva(sinIva) {
+  const f = 1 + (window.__ivaPct || 0) / 100;
+  return (sinIva * f).toFixed(2);
+}
+
 async function abrirModalGFValor(id, mes, valorActual) {
   await _abrirModalGF(valorActual, "Valor mensual", async (valor) => {
     const display = document.getElementById("gf-val-disp-" + id);
-    if (display) display.querySelector("span:first-child").textContent = valor.toFixed(2);
+    if (display) display.querySelector("span:first-child").textContent = _fmtConIva(valor);
     const fakeInput = { dataset: { id, mes }, value: valor };
     await updateGastoFijoValor(fakeInput);
   });
@@ -8031,7 +8040,7 @@ window.abrirModalGFValor = abrirModalGFValor;
 async function abrirModalGFPrecioUnit(id, mes, valorActual) {
   await _abrirModalGF(valorActual, "Precio unitario", async (valor) => {
     const display = document.getElementById("gf-pu-disp-" + id);
-    if (display) display.querySelector("span:first-child").textContent = valor.toFixed(2);
+    if (display) display.querySelector("span:first-child").textContent = _fmtConIva(valor);
     const fakeInput = { dataset: { id, mes }, value: valor };
     await updateGastoFijoPrecio(fakeInput);
   });
@@ -8042,10 +8051,13 @@ async function abrirModalGFGlobal(campo, valorActual) {
   const label = campo === "mrw" ? "Precio unitario MRW" : "Precio unitario Logística";
   await _abrirModalGF(valorActual, label, async (valor) => {
     const display = document.getElementById("gf-global-disp-" + campo);
-    if (display) display.querySelector("span:first-child").textContent = valor.toFixed(2);
-    // Guardar en precios globales
-    const mrw = campo === "mrw" ? valor : (parseFloat(document.getElementById("gf-global-disp-mrw")?.querySelector("span")?.textContent) || 0);
-    const log = campo === "logistica" ? valor : (parseFloat(document.getElementById("gf-global-disp-logistica")?.querySelector("span")?.textContent) || 0);
+    if (display) display.querySelector("span:first-child").textContent = _fmtConIva(valor);
+    const ivaF = 1 + (window.__ivaPct || 0) / 100;
+    // Leer valores sin IVA de los displays (revertir con ivaF)
+    const mrwConIva = parseFloat(document.getElementById("gf-global-disp-mrw")?.querySelector("span")?.textContent) || 0;
+    const logConIva = parseFloat(document.getElementById("gf-global-disp-logistica")?.querySelector("span")?.textContent) || 0;
+    const mrw = campo === "mrw" ? valor : (mrwConIva / ivaF);
+    const log = campo === "logistica" ? valor : (logConIva / ivaF);
     try {
       await fetch(`${API_BASE}/api/shopify/precios-globales`, {
         method: "POST",
@@ -8053,15 +8065,14 @@ async function abrirModalGFGlobal(campo, valorActual) {
         body: JSON.stringify({ precio_mrw: mrw, precio_logistica: log })
       });
       invalidateCache("precios-globales");
-      // Reflejar en la tabla principal
       document.querySelectorAll("tr[data-id]").forEach(row => {
         const nameEl = row.querySelector("span");
         if (!nameEl) return;
         const nombre = nameEl.textContent.trim();
         const puDisp = row.querySelector("[id^='gf-pu-disp-']");
         if (!puDisp) return;
-        if (nombre === "MRW" && campo === "mrw") puDisp.querySelector("span:first-child").textContent = valor.toFixed(2);
-        if (nombre === "LOGÍSTICA" && campo === "logistica") puDisp.querySelector("span:first-child").textContent = valor.toFixed(2);
+        if (nombre === "MRW" && campo === "mrw") puDisp.querySelector("span:first-child").textContent = _fmtConIva(valor);
+        if (nombre === "LOGÍSTICA" && campo === "logistica") puDisp.querySelector("span:first-child").textContent = _fmtConIva(valor);
       });
     } catch(e) { console.error(e); }
   });
