@@ -2556,6 +2556,7 @@ if (id === "tiendas") {
       });
       const data = await res.json();
       if (data.ok) {
+        window.__cachedTipoFiscal = valor;
         renderFiscalidadUI(valor, false);
       } else {
         alert("Error al guardar: " + (data.error || "desconocido"));
@@ -8287,12 +8288,59 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
 
   const h = { Authorization: "Bearer " + getActiveToken() };
 
-  // Cargar tipo fiscal + datos de gastos en paralelo
-  let tipoFiscal = null, ivaPct = 0;
+  // Paso 1: obtener tipo fiscal rápido y renderizar config card ya
+  let tipoFiscal = window.__cachedTipoFiscal ?? null;
+  if (tipoFiscal === null) {
+    try {
+      const meRes = await fetch(`${API_BASE}/api/auth/me`, { headers: h }).then(r => r.json());
+      tipoFiscal = meRes.user?.tipo_fiscal || null;
+      window.__cachedTipoFiscal = tipoFiscal;
+    } catch {}
+  }
+
+  // Renderizar config card inmediatamente
+  if (wrap) {
+    const _opts = [
+      { value: "recargo_equivalencia", label: "Autónomo (Recargo de equivalencia)" },
+      { value: "sociedad_limitada",    label: "Sociedad Limitada" }
+    ];
+    const _label = _opts.find(o => o.value === tipoFiscal)?.label || null;
+    const _cardContent = tipoFiscal
+      ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:8px;border:1.5px solid #22c55e;background:rgba(34,197,94,.06);">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#22c55e;margin-bottom:3px;">Tipo fiscal seleccionado</div>
+            <div style="font-size:15px;font-weight:700;color:#f9fafb;">${_label}</div>
+          </div>
+          <button onclick="renderFiscalidadUI('${tipoFiscal}',true)"
+            style="padding:8px 18px;background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid #3b82f6;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+            ✏️ Editar
+          </button>
+        </div>`
+      : `<div style="display:flex;flex-direction:column;gap:12px;" id="fiscalidad-opciones">
+          ${_opts.map(o=>`<button onclick="seleccionarTipoFiscal('${o.value}')"
+            style="padding:12px 20px;border-radius:8px;border:1.5px solid #374151;background:var(--card);font-size:14px;font-weight:600;color:#e5e7eb;cursor:pointer;font-family:inherit;text-align:left;">${o.label}</button>`).join('')}
+        </div>`;
+    wrap.innerHTML = `
+      <div class="card" style="padding:20px 24px;max-width:560px;margin-bottom:24px;">
+        <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">🧾 Fiscalidad</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:14px;">Tipo fiscal configurado</div>
+        <div id="fiscalidad-content">${_cardContent}</div>
+      </div>
+      <div id="fiscalidad-iva-desglose" style="color:#6b7280;font-size:13px;">Cargando desglose...</div>
+    `;
+  }
+
+  if (!tipoFiscal) {
+    const d = document.getElementById("fiscalidad-iva-desglose");
+    if (d) d.innerHTML = `<div class="card" style="padding:24px;max-width:560px;color:#6b7280;font-size:13px;">Configura tu tipo fiscal arriba para ver el desglose de IVA.</div>`;
+    return;
+  }
+
+  // Paso 2: cargar resto de datos en paralelo
+  let ivaPct = 0;
   let stores = [], adsSpends = {}, gastosFijos = [], gastosVarios = {}, gastosExtrasRaw = [], stockData = [], varData = [], nominaData = { total: 0 };
   try {
-    const [meRes, gf, gv, ge, nom, imp, st, vr, storesRes] = await Promise.all([
-      fetch(`${API_BASE}/api/auth/me`, { headers: h }).then(r => r.json()),
+    const [gf, gv, ge, nom, imp, st, vr, storesRes] = await Promise.all([
       fetch(`${API_BASE}/api/gastos-fijos?mes=${mes}`, { headers: h }).then(r => r.json()),
       fetch(`${API_BASE}/api/gastos-varios?mes=${mes}`, { headers: h }).then(r => r.json()),
       fetch(`${API_BASE}/api/gastos-varios/extras?mes=${mes}`, { headers: h }).then(r => r.json()),
@@ -8302,7 +8350,6 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
       fetch(`${API_BASE}/api/shopify/variantes-config`, { headers: h }).then(r => r.json()),
       fetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(r => r.json()),
     ]);
-    tipoFiscal = meRes.user?.tipo_fiscal || null;
     ivaPct = (Array.isArray(imp) && imp.length > 0 && imp[0].porcentaje != null) ? parseFloat(imp[0].porcentaje) : 0;
     const allStores = Array.isArray(storesRes) ? storesRes : [];
     stores = allStores.filter(s => s.active || s.status === "active" || s.is_active);
@@ -8314,7 +8361,8 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
     stockData = Array.isArray(st) ? st : [];
     varData = Array.isArray(vr) ? vr : [];
   } catch(e) {
-    if (wrap) wrap.innerHTML = `<div style="color:#ef4444;font-size:13px;padding:16px;">Error al cargar datos.</div>`;
+    const d = document.getElementById("fiscalidad-iva-desglose");
+    if (d) d.innerHTML = `<div style="color:#ef4444;font-size:13px;">Error al cargar datos.</div>`;
     return;
   }
 
@@ -8546,25 +8594,19 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
   }).join("");
 
   const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-  wrap.innerHTML = `
-    <div class="card" style="padding:20px 24px;max-width:560px;margin-bottom:24px;">
-      <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">🧾 Fiscalidad</div>
-      <div style="font-size:12px;color:#6b7280;margin-bottom:14px;">Tipo fiscal configurado</div>
-      <div id="fiscalidad-content"><div style="color:#6b7280;font-size:13px;">Cargando...</div></div>
+  const desglose = document.getElementById("fiscalidad-iva-desglose");
+  if (desglose) desglose.innerHTML = tipoFiscal === "recargo_equivalencia" ? `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:700;color:#f9fafb;margin-bottom:4px;">IVA soportado en gastos — ${monthNames[parseInt(month)-1].toUpperCase()} ${year}</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">Como autónomo en recargo de equivalencia no puedes deducir el IVA de tus compras. Este es el IVA que has pagado en cada concepto.</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
+        ${tiendaCards || `<div style="color:#6b7280;font-size:13px;">No hay tiendas activas.</div>`}
+      </div>
     </div>
-    ${tipoFiscal === "recargo_equivalencia" ? `
-      <div style="margin-bottom:16px;">
-        <div style="font-size:14px;font-weight:700;color:#f9fafb;margin-bottom:4px;">IVA soportado en gastos — ${monthNames[parseInt(month)-1].toUpperCase()} ${year}</div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">Como autónomo en recargo de equivalencia no puedes deducir el IVA de tus compras. Este es el IVA que has pagado en cada concepto.</div>
-        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
-          ${tiendaCards || `<div style="color:#6b7280;font-size:13px;">No hay tiendas activas.</div>`}
-        </div>
-      </div>
-    ` : `
-      <div class="card" style="padding:20px 24px;max-width:560px;color:#6b7280;font-size:13px;">
-        El desglose de IVA para Sociedad Limitada estará disponible próximamente.
-      </div>
-    `}
+  ` : `
+    <div class="card" style="padding:20px 24px;max-width:560px;color:#6b7280;font-size:13px;">
+      El desglose de IVA para Sociedad Limitada estará disponible próximamente.
+    </div>
   `;
 }
 window.loadFiscalidadIva = loadFiscalidadIva;
