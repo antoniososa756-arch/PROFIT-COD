@@ -8547,9 +8547,9 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
     const totalIva     = rows.reduce((s,r) => s + r.base * ivaFactor, 0);
     const totalToggle  = rows.reduce((s,r,i) => s + (toggles[i] ? r.base * toggleFactor : 0), 0);
 
-    // IVA repercutido: extraer IVA del bruto de ventas del mes
-    const pedEntFiva = pedidosTienda.filter(o => o.fulfillment_status === "entregado");
-    const ingresoBruto = pedEntFiva.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
+    // IVA repercutido: todos los pedidos pagados del mes (IVA se devenga al cobrar)
+    const pedPagados = pedidosTienda.filter(o => o.financial_status === "paid" && o.fulfillment_status !== "cancelado");
+    const ingresoBruto = pedPagados.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
     // Extraer IVA de precio con IVA incluido: IVA = bruto * IVA% / (100 + IVA%)
     const ivaRepercutido = ingresoBruto * ivaPct / (100 + ivaPct);
     const ivaAPagar = ivaRepercutido - totalToggle;
