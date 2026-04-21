@@ -8545,10 +8545,8 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
 
     const domainSlug   = store.domain.replace(/\./g,"-");
     const totalIva     = rows.reduce((s,r) => s + r.base * ivaFactor, 0);
-    // RE: suma todo el IVA directamente; SL: solo los toggleados
-    const totalToggle  = esSL_card
-      ? rows.reduce((s,r,i) => s + (toggles[i] ? r.base * toggleFactor : 0), 0)
-      : totalIva;
+    // totalToggle: recargo activado (RE) o IVA deducible activado (SL)
+    const totalToggle = rows.reduce((s,r,i) => s + (toggles[i] ? r.base * toggleFactor : 0), 0);
 
     // IVA repercutido: mismo criterio que métricas
     // Tarjeta (paid): todos los no-cancelados pagados online, sin importar fulfillment
@@ -8574,18 +8572,31 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
     const ivaAPagar = ivaRepercutido - totalToggle;
 
     const rowsHtml = rows.map((r, i) => {
-      const ivaVal = r.base * ivaFactor; // IVA del concepto
+      const ivaVal = r.base * ivaFactor;
       if (!esSL_card) {
-        // RE: mostrar IVA directamente, sin toggle
+        // RE: IVA fijo + toggle de recargo (5.2%)
+        const activeRec = !!toggles[i];
+        const recVal    = activeRec ? r.base * toggleFactor : 0;
         return `
       <tr${i%2===1?' style="background:#1f2937;"':''}>
         <td style="padding:9px 14px;border:1px solid #374151;color:#e5e7eb;font-size:13px;">${r.label}</td>
         <td style="padding:9px 14px;border:1px solid #374151;text-align:right;color:#6b7280;font-size:13px;">${fmt(r.base)} €</td>
-        <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-size:13px;font-weight:600;color:#f59e0b;">${fmt(ivaVal)} €</td>`;
+        <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-size:13px;font-weight:600;color:#f59e0b;">${fmt(ivaVal)} €</td>
+        <td style="padding:9px 14px;border:1px solid #374151;text-align:right;font-size:13px;">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+            <span id="rec-val-${domainSlug}-${i}" style="font-weight:600;color:${activeRec?'#22c55e':'#4b5563'};">${activeRec ? fmt(recVal)+' €' : '—'}</span>
+            <span id="rec-tog-${domainSlug}-${i}"
+              onclick="toggleRecargoRow('${store.domain}',${i},${r.base})"
+              title="${activeRec?'Quitar':'Activar'}"
+              style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${activeRec?'#22c55e':'#374151'};border:2px solid ${activeRec?'#16a34a':'#6b7280'};cursor:pointer;flex-shrink:0;transition:background .2s;">
+            </span>
+          </div>
+        </td>
+      </tr>`;
       }
       // SL: toggle para marcar IVA deducible
-      const active   = !!toggles[i];
-      const togVal   = active ? r.base * toggleFactor : 0;
+      const active = !!toggles[i];
+      const togVal = active ? r.base * toggleFactor : 0;
       return `
       <tr${i%2===1?' style="background:#1f2937;"':''}>
         <td style="padding:9px 14px;border:1px solid #374151;color:#e5e7eb;font-size:13px;">${r.label}</td>
@@ -8614,14 +8625,16 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
             <tr style="background:#1f2937;">
               <th style="padding:8px 14px;border:1px solid #374151;text-align:left;font-size:11px;color:#9ca3af;font-weight:600;">Concepto</th>
               <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#9ca3af;font-weight:600;">Base (sin IVA)</th>
-              <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:${esSL_card?'#22c55e':'#f59e0b'};font-weight:600;">${esSL_card ? `IVA deducible (${ivaPct}%)` : `IVA (${ivaPct}%)`}</th>
+              <th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#f59e0b;font-weight:600;">${esSL_card ? `IVA deducible (${ivaPct}%)` : `IVA (${ivaPct}%)`}</th>
+              ${!esSL_card ? `<th style="padding:8px 14px;border:1px solid #374151;text-align:right;font-size:11px;color:#22c55e;font-weight:600;">Recargo (5.2%)</th>` : ''}
             </tr>
           </thead>
           <tbody>
             ${rowsHtml}
             <tr style="background:${esSL_card?'rgba(34,197,94,.1)':'rgba(245,158,11,.1)'};">
               <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;color:${esSL_card?'#22c55e':'#f59e0b'};" colspan="2">TOTAL ${esSL_card ? 'IVA DEDUCIBLE' : 'IVA'}</td>
-              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:${esSL_card?'#22c55e':'#f59e0b'};font-size:15px;" id="total-rec-${domainSlug}">${fmt(totalToggle)} €</td>
+              <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:${esSL_card?'#22c55e':'#f59e0b'};font-size:15px;" ${esSL_card?`id="total-rec-${domainSlug}"`:''}>${fmt(esSL_card ? totalToggle : totalIva)} €</td>
+              ${!esSL_card ? `<td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;font-size:15px;" id="total-rec-${domainSlug}">${fmt(totalToggle)} €</td>` : ''}
             </tr>
           </tbody>
         </table>
