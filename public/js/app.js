@@ -8996,6 +8996,15 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
     const baseGastos = ads.meta + ads.tiktok + costoProductosNeto + mrw + logistica + fijoXTienda + shopify + extrasTotal;
     const ivaTotal = baseGastos * ivaPorcentaje;
 
+    // Toggles SL (necesarios para display y cálculo de total)
+    let togglesSL = {};
+    if (esSL) { try { togglesSL = JSON.parse(localStorage.getItem(`sl_iva_toggles_${store.domain}`) || "{}"); } catch {} }
+    // fmtT: aplica IVA solo si el toggle del índice está activo (SL), o no aplica (RE)
+    const fmtT = (n, idx) => {
+      const factor = (esSL && togglesSL[idx]) ? (1 + ivaPorcentaje) : 1;
+      return (Math.round((parseFloat(n)||0) * factor * 100) / 100).toFixed(2);
+    };
+
     // IVA neto a pagar para Sociedad Limitada (repercutido − deducible)
     let ivaSLNetoPagar = 0;
     if (esSL) {
@@ -9015,19 +9024,18 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
       const ingresoBrutoSL = pedIvaTiendaSL.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
       const ivaRepercutidoSL = ingresoBrutoSL * ivaPorcentaje / (1 + ivaPorcentaje);
       const rowsSL = [
-        { base: ads.meta }, { base: ads.tiktok }, { base: costoProductosNeto },
-        { base: mrw }, { base: logistica }, { base: fijoXTienda }, { base: shopify },
-        ...(gastosExtras[store.domain]||[]).map(g => ({ base: parseFloat(g.valor)||0 })),
+        ads.meta, ads.tiktok, costoProductosNeto, mrw, logistica, fijoXTienda, shopify,
+        ...(gastosExtras[store.domain]||[]).map(g => parseFloat(g.valor)||0),
       ];
-      let togglesSL = {};
-      try { togglesSL = JSON.parse(localStorage.getItem(`sl_iva_toggles_${store.domain}`) || "{}"); } catch {}
-      const ivaDeducibleSL = rowsSL.reduce((s,r,i) => s + (togglesSL[i] ? r.base * ivaPorcentaje : 0), 0);
+      const ivaDeducibleSL = rowsSL.reduce((s,b,i) => s + (togglesSL[i] ? b * ivaPorcentaje : 0), 0);
       ivaSLNetoPagar = ivaRepercutidoSL - ivaDeducibleSL;
     }
 
-    // Para SL los ítems se muestran con IVA (fmtD = base*(1+ivaPct)), nómina sin IVA
+    // Total: suma cada item con su factor de IVA según toggle + nómina + IVA neto
+    const rowBasesGV = [ads.meta, ads.tiktok, costoProductosNeto, mrw, logistica, fijoXTienda, shopify,
+      ...(gastosExtras[store.domain]||[]).map(g => parseFloat(g.valor)||0)];
     const total = esSL
-      ? baseGastos * (1 + ivaPorcentaje) + nominaXTienda + ivaSLNetoPagar
+      ? rowBasesGV.reduce((s,b,i) => s + b * (togglesSL[i] ? (1+ivaPorcentaje) : 1), 0) + nominaXTienda + ivaSLNetoPagar
       : baseGastos + ivaTotal + nominaXTienda;
     if (!window.__gastosPorTienda) window.__gastosPorTienda = {};
     window.__gastosPorTienda[store.domain] = total;
@@ -9042,23 +9050,23 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
           <tbody>
             <tr>
               <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Gasto Meta</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtD(ads.meta)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtT(ads.meta,0)} €</td>
             </tr>
             <tr style="background:#1f2937;">
               <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Gasto TikTok</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtD(ads.tiktok)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtT(ads.tiktok,1)} €</td>
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;vertical-align:top;">Productos</td>
               <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">
-                <div style="font-weight:700;color:#e5e7eb;">${fmtD(costoProductosNeto)} €</div>
-                ${costoRecuperadoGV > 0 ? `<div style="font-size:10px;color:#9ca3af;margin-bottom:6px;">${fmtD(costoProductos)}€ bruto − ${fmtD(costoRecuperadoGV)}€ (${numDevGV} dev.)</div>` : ''}
+                <div style="font-weight:700;color:#e5e7eb;">${fmtT(costoProductosNeto,2)} €</div>
+                ${costoRecuperadoGV > 0 ? `<div style="font-size:10px;color:#9ca3af;margin-bottom:6px;">${fmtT(costoProductos,2)}€ bruto − ${fmtT(costoRecuperadoGV,2)}€ (${numDevGV} dev.)</div>` : ''}
                 ${Object.values(desgloseProd).length > 0 ? `
                 <div style="margin-top:6px;border-top:1px solid #374151;padding-top:6px;display:flex;flex-direction:column;gap:3px;">
                   ${Object.values(desgloseProd).map(p => `
                     <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;">
                       <span style="color:#9ca3af;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;" title="${escapeHtml(p.title)}">${p.isGroup ? '🔗 ' : ''}${escapeHtml(p.title)}</span>
-                      <span style="color:#6b7280;white-space:nowrap;flex-shrink:0;">${p.uds} uds × ${fmtD(p.costoUnit)}€ = <strong style="color:#9ca3af;">${fmtD(p.costoTotal)}€</strong></span>
+                      <span style="color:#6b7280;white-space:nowrap;flex-shrink:0;">${p.uds} uds × ${fmtT(p.costoUnit,2)}€ = <strong style="color:#9ca3af;">${fmtT(p.costoTotal,2)}€</strong></span>
                     </div>
                   `).join('')}
                 </div>` : ''}
@@ -9066,20 +9074,20 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
             </tr>
             <tr>
               <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">MRW</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtD(mrw)} €
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtT(mrw,3)} €
                 <div style="font-size:10px;color:#9ca3af;">${fmt(totalMRW)}€ ÷ ${totalEnviosGlobales} envíos globales (${enviosTiendaMRW.length} salidas + ${devueltosTienda} dev. esta tienda)</div>
               </td>
             </tr>
             <tr style="background:#1f2937;">
               <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Logística</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtD(logistica)} €
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtT(logistica,4)} €
                 <div style="font-size:10px;color:#9ca3af;">${fmt(totalLogistica)}€ ÷ ${totalPedidosGlobales} envíos × ${enviosTiendaMRW.length} esta tienda</div>
               </td>
             </tr>
             <tr>
               <tr>
               <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Gastos Fijos</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtD(fijoXTienda)} €
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmtT(fijoXTienda,5)} €
                 <div style="font-size:10px;color:#9ca3af;">${fmt(totalOtrosFijos)}€ ÷ ${numTiendas} tiendas</div>
               </td>
             </tr>
@@ -9107,12 +9115,12 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                   id="gv-shopify-disp-${store.domain.replace(/\./g,'-')}"
                   style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;"
                   onmouseover="this.style.borderColor='#93c5fd'" onmouseout="this.style.borderColor='transparent'">
-                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${fmtD(shopify)}</span>
+                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${fmtT(shopify,6)}</span>
                   <span style="font-size:11px;color:#93c5fd;">€ ✏️</span>
                 </div>
               </td>
             </tr>
-            ${(gastosExtras[store.domain]||[]).map((g) => `
+            ${(gastosExtras[store.domain]||[]).map((g, gi) => `
             <tr style="background:rgba(59,130,246,.08);">
               <td style="padding:7px 14px;border:1px solid #bfdbfe;">
                 <input type="text" value="${escapeHtml(g.nombre||'')}" placeholder="Concepto..."
@@ -9125,7 +9133,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                   id="gv-extra-disp-${g.id}"
                   style="display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;padding:4px 6px;border-radius:6px;border:1px solid transparent;transition:border .15s;flex:1;"
                   onmouseover="this.style.borderColor='#93c5fd'" onmouseout="this.style.borderColor='transparent'">
-                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${fmtD(g.valor||0)}</span>
+                  <span style="font-size:13px;font-weight:600;color:#2563eb;">${fmtT(g.valor||0, 7+gi)}</span>
                   <span style="font-size:11px;color:#93c5fd;">€ ✏️</span>
                 </div>
                 <button onclick="deleteGastoExtra(${g.id})"
