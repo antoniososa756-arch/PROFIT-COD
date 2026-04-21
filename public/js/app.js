@@ -8995,7 +8995,37 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
     // IVA soportado sobre la base de gastos (sin nómina, que no lleva IVA)
     const baseGastos = ads.meta + ads.tiktok + costoProductosNeto + mrw + logistica + fijoXTienda + shopify + extrasTotal;
     const ivaTotal = baseGastos * ivaPorcentaje;
-    const total = ads.meta + ads.tiktok + shopify + costoProductosNeto + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
+
+    // IVA neto a pagar para Sociedad Limitada (repercutido − deducible)
+    let ivaSLNetoPagar = 0;
+    if (esSL) {
+      const allOrd = window.__allOrdersCache || [];
+      const pedIvaTiendaSL = allOrd.filter(o => {
+        if (!o.created_at) return false;
+        if (o.fulfillment_status === "cancelado") return false;
+        const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
+        return d.startsWith(mes) && o.shop_domain === store.domain;
+      }).filter(o => {
+        try {
+          const raw = o.raw_json ? (typeof o.raw_json==="string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
+          const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
+          return fin==="paid" || fin==="pagado" || ((fin==="pending"||fin==="cod"||fin==="pendiente") && o.fulfillment_status==="entregado");
+        } catch { return false; }
+      });
+      const ingresoBrutoSL = pedIvaTiendaSL.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
+      const ivaRepercutidoSL = ingresoBrutoSL * ivaPorcentaje / (1 + ivaPorcentaje);
+      const rowsSL = [
+        { base: ads.meta }, { base: ads.tiktok }, { base: costoProductosNeto },
+        { base: mrw }, { base: logistica }, { base: fijoXTienda }, { base: shopify },
+        ...(gastosExtras[store.domain]||[]).map(g => ({ base: parseFloat(g.valor)||0 })),
+      ];
+      let togglesSL = {};
+      try { togglesSL = JSON.parse(localStorage.getItem(`sl_iva_toggles_${store.domain}`) || "{}"); } catch {}
+      const ivaDeducibleSL = rowsSL.reduce((s,r,i) => s + (togglesSL[i] ? r.base * ivaPorcentaje : 0), 0);
+      ivaSLNetoPagar = ivaRepercutidoSL - ivaDeducibleSL;
+    }
+
+    const total = ads.meta + ads.tiktok + shopify + costoProductosNeto + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + (esSL ? ivaSLNetoPagar : ivaTotal);
     if (!window.__gastosPorTienda) window.__gastosPorTienda = {};
     window.__gastosPorTienda[store.domain] = total;
 
@@ -9056,12 +9086,17 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
                 <div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${numTiendas} tiendas</div>
               </td>
             </tr>
-            ${!esSL ? `<tr style="background:#fefce8;">
+            ${esSL ? `<tr style="background:rgba(239,68,68,.08);">
+              <td style="padding:10px 14px;border:1px solid #fca5a5;font-weight:600;color:#ef4444;">IVA a pagar (${(ivaPorcentaje*100).toFixed(0)}%)</td>
+              <td style="padding:10px 14px;border:1px solid #fca5a5;text-align:right;color:#ef4444;font-weight:600;">${fmt(ivaSLNetoPagar)} €
+                <div style="font-size:10px;color:#f87171;">IVA repercutido − IVA deducible</div>
+              </td>
+            </tr>` : `<tr style="background:#fefce8;">
               <td style="padding:10px 14px;border:1px solid #fef08a;font-weight:600;color:#854d0e;">IVA (${(ivaPorcentaje*100).toFixed(0)}%)</td>
               <td style="padding:10px 14px;border:1px solid #fef08a;text-align:right;color:#854d0e;font-weight:600;">${fmt(ivaTotal)} €
                 <div style="font-size:10px;color:#a16207;">IVA soportado en gastos × ${(ivaPorcentaje*100).toFixed(0)}%</div>
               </td>
-            </tr>` : ''}
+            </tr>`}
             <tr style="background:rgba(59,130,246,.08);">
               <td style="padding:10px 14px;border:1px solid #bfdbfe;font-weight:700;color:#2563eb;">Shopify</td>
               <td style="padding:10px 14px;border:1px solid #bfdbfe;">
