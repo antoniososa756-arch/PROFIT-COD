@@ -8547,9 +8547,16 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
     const totalIva     = rows.reduce((s,r) => s + r.base * ivaFactor, 0);
     const totalToggle  = rows.reduce((s,r,i) => s + (toggles[i] ? r.base * toggleFactor : 0), 0);
 
-    // IVA repercutido: mismo criterio que métricas (COD entregados + tarjeta pagada)
-    const pedIva = pedidosTienda.filter(o => {
+    // IVA repercutido: mismo criterio que métricas
+    // Tarjeta (paid): todos los no-cancelados pagados online, sin importar fulfillment
+    // COD (pending+entregado): cobrados al entregar
+    const pedIvaTienda = allOrders.filter(o => {
+      if (!o.created_at) return false;
       if (o.fulfillment_status === "cancelado") return false;
+      const d = new Date(o.created_at).toLocaleString("sv-SE",{timeZone:"Europe/Madrid"}).split(" ")[0];
+      return d.startsWith(mes) && o.shop_domain === store.domain;
+    });
+    const pedIva = pedIvaTienda.filter(o => {
       try {
         const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
         const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
