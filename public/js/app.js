@@ -8637,7 +8637,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
   const totLiqDeducible   = liquidaciones.reduce((s,l) => s + l.ivaDeducible, 0);
   const totLiqAPagar      = liquidaciones.reduce((s,l) => s + l.ivaAPagar, 0);
 
-  const liqHtml = `
+  const liqHtml = tipoFiscal !== "sociedad_limitada" ? "" : `
     <div style="margin-top:32px;">
       <div style="font-size:14px;font-weight:700;color:#f9fafb;margin-bottom:4px;">Liquidación IVA — ${monthNames[parseInt(month)-1].toUpperCase()} ${year}</div>
       <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">IVA repercutido (de ventas) − IVA deducible (de gastos marcados) = IVA a pagar/recuperar</div>
@@ -8689,6 +8689,7 @@ async function loadFiscalidadIva(forzarMonth, forzarYear) {
   `;
 
   const desglose = document.getElementById("fiscalidad-iva-desglose");
+
   const desgloseMsg = tipoFiscal === "recargo_equivalencia"
     ? "Como autónomo en recargo de equivalencia no puedes deducir el IVA de tus compras. Este es el IVA que has pagado en cada concepto."
     : "Marca en verde el IVA que ya has pagado que forma parte de tu actividad comercial.";
