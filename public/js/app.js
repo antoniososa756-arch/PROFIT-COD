@@ -9025,7 +9025,10 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
       ivaSLNetoPagar = ivaRepercutidoSL - ivaDeducibleSL;
     }
 
-    const total = ads.meta + ads.tiktok + shopify + costoProductosNeto + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + (esSL ? ivaSLNetoPagar : ivaTotal);
+    // Para SL los ítems se muestran con IVA (fmtD = base*(1+ivaPct)), nómina sin IVA
+    const total = esSL
+      ? baseGastos * (1 + ivaPorcentaje) + nominaXTienda + ivaSLNetoPagar
+      : baseGastos + ivaTotal + nominaXTienda;
     if (!window.__gastosPorTienda) window.__gastosPorTienda = {};
     window.__gastosPorTienda[store.domain] = total;
 
