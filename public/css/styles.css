@@ -1190,6 +1190,14 @@ body.dark .sidebar .toggle span { color: #9ca3af; }
   box-shadow: 0 20px 40px rgba(0,0,0,.4);
 }
 
+.store-card--inactive {
+  opacity: 0.5;
+  filter: grayscale(0.4);
+}
+.store-card--inactive:hover {
+  opacity: 0.75;
+}
+
 .store-header {
   display: flex;
   justify-content: space-between;

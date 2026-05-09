@@ -13,7 +13,7 @@ router.get("/metrics", auth, async (req, res) => {
         COUNT(DISTINCT orders.id) AS pedidos,
         COALESCE(SUM(orders.total_price), 0) AS facturacion
        FROM users
-       LEFT JOIN shops ON shops.user_id = users.id
+       LEFT JOIN shops ON shops.user_id = users.id AND shops.status = 'active'
        LEFT JOIN orders ON orders.shop_id = shops.id
        WHERE users.id = $1`,
       [userId]

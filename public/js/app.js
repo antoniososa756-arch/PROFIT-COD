@@ -5628,8 +5628,12 @@ async function fetchStores() {
       return;
     }
 
-grid.innerHTML = stores.map(store => `
-  <div class="store-card">
+const activeStores   = stores.filter(s => s.status === 'active');
+const inactiveStores = stores.filter(s => s.status !== 'active');
+
+function renderStoreCard(store) {
+  return `
+  <div class="store-card${store.status !== 'active' ? ' store-card--inactive' : ''}">
     <div class="store-header">
       <div class="shopify-badge">Shopify</div>
       <div class="store-menu" onclick="openStoreMenu(event, ${store.id})">⋮</div>
@@ -5674,7 +5678,26 @@ grid.innerHTML = stores.map(store => `
       }
     </div>
   </div>
-`).join("");
+`;
+}
+
+let html = activeStores.map(renderStoreCard).join("");
+
+if (inactiveStores.length > 0) {
+  html += `
+    <div class="inactive-stores-section" style="width:100%; margin-top:12px;">
+      <button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'flex' : 'none'; this.querySelector('span').textContent = this.nextElementSibling.style.display === 'none' ? '▶' : '▼';"
+        style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 0;">
+        <span>▶</span> Tiendas inactivas (${inactiveStores.length})
+      </button>
+      <div style="display:none; flex-wrap:wrap; gap:16px; margin-top:8px;">
+        ${inactiveStores.map(renderStoreCard).join("")}
+      </div>
+    </div>
+  `;
+}
+
+grid.innerHTML = html;
 
   } catch (e) {
     grid.innerHTML = `
@@ -6602,6 +6625,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(d => Array.isArray(d) ? d : []),
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
+    stores = stores.filter(s => s.status === 'active');
     if (shopsFiltro.length > 0) stores = stores.filter(s => shopsFiltro.includes(s.domain));
     // Facturación exacta por tienda (mismo cálculo que Gastos Ads: bruto - cancelados por cancelled_at)
     await Promise.all(stores.map(async store => {
