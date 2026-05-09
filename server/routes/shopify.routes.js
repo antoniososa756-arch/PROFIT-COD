@@ -192,9 +192,10 @@ if (!appSecret) appSecret = process.env.SHOPIFY_API_SECRET || "";
 
 router.get("/stores", auth, async (req, res) => {
   const userId = req.user.id;
+  const showAll = req.query.all === 'true';
   try {
     const rows = await db.all(
-      `SELECT id, shop_domain AS domain, shop_name, status, last_sync, created_at FROM shops WHERE user_id = $1 ORDER BY created_at DESC`,
+      `SELECT id, shop_domain AS domain, shop_name, status, last_sync, created_at FROM shops WHERE user_id = $1 ${showAll ? '' : "AND status = 'active'"} ORDER BY created_at DESC`,
       [userId]
     );
     res.json(rows || []);

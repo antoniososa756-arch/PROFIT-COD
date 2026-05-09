@@ -36,7 +36,7 @@ router.get("/stats", auth, async (req, res) => {
   if (!Array.isArray(shops) || shops.length === 0) shops = null;
 
   try {
-    const shopSubquery = `SELECT id FROM shops WHERE user_id = $1`;
+    const shopSubquery = `SELECT id FROM shops WHERE user_id = $1 AND status = 'active'`;
     const params = [userId];
     let i = 2;
 

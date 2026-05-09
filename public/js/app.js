@@ -5615,7 +5615,7 @@ async function fetchStores() {
   grid.innerHTML = "Cargando tiendas…";
 
   try {
-    const stores = await cachedFetch(`${API_BASE}/api/shopify/stores`, {
+    const stores = await cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     });
 
@@ -8103,8 +8103,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
   let stores = [];
   try {
     const all = await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: _hGV });
-    stores = Array.isArray(all) ? all.filter(s => s.active || s.status === "active" || s.is_active) : [];
-    if (stores.length === 0) stores = Array.isArray(all) ? all : [];
+    stores = Array.isArray(all) ? all : [];
   } catch {}
 
   const numTiendas = stores.length || 1;
