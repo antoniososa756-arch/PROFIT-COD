@@ -6614,6 +6614,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
   const TARJETA_PCT  = 0.04;
 
   let stores = [], orders = [], manuales = [];
+  let totalTiendasActivas = 1;
   const facturacionPorTienda = {};
   try {
     const token = getActiveToken();
@@ -6626,6 +6627,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
     stores = stores.filter(s => s.status === 'active');
+    totalTiendasActivas = stores.length || 1;
     if (shopsFiltro.length > 0) stores = stores.filter(s => shopsFiltro.includes(s.domain));
     // Facturación exacta por tienda (mismo cálculo que Gastos Ads: bruto - cancelados por cancelled_at)
     await Promise.all(stores.map(async store => {
@@ -6651,7 +6653,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     if (!Array.isArray(manuales)) manuales = [];
   } catch {}
 
-  const numTiendas = stores.length || 1;
+  const numTiendas = totalTiendasActivas;
 
   const mesesRango = [];
   const dStart = dateFrom ? new Date(dateFrom + "T00:00:00") : new Date();
