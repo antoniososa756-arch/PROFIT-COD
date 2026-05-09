@@ -441,6 +441,7 @@ router.get("/stock", auth, async (req, res) => {
 
 router.post("/stock", auth, async (req, res) => {
   const { shop_domain, product_id, stock, stock_minimo, costo_compra } = req.body;
+  const userId = req.user.id;
   try {
     await db.run(
       `INSERT INTO productos_stock (user_id, shop_domain, product_id, stock, stock_minimo, costo_compra)
@@ -449,8 +450,32 @@ router.post("/stock", auth, async (req, res) => {
          stock = COALESCE(EXCLUDED.stock, productos_stock.stock),
          stock_minimo = COALESCE(EXCLUDED.stock_minimo, productos_stock.stock_minimo),
          costo_compra = COALESCE(EXCLUDED.costo_compra, productos_stock.costo_compra)`,
-      [req.user.id, shop_domain, product_id, stock ?? null, stock_minimo ?? null, costo_compra ?? null]
+      [userId, shop_domain, product_id, stock ?? null, stock_minimo ?? null, costo_compra ?? null]
     );
+
+    // Si se actualizó costo_compra, propagarlo a todos los miembros del grupo
+    if (costo_compra != null) {
+      const groupRow = await db.get(
+        `SELECT group_id FROM product_group_members WHERE user_id = $1 AND product_id = $2`,
+        [userId, String(product_id)]
+      );
+      if (groupRow?.group_id) {
+        const members = await db.all(
+          `SELECT product_id, shop_domain FROM product_group_members WHERE user_id = $1 AND group_id = $2`,
+          [userId, groupRow.group_id]
+        );
+        for (const m of members) {
+          if (String(m.product_id) === String(product_id) && m.shop_domain === shop_domain) continue;
+          await db.run(
+            `INSERT INTO productos_stock (user_id, shop_domain, product_id, costo_compra)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT(user_id, shop_domain, product_id) DO UPDATE SET costo_compra = EXCLUDED.costo_compra`,
+            [userId, m.shop_domain, m.product_id, costo_compra]
+          );
+        }
+      }
+    }
+
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: "Error guardando stock" }); }
 });
