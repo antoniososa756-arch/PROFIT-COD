@@ -7539,16 +7539,19 @@ async function loadAdsTable() {
     }
 
     table.addEventListener("mousedown", function(e) {
-      if (e.target.tagName === "INPUT") return;
       const coords = cellAt(e.target);
       if (!coords) return;
+      if (e.target.tagName === "INPUT") {
+        // clic en input: solo actualizar selección sin bloquear el foco del input
+        if (e.shiftKey && selStart) { selEnd = coords; } else { selStart = selEnd = coords; }
+        applySelection();
+        return;
+      }
       e.preventDefault();
       isDragging = true;
       if (e.shiftKey && selStart) {
-        // Shift+Click: extender rango desde selStart existente
         selEnd = coords;
       } else {
-        // Click normal: nueva selección desde esta celda
         selStart = selEnd = coords;
       }
       applySelection();
@@ -7579,13 +7582,23 @@ async function loadAdsTable() {
         const text = Object.keys(map).sort((a,b)=>+a-+b)
           .map(r => Object.keys(map[r]).sort((a,b)=>+a-+b).map(c => map[r][c]).join("\t"))
           .join("\n");
-        const ta = document.createElement("textarea");
-        ta.value = text; ta.style.cssText = "position:fixed;top:-9999px;opacity:0;";
-        document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
-        selected.forEach(td => {
+        const flash = () => selected.forEach(td => {
           td.style.outline = "2px solid #22c55e";
           setTimeout(() => { td.style.outline = ""; td.classList.remove("ads-sel"); }, 600);
         });
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(text).then(flash).catch(() => {
+            const ta = document.createElement("textarea");
+            ta.value = text; ta.style.cssText = "position:fixed;top:-9999px;opacity:0;";
+            document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+            flash();
+          });
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = text; ta.style.cssText = "position:fixed;top:-9999px;opacity:0;";
+          document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+          flash();
+        }
       }
       if (e.key === "Escape") clearAdsSelection(table);
     };
