@@ -7582,23 +7582,23 @@ async function loadAdsTable() {
         const text = Object.keys(map).sort((a,b)=>+a-+b)
           .map(r => Object.keys(map[r]).sort((a,b)=>+a-+b).map(c => map[r][c]).join("\t"))
           .join("\n");
-        const flash = () => selected.forEach(td => {
+        // Copia síncrona dentro del contexto de gesto de usuario (keydown)
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;";
+          document.body.appendChild(ta);
+          ta.focus(); ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        } catch(err) {}
+        // También API moderna para contextos que requieren HTTPS
+        navigator.clipboard?.writeText(text).catch(() => {});
+        selected.forEach(td => {
           td.style.outline = "2px solid #22c55e";
           setTimeout(() => { td.style.outline = ""; td.classList.remove("ads-sel"); }, 600);
         });
-        if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(text).then(flash).catch(() => {
-            const ta = document.createElement("textarea");
-            ta.value = text; ta.style.cssText = "position:fixed;top:-9999px;opacity:0;";
-            document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
-            flash();
-          });
-        } else {
-          const ta = document.createElement("textarea");
-          ta.value = text; ta.style.cssText = "position:fixed;top:-9999px;opacity:0;";
-          document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
-          flash();
-        }
       }
       if (e.key === "Escape") clearAdsSelection(table);
     };
