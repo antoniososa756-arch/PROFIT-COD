@@ -8048,11 +8048,53 @@ async function saveAdsSpend(input) {
   }
 }
 
+function parsearNumero(raw) {
+  const s = String(raw).trim();
+  const hasPunto  = s.includes(".");
+  const hasComa   = s.includes(",");
+  let normalizado;
+  if (hasPunto && hasComa) {
+    // Determinar cuál es separador decimal: el que aparece más a la derecha
+    const lastPunto = s.lastIndexOf(".");
+    const lastComa  = s.lastIndexOf(",");
+    if (lastComa > lastPunto) {
+      // Formato europeo: 1.252,00 → quitar puntos, coma → punto
+      normalizado = s.replace(/\./g, "").replace(",", ".");
+    } else {
+      // Formato anglosajón: 1,252.00 → quitar comas
+      normalizado = s.replace(/,/g, "");
+    }
+  } else if (hasComa && !hasPunto) {
+    // Solo coma: puede ser decimal europeo (1252,00) o miles (1,252)
+    // Si hay exactamente una coma y exactamente 2-3 dígitos tras ella → decimal
+    const partes = s.split(",");
+    if (partes.length === 2 && partes[1].length <= 2) {
+      normalizado = s.replace(",", ".");
+    } else {
+      // Coma como separador de miles → quitar
+      normalizado = s.replace(/,/g, "");
+    }
+  } else {
+    // Solo punto o sin separadores: parseFloat lo maneja bien
+    normalizado = s.replace(/,/g, "");
+  }
+  return parseFloat(normalizado);
+}
+
 async function pegarDesdeExcel(e, inputOrigen) {
   const text = (e.clipboardData || window.clipboardData).getData("text");
-  // Si es un solo valor, comportamiento normal
-  const lines = text.trim().split(/\r?\n/).map(l => l.trim().split(/\t/)[0].replace(",", ".")).filter(l => l !== "");
-  if (lines.length <= 1) return;
+  const lines = text.trim().split(/\r?\n/).map(l => l.trim().split(/\t/)[0].trim()).filter(l => l !== "");
+
+  // Valor único: interceptar igualmente para parsear formato europeo
+  if (lines.length === 1) {
+    const num = parsearNumero(lines[0]);
+    if (!isNaN(num)) {
+      e.preventDefault();
+      inputOrigen.value = num;
+      inputOrigen.dispatchEvent(new Event("change"));
+    }
+    return;
+  }
 
   e.preventDefault();
   const tipo = inputOrigen.dataset.type;
@@ -8063,7 +8105,7 @@ async function pegarDesdeExcel(e, inputOrigen) {
   lines.forEach((val, i) => {
     const input = todosLosInputs[idxOrigen + i];
     if (!input) return;
-    const num = parseFloat(val);
+    const num = parsearNumero(val);
     if (isNaN(num)) return;
     input.value = num;
     promises.push(
