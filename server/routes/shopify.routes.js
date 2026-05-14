@@ -987,4 +987,37 @@ setInterval(syncRecuperacion, 24 * 60 * 60 * 1000);
 // También ejecutar al arrancar el servidor (por si reinició el día 1)
 syncRecuperacion();
 
+// ── Registrar webhooks en todas las tiendas activas ────────────────────────
+router.post("/register-webhooks", auth, async (req, res) => {
+  const appUrl = process.env.APP_URL;
+  if (!appUrl) return res.status(500).json({ error: "APP_URL no configurada" });
+
+  const shops = await db.all(
+    "SELECT shop_domain, access_token FROM shops WHERE user_id = $1 AND status = 'active'",
+    [req.user.id]
+  );
+
+  const webhookUrl = `${appUrl}/api/shopify/webhooks/orders`;
+  const topics = ["orders/create", "orders/updated", "fulfillments/create", "fulfillments/update"];
+  const results = [];
+
+  for (const shop of shops) {
+    for (const topic of topics) {
+      try {
+        const r = await fetch(`https://${shop.shop_domain}/admin/api/2024-10/webhooks.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": shop.access_token },
+          body: JSON.stringify({ webhook: { topic, address: webhookUrl, format: "json" } }),
+        });
+        const data = await r.json();
+        results.push({ shop: shop.shop_domain, topic, ok: !!data.webhook?.id, id: data.webhook?.id });
+      } catch (e) {
+        results.push({ shop: shop.shop_domain, topic, ok: false, error: e.message });
+      }
+    }
+  }
+
+  res.json({ ok: true, webhookUrl, results });
+});
+
 module.exports = router;
