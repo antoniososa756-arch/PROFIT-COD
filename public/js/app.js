@@ -9176,6 +9176,9 @@ async function refreshCacheBackground() {
       __cacheTime[url] = Date.now();
     } catch {}
   }));
+
+  // Comprobar notificaciones de entregas en cualquier sección activa
+  checkNotificaciones().catch(() => {});
 }
 
 // Arrancar refresco en segundo plano cada 55 segundos
