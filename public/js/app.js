@@ -372,6 +372,9 @@ if (location.pathname.includes("login")) {
           }).catch(() => {});
       }
 
+      // Comprobar notificaciones pendientes al abrir la app (pedidos entregados mientras estaba cerrada)
+      setTimeout(() => checkNotificaciones().catch(() => {}), 2000);
+
       // 🚀 Cargar app UNA sola vez
       // Detectar retorno del flujo OAuth de Gmail
       const _hash = window.location.hash;
