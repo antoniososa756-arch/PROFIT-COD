@@ -10273,28 +10273,36 @@ async function checkNotificaciones() {
       const horaDetectada = ahoraMadrid; // "20/03/2026, 14:35"
 
       // 1. Entregado — solo UNA VEZ para siempre (usa registro permanente)
-      if (estado === "entregado" && estadoAnterior && estadoAnterior !== "entregado") {
+      if (estado === "entregado") {
         const notiId = `entregado_${id}`;
         if (!permShown.has(notiId)) {
-          const txt = `${nombre} — ${o.customer_name || ""} · Su pedido fue entregado a las ${horaDetectada}`;
-          nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, date: ahoraISO });
-          notisIds.add(notiId);
+          if (estadoAnterior && estadoAnterior !== "entregado") {
+            // Transición detectada: mostrar notificación
+            const txt = `${nombre} — ${o.customer_name || ""} · Su pedido fue entregado a las ${horaDetectada}`;
+            nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, date: ahoraISO });
+            notisIds.add(notiId);
+            showToast("✅ Pedido entregado", txt, "#22c55e");
+          }
+          // Si estadoAnterior es undefined: primer vez que se ve este pedido ya entregado → marcar silenciosamente sin notificar
           permShown.add(notiId);
           permNuevos.push(notiId);
-          showToast("✅ Pedido entregado", txt, "#22c55e");
         }
       }
 
       // 2. Franquicia — solo UNA VEZ para siempre (usa registro permanente)
-      if (estado === "franquicia" && estadoAnterior && estadoAnterior !== "franquicia") {
+      if (estado === "franquicia") {
         const notiId = `franquicia_${id}`;
         if (!permShown.has(notiId)) {
-          const txt = `${nombre} — ${o.customer_name || ""} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
-          nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, date: ahoraISO });
-          notisIds.add(notiId);
+          if (estadoAnterior && estadoAnterior !== "franquicia") {
+            // Transición detectada: mostrar notificación
+            const txt = `${nombre} — ${o.customer_name || ""} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
+            nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, date: ahoraISO });
+            notisIds.add(notiId);
+            showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
+          }
+          // Primer vez que se ve ya en franquicia → marcar silenciosamente
           permShown.add(notiId);
           permNuevos.push(notiId);
-          showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
         }
       }
 
