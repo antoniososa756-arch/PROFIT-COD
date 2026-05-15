@@ -9235,23 +9235,13 @@ async function fetchOrders() {
 
   // Si venimos de una notificación, buscar ese pedido directamente
   if (window.__pendingSearchNoti) {
-    const orderId = window.__pendingSearchNoti;
+    const q = window.__pendingSearchNoti;
     window.__pendingSearchNoti = null;
-    try {
-      const res = await fetch(`${API_BASE}/api/orders?q=${encodeURIComponent(orderId)}&page=1&limit=1`, {
-        headers: { Authorization: "Bearer " + getActiveToken() }
-      });
-      const data = await res.json();
-      const order = (data.orders || [])[0];
-      if (order) {
-        const q = order.order_number || "";
-        const searchEl = document.getElementById("search");
-        if (searchEl) searchEl.value = q;
-        ordersState = { ...ordersState, q, page: 1 };
-        await fetchOrdersFiltered();
-        return;
-      }
-    } catch {}
+    const searchEl = document.getElementById("search");
+    if (searchEl) searchEl.value = q;
+    ordersState = { ...ordersState, q, page: 1 };
+    await fetchOrdersFiltered();
+    return;
   }
 
   ordersState = {
@@ -10285,7 +10275,7 @@ async function checkNotificaciones() {
           if (estadoAnterior && estadoAnterior !== "entregado") {
             // Transición detectada: mostrar notificación
             const txt = `${nombre} — ${o.customer_name || ""} · Su pedido fue entregado a las ${horaDetectada}`;
-            nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, date: ahoraISO });
+            nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("✅ Pedido entregado", txt, "#22c55e");
           }
@@ -10302,7 +10292,7 @@ async function checkNotificaciones() {
           if (estadoAnterior && estadoAnterior !== "franquicia") {
             // Transición detectada: mostrar notificación
             const txt = `${nombre} — ${o.customer_name || ""} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
-            nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, date: ahoraISO });
+            nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
           }
@@ -10405,9 +10395,23 @@ function irAPedidoDesdeNotif(notiId) {
     return;
   }
 
-  const orderId = notiId.includes("__") ? notiId.split("__")[1] : notiId.split("_").pop();
-  window.__pendingSearchNoti = orderId;
-  setSection("pedidos");
+  // Buscar el orderNumber guardado en la notificación
+  const notisKey = `notifications_${currentUser?.id || "anon"}`;
+  const notis = JSON.parse(localStorage.getItem(notisKey) || "[]");
+  const noti = notis.find(n => n.id === notiId);
+  const q = noti?.orderNumber || (notiId.includes("__") ? notiId.split("__")[1] : notiId.split("_").pop());
+
+  const yaEnPedidos = document.getElementById("ordersBody");
+  if (yaEnPedidos) {
+    // Ya estamos en la sección pedidos — filtrar directamente
+    const searchEl = document.getElementById("search");
+    if (searchEl) searchEl.value = q;
+    ordersState = { ...ordersState, q, page: 1 };
+    fetchOrdersFiltered();
+  } else {
+    window.__pendingSearchNoti = q;
+    setSection("pedidos");
+  }
 }
 
 window.irAPedidoDesdeNotif = irAPedidoDesdeNotif;
