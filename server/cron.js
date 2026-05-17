@@ -309,8 +309,8 @@ async function syncAllGmailPDF() {
 
 // ── Arrancar los crons ───────────────────────────────────────────────────────
 function startCrons() {
-  // Sync Shopify cada 10 minutos
-  setInterval(syncAllShopifyOrders, 10 * 60 * 1000);
+  // Sync Shopify cada 1 minuto
+  setInterval(syncAllShopifyOrders, 1 * 60 * 1000);
   // Sync MRW cada 5 minutos
   setInterval(syncAllMRW, 5 * 60 * 1000);
 
@@ -318,7 +318,7 @@ function startCrons() {
   setTimeout(syncAllShopifyOrders, 30 * 1000);
   setTimeout(syncAllMRW, 60 * 1000);
 
-  console.log("✅ [CRON] Crons iniciados — Shopify cada 10min, MRW cada 5min");
+  console.log("✅ [CRON] Crons iniciados — Shopify cada 1min, MRW cada 5min");
 
   // ── Cierre de mes: comprobar cada hora si toca generar factura y resetear contadores ──
   setInterval(async () => {
