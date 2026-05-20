@@ -5688,12 +5688,16 @@ let html = activeStores.map(renderStoreCard).join("");
 
 if (inactiveStores.length > 0) {
   html += `
-    <div class="inactive-stores-section" style="width:100%; margin-top:12px;">
-      <button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'flex' : 'none'; this.querySelector('span').textContent = this.nextElementSibling.style.display === 'none' ? '▶' : '▼';"
-        style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 0;">
+    <div class="inactive-stores-section" style="grid-column: 1 / -1; margin-top:8px; border-top:1px solid var(--border); padding-top:16px;">
+      <button onclick="
+        const inner = this.nextElementSibling;
+        const open = inner.style.display !== 'none';
+        inner.style.display = open ? 'none' : 'grid';
+        this.querySelector('span').textContent = open ? '▶' : '▼';
+      " style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 0;margin-bottom:12px;">
         <span>▶</span> Tiendas inactivas (${inactiveStores.length})
       </button>
-      <div style="display:none; flex-wrap:wrap; gap:16px; margin-top:8px;">
+      <div style="display:none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:18px;">
         ${inactiveStores.map(renderStoreCard).join("")}
       </div>
     </div>
