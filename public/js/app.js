@@ -10680,13 +10680,13 @@ window.showOrderSquare = showOrderSquare;
 function sendDesktopOrderNotif(color, dailyCount, shopName, orderNumber) {
   if (Notification.permission !== "granted") return;
   try {
-    const icon = makeColorIcon(color);
+    const icon = `${API_BASE}/api/push/icon?color=${encodeURIComponent(color)}&n=${dailyCount}`;
     const n = new Notification(`Pedido #${dailyCount} — ${shopName}`, {
       body: orderNumber ? `Referencia: ${orderNumber}` : `Nuevo pedido entrante`,
-      icon: icon || undefined,
-      badge: icon || undefined,
-      tag: `order-${Date.now()}`,
-      silent: true, // el sonido lo manejamos nosotros
+      icon,
+      badge: icon,
+      tag: `order-notif`,
+      silent: true,
     });
     n.onclick = () => { window.focus(); n.close(); };
   } catch {}
@@ -10739,6 +10739,7 @@ function handleOrderEvent(data) {
   const shop  = data.shopName || "Tienda";
   showOrderSquare(color, count, shop);
   playOrderSound();
+  sendDesktopOrderNotif(color, count, shop, data.orderNumber);
   if (localStorage.getItem("section") === "pedidos" && typeof fetchOrdersFiltered === "function") {
     fetchOrdersFiltered();
   }

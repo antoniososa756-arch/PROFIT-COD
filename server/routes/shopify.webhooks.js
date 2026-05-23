@@ -98,30 +98,7 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
         type: "new_order", color, shopName, dailyCount, orderNumber: o.name,
       });
 
-      // Push (navegador abierto aunque pestaña cerrada)
-      if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) try {
-        const subs = await db.all(
-          "SELECT endpoint, subscription FROM push_subscriptions WHERE user_id = $1",
-          [shop.user_id]
-        );
-        const iconUrl = `${process.env.APP_URL}/api/push/icon?color=${encodeURIComponent(color)}&n=${dailyCount}`;
-        const payload = JSON.stringify({
-          title: `#${dailyCount} — ${shopName}`,
-          body: o.name ? `Referencia: ${o.name}` : "Nuevo pedido entrante",
-          icon: iconUrl,
-          tag: `order-${o.id}`,
-          color,
-        });
-        for (const sub of subs) {
-          webpush.sendNotification(JSON.parse(sub.subscription), payload).catch(async (e) => {
-            if (e.statusCode === 410 || e.statusCode === 404) {
-              await db.run("DELETE FROM push_subscriptions WHERE endpoint = $1", [sub.endpoint]);
-            }
-          });
-        }
-      } catch (e) {
-        console.warn("[Push] Error enviando notificación push:", e.message);
-      }
+      // Las notificaciones de escritorio se gestionan en el cliente vía SSE + Notification API.
 
     } else if (topic === "orders/updated") {
       const status = mapStatus(o);
