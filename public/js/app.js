@@ -374,6 +374,8 @@ if (location.pathname.includes("login")) {
 
       // Comprobar notificaciones pendientes al abrir la app (pedidos entregados mientras estaba cerrada)
       setTimeout(() => checkNotificaciones().catch(() => {}), 2000);
+      // WebSocket para pedidos nuevos en tiempo real
+      connectOrderWebSocket(token);
 
       // 🚀 Cargar app UNA sola vez
       // Detectar retorno del flujo OAuth de Gmail
@@ -5674,6 +5676,21 @@ function renderStoreCard(store) {
       </div>
     </div>
 
+    <div class="store-color-row" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:#6b7280;font-weight:600;flex-shrink:0;">Color notificación:</span>
+      ${["#3b82f6","#22c55e","#f97316","#ef4444","#8b5cf6","#06b6d4","#ec4899","#eab308","#14b8a6","#f43f5e"].map(hex => `
+        <div onclick="updateStoreColor(${store.id}, '${hex}', this)"
+          style="width:20px;height:20px;border-radius:50%;background:${hex};cursor:pointer;flex-shrink:0;
+          border:2.5px solid ${(store.notification_color || '#3b82f6') === hex ? '#fff' : 'transparent'};
+          box-shadow:${(store.notification_color || '#3b82f6') === hex ? '0 0 0 2px ' + hex : 'none'};
+          transition:all .15s;" data-color="${hex}">
+        </div>`).join("")}
+      <input type="color" value="${store.notification_color || '#3b82f6'}"
+        style="width:22px;height:22px;border:none;border-radius:50%;padding:0;cursor:pointer;background:none;flex-shrink:0;"
+        title="Color personalizado"
+        onchange="updateStoreColor(${store.id}, this.value, null)">
+    </div>
+
     <div class="store-actions">
       ${store.status === "active"
         ? `<button class="btn-secondary" onclick="disableStore(${store.id})">Deshabilitar</button>`
@@ -5714,6 +5731,30 @@ grid.innerHTML = html;
     `;
   }
 }
+
+async function updateStoreColor(storeId, color, clickedDot) {
+  // Validar formato hex
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
+  try {
+    await fetch(`${API_BASE}/api/shopify/stores/${storeId}/color`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ color }),
+    });
+    // Actualizar visual de los dots en esa tarjeta
+    if (clickedDot) {
+      const row = clickedDot.closest(".store-color-row");
+      if (row) {
+        row.querySelectorAll("[data-color]").forEach(dot => {
+          const isSelected = dot.dataset.color === color;
+          dot.style.border = isSelected ? "2.5px solid #fff" : "2.5px solid transparent";
+          dot.style.boxShadow = isSelected ? `0 0 0 2px ${dot.dataset.color}` : "none";
+        });
+      }
+    }
+  } catch {}
+}
+window.updateStoreColor = updateStoreColor;
 
 // =========================
 // SHOPIFY CONEXIÓN (TOKEN + APP SECRET)
@@ -10388,6 +10429,83 @@ function showToast(title, text, color) {
 }
 window.showToast = showToast;
 window.checkNotificaciones = checkNotificaciones;
+
+// =========================
+// NOTIFICACIÓN CUADRADO DE COLOR (PEDIDO NUEVO EN TIEMPO REAL)
+// =========================
+function getOrCreateStack() {
+  let stack = document.getElementById("order-notif-stack");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.id = "order-notif-stack";
+    stack.style.cssText = "position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column-reverse;gap:10px;align-items:flex-end;pointer-events:none;";
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
+
+function showOrderSquare(color, dailyCount, shopName) {
+  const stack = getOrCreateStack();
+  const el = document.createElement("div");
+  el.style.cssText = `
+    width:88px;height:88px;border-radius:14px;
+    background:${color};
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    box-shadow:0 6px 24px rgba(0,0,0,0.35);
+    pointer-events:auto;cursor:pointer;
+    opacity:1;transition:opacity 0.5s ease, transform 0.5s ease;
+    transform:scale(1);
+    user-select:none;
+  `;
+  el.innerHTML = `
+    <div style="font-size:36px;font-weight:800;color:#fff;line-height:1;">${dailyCount}</div>
+    <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.85);margin-top:3px;text-align:center;max-width:76px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px;">${escapeHtml(shopName)}</div>
+  `;
+  el.onclick = () => { el.style.opacity = "0"; el.style.transform = "scale(0.85)"; setTimeout(() => el.remove(), 500); };
+  stack.appendChild(el);
+
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transform = "scale(0.85)";
+    setTimeout(() => el.remove(), 500);
+  }, 6000);
+}
+window.showOrderSquare = showOrderSquare;
+
+// =========================
+// WEBSOCKET — PEDIDOS EN TIEMPO REAL
+// =========================
+let __wsReconnectDelay = 2000;
+let __wsInstance = null;
+
+function connectOrderWebSocket(token) {
+  if (__wsInstance && (__wsInstance.readyState === 0 || __wsInstance.readyState === 1)) return;
+  const wsBase = API_BASE.replace(/^https/, "wss").replace(/^http/, "ws");
+  const ws = new WebSocket(`${wsBase}/ws?token=${encodeURIComponent(token)}`);
+  __wsInstance = ws;
+
+  ws.onopen = () => { __wsReconnectDelay = 2000; };
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === "new_order") {
+        showOrderSquare(data.color || "#3b82f6", data.dailyCount || 1, data.shopName || "Tienda");
+      }
+    } catch {}
+  };
+
+  ws.onclose = () => {
+    __wsInstance = null;
+    if (getActiveToken()) {
+      setTimeout(() => connectOrderWebSocket(getActiveToken()), __wsReconnectDelay);
+      __wsReconnectDelay = Math.min(__wsReconnectDelay * 2, 30000);
+    }
+  };
+
+  ws.onerror = () => ws.close();
+}
+window.connectOrderWebSocket = connectOrderWebSocket;
 
 function irAPedidoDesdeNotif(notiId) {
   closeAllDrops();

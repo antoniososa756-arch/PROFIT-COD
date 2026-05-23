@@ -166,6 +166,7 @@ async function initDB() {
 try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS financial_status TEXT`); } catch(e) {}
   try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS raw_json TEXT`); } catch(e) {}
   try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shop_domain TEXT`); } catch(e) {}
+  try { await pool.query(`ALTER TABLE shops ADD COLUMN IF NOT EXISTS notification_color TEXT DEFAULT '#3b82f6'`); } catch(e) {}
 
 await pool.query(`
     CREATE TABLE IF NOT EXISTS productos_stock (

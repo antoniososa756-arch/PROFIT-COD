@@ -1,6 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const db = require("../db");
+const wsManager = require("../ws");
 const router = express.Router();
 
 function mapStatus(o) {
@@ -25,7 +26,7 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
 
   try {
     const shop = await db.get(
-      "SELECT id, shop_domain, app_secret FROM shops WHERE LOWER(shop_domain) = $1 AND status = 'active'",
+      "SELECT id, user_id, shop_domain, shop_name, app_secret, notification_color FROM shops WHERE LOWER(shop_domain) = $1 AND status = 'active'",
       [shopDomain]
     );
     if (!shop) return res.status(200).send("OK");
@@ -64,6 +65,24 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
          parseFloat(o.total_price || 0), o.currency, status, o.financial_status || null,
          tracking, o.cancelled_at || null, JSON.stringify(o)]
       );
+
+      // Contar pedidos del día en hora española (incluye el que acabamos de insertar)
+      const countRow = await db.get(
+        `SELECT COUNT(*) AS cnt FROM orders
+         WHERE shop_id = $1
+         AND (created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date
+           = (NOW() AT TIME ZONE 'Europe/Madrid')::date`,
+        [shop.id]
+      );
+      const dailyCount = parseInt(countRow?.cnt || 1, 10);
+
+      wsManager.emitToUser(shop.user_id, {
+        type: "new_order",
+        color: shop.notification_color || "#3b82f6",
+        shopName: shop.shop_name || shop.shop_domain,
+        dailyCount,
+        orderNumber: o.name,
+      });
 
     } else if (topic === "orders/updated") {
       const status = mapStatus(o);

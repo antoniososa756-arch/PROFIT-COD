@@ -2,9 +2,11 @@ require("dotenv").config({
   path: require("path").join(__dirname, ".env"),
 });
 
+const http = require("http");
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
+const wsManager = require("./ws");
 
 // DB
 const db = require("./db");
@@ -86,9 +88,10 @@ app.use((req, res) => {
 });
 
 // START
-app.listen(PORT, () => {
+const server = http.createServer(app);
+wsManager.setup(server);
+server.listen(PORT, () => {
   console.log(`OK http://localhost:${PORT}`);
-  // Arrancar sincronización automática en background
   const { startCrons } = require("./cron");
   startCrons();
 });

@@ -195,7 +195,7 @@ router.get("/stores", auth, async (req, res) => {
   const showAll = req.query.all === 'true';
   try {
     const rows = await db.all(
-      `SELECT id, shop_domain AS domain, shop_name, status, last_sync, created_at FROM shops WHERE user_id = $1 ${showAll ? '' : "AND status = 'active'"} ORDER BY created_at DESC`,
+      `SELECT id, shop_domain AS domain, shop_name, status, last_sync, created_at, notification_color FROM shops WHERE user_id = $1 ${showAll ? '' : "AND status = 'active'"} ORDER BY created_at DESC`,
       [userId]
     );
     res.json(rows || []);
@@ -214,6 +214,15 @@ router.patch("/stores/:id/name", auth, async (req, res) => {
   const { shop_name } = req.body;
   try {
     await db.run("UPDATE shops SET shop_name = $1 WHERE id = $2 AND user_id = $3", [shop_name, req.params.id, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error BD" }); }
+});
+
+router.patch("/stores/:id/color", auth, async (req, res) => {
+  const { color } = req.body;
+  if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ error: "Color inválido" });
+  try {
+    await db.run("UPDATE shops SET notification_color = $1 WHERE id = $2 AND user_id = $3", [color, req.params.id, req.user.id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: "Error BD" }); }
 });
