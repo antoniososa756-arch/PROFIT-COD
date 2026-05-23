@@ -117,6 +117,14 @@ router.get("/icon", (req, res) => {
   res.send(buf);
 });
 
+// Estado del sistema de notificaciones
+router.get("/status", auth, async (req, res) => {
+  const userId = req.user.id;
+  const subs = await db.all("SELECT id, endpoint, created_at FROM push_subscriptions WHERE user_id = $1", [userId]);
+  const vapidOk = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+  res.json({ vapidOk, subscriptions: subs.length, subs: subs.map(s => ({ id: s.id, created_at: s.created_at })) });
+});
+
 // Guardar suscripción push del navegador
 router.post("/subscribe", auth, async (req, res) => {
   const userId = req.user.id;

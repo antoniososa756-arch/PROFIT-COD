@@ -5737,6 +5737,10 @@ function renderStoreCard(store) {
         style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
         🔗 Registrar webhooks
       </button>
+      <button onclick="checkNotifStatus()"
+        style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
+        🩺 Diagnóstico
+      </button>
     </div>
   </div>
 `;
@@ -5824,6 +5828,31 @@ async function simulateRealOrder() {
   } catch {}
 }
 window.simulateRealOrder = simulateRealOrder;
+
+async function checkNotifStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/api/push/status`, {
+      headers: { "Authorization": `Bearer ${getActiveToken()}` },
+    });
+    const data = await res.json();
+    const perm = Notification.permission;
+    const swOk = "serviceWorker" in navigator;
+    console.log("=== DIAGNÓSTICO NOTIFICACIONES ===");
+    console.log("Permiso notificaciones:", perm);
+    console.log("Service Worker disponible:", swOk);
+    console.log("VAPID configurado en servidor:", data.vapidOk);
+    console.log("Suscripciones push guardadas:", data.subscriptions);
+    if (!data.vapidOk) console.warn("⚠️ VAPID no configurado — las push no funcionarán");
+    if (data.subscriptions === 0) console.warn("⚠️ Sin suscripción push guardada — recarga la app y acepta permisos");
+    if (perm !== "granted") console.warn("⚠️ Permiso no concedido — activa notificaciones en el navegador");
+    showToast(
+      data.subscriptions > 0 && data.vapidOk && perm === "granted" ? "✅ OK" : "⚠️ Revisar",
+      `Push: ${data.subscriptions} subs | VAPID: ${data.vapidOk ? "OK" : "NO"} | Permiso: ${perm}`,
+      data.subscriptions > 0 && data.vapidOk ? "#22c55e" : "#f59e0b"
+    );
+  } catch (e) { console.error("Error diagnóstico:", e); }
+}
+window.checkNotifStatus = checkNotifStatus;
 
 function toggleColorPicker(storeId, e) {
   e.stopPropagation();
