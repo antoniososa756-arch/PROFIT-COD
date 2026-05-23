@@ -1046,4 +1046,45 @@ router.post("/register-webhooks", auth, async (req, res) => {
   res.json({ ok: true, webhookUrl, results });
 });
 
+// Lista todos los webhooks registrados en Shopify para cada tienda activa
+router.get("/list-webhooks", auth, async (req, res) => {
+  const shops = await db.all(
+    "SELECT shop_domain, access_token FROM shops WHERE user_id = $1 AND status = 'active'",
+    [req.user.id]
+  );
+  const result = [];
+  for (const shop of shops) {
+    try {
+      const r = await fetch(
+        `https://${shop.shop_domain}/admin/api/2024-10/webhooks.json?limit=250`,
+        { headers: { "X-Shopify-Access-Token": shop.access_token } }
+      );
+      const data = await r.json();
+      result.push({ shop: shop.shop_domain, webhooks: data.webhooks || [] });
+    } catch (e) {
+      result.push({ shop: shop.shop_domain, error: e.message });
+    }
+  }
+  res.json(result);
+});
+
+// Elimina un webhook específico de Shopify
+router.delete("/webhook/:shopDomain/:webhookId", auth, async (req, res) => {
+  const { shopDomain, webhookId } = req.params;
+  const shop = await db.get(
+    "SELECT access_token FROM shops WHERE shop_domain = $1 AND user_id = $2 AND status = 'active'",
+    [shopDomain, req.user.id]
+  );
+  if (!shop) return res.status(404).json({ error: "Tienda no encontrada" });
+  try {
+    await fetch(
+      `https://${shopDomain}/admin/api/2024-10/webhooks/${webhookId}.json`,
+      { method: "DELETE", headers: { "X-Shopify-Access-Token": shop.access_token } }
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

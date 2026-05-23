@@ -5733,13 +5733,13 @@ function renderStoreCard(store) {
         style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
         ⚡ Simular pedido
       </button>
+      <button onclick="listWebhooks()"
+        style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
+        🔍 Ver webhooks
+      </button>
       <button onclick="registerWebhooks()"
         style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
         🔗 Registrar webhooks
-      </button>
-      <button onclick="checkNotifStatus()"
-        style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
-        🩺 Diagnóstico
       </button>
     </div>
   </div>
@@ -5815,6 +5815,36 @@ async function registerWebhooks() {
   } catch { showToast("⚠️ Error", "No se pudo conectar", "#ef4444"); }
 }
 window.registerWebhooks = registerWebhooks;
+
+async function listWebhooks() {
+  try {
+    const res = await fetch(`${API_BASE}/api/shopify/list-webhooks`, {
+      headers: { "Authorization": `Bearer ${getActiveToken()}` },
+    });
+    const data = await res.json();
+    console.log("=== WEBHOOKS REGISTRADOS EN SHOPIFY ===");
+    let totalOrdersCreate = 0;
+    for (const shop of data) {
+      const ordersCreate = (shop.webhooks || []).filter(w => w.topic === "orders/create");
+      totalOrdersCreate += ordersCreate.length;
+      console.log(`\n📦 ${shop.shop}`);
+      console.log(`  Total webhooks: ${(shop.webhooks || []).length}`);
+      console.log(`  orders/create: ${ordersCreate.length}`);
+      ordersCreate.forEach(w => console.log(`    → ID:${w.id} URL:${w.address}`));
+    }
+
+    const msg = data.map(s => {
+      const oc = (s.webhooks || []).filter(w => w.topic === "orders/create");
+      return `${s.shop}: ${oc.length} webhook(s)`;
+    }).join(" | ");
+    showToast(
+      totalOrdersCreate > data.length ? "⚠️ Duplicados" : "✅ Webhooks",
+      msg,
+      totalOrdersCreate > data.length ? "#f59e0b" : "#22c55e"
+    );
+  } catch (e) { console.error("Error:", e); }
+}
+window.listWebhooks = listWebhooks;
 
 async function simulateRealOrder() {
   try {
