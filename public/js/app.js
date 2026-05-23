@@ -10590,46 +10590,38 @@ function requestOrderNotifPermission() {
 window.requestOrderNotifPermission = requestOrderNotifPermission;
 
 // =========================
-// WEBSOCKET — PEDIDOS EN TIEMPO REAL
+// SSE — PEDIDOS EN TIEMPO REAL
 // =========================
-let __wsReconnectDelay = 2000;
-let __wsInstance = null;
+let __sseInstance = null;
+
+function handleOrderEvent(data) {
+  const color = data.color || "#3b82f6";
+  const count = data.dailyCount || 1;
+  const shop  = data.shopName || "Tienda";
+  showOrderSquare(color, count, shop);
+  playOrderSound();
+  sendDesktopOrderNotif(color, count, shop, data.orderNumber);
+  if (localStorage.getItem("section") === "pedidos" && typeof fetchOrdersFiltered === "function") {
+    fetchOrdersFiltered();
+  }
+}
 
 function connectOrderWebSocket(token) {
-  if (__wsInstance && (__wsInstance.readyState === 0 || __wsInstance.readyState === 1)) return;
-  const wsBase = API_BASE.replace(/^https/, "wss").replace(/^http/, "ws");
-  const ws = new WebSocket(`${wsBase}/ws?token=${encodeURIComponent(token)}`);
-  __wsInstance = ws;
+  if (__sseInstance) { try { __sseInstance.close(); } catch {} }
+  const url = `${API_BASE}/api/events?token=${encodeURIComponent(token)}`;
+  const es = new EventSource(url);
+  __sseInstance = es;
 
-  ws.onopen = () => { __wsReconnectDelay = 2000; };
-
-  ws.onmessage = (e) => {
+  es.onmessage = (e) => {
     try {
       const data = JSON.parse(e.data);
-      if (data.type === "new_order") {
-        const color = data.color || "#3b82f6";
-        const count = data.dailyCount || 1;
-        const shop  = data.shopName || "Tienda";
-        showOrderSquare(color, count, shop);
-        playOrderSound();
-        sendDesktopOrderNotif(color, count, shop, data.orderNumber);
-        // Refrescar lista de pedidos al instante si el usuario está en esa sección
-        if (localStorage.getItem("section") === "pedidos" && typeof fetchOrdersFiltered === "function") {
-          fetchOrdersFiltered();
-        }
-      }
+      if (data.type === "new_order") handleOrderEvent(data);
     } catch {}
   };
 
-  ws.onclose = () => {
-    __wsInstance = null;
-    if (getActiveToken()) {
-      setTimeout(() => connectOrderWebSocket(getActiveToken()), __wsReconnectDelay);
-      __wsReconnectDelay = Math.min(__wsReconnectDelay * 2, 30000);
-    }
+  es.onerror = () => {
+    // EventSource reconecta automáticamente — no hace falta gestión manual
   };
-
-  ws.onerror = () => ws.close();
 }
 window.connectOrderWebSocket = connectOrderWebSocket;
 

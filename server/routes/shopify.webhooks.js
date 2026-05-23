@@ -1,7 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const db = require("../db");
-const wsManager = require("../ws");
+const sseManager = require("../sse");
 const router = express.Router();
 
 function mapStatus(o) {
@@ -82,7 +82,7 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
       }
 
       console.log(`[Webhook] orders/create → tienda ${shop.shop_domain}, usuario ${shop.user_id}, pedido #${dailyCount} del día`);
-      wsManager.emitToUser(shop.user_id, {
+      sseManager.emitToUser(shop.user_id, {
         type: "new_order",
         color: shop.notification_color || "#3b82f6",
         shopName: shop.shop_name || shop.shop_domain,

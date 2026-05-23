@@ -2,11 +2,9 @@ require("dotenv").config({
   path: require("path").join(__dirname, ".env"),
 });
 
-const http = require("http");
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
-const wsManager = require("./ws");
 
 // DB
 const db = require("./db");
@@ -87,10 +85,11 @@ app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
 });
 
+// SSE — sin auth middleware (verifica JWT internamente)
+app.use("/api/events", require("./routes/events.routes"));
+
 // START
-const server = http.createServer(app);
-wsManager.setup(server);
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`OK http://localhost:${PORT}`);
   const { startCrons } = require("./cron");
   startCrons();
