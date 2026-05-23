@@ -376,6 +376,8 @@ if (location.pathname.includes("login")) {
       setTimeout(() => checkNotificaciones().catch(() => {}), 2000);
       // WebSocket para pedidos nuevos en tiempo real
       connectOrderWebSocket(token);
+      // Pedir permiso de notificaciones nativas de escritorio
+      setTimeout(() => requestOrderNotifPermission(), 3000);
 
       // 🚀 Cargar app UNA sola vez
       // Detectar retorno del flujo OAuth de Gmail
@@ -10444,6 +10446,39 @@ function getOrCreateStack() {
   return stack;
 }
 
+function playOrderSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    // Dos tonos ascendentes cortos
+    [[880, 0, 0.12], [1320, 0.13, 0.28]].forEach(([freq, start, end]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + start);
+      gain.gain.setValueAtTime(0.25, now + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + end);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + start);
+      osc.stop(now + end);
+    });
+  } catch {}
+}
+
+function makeColorIcon(color) {
+  try {
+    const c = document.createElement("canvas");
+    c.width = 64; c.height = 64;
+    const ctx = c.getContext("2d");
+    ctx.beginPath();
+    ctx.roundRect(0, 0, 64, 64, 14);
+    ctx.fillStyle = color;
+    ctx.fill();
+    return c.toDataURL();
+  } catch { return null; }
+}
+
 function showOrderSquare(color, dailyCount, shopName) {
   const stack = getOrCreateStack();
   const el = document.createElement("div");
@@ -10472,6 +10507,29 @@ function showOrderSquare(color, dailyCount, shopName) {
 }
 window.showOrderSquare = showOrderSquare;
 
+function sendDesktopOrderNotif(color, dailyCount, shopName, orderNumber) {
+  if (Notification.permission !== "granted") return;
+  try {
+    const icon = makeColorIcon(color);
+    const n = new Notification(`Pedido #${dailyCount} — ${shopName}`, {
+      body: orderNumber ? `Referencia: ${orderNumber}` : `Nuevo pedido entrante`,
+      icon: icon || undefined,
+      badge: icon || undefined,
+      tag: `order-${Date.now()}`,
+      silent: true, // el sonido lo manejamos nosotros
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+  } catch {}
+}
+
+function requestOrderNotifPermission() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+window.requestOrderNotifPermission = requestOrderNotifPermission;
+
 // =========================
 // WEBSOCKET — PEDIDOS EN TIEMPO REAL
 // =========================
@@ -10490,7 +10548,12 @@ function connectOrderWebSocket(token) {
     try {
       const data = JSON.parse(e.data);
       if (data.type === "new_order") {
-        showOrderSquare(data.color || "#3b82f6", data.dailyCount || 1, data.shopName || "Tienda");
+        const color = data.color || "#3b82f6";
+        const count = data.dailyCount || 1;
+        const shop  = data.shopName || "Tienda";
+        showOrderSquare(color, count, shop);
+        playOrderSound();
+        sendDesktopOrderNotif(color, count, shop, data.orderNumber);
       }
     } catch {}
   };
