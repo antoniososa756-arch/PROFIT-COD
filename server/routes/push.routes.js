@@ -42,4 +42,35 @@ router.post("/subscribe", auth, async (req, res) => {
   }
 });
 
+// Notificación de prueba
+router.post("/test", auth, async (req, res) => {
+  const userId = req.user.id;
+  const subs = await db.all("SELECT endpoint, subscription FROM push_subscriptions WHERE user_id = $1", [userId]);
+  if (!subs.length) return res.status(404).json({ error: "No hay suscripciones registradas. Acepta el permiso de notificaciones primero." });
+  if (!process.env.VAPID_PUBLIC_KEY) return res.status(503).json({ error: "VAPID no configurado en el servidor." });
+
+  const color = req.body.color || "#3b82f6";
+  const shopName = req.body.shopName || "Tienda de prueba";
+  const iconUrl = `${process.env.APP_URL}/api/push/icon?color=${encodeURIComponent(color)}`;
+  const payload = JSON.stringify({
+    title: `#1 — ${shopName}`,
+    body: "Referencia: #TEST-001",
+    icon: iconUrl,
+    tag: "order-test-" + Date.now(),
+  });
+
+  let sent = 0;
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(JSON.parse(sub.subscription), payload);
+      sent++;
+    } catch (e) {
+      if (e.statusCode === 410 || e.statusCode === 404) {
+        await db.run("DELETE FROM push_subscriptions WHERE endpoint = $1", [sub.endpoint]);
+      }
+    }
+  }
+  res.json({ ok: true, sent });
+});
+
 module.exports = { router, webpush };

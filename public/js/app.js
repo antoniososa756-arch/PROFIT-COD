@@ -5705,11 +5705,15 @@ function renderStoreCard(store) {
       </div>
     </div>
 
-    <div class="store-actions">
+    <div class="store-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
       ${store.status === "active"
         ? `<button class="btn-secondary" onclick="disableStore(${store.id})">Deshabilitar</button>`
         : `<button class="btn-primary" onclick="openReactivateModal('${store.domain}', ${store.id})">Habilitar</button>`
       }
+      <button onclick="testPushNotification('${store.notification_color || '#3b82f6'}', ${JSON.stringify(store.shop_name || store.domain)})"
+        style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
+        🔔 Probar notificación
+      </button>
     </div>
   </div>
 `;
@@ -5745,6 +5749,22 @@ grid.innerHTML = html;
     `;
   }
 }
+
+async function testPushNotification(color, shopName) {
+  // Prueba in-app (cuadrado de color + sonido)
+  handleOrderEvent({ color, dailyCount: 1, shopName, orderNumber: "#TEST-001" });
+  // Prueba push real (para cuando la pestaña esté cerrada)
+  try {
+    const res = await fetch(`${API_BASE}/api/push/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ color, shopName }),
+    });
+    const data = await res.json();
+    if (!res.ok) showToast("⚠️ Push", data.error || "Error enviando push", "#f59e0b");
+  } catch {}
+}
+window.testPushNotification = testPushNotification;
 
 function toggleColorPicker(storeId, e) {
   e.stopPropagation();
