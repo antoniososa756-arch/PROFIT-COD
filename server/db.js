@@ -168,6 +168,16 @@ try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS financial_st
   try { await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shop_domain TEXT`); } catch(e) {}
   try { await pool.query(`ALTER TABLE shops ADD COLUMN IF NOT EXISTS notification_color TEXT DEFAULT '#3b82f6'`); } catch(e) {}
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      endpoint TEXT NOT NULL UNIQUE,
+      subscription TEXT NOT NULL,
+      created_at TEXT DEFAULT now()::text
+    )
+  `);
+
 await pool.query(`
     CREATE TABLE IF NOT EXISTS productos_stock (
       id SERIAL PRIMARY KEY,

@@ -10581,10 +10581,38 @@ function sendDesktopOrderNotif(color, dailyCount, shopName, orderNumber) {
   } catch {}
 }
 
-function requestOrderNotifPermission() {
-  if (!("Notification" in window)) return;
-  if (Notification.permission === "default") {
-    Notification.requestPermission();
+const VAPID_PUBLIC_KEY = "BFgT3YW_-ZCkt4VqRlvmJiyksaK8qoMWCeKT1PL3FKjLDLNCeyDm7Pw-geNOQwldn5zEmktbhiGBAL0Xn1SUYoM";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function requestOrderNotifPermission() {
+  if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return;
+
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+
+    const existing = await reg.pushManager.getSubscription();
+    const sub = existing || await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+
+    await fetch(`${API_BASE}/api/push/subscribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify(sub),
+    });
+  } catch (e) {
+    console.warn("[Push] Error registrando suscripción:", e);
   }
 }
 window.requestOrderNotifPermission = requestOrderNotifPermission;

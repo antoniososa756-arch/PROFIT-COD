@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git reset *)",
+      "Bash(git push *)",
+      "Bash(git remote *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(gh auth *)",
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\Windows\\\\Desktop\\\\PROFIT-COD\\\\public\\\\js\\\\app.js\"\\).Count)",
+      "Bash(git log *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Windows\\\\Desktop\\\\PROFIT-COD\" -Recurse -Filter \"*.js\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(powershell -Command \"Get-ChildItem -Path server -Name\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path public -Name\")"
+    ]
+  }
+}

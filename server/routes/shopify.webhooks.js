@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const db = require("../db");
 const sseManager = require("../sse");
+const { webpush } = require("./push.routes");
 const router = express.Router();
 
 function mapStatus(o) {
@@ -81,14 +82,39 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
         console.warn("[Webhook] Error contando pedidos del día:", e.message);
       }
 
+      const color = shop.notification_color || "#3b82f6";
+      const shopName = shop.shop_name || shop.shop_domain;
       console.log(`[Webhook] orders/create → tienda ${shop.shop_domain}, usuario ${shop.user_id}, pedido #${dailyCount} del día`);
+
+      // SSE (pestaña abierta)
       sseManager.emitToUser(shop.user_id, {
-        type: "new_order",
-        color: shop.notification_color || "#3b82f6",
-        shopName: shop.shop_name || shop.shop_domain,
-        dailyCount,
-        orderNumber: o.name,
+        type: "new_order", color, shopName, dailyCount, orderNumber: o.name,
       });
+
+      // Push (navegador abierto aunque pestaña cerrada)
+      try {
+        const subs = await db.all(
+          "SELECT endpoint, subscription FROM push_subscriptions WHERE user_id = $1",
+          [shop.user_id]
+        );
+        const iconUrl = `${process.env.APP_URL}/api/push/icon?color=${encodeURIComponent(color)}`;
+        const payload = JSON.stringify({
+          title: `#${dailyCount} — ${shopName}`,
+          body: o.name ? `Referencia: ${o.name}` : "Nuevo pedido entrante",
+          icon: iconUrl,
+          tag: `order-${o.id}`,
+          color,
+        });
+        for (const sub of subs) {
+          webpush.sendNotification(JSON.parse(sub.subscription), payload).catch(async (e) => {
+            if (e.statusCode === 410 || e.statusCode === 404) {
+              await db.run("DELETE FROM push_subscriptions WHERE endpoint = $1", [sub.endpoint]);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("[Push] Error enviando notificación push:", e.message);
+      }
 
     } else if (topic === "orders/updated") {
       const status = mapStatus(o);

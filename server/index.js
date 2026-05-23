@@ -88,6 +88,9 @@ app.use((req, res) => {
 // SSE — sin auth middleware (verifica JWT internamente)
 app.use("/api/events", require("./routes/events.routes"));
 
+// Push notifications
+app.use("/api/push", require("./routes/push.routes").router);
+
 // START
 app.listen(PORT, () => {
   console.log(`OK http://localhost:${PORT}`);
