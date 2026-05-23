@@ -5682,8 +5682,8 @@ function renderStoreCard(store) {
       <span style="font-size:11px;color:#6b7280;font-weight:600;">Color notificación:</span>
       <div id="color-trigger-${store.id}"
         onclick="toggleColorPicker(${store.id}, event)"
-        style="width:22px;height:22px;border-radius:50%;background:${store.notification_color || '#3b82f6'};cursor:pointer;
-        box-shadow:0 0 0 2px ${store.notification_color || '#3b82f6'},0 0 0 4px rgba(0,0,0,0.15);
+        style="width:14px;height:14px;border-radius:50%;background:${store.notification_color || '#3b82f6'};cursor:pointer;
+        box-shadow:0 0 0 2px ${store.notification_color || '#3b82f6'},0 0 0 3px rgba(0,0,0,0.15);
         transition:transform .15s;flex-shrink:0;"
         title="Cambiar color">
       </div>
@@ -5769,7 +5769,7 @@ async function pickStoreColor(storeId, color) {
   const trigger = document.getElementById(`color-trigger-${storeId}`);
   if (trigger) {
     trigger.style.background = color;
-    trigger.style.boxShadow = `0 0 0 2px ${color},0 0 0 4px rgba(0,0,0,0.15)`;
+    trigger.style.boxShadow = `0 0 0 2px ${color},0 0 0 3px rgba(0,0,0,0.15)`;
   }
   // Actualizar dots del picker
   const picker = document.getElementById(`color-picker-${storeId}`);
