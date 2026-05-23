@@ -5710,7 +5710,8 @@ function renderStoreCard(store) {
         ? `<button class="btn-secondary" onclick="disableStore(${store.id})">Deshabilitar</button>`
         : `<button class="btn-primary" onclick="openReactivateModal('${store.domain}', ${store.id})">Habilitar</button>`
       }
-      <button onclick="testPushNotification('${store.notification_color || '#3b82f6'}', ${JSON.stringify(store.shop_name || store.domain)})"
+      <button data-color="${store.notification_color || '#3b82f6'}" data-name="${escapeHtml(store.shop_name || store.domain)}"
+        onclick="testPushNotification(this.dataset.color, this.dataset.name)"
         style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
         🔔 Probar notificación
       </button>
@@ -10653,6 +10654,7 @@ function handleOrderEvent(data) {
     fetchOrdersFiltered();
   }
 }
+window.handleOrderEvent = handleOrderEvent;
 
 function connectOrderWebSocket(token) {
   if (__sseInstance) { try { __sseInstance.close(); } catch {} }
