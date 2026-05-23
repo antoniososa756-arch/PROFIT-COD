@@ -5705,38 +5705,11 @@ function renderStoreCard(store) {
       </div>
     </div>
 
-    <div style="margin-bottom:12px;">
-      <div style="font-size:10px;color:#6b7280;font-weight:600;margin-bottom:3px;">URL webhook para Shopify:</div>
-      <div style="display:flex;align-items:center;gap:6px;background:var(--input);border:1px solid var(--border);border-radius:8px;padding:5px 8px;">
-        <span style="flex:1;font-size:10px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:monospace;">
-          ${API_BASE}/api/shopify/webhooks/orders
-        </span>
-        <button onclick="copyWebhookUrl()"
-          style="flex-shrink:0;padding:2px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit;">
-          Copiar
-        </button>
-      </div>
-      <div style="font-size:10px;color:#6b7280;margin-top:3px;">Shopify Admin → Ajustes → Notificaciones → Webhooks → Creación de pedido</div>
-    </div>
-
     <div class="store-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
       ${store.status === "active"
         ? `<button class="btn-secondary" onclick="disableStore(${store.id})">Deshabilitar</button>`
         : `<button class="btn-primary" onclick="openReactivateModal('${store.domain}', ${store.id})">Habilitar</button>`
       }
-      <button data-color="${store.notification_color || '#3b82f6'}" data-name="${escapeHtml(store.shop_name || store.domain)}"
-        onclick="testPushNotification(this.dataset.color, this.dataset.name)"
-        style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
-        🔔 Probar
-      </button>
-      <button onclick="simulateRealOrder()"
-        style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
-        ⚡ Simular pedido
-      </button>
-      <button onclick="listWebhooks()"
-        style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
-        🔍 Ver webhooks
-      </button>
       <button onclick="registerWebhooks()"
         style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
         🔗 Registrar webhooks
