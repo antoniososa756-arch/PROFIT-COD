@@ -1011,6 +1011,23 @@ router.post("/register-webhooks", auth, async (req, res) => {
   const results = [];
 
   for (const shop of shops) {
+    // Eliminar webhooks existentes con la misma URL para evitar duplicados
+    try {
+      const listRes = await fetch(
+        `https://${shop.shop_domain}/admin/api/2024-10/webhooks.json?limit=250`,
+        { headers: { "X-Shopify-Access-Token": shop.access_token } }
+      );
+      const listData = await listRes.json();
+      for (const wh of listData.webhooks || []) {
+        if (wh.address === webhookUrl) {
+          await fetch(
+            `https://${shop.shop_domain}/admin/api/2024-10/webhooks/${wh.id}.json`,
+            { method: "DELETE", headers: { "X-Shopify-Access-Token": shop.access_token } }
+          );
+        }
+      }
+    } catch {}
+
     for (const topic of topics) {
       try {
         const r = await fetch(`https://${shop.shop_domain}/admin/api/2024-10/webhooks.json`, {

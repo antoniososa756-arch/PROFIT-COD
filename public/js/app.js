@@ -10736,7 +10736,12 @@ function handleOrderEvent(data) {
   const shop  = data.shopName || "Tienda";
   showOrderSquare(color, count, shop);
   playOrderSound();
-  sendDesktopOrderNotif(color, count, shop, data.orderNumber);
+  // Solo notificación de escritorio directa si la pestaña está oculta/en segundo plano.
+  // Si está visible, el cuadro en pantalla ya es suficiente; el push del servidor
+  // cubre el caso con pestaña cerrada.
+  if (document.hidden) {
+    sendDesktopOrderNotif(color, count, shop, data.orderNumber);
+  }
   if (localStorage.getItem("section") === "pedidos" && typeof fetchOrdersFiltered === "function") {
     fetchOrdersFiltered();
   }
