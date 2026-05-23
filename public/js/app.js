@@ -10450,19 +10450,46 @@ function playOrderSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const now = ctx.currentTime;
-    // Dos tonos ascendentes cortos
-    [[880, 0, 0.12], [1320, 0.13, 0.28]].forEach(([freq, start, end]) => {
-      const osc = ctx.createOscillator();
+
+    // Sonido metálico tipo moneda/caja registradora (estilo Shopify)
+    // Parciales inarmónicas: dan el timbre metálico característico
+    const base = 1350;
+    [
+      { ratio: 1,    vol: 0.55, decay: 0.55 },
+      { ratio: 2.76, vol: 0.40, decay: 0.35 },
+      { ratio: 5.40, vol: 0.22, decay: 0.20 },
+      { ratio: 8.93, vol: 0.10, decay: 0.10 },
+    ].forEach(({ ratio, vol, decay }) => {
+      const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, now + start);
-      gain.gain.setValueAtTime(0.25, now + start);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + end);
+      osc.frequency.setValueAtTime(base * ratio, now);
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(now + start);
-      osc.stop(now + end);
+      osc.start(now);
+      osc.stop(now + decay + 0.05);
     });
+
+    // Burst de ruido al inicio — el "golpe" de la moneda
+    const bufLen = Math.floor(ctx.sampleRate * 0.04);
+    const buf    = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+    const data   = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+    const noise       = ctx.createBufferSource();
+    noise.buffer      = buf;
+    const nFilter     = ctx.createBiquadFilter();
+    nFilter.type      = "bandpass";
+    nFilter.frequency.value = 3200;
+    nFilter.Q.value   = 0.8;
+    const nGain       = ctx.createGain();
+    nGain.gain.setValueAtTime(0.18, now);
+    nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+    noise.connect(nFilter);
+    nFilter.connect(nGain);
+    nGain.connect(ctx.destination);
+    noise.start(now);
   } catch {}
 }
 
