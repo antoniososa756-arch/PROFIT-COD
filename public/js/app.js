@@ -10581,6 +10581,10 @@ function connectOrderWebSocket(token) {
         showOrderSquare(color, count, shop);
         playOrderSound();
         sendDesktopOrderNotif(color, count, shop, data.orderNumber);
+        // Refrescar lista de pedidos al instante si el usuario está en esa sección
+        if (localStorage.getItem("section") === "pedidos" && typeof fetchOrdersFiltered === "function") {
+          fetchOrdersFiltered();
+        }
       }
     } catch {}
   };
