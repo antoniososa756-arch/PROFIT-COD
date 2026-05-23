@@ -5678,19 +5678,32 @@ function renderStoreCard(store) {
       </div>
     </div>
 
-    <div class="store-color-row" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
-      <span style="font-size:11px;color:#6b7280;font-weight:600;flex-shrink:0;">Color notificación:</span>
-      ${["#3b82f6","#22c55e","#f97316","#ef4444","#8b5cf6","#06b6d4","#ec4899","#eab308","#14b8a6","#f43f5e"].map(hex => `
-        <div onclick="updateStoreColor(${store.id}, '${hex}', this)"
-          style="width:20px;height:20px;border-radius:50%;background:${hex};cursor:pointer;flex-shrink:0;
-          border:2.5px solid ${(store.notification_color || '#3b82f6') === hex ? '#fff' : 'transparent'};
-          box-shadow:${(store.notification_color || '#3b82f6') === hex ? '0 0 0 2px ' + hex : 'none'};
-          transition:all .15s;" data-color="${hex}">
-        </div>`).join("")}
-      <input type="color" value="${store.notification_color || '#3b82f6'}"
-        style="width:22px;height:22px;border:none;border-radius:50%;padding:0;cursor:pointer;background:none;flex-shrink:0;"
-        title="Color personalizado"
-        onchange="updateStoreColor(${store.id}, this.value, null)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;position:relative;">
+      <span style="font-size:11px;color:#6b7280;font-weight:600;">Color notificación:</span>
+      <div id="color-trigger-${store.id}"
+        onclick="toggleColorPicker(${store.id}, event)"
+        style="width:22px;height:22px;border-radius:50%;background:${store.notification_color || '#3b82f6'};cursor:pointer;
+        box-shadow:0 0 0 2px ${store.notification_color || '#3b82f6'},0 0 0 4px rgba(0,0,0,0.15);
+        transition:transform .15s;flex-shrink:0;"
+        title="Cambiar color">
+      </div>
+      <div id="color-picker-${store.id}" style="display:none;position:absolute;left:0;top:32px;
+        background:var(--card);border:1px solid var(--border);border-radius:10px;
+        padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.25);z-index:999;
+        display:none;flex-wrap:wrap;gap:8px;width:174px;">
+        ${["#3b82f6","#22c55e","#f97316","#ef4444","#8b5cf6","#06b6d4","#ec4899","#eab308","#14b8a6","#f43f5e"].map(hex => `
+          <div onclick="pickStoreColor(${store.id},'${hex}')"
+            data-color="${hex}"
+            style="width:24px;height:24px;border-radius:50%;background:${hex};cursor:pointer;
+            border:2.5px solid ${(store.notification_color||'#3b82f6')===hex?'#fff':'transparent'};
+            box-shadow:${(store.notification_color||'#3b82f6')===hex?'0 0 0 2px '+hex:'none'};
+            transition:all .15s;">
+          </div>`).join("")}
+        <input type="color" value="${store.notification_color || '#3b82f6'}"
+          title="Color personalizado"
+          onchange="pickStoreColor(${store.id}, this.value)"
+          style="width:24px;height:24px;border:none;border-radius:50%;padding:0;cursor:pointer;background:none;">
+      </div>
     </div>
 
     <div class="store-actions">
@@ -5734,29 +5747,49 @@ grid.innerHTML = html;
   }
 }
 
-async function updateStoreColor(storeId, color, clickedDot) {
-  // Validar formato hex
+function toggleColorPicker(storeId, e) {
+  e.stopPropagation();
+  const picker = document.getElementById(`color-picker-${storeId}`);
+  if (!picker) return;
+  const isOpen = picker.style.display === "flex";
+  // Cerrar todos los pickers abiertos
+  document.querySelectorAll("[id^='color-picker-']").forEach(p => { p.style.display = "none"; });
+  if (!isOpen) picker.style.display = "flex";
+}
+window.toggleColorPicker = toggleColorPicker;
+
+// Cerrar picker al hacer clic fuera
+document.addEventListener("click", () => {
+  document.querySelectorAll("[id^='color-picker-']").forEach(p => { p.style.display = "none"; });
+});
+
+async function pickStoreColor(storeId, color) {
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
+  // Actualizar círculo visible
+  const trigger = document.getElementById(`color-trigger-${storeId}`);
+  if (trigger) {
+    trigger.style.background = color;
+    trigger.style.boxShadow = `0 0 0 2px ${color},0 0 0 4px rgba(0,0,0,0.15)`;
+  }
+  // Actualizar dots del picker
+  const picker = document.getElementById(`color-picker-${storeId}`);
+  if (picker) {
+    picker.querySelectorAll("[data-color]").forEach(dot => {
+      const sel = dot.dataset.color === color;
+      dot.style.border = sel ? "2.5px solid #fff" : "2.5px solid transparent";
+      dot.style.boxShadow = sel ? `0 0 0 2px ${dot.dataset.color}` : "none";
+    });
+    picker.style.display = "none";
+  }
   try {
     await fetch(`${API_BASE}/api/shopify/stores/${storeId}/color`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ color }),
     });
-    // Actualizar visual de los dots en esa tarjeta
-    if (clickedDot) {
-      const row = clickedDot.closest(".store-color-row");
-      if (row) {
-        row.querySelectorAll("[data-color]").forEach(dot => {
-          const isSelected = dot.dataset.color === color;
-          dot.style.border = isSelected ? "2.5px solid #fff" : "2.5px solid transparent";
-          dot.style.boxShadow = isSelected ? `0 0 0 2px ${dot.dataset.color}` : "none";
-        });
-      }
-    }
   } catch {}
 }
-window.updateStoreColor = updateStoreColor;
+window.pickStoreColor = pickStoreColor;
 
 // =========================
 // SHOPIFY CONEXIÓN (TOKEN + APP SECRET)
