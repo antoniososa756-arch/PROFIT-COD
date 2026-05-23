@@ -32,10 +32,17 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
     );
     if (!shop) return res.status(200).send("OK");
 
-    const generatedHmac = crypto.createHmac("sha256", shop.app_secret).update(body).digest("base64");
-    const valid = Buffer.byteLength(generatedHmac) === Buffer.byteLength(hmac) &&
-      crypto.timingSafeEqual(Buffer.from(generatedHmac), Buffer.from(hmac));
-    if (!valid) return res.status(401).send("HMAC inválido");
+    if (shop.app_secret) {
+      const generatedHmac = crypto.createHmac("sha256", shop.app_secret).update(body).digest("base64");
+      const valid = Buffer.byteLength(generatedHmac) === Buffer.byteLength(hmac) &&
+        crypto.timingSafeEqual(Buffer.from(generatedHmac), Buffer.from(hmac));
+      if (!valid) {
+        console.warn(`[Webhook] HMAC inválido para ${shopDomain}`);
+        return res.status(401).send("HMAC inválido");
+      }
+    } else {
+      console.warn(`[Webhook] Sin app_secret para ${shopDomain} — omitiendo validación HMAC`);
+    }
 
     const o = JSON.parse(body.toString("utf8"));
 

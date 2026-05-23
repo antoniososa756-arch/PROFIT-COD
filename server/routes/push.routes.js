@@ -167,4 +167,33 @@ router.post("/test", auth, async (req, res) => {
   res.json({ ok: true, sent });
 });
 
+// Simula un orders/create para una tienda del usuario — diagnóstico
+router.post("/simulate", auth, async (req, res) => {
+  const userId = req.user.id;
+  const shops = await db.all(
+    "SELECT id, shop_domain, shop_name, notification_color FROM shops WHERE user_id = $1 AND status = 'active'",
+    [userId]
+  );
+  if (!shops.length) return res.status(404).json({ error: "Sin tiendas activas" });
+
+  const shop = shops[0];
+  const color = shop.notification_color || "#3b82f6";
+  const shopName = shop.shop_name || shop.shop_domain;
+
+  const sseManager = require("../sse");
+  sseManager.emitToUser(userId, { type: "new_order", color, shopName, dailyCount: 99, orderNumber: "#SIM-001" });
+
+  let pushSent = 0;
+  if (process.env.VAPID_PUBLIC_KEY) {
+    const subs = await db.all("SELECT endpoint, subscription FROM push_subscriptions WHERE user_id = $1", [userId]);
+    const iconUrl = `${process.env.APP_URL}/api/push/icon?color=${encodeURIComponent(color)}&n=99`;
+    const payload = JSON.stringify({ title: `#99 — ${shopName}`, body: "Simulación pedido real", icon: iconUrl, tag: "sim-" + Date.now() });
+    for (const sub of subs) {
+      try { await webpush.sendNotification(JSON.parse(sub.subscription), payload); pushSent++; } catch {}
+    }
+  }
+
+  res.json({ ok: true, shop: shopName, sseEmitted: true, pushSent });
+});
+
 module.exports = { router, webpush };

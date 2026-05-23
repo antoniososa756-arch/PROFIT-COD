@@ -5713,7 +5713,11 @@ function renderStoreCard(store) {
       <button data-color="${store.notification_color || '#3b82f6'}" data-name="${escapeHtml(store.shop_name || store.domain)}"
         onclick="testPushNotification(this.dataset.color, this.dataset.name)"
         style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
-        🔔 Probar notificación
+        🔔 Probar
+      </button>
+      <button onclick="simulateRealOrder()"
+        style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
+        ⚡ Simular pedido
       </button>
     </div>
   </div>
@@ -5752,9 +5756,7 @@ grid.innerHTML = html;
 }
 
 async function testPushNotification(color, shopName) {
-  // Prueba in-app (cuadrado de color + sonido)
   handleOrderEvent({ color, dailyCount: 1, shopName, orderNumber: "#TEST-001" });
-  // Prueba push real (para cuando la pestaña esté cerrada)
   try {
     const res = await fetch(`${API_BASE}/api/push/test`, {
       method: "POST",
@@ -5766,6 +5768,19 @@ async function testPushNotification(color, shopName) {
   } catch {}
 }
 window.testPushNotification = testPushNotification;
+
+async function simulateRealOrder() {
+  try {
+    const res = await fetch(`${API_BASE}/api/push/simulate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+    });
+    const data = await res.json();
+    if (res.ok) showToast("🔔 Simulación", `SSE + ${data.pushSent} push enviados para ${data.shop}`, "#22c55e");
+    else showToast("⚠️ Error", data.error || "Error en simulación", "#f59e0b");
+  } catch {}
+}
+window.simulateRealOrder = simulateRealOrder;
 
 function toggleColorPicker(storeId, e) {
   e.stopPropagation();
