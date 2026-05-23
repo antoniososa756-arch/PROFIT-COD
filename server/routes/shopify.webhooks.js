@@ -66,16 +66,22 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
          tracking, o.cancelled_at || null, JSON.stringify(o)]
       );
 
-      // Contar pedidos del día en hora española (incluye el que acabamos de insertar)
-      const countRow = await db.get(
-        `SELECT COUNT(*) AS cnt FROM orders
-         WHERE shop_id = $1
-         AND (created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date
-           = (NOW() AT TIME ZONE 'Europe/Madrid')::date`,
-        [shop.id]
-      );
-      const dailyCount = parseInt(countRow?.cnt || 1, 10);
+      // Contar pedidos del día en hora española (aislado para que un fallo no bloquee el emit)
+      let dailyCount = 1;
+      try {
+        const countRow = await db.get(
+          `SELECT COUNT(*) AS cnt FROM orders
+           WHERE shop_id = $1
+           AND (created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date
+             = (NOW() AT TIME ZONE 'Europe/Madrid')::date`,
+          [shop.id]
+        );
+        dailyCount = parseInt(countRow?.cnt || 1, 10);
+      } catch (e) {
+        console.warn("[Webhook] Error contando pedidos del día:", e.message);
+      }
 
+      console.log(`[Webhook] orders/create → tienda ${shop.shop_domain}, usuario ${shop.user_id}, pedido #${dailyCount} del día`);
       wsManager.emitToUser(shop.user_id, {
         type: "new_order",
         color: shop.notification_color || "#3b82f6",
