@@ -14,12 +14,18 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   console.warn("[Push] VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY no configuradas — push desactivado");
 }
 
-// Icono SVG de color dinámico para las notificaciones
+// Icono SVG de color dinámico con número para las notificaciones
 router.get("/icon", (req, res) => {
   const color = /^#[0-9a-fA-F]{6}$/.test(req.query.color) ? req.query.color : "#3b82f6";
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" rx="40" fill="${color}"/></svg>`;
+  const num = parseInt(req.query.n) || "";
+  const fontSize = num !== "" && num >= 100 ? 64 : num >= 10 ? 80 : 96;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192">
+  <rect width="192" height="192" rx="40" fill="${color}"/>
+  ${num !== "" ? `<text x="96" y="96" text-anchor="middle" dominant-baseline="central"
+    font-family="Arial,sans-serif" font-size="${fontSize}" font-weight="800" fill="white">${num}</text>` : ""}
+</svg>`;
   res.setHeader("Content-Type", "image/svg+xml");
-  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.setHeader("Cache-Control", "no-cache");
   res.send(svg);
 });
 
@@ -51,7 +57,7 @@ router.post("/test", auth, async (req, res) => {
 
   const color = req.body.color || "#3b82f6";
   const shopName = req.body.shopName || "Tienda de prueba";
-  const iconUrl = `${process.env.APP_URL}/api/push/icon?color=${encodeURIComponent(color)}`;
+  const iconUrl = `${process.env.APP_URL}/api/push/icon?color=${encodeURIComponent(color)}&n=1`;
   const payload = JSON.stringify({
     title: `#1 — ${shopName}`,
     body: "Referencia: #TEST-001",

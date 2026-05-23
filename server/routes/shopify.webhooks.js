@@ -97,7 +97,7 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
           "SELECT endpoint, subscription FROM push_subscriptions WHERE user_id = $1",
           [shop.user_id]
         );
-        const iconUrl = `${process.env.APP_URL}/api/push/icon?color=${encodeURIComponent(color)}`;
+        const iconUrl = `${process.env.APP_URL}/api/push/icon?color=${encodeURIComponent(color)}&n=${dailyCount}`;
         const payload = JSON.stringify({
           title: `#${dailyCount} — ${shopName}`,
           body: o.name ? `Referencia: ${o.name}` : "Nuevo pedido entrante",
