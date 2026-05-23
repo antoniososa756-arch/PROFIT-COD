@@ -4,11 +4,15 @@ const auth = require("../middlewares/auth");
 const db = require("../db");
 const router = express.Router();
 
-webpush.setVapidDetails(
-  "mailto:admin@profit-cod.com",
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    "mailto:admin@profit-cod.com",
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+} else {
+  console.warn("[Push] VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY no configuradas — push desactivado");
+}
 
 // Icono SVG de color dinámico para las notificaciones
 router.get("/icon", (req, res) => {

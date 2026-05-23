@@ -92,7 +92,7 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
       });
 
       // Push (navegador abierto aunque pestaña cerrada)
-      try {
+      if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) try {
         const subs = await db.all(
           "SELECT endpoint, subscription FROM push_subscriptions WHERE user_id = $1",
           [shop.user_id]
