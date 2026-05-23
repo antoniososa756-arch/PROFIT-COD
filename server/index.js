@@ -80,16 +80,16 @@ app.get("/privacidad", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../public/privacidad.html"));
 });
 
-// 404
-app.use((req, res) => {
-  res.status(404).json({ error: "Ruta no encontrada" });
-});
-
 // SSE — sin auth middleware (verifica JWT internamente)
 app.use("/api/events", require("./routes/events.routes"));
 
 // Push notifications
 app.use("/api/push", require("./routes/push.routes").router);
+
+// 404
+app.use((req, res) => {
+  res.status(404).json({ error: "Ruta no encontrada" });
+});
 
 // START
 app.listen(PORT, () => {

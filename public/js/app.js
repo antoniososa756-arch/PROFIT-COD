@@ -5705,6 +5705,20 @@ function renderStoreCard(store) {
       </div>
     </div>
 
+    <div style="margin-bottom:12px;">
+      <div style="font-size:10px;color:#6b7280;font-weight:600;margin-bottom:3px;">URL webhook para Shopify:</div>
+      <div style="display:flex;align-items:center;gap:6px;background:var(--input);border:1px solid var(--border);border-radius:8px;padding:5px 8px;">
+        <span style="flex:1;font-size:10px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:monospace;">
+          ${API_BASE}/api/shopify/webhooks/orders
+        </span>
+        <button onclick="copyWebhookUrl()"
+          style="flex-shrink:0;padding:2px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit;">
+          Copiar
+        </button>
+      </div>
+      <div style="font-size:10px;color:#6b7280;margin-top:3px;">Shopify Admin → Ajustes → Notificaciones → Webhooks → Creación de pedido</div>
+    </div>
+
     <div class="store-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
       ${store.status === "active"
         ? `<button class="btn-secondary" onclick="disableStore(${store.id})">Deshabilitar</button>`
@@ -5718,6 +5732,10 @@ function renderStoreCard(store) {
       <button onclick="simulateRealOrder()"
         style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
         ⚡ Simular pedido
+      </button>
+      <button onclick="registerWebhooks()"
+        style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
+        🔗 Registrar webhooks
       </button>
     </div>
   </div>
@@ -5768,6 +5786,31 @@ async function testPushNotification(color, shopName) {
   } catch {}
 }
 window.testPushNotification = testPushNotification;
+
+function copyWebhookUrl() {
+  const url = `${API_BASE}/api/shopify/webhooks/orders`;
+  navigator.clipboard.writeText(url).then(() => showToast("✅ Copiado", "URL del webhook copiada", "#22c55e"));
+}
+window.copyWebhookUrl = copyWebhookUrl;
+
+async function registerWebhooks() {
+  try {
+    showToast("⏳", "Registrando webhooks en Shopify...", "#3b82f6");
+    const res = await fetch(`${API_BASE}/api/shopify/register-webhooks`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${getActiveToken()}` },
+    });
+    const data = await res.json();
+    if (res.ok) {
+      const ok = (data.results || []).filter(r => r.ok).length;
+      const fail = (data.results || []).filter(r => !r.ok).length;
+      showToast("✅ Webhooks", `${ok} registrados${fail ? `, ${fail} ya existían` : ""}`, "#22c55e");
+    } else {
+      showToast("⚠️ Error", data.error || "Error registrando webhooks", "#f59e0b");
+    }
+  } catch { showToast("⚠️ Error", "No se pudo conectar", "#ef4444"); }
+}
+window.registerWebhooks = registerWebhooks;
 
 async function simulateRealOrder() {
   try {
