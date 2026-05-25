@@ -2402,12 +2402,16 @@ if (id === "tiendas") {
         style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
         Fiscalidad
       </button>
+      <button id="int-tab-btn-leads" onclick="switchIntegracionesTab('leads')"
+        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
+        Leads COD
+      </button>
     </div>
     <div id="integraciones-content"></div>
   `;
 
   window.switchIntegracionesTab = function(tab) {
-    ["tiendas","agencia","reembolsos","fiscalidad"].forEach(k => {
+    ["tiendas","agencia","reembolsos","fiscalidad","leads"].forEach(k => {
       const btn = document.getElementById("int-tab-btn-" + k);
       if (!btn) return;
       if (k === tab) {
@@ -2504,6 +2508,10 @@ if (id === "tiendas") {
           </div>
         </div>
       `;
+    }
+
+    if (tab === "leads") {
+      loadLeadsCOD(content);
     }
   };
 
@@ -5856,6 +5864,173 @@ async function checkNotifStatus() {
   } catch (e) { console.error("Error diagnóstico:", e); }
 }
 window.checkNotifStatus = checkNotifStatus;
+
+// ─── LEADS COD ────────────────────────────────────────────────────────────────
+
+const COD_STATUS_LABEL = {
+  open:      { text: "👁 Viendo formulario", color: "#3b82f6" },
+  filling:   { text: "✍️ Rellenando",         color: "#f97316" },
+  abandoned: { text: "🔴 Abandonado",          color: "#ef4444" },
+  submitted: { text: "🟢 Pedido enviado",       color: "#22c55e" },
+};
+const COD_FIELD_LABEL = {
+  nombre:"Nombre", telefono:"Teléfono", direccion:"Dirección",
+  direccion2:"Piso/Local", ciudad:"Ciudad", cp:"C.P.", email:"Email",
+};
+
+function renderLeadRow(s) {
+  const fd = typeof s.form_data === "string" ? JSON.parse(s.form_data || "{}") : (s.form_data || {});
+  const st = COD_STATUS_LABEL[s.status] || { text: s.status, color: "#6b7280" };
+  const hasData = Object.keys(fd).length > 0;
+  const dataHtml = hasData
+    ? Object.entries(fd).map(([k,v]) =>
+        `<span style="background:var(--input);border-radius:6px;padding:2px 8px;font-size:11px;color:#e5e7eb;">
+          <span style="color:#6b7280;">${COD_FIELD_LABEL[k]||k}:</span> ${escapeHtml(String(v))}
+        </span>`).join("")
+    : `<span style="font-size:11px;color:#6b7280;">Sin datos capturados</span>`;
+  const ts = new Date(s.updated_at || s.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" });
+  return `
+    <div id="lead-row-${s.session_id}" style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${st.color};flex-shrink:0;"></span>
+          <span style="font-size:12px;font-weight:600;color:#e5e7eb;">${st.text}</span>
+          <span style="font-size:11px;color:#6b7280;">${escapeHtml(s.shop_domain)}</span>
+        </div>
+        <span style="font-size:11px;color:#6b7280;">${ts}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">${dataHtml}</div>
+    </div>`;
+}
+
+async function loadLeadsCOD(container) {
+  container.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#f9fafb;">📋 Leads Realist COD en tiempo real</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">Clientes que abren el formulario COD en tus tiendas</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="leads-filter-shop" onchange="filterLeads()"
+            style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-family:inherit;">
+            <option value="">Todas las tiendas</option>
+          </select>
+          <select id="leads-filter-status" onchange="filterLeads()"
+            style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-family:inherit;">
+            <option value="">Todos los estados</option>
+            <option value="open">Viendo</option>
+            <option value="filling">Rellenando</option>
+            <option value="abandoned">Abandonados</option>
+            <option value="submitted">Enviados</option>
+          </select>
+          <div id="leads-live-dot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.3);animation:pulse 2s infinite;"></div>
+          <span style="font-size:11px;color:#22c55e;font-weight:600;">EN VIVO</span>
+        </div>
+      </div>
+      <div id="leads-stats" style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;"></div>
+      <div id="leads-script-box" style="padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(59,130,246,.05);">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:6px;font-weight:600;">Instala este script en cada tienda Shopify (Tienda → Temas → Editar código → theme.liquid antes de &lt;/body&gt;):</div>
+        <div id="leads-scripts-list"></div>
+      </div>
+      <div id="leads-list" style="max-height:480px;overflow-y:auto;"></div>
+    </div>`;
+
+  await refreshLeads();
+
+  // Cargar tiendas para el filtro y los scripts
+  try {
+    const sr = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const stores = await sr.json();
+    const shopSel = document.getElementById("leads-filter-shop");
+    const scriptBox = document.getElementById("leads-scripts-list");
+    if (shopSel && stores.length) {
+      stores.forEach(s => {
+        const o = document.createElement("option");
+        o.value = s.domain; o.textContent = s.shop_name || s.domain;
+        shopSel.appendChild(o);
+      });
+    }
+    if (scriptBox && stores.length) {
+      scriptBox.innerHTML = stores.map(s => `
+        <div style="margin-bottom:8px;">
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:3px;">${escapeHtml(s.shop_name || s.domain)}</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <code style="flex:1;font-size:10px;background:var(--input);border-radius:6px;padding:5px 8px;color:#e5e7eb;word-break:break-all;display:block;">
+              &lt;script src="${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}" defer&gt;&lt;/script&gt;
+            </code>
+            <button onclick="navigator.clipboard.writeText('<script src=\\'${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}\\' defer></scr'+'ipt>').then(()=>showToast('✅','Copiado','#22c55e'))"
+              style="flex-shrink:0;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;">
+              Copiar
+            </button>
+          </div>
+        </div>`).join("");
+    }
+  } catch {}
+}
+
+async function refreshLeads() {
+  try {
+    const shop = document.getElementById("leads-filter-shop")?.value || "";
+    const status = document.getElementById("leads-filter-status")?.value || "";
+    let url = `${API_BASE}/api/cod-tracker/sessions?limit=80`;
+    if (shop) url += `&shop=${encodeURIComponent(shop)}`;
+    if (status) url += `&status=${status}`;
+    const res = await fetch(url, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const sessions = await res.json();
+
+    const list = document.getElementById("leads-list");
+    if (list) list.innerHTML = sessions.length
+      ? sessions.map(renderLeadRow).join("")
+      : `<div style="padding:40px;text-align:center;color:#6b7280;font-size:13px;">Sin leads todavía — instala el script en tu tienda</div>`;
+
+    // Stats
+    const statsEl = document.getElementById("leads-stats");
+    const sr2 = await fetch(`${API_BASE}/api/cod-tracker/stats`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const stats = await sr2.json();
+    if (statsEl) {
+      statsEl.innerHTML = stats.map(s => `
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-size:10px;color:#6b7280;">${escapeHtml(s.shop_domain)}</span>
+          <div style="display:flex;gap:10px;">
+            <span style="font-size:13px;font-weight:700;color:#3b82f6;">${s.live} <span style="font-size:10px;font-weight:400;">en vivo</span></span>
+            <span style="font-size:13px;font-weight:700;color:#ef4444;">${s.abandoned} <span style="font-size:10px;font-weight:400;">abandonados</span></span>
+            <span style="font-size:13px;font-weight:700;color:#22c55e;">${s.submitted} <span style="font-size:10px;font-weight:400;">enviados</span></span>
+          </div>
+        </div>`).join('<div style="width:1px;background:var(--border);"></div>');
+    }
+  } catch (e) { console.error("Leads error:", e); }
+}
+window.filterLeads = refreshLeads;
+
+// Actualizar lead existente desde SSE en tiempo real
+function handleCodEvent(data) {
+  // Actualizar fila si existe, sino prepend
+  const existing = document.getElementById(`lead-row-${data.sid}`);
+  const list = document.getElementById("leads-list");
+  if (!list) return;
+
+  const fakeSession = {
+    session_id: data.sid,
+    shop_domain: data.shopDomain,
+    status: data.eventType === "form_submit" ? "submitted"
+          : data.eventType === "form_abandon" ? "abandoned"
+          : data.eventType === "form_open" ? "open" : "filling",
+    form_data: data.formData || {},
+    updated_at: new Date().toISOString(),
+  };
+
+  const html = renderLeadRow(fakeSession);
+  if (existing) {
+    existing.outerHTML = html;
+  } else {
+    list.insertAdjacentHTML("afterbegin", html);
+  }
+
+  // Refrescar stats cada vez que llega un evento
+  refreshLeads();
+}
+window.handleCodEvent = handleCodEvent;
 
 function toggleColorPicker(storeId, e) {
   e.stopPropagation();
@@ -10776,6 +10951,7 @@ function connectOrderWebSocket(token) {
     try {
       const data = JSON.parse(e.data);
       if (data.type === "new_order") handleOrderEvent(data);
+      if (data.type === "cod_event") handleCodEvent(data);
     } catch {}
   };
 

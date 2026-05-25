@@ -80,6 +80,9 @@ app.get("/privacidad", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../public/privacidad.html"));
 });
 
+// COD Tracker — script público + eventos sin auth
+app.use("/api/cod-tracker", require("./routes/cod-tracker.routes"));
+
 // SSE — sin auth middleware (verifica JWT internamente)
 app.use("/api/events", require("./routes/events.routes"));
 

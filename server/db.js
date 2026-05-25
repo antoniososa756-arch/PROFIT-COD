@@ -384,6 +384,24 @@ await pool.query(`
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_cancelled_at ON orders(cancelled_at)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_shop_domain  ON orders(shop_domain)`);
 
+  // Tracker de formularios Realist COD
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS checkout_sessions (
+      id          SERIAL PRIMARY KEY,
+      user_id     INTEGER NOT NULL,
+      shop_domain TEXT NOT NULL,
+      session_id  TEXT NOT NULL,
+      status      TEXT NOT NULL DEFAULT 'open',
+      form_data   JSONB NOT NULL DEFAULT '{}',
+      page_url    TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(shop_domain, session_id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_cs_user_updated ON checkout_sessions(user_id, updated_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_cs_status ON checkout_sessions(status)`);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 
