@@ -5713,6 +5713,20 @@ function renderStoreCard(store) {
       </div>
     </div>
 
+    <div style="margin-bottom:12px;">
+      <div style="font-size:10px;color:#6b7280;font-weight:600;margin-bottom:3px;">Script tracker Realist COD:</div>
+      <div style="display:flex;align-items:center;gap:6px;background:var(--input);border:1px solid var(--border);border-radius:8px;padding:5px 8px;">
+        <code style="flex:1;font-size:10px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          &lt;script src="${API_BASE}/api/cod-tracker/script.js?shop=${store.domain}" defer&gt;&lt;/script&gt;
+        </code>
+        <button onclick="navigator.clipboard.writeText('<script src=\\'${API_BASE}/api/cod-tracker/script.js?shop=${store.domain}\\' defer></scr'+'ipt>').then(()=>showToast('✅','Script copiado','#22c55e'))"
+          style="flex-shrink:0;padding:2px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit;">
+          Copiar
+        </button>
+      </div>
+      <div style="font-size:10px;color:#6b7280;margin-top:3px;">Shopify → Tienda → Temas → Editar código → theme.liquid antes de &lt;/body&gt;</div>
+    </div>
+
     <div class="store-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
       ${store.status === "active"
         ? `<button class="btn-secondary" onclick="disableStore(${store.id})">Deshabilitar</button>`
