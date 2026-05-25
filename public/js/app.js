@@ -10746,13 +10746,25 @@ function handleOrderEvent(data) {
 }
 window.handleOrderEvent = handleOrderEvent;
 
+let __sseErrCount = 0;
+let __sseReconnectTimer = null;
+
 function connectOrderWebSocket(token) {
-  if (__sseInstance) { try { __sseInstance.close(); } catch {} }
-  const url = `${API_BASE}/api/events?token=${encodeURIComponent(token)}`;
+  if (__sseReconnectTimer) { clearTimeout(__sseReconnectTimer); __sseReconnectTimer = null; }
+  if (__sseInstance) { try { __sseInstance.close(); } catch {} __sseInstance = null; }
+
+  const freshToken = token || getActiveToken();
+  if (!freshToken) return;
+
+  const url = `${API_BASE}/api/events?token=${encodeURIComponent(freshToken)}`;
   const es = new EventSource(url);
   __sseInstance = es;
+  __sseErrCount = 0;
+
+  es.onopen = () => { __sseErrCount = 0; };
 
   es.onmessage = (e) => {
+    __sseErrCount = 0;
     try {
       const data = JSON.parse(e.data);
       if (data.type === "new_order") handleOrderEvent(data);
@@ -10760,10 +10772,37 @@ function connectOrderWebSocket(token) {
   };
 
   es.onerror = () => {
-    // EventSource reconecta automáticamente — no hace falta gestión manual
+    __sseErrCount++;
+    // Tras 3 errores consecutivos cerramos y reconectamos con token fresco
+    if (__sseErrCount >= 3) {
+      try { es.close(); } catch {}
+      __sseInstance = null;
+      const t = getActiveToken();
+      if (t) __sseReconnectTimer = setTimeout(() => connectOrderWebSocket(t), 5000);
+    }
   };
 }
 window.connectOrderWebSocket = connectOrderWebSocket;
+
+// Reconectar al volver a la pestaña si la conexión se cayó
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    const closed = !__sseInstance || __sseInstance.readyState === 2;
+    if (closed) {
+      const t = getActiveToken();
+      if (t) connectOrderWebSocket(t);
+    }
+  }
+});
+
+// Comprobación periódica cada 60s por si la conexión quedó zombie
+setInterval(() => {
+  const bad = !__sseInstance || __sseInstance.readyState === 2;
+  if (bad) {
+    const t = getActiveToken();
+    if (t) connectOrderWebSocket(t);
+  }
+}, 60000);
 
 function irAPedidoDesdeNotif(notiId) {
   closeAllDrops();
