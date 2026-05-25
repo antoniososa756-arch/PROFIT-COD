@@ -10679,17 +10679,24 @@ window.showOrderSquare = showOrderSquare;
 
 function sendDesktopOrderNotif(color, dailyCount, shopName, orderNumber) {
   if (Notification.permission !== "granted") return;
-  try {
-    const icon = `${API_BASE}/api/push/icon?color=${encodeURIComponent(color)}&n=${dailyCount}`;
-    const n = new Notification(`Pedido #${dailyCount} — ${shopName}`, {
-      body: orderNumber ? `Referencia: ${orderNumber}` : `Nuevo pedido entrante`,
-      icon,
-      badge: icon,
-      tag: `order-notif`,
-      silent: true,
+  const icon = `${API_BASE}/api/push/icon?color=${encodeURIComponent(color)}&n=${dailyCount}`;
+  const opts = {
+    body: orderNumber ? `Referencia: ${orderNumber}` : `Nuevo pedido entrante`,
+    icon,
+    badge: icon,
+    tag: `order-notif`,
+    silent: true,
+  };
+  // Chrome bloquea new Notification() cuando hay SW registrado — usar SW.showNotification()
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.ready.then(reg => {
+      reg.showNotification(`Pedido #${dailyCount} — ${shopName}`, opts);
+    }).catch(() => {
+      try { new Notification(`Pedido #${dailyCount} — ${shopName}`, opts); } catch {}
     });
-    n.onclick = () => { window.focus(); n.close(); };
-  } catch {}
+  } else {
+    try { new Notification(`Pedido #${dailyCount} — ${shopName}`, opts); } catch {}
+  }
 }
 
 const VAPID_PUBLIC_KEY = "BFgT3YW_-ZCkt4VqRlvmJiyksaK8qoMWCeKT1PL3FKjLDLNCeyDm7Pw-geNOQwldn5zEmktbhiGBAL0Xn1SUYoM";
