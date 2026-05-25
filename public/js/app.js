@@ -5715,7 +5715,7 @@ function renderStoreCard(store) {
 
     <div style="margin-bottom:12px;">
       <div style="font-size:10px;color:#6b7280;margin-bottom:5px;">Script tracker Realist COD <span style="color:#4b5563;">(theme.liquid antes de &lt;/body&gt;)</span></div>
-      <button onclick="(function(){var t='<script src=\\'${API_BASE}/api/cod-tracker/script.js?shop=${store.domain}\\' defer></scr'+'ipt>';navigator.clipboard.writeText(t).then(function(){showToast('✅','Script copiado','#22c55e')});})();"
+      <button data-shop="${store.domain}" onclick="copyTrackerScript(this.dataset.shop)"
         style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
         📋 Copiar script
       </button>
@@ -5779,6 +5779,12 @@ async function testPushNotification(color, shopName) {
   } catch {}
 }
 window.testPushNotification = testPushNotification;
+
+function copyTrackerScript(shopDomain) {
+  const tag = `<script src="${API_BASE}/api/cod-tracker/script.js?shop=${shopDomain}" defer><\/script>`;
+  navigator.clipboard.writeText(tag).then(() => showToast("✅", "Script copiado", "#22c55e"));
+}
+window.copyTrackerScript = copyTrackerScript;
 
 function copyWebhookUrl() {
   const url = `${API_BASE}/api/shopify/webhooks/orders`;
@@ -5960,13 +5966,15 @@ async function loadLeadsCOD(container) {
       });
     }
     if (scriptBox && stores.length) {
-      scriptBox.innerHTML = stores.map(s => {
-        const tag = `<script src="${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}" defer></` + `script>`;
-        return `<button onclick="navigator.clipboard.writeText(${JSON.stringify(tag)}).then(()=>showToast('✅','Script copiado','#22c55e'))"
-          style="padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;">
-          📋 ${escapeHtml(s.shop_name || s.domain)}
-        </button>`;
-      }).join("");
+      scriptBox.innerHTML = "";
+      stores.forEach(s => {
+        const tag = `<script src="${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}" defer><\/script>`;
+        const btn = document.createElement("button");
+        btn.textContent = `📋 ${s.shop_name || s.domain}`;
+        btn.style.cssText = "padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;";
+        btn.addEventListener("click", () => navigator.clipboard.writeText(tag).then(() => showToast("✅", "Script copiado", "#22c55e")));
+        scriptBox.appendChild(btn);
+      });
     }
   } catch {}
 }
