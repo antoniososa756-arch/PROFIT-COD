@@ -5713,14 +5713,6 @@ function renderStoreCard(store) {
       </div>
     </div>
 
-    <div style="margin-bottom:12px;">
-      <div style="font-size:10px;color:#6b7280;margin-bottom:5px;">Script tracker Realist COD <span style="color:#4b5563;">(theme.liquid antes de &lt;/body&gt;)</span></div>
-      <button data-shop="${store.domain}" onclick="copyTrackerScript(this.dataset.shop)"
-        style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
-        📋 Copiar script
-      </button>
-    </div>
-
     <div class="store-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
       ${store.status === "active"
         ? `<button class="btn-secondary" onclick="disableStore(${store.id})">Deshabilitar</button>`
@@ -5922,7 +5914,7 @@ async function loadLeadsCOD(container) {
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
-          <div style="font-size:15px;font-weight:700;color:#f9fafb;">📋 Leads Realist COD en tiempo real</div>
+          <div style="font-size:15px;font-weight:700;color:#f9fafb;">Leads Realist COD en tiempo real</div>
           <div style="font-size:12px;color:#6b7280;margin-top:2px;">Clientes que abren el formulario COD en tus tiendas</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -5938,26 +5930,36 @@ async function loadLeadsCOD(container) {
             <option value="abandoned">Abandonados</option>
             <option value="submitted">Enviados</option>
           </select>
-          <div id="leads-live-dot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.3);animation:pulse 2s infinite;"></div>
-          <span style="font-size:11px;color:#22c55e;font-weight:600;">EN VIVO</span>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.3);animation:pulse 2s infinite;"></div>
+            <span style="font-size:11px;color:#22c55e;font-weight:600;">EN VIVO</span>
+          </div>
         </div>
       </div>
-      <div id="leads-stats" style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;"></div>
-      <div id="leads-script-box" style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span style="font-size:12px;color:#6b7280;">Script para instalar en cada tienda:</span>
-        <div id="leads-scripts-list" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <div id="leads-stats" style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;min-height:44px;"></div>
+      <div id="leads-install-box" style="padding:16px 20px;border-bottom:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:600;color:#9ca3af;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em;">Tracker por tienda</div>
+        <div id="leads-install-list" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
       <div id="leads-list" style="max-height:480px;overflow-y:auto;"></div>
     </div>`;
 
   await refreshLeads();
 
-  // Cargar tiendas para el filtro y los scripts
+  // Cargar tiendas y estado de instalación
   try {
-    const sr = await fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const [sr, statusR] = await Promise.all([
+      fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
+      fetch(`${API_BASE}/api/shopify/cod-script/status`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
+    ]);
     const stores = await sr.json();
+    const statusList = await statusR.json().catch(() => []);
+    const statusMap = {};
+    (Array.isArray(statusList) ? statusList : []).forEach(s => { statusMap[s.shop] = s; });
+
     const shopSel = document.getElementById("leads-filter-shop");
-    const scriptBox = document.getElementById("leads-scripts-list");
+    const installList = document.getElementById("leads-install-list");
+
     if (shopSel && stores.length) {
       stores.forEach(s => {
         const o = document.createElement("option");
@@ -5965,18 +5967,112 @@ async function loadLeadsCOD(container) {
         shopSel.appendChild(o);
       });
     }
-    if (scriptBox && stores.length) {
-      scriptBox.innerHTML = "";
+
+    if (installList && stores.length) {
       stores.forEach(s => {
-        const tag = `<script src="${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}" defer><\/script>`;
-        const btn = document.createElement("button");
-        btn.textContent = `📋 ${s.shop_name || s.domain}`;
-        btn.style.cssText = "padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;";
-        btn.addEventListener("click", () => navigator.clipboard.writeText(tag).then(() => showToast("✅", "Script copiado", "#22c55e")));
-        scriptBox.appendChild(btn);
+        const info = statusMap[s.domain] || {};
+        const installed = info.installed;
+        const scopeError = info.scopeError;
+        const scriptTag = `<script src="${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}" defer><\/script>`;
+
+        const row = document.createElement("div");
+        row.id = `cod-install-row-${s.domain}`;
+        row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--input);flex-wrap:wrap;";
+
+        const badge = document.createElement("span");
+        badge.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:${installed ? "rgba(34,197,94,.15)" : "rgba(107,114,128,.12)"};color:${installed ? "#22c55e" : "#9ca3af"};`;
+        badge.textContent = installed ? "✓ Instalado" : "Sin instalar";
+
+        const name = document.createElement("span");
+        name.style.cssText = "font-size:13px;font-weight:600;color:#e5e7eb;flex:1;min-width:100px;";
+        name.textContent = s.shop_name || s.domain;
+
+        const actions = document.createElement("div");
+        actions.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;";
+
+        if (!installed) {
+          const installBtn = document.createElement("button");
+          installBtn.textContent = "Instalar automáticamente";
+          installBtn.style.cssText = "padding:5px 12px;border-radius:7px;border:none;background:#22c55e;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;";
+          installBtn.addEventListener("click", async () => {
+            installBtn.disabled = true;
+            installBtn.textContent = "Instalando...";
+            try {
+              const r = await fetch(`${API_BASE}/api/shopify/cod-script/install/${encodeURIComponent(s.domain)}`, {
+                method: "POST",
+                headers: { Authorization: "Bearer " + getActiveToken() },
+              });
+              const d = await r.json();
+              if (d.ok) {
+                showToast("✅", `Script instalado en ${s.shop_name || s.domain}`, "#22c55e");
+                badge.style.background = "rgba(34,197,94,.15)";
+                badge.style.color = "#22c55e";
+                badge.textContent = "✓ Instalado";
+                installBtn.remove();
+                addUninstallBtn();
+              } else if (d.error === "scope_missing") {
+                showToast("⚠️", "Reconecta la tienda en Ajustes → Tiendas para conceder el permiso", "#f59e0b");
+                installBtn.textContent = "Instalar automáticamente";
+                installBtn.disabled = false;
+                addCopyBtn();
+              } else {
+                showToast("❌", d.error || "Error al instalar", "#ef4444");
+                installBtn.textContent = "Instalar automáticamente";
+                installBtn.disabled = false;
+              }
+            } catch {
+              showToast("❌", "Error de red", "#ef4444");
+              installBtn.textContent = "Instalar automáticamente";
+              installBtn.disabled = false;
+            }
+          });
+          actions.appendChild(installBtn);
+          if (scopeError) addCopyBtn();
+        } else {
+          addUninstallBtn();
+        }
+
+        function addUninstallBtn() {
+          const u = document.createElement("button");
+          u.textContent = "Desinstalar";
+          u.style.cssText = "padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;font-family:inherit;";
+          u.addEventListener("click", async () => {
+            u.disabled = true;
+            const r = await fetch(`${API_BASE}/api/shopify/cod-script/uninstall/${encodeURIComponent(s.domain)}`, {
+              method: "DELETE",
+              headers: { Authorization: "Bearer " + getActiveToken() },
+            }).catch(() => null);
+            if (r && r.ok) {
+              showToast("✅", "Script desinstalado", "#22c55e");
+              badge.style.background = "rgba(107,114,128,.12)";
+              badge.style.color = "#9ca3af";
+              badge.textContent = "Sin instalar";
+              u.remove();
+              // Re-add install button
+              loadLeadsCOD(container);
+            } else {
+              showToast("❌", "Error al desinstalar", "#ef4444");
+              u.disabled = false;
+            }
+          });
+          actions.appendChild(u);
+        }
+
+        function addCopyBtn() {
+          const c = document.createElement("button");
+          c.textContent = "Copiar script manual";
+          c.style.cssText = "padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;font-family:inherit;";
+          c.addEventListener("click", () => navigator.clipboard.writeText(scriptTag).then(() => showToast("✅", "Script copiado — pégalo antes de </body> en theme.liquid", "#22c55e")));
+          actions.appendChild(c);
+        }
+
+        row.appendChild(badge);
+        row.appendChild(name);
+        row.appendChild(actions);
+        installList.appendChild(row);
       });
     }
-  } catch {}
+  } catch(e) { console.error("loadLeadsCOD stores:", e); }
 }
 
 async function refreshLeads() {

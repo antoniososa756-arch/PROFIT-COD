@@ -1087,4 +1087,86 @@ router.delete("/webhook/:shopDomain/:webhookId", auth, async (req, res) => {
   }
 });
 
+// ── COD Tracker Script Tag (instalación automática) ──────────────────────────
+
+async function getShopForUser(userId, shopDomain) {
+  return db.get(
+    "SELECT access_token FROM shops WHERE user_id = $1 AND LOWER(shop_domain) = $2 AND status = 'active'",
+    [userId, shopDomain.toLowerCase()]
+  );
+}
+
+async function listCodScriptTags(shopDomain, accessToken) {
+  const appUrl = process.env.APP_URL || "https://profit-cod.onrender.com";
+  const srcPrefix = `${appUrl}/api/cod-tracker/script.js`;
+  const r = await fetch(
+    `https://${shopDomain}/admin/api/2024-10/script_tags.json?limit=250`,
+    { headers: { "X-Shopify-Access-Token": accessToken } }
+  );
+  if (!r.ok) return { tags: [], error: r.status };
+  const data = await r.json();
+  const tags = (data.script_tags || []).filter(t => t.src && t.src.startsWith(srcPrefix));
+  return { tags };
+}
+
+router.get("/cod-script/status", auth, async (req, res) => {
+  const userId = req.user.id;
+  const shops = await db.all(
+    "SELECT shop_domain, access_token FROM shops WHERE user_id = $1 AND status = 'active'",
+    [userId]
+  );
+  const result = [];
+  for (const shop of shops) {
+    const { tags, error } = await listCodScriptTags(shop.shop_domain, shop.access_token);
+    result.push({ shop: shop.shop_domain, installed: tags.length > 0, scopeError: error === 403 });
+  }
+  res.json(result);
+});
+
+router.post("/cod-script/install/:shopDomain", auth, async (req, res) => {
+  const shop = await getShopForUser(req.user.id, req.params.shopDomain);
+  if (!shop) return res.status(404).json({ error: "Tienda no encontrada" });
+
+  const shopDomain = req.params.shopDomain.toLowerCase();
+  const appUrl = process.env.APP_URL || "https://profit-cod.onrender.com";
+  const scriptSrc = `${appUrl}/api/cod-tracker/script.js?shop=${shopDomain}`;
+
+  // Eliminar tags existentes del mismo script
+  const { tags, error } = await listCodScriptTags(shopDomain, shop.access_token);
+  if (error === 403) return res.status(403).json({ error: "scope_missing", hint: "Reconecta la tienda para conceder el permiso write_script_tags" });
+  for (const tag of tags) {
+    await fetch(
+      `https://${shopDomain}/admin/api/2024-10/script_tags/${tag.id}.json`,
+      { method: "DELETE", headers: { "X-Shopify-Access-Token": shop.access_token } }
+    ).catch(() => {});
+  }
+
+  const cr = await fetch(
+    `https://${shopDomain}/admin/api/2024-10/script_tags.json`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": shop.access_token },
+      body: JSON.stringify({ script_tag: { event: "onload", src: scriptSrc } }),
+    }
+  );
+  const cd = await cr.json();
+  if (cd.script_tag) return res.json({ ok: true, id: cd.script_tag.id });
+  res.status(500).json({ error: "Error al instalar", details: cd.errors });
+});
+
+router.delete("/cod-script/uninstall/:shopDomain", auth, async (req, res) => {
+  const shop = await getShopForUser(req.user.id, req.params.shopDomain);
+  if (!shop) return res.status(404).json({ error: "Tienda no encontrada" });
+
+  const shopDomain = req.params.shopDomain.toLowerCase();
+  const { tags } = await listCodScriptTags(shopDomain, shop.access_token);
+  for (const tag of tags) {
+    await fetch(
+      `https://${shopDomain}/admin/api/2024-10/script_tags/${tag.id}.json`,
+      { method: "DELETE", headers: { "X-Shopify-Access-Token": shop.access_token } }
+    ).catch(() => {});
+  }
+  res.json({ ok: true, removed: tags.length });
+});
+
 module.exports = router;
