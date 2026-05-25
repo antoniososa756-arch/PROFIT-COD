@@ -5714,17 +5714,11 @@ function renderStoreCard(store) {
     </div>
 
     <div style="margin-bottom:12px;">
-      <div style="font-size:10px;color:#6b7280;font-weight:600;margin-bottom:3px;">Script tracker Realist COD:</div>
-      <div style="display:flex;align-items:center;gap:6px;background:var(--input);border:1px solid var(--border);border-radius:8px;padding:5px 8px;">
-        <code style="flex:1;font-size:10px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          &lt;script src="${API_BASE}/api/cod-tracker/script.js?shop=${store.domain}" defer&gt;&lt;/script&gt;
-        </code>
-        <button onclick="navigator.clipboard.writeText('<script src=\\'${API_BASE}/api/cod-tracker/script.js?shop=${store.domain}\\' defer></scr'+'ipt>').then(()=>showToast('✅','Script copiado','#22c55e'))"
-          style="flex-shrink:0;padding:2px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit;">
-          Copiar
-        </button>
-      </div>
-      <div style="font-size:10px;color:#6b7280;margin-top:3px;">Shopify → Tienda → Temas → Editar código → theme.liquid antes de &lt;/body&gt;</div>
+      <div style="font-size:10px;color:#6b7280;margin-bottom:5px;">Script tracker Realist COD <span style="color:#4b5563;">(theme.liquid antes de &lt;/body&gt;)</span></div>
+      <button onclick="(function(){var t='<script src=\\'${API_BASE}/api/cod-tracker/script.js?shop=${store.domain}\\' defer></scr'+'ipt>';navigator.clipboard.writeText(t).then(function(){showToast('✅','Script copiado','#22c55e')});})();"
+        style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
+        📋 Copiar script
+      </button>
     </div>
 
     <div class="store-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -5943,9 +5937,9 @@ async function loadLeadsCOD(container) {
         </div>
       </div>
       <div id="leads-stats" style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;"></div>
-      <div id="leads-script-box" style="padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(59,130,246,.05);">
-        <div style="font-size:12px;color:#6b7280;margin-bottom:6px;font-weight:600;">Instala este script en cada tienda Shopify (Tienda → Temas → Editar código → theme.liquid antes de &lt;/body&gt;):</div>
-        <div id="leads-scripts-list"></div>
+      <div id="leads-script-box" style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:12px;color:#6b7280;">Script para instalar en cada tienda:</span>
+        <div id="leads-scripts-list" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
       </div>
       <div id="leads-list" style="max-height:480px;overflow-y:auto;"></div>
     </div>`;
@@ -5966,19 +5960,13 @@ async function loadLeadsCOD(container) {
       });
     }
     if (scriptBox && stores.length) {
-      scriptBox.innerHTML = stores.map(s => `
-        <div style="margin-bottom:8px;">
-          <div style="font-size:11px;color:#9ca3af;margin-bottom:3px;">${escapeHtml(s.shop_name || s.domain)}</div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <code style="flex:1;font-size:10px;background:var(--input);border-radius:6px;padding:5px 8px;color:#e5e7eb;word-break:break-all;display:block;">
-              &lt;script src="${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}" defer&gt;&lt;/script&gt;
-            </code>
-            <button onclick="navigator.clipboard.writeText('<script src=\\'${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}\\' defer></scr'+'ipt>').then(()=>showToast('✅','Copiado','#22c55e'))"
-              style="flex-shrink:0;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;">
-              Copiar
-            </button>
-          </div>
-        </div>`).join("");
+      scriptBox.innerHTML = stores.map(s => {
+        const tag = `<script src="${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}" defer></` + `script>`;
+        return `<button onclick="navigator.clipboard.writeText(${JSON.stringify(tag)}).then(()=>showToast('✅','Script copiado','#22c55e'))"
+          style="padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;">
+          📋 ${escapeHtml(s.shop_name || s.domain)}
+        </button>`;
+      }).join("");
     }
   } catch {}
 }

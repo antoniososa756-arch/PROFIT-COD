@@ -17,7 +17,7 @@ router.get("/script.js", async (req, res) => {
 
   const appUrl = process.env.APP_URL || "https://profit-cod.onrender.com";
 
-  const script = `/* PROFIT-COD COD Tracker v1 — ${shop} */
+  const script = `/* PROFIT-COD COD Tracker v1 */
 (function(){
   var SHOP="${shop}", API="${appUrl}";
   var sid=sessionStorage.getItem("_pc_sid");
@@ -31,8 +31,12 @@ router.get("/script.js", async (req, res) => {
   };
   function send(type,extra){
     var p=Object.assign({shop:SHOP,sid:sid,type:type,url:location.href},extra||{});
-    navigator.sendBeacon?navigator.sendBeacon(API+"/api/cod-tracker/event",new Blob([JSON.stringify(p)],{type:"application/json"})):
-    fetch(API+"/api/cod-tracker/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p),keepalive:true}).catch(function(){});
+    fetch(API+"/api/cod-tracker/event",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(p),
+      keepalive:true
+    }).catch(function(){});
   }
   function fieldName(el){return FM[el.placeholder]||FM[el.name]||el.name||el.placeholder||"campo";}
   function attachForm(form){
@@ -80,7 +84,15 @@ router.get("/script.js", async (req, res) => {
 });
 
 // ── Recibir evento del tracker (sin auth, viene del navegador del cliente) ─────
+router.options("/event", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.status(204).end();
+});
+
 router.post("/event", express.json(), async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.status(204).end(); // responder rápido, procesar async
   const { shop, sid, type, field, value, formData, url } = req.body || {};
   if (!shop || !sid || !type) return;
