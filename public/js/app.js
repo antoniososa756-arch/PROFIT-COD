@@ -10685,6 +10685,7 @@ function sendDesktopOrderNotif(color, dailyCount, shopName, orderNumber) {
     icon,
     badge: icon,
     tag: `order-notif`,
+    renotify: true,
     silent: true,
   };
   // Chrome bloquea new Notification() cuando hay SW registrado — usar SW.showNotification()
