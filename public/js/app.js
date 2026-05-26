@@ -2402,16 +2402,12 @@ if (id === "tiendas") {
         style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
         Fiscalidad
       </button>
-      <button id="int-tab-btn-leads" onclick="switchIntegracionesTab('leads')"
-        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
-        Leads COD
-      </button>
     </div>
     <div id="integraciones-content"></div>
   `;
 
   window.switchIntegracionesTab = function(tab) {
-    ["tiendas","agencia","reembolsos","fiscalidad","leads"].forEach(k => {
+    ["tiendas","agencia","reembolsos","fiscalidad"].forEach(k => {
       const btn = document.getElementById("int-tab-btn-" + k);
       if (!btn) return;
       if (k === tab) {
@@ -2508,10 +2504,6 @@ if (id === "tiendas") {
           </div>
         </div>
       `;
-    }
-
-    if (tab === "leads") {
-      loadLeadsCOD(content);
     }
   };
 
@@ -5772,12 +5764,6 @@ async function testPushNotification(color, shopName) {
 }
 window.testPushNotification = testPushNotification;
 
-function copyTrackerScript(shopDomain) {
-  const tag = `<script src="${API_BASE}/api/cod-tracker/script.js?shop=${shopDomain}" defer><\/script>`;
-  navigator.clipboard.writeText(tag).then(() => showToast("✅", "Script copiado", "#22c55e"));
-}
-window.copyTrackerScript = copyTrackerScript;
-
 function copyWebhookUrl() {
   const url = `${API_BASE}/api/shopify/webhooks/orders`;
   navigator.clipboard.writeText(url).then(() => showToast("✅ Copiado", "URL del webhook copiada", "#22c55e"));
@@ -5870,273 +5856,6 @@ async function checkNotifStatus() {
   } catch (e) { console.error("Error diagnóstico:", e); }
 }
 window.checkNotifStatus = checkNotifStatus;
-
-// ─── LEADS COD ────────────────────────────────────────────────────────────────
-
-const COD_STATUS_LABEL = {
-  open:      { text: "👁 Viendo formulario", color: "#3b82f6" },
-  filling:   { text: "✍️ Rellenando",         color: "#f97316" },
-  abandoned: { text: "🔴 Abandonado",          color: "#ef4444" },
-  submitted: { text: "🟢 Pedido enviado",       color: "#22c55e" },
-};
-const COD_FIELD_LABEL = {
-  nombre:"Nombre", telefono:"Teléfono", direccion:"Dirección",
-  direccion2:"Piso/Local", ciudad:"Ciudad", cp:"C.P.", email:"Email",
-};
-
-function renderLeadRow(s) {
-  const fd = typeof s.form_data === "string" ? JSON.parse(s.form_data || "{}") : (s.form_data || {});
-  const st = COD_STATUS_LABEL[s.status] || { text: s.status, color: "#6b7280" };
-  const hasData = Object.keys(fd).length > 0;
-  const dataHtml = hasData
-    ? Object.entries(fd).map(([k,v]) =>
-        `<span style="background:var(--input);border-radius:6px;padding:2px 8px;font-size:11px;color:#e5e7eb;">
-          <span style="color:#6b7280;">${COD_FIELD_LABEL[k]||k}:</span> ${escapeHtml(String(v))}
-        </span>`).join("")
-    : `<span style="font-size:11px;color:#6b7280;">Sin datos capturados</span>`;
-  const ts = new Date(s.updated_at || s.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" });
-  return `
-    <div id="lead-row-${s.session_id}" style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="width:8px;height:8px;border-radius:50%;background:${st.color};flex-shrink:0;"></span>
-          <span style="font-size:12px;font-weight:600;color:#e5e7eb;">${st.text}</span>
-          <span style="font-size:11px;color:#6b7280;">${escapeHtml(s.shop_domain)}</span>
-        </div>
-        <span style="font-size:11px;color:#6b7280;">${ts}</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px;">${dataHtml}</div>
-    </div>`;
-}
-
-async function loadLeadsCOD(container) {
-  container.innerHTML = `
-    <div class="card" style="padding:0;overflow:hidden;">
-      <div style="padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-        <div>
-          <div style="font-size:15px;font-weight:700;color:#f9fafb;">Leads Realist COD en tiempo real</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:2px;">Clientes que abren el formulario COD en tus tiendas</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <select id="leads-filter-shop" onchange="filterLeads()"
-            style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-family:inherit;">
-            <option value="">Todas las tiendas</option>
-          </select>
-          <select id="leads-filter-status" onchange="filterLeads()"
-            style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-family:inherit;">
-            <option value="">Todos los estados</option>
-            <option value="open">Viendo</option>
-            <option value="filling">Rellenando</option>
-            <option value="abandoned">Abandonados</option>
-            <option value="submitted">Enviados</option>
-          </select>
-          <div style="display:flex;align-items:center;gap:5px;">
-            <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.3);animation:pulse 2s infinite;"></div>
-            <span style="font-size:11px;color:#22c55e;font-weight:600;">EN VIVO</span>
-          </div>
-        </div>
-      </div>
-      <div id="leads-stats" style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;min-height:44px;"></div>
-      <div id="leads-install-box" style="padding:16px 20px;border-bottom:1px solid var(--border);">
-        <div style="font-size:12px;font-weight:600;color:#9ca3af;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em;">Tracker por tienda</div>
-        <div id="leads-install-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-      </div>
-      <div id="leads-list" style="max-height:480px;overflow-y:auto;"></div>
-    </div>`;
-
-  await refreshLeads();
-
-  // Cargar tiendas y estado de instalación
-  try {
-    const [sr, statusR] = await Promise.all([
-      fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
-      fetch(`${API_BASE}/api/shopify/cod-script/status`, { headers: { Authorization: "Bearer " + getActiveToken() } }),
-    ]);
-    const stores = await sr.json();
-    const statusList = await statusR.json().catch(() => []);
-    const statusMap = {};
-    (Array.isArray(statusList) ? statusList : []).forEach(s => { statusMap[s.shop] = s; });
-
-    const shopSel = document.getElementById("leads-filter-shop");
-    const installList = document.getElementById("leads-install-list");
-
-    if (shopSel && stores.length) {
-      stores.forEach(s => {
-        const o = document.createElement("option");
-        o.value = s.domain; o.textContent = s.shop_name || s.domain;
-        shopSel.appendChild(o);
-      });
-    }
-
-    if (installList && stores.length) {
-      stores.forEach(s => {
-        const info = statusMap[s.domain] || {};
-        const installed = info.installed;
-        const scopeError = info.scopeError;
-        const scriptTag = `<script src="${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}" defer><\/script>`;
-
-        const row = document.createElement("div");
-        row.id = `cod-install-row-${s.domain}`;
-        row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--input);flex-wrap:wrap;";
-
-        const badge = document.createElement("span");
-        badge.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:${installed ? "rgba(34,197,94,.15)" : "rgba(107,114,128,.12)"};color:${installed ? "#22c55e" : "#9ca3af"};`;
-        badge.textContent = installed ? "✓ Instalado" : "Sin instalar";
-
-        const name = document.createElement("span");
-        name.style.cssText = "font-size:13px;font-weight:600;color:#e5e7eb;flex:1;min-width:100px;";
-        name.textContent = s.shop_name || s.domain;
-
-        const actions = document.createElement("div");
-        actions.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;";
-
-        if (!installed) {
-          const installBtn = document.createElement("button");
-          installBtn.textContent = "Instalar automáticamente";
-          installBtn.style.cssText = "padding:5px 12px;border-radius:7px;border:none;background:#22c55e;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;";
-          installBtn.addEventListener("click", async () => {
-            installBtn.disabled = true;
-            installBtn.textContent = "Instalando...";
-            try {
-              const r = await fetch(`${API_BASE}/api/shopify/cod-script/install/${encodeURIComponent(s.domain)}`, {
-                method: "POST",
-                headers: { Authorization: "Bearer " + getActiveToken() },
-              });
-              const d = await r.json();
-              if (d.ok) {
-                showToast("✅", `Script instalado en ${s.shop_name || s.domain}`, "#22c55e");
-                badge.style.background = "rgba(34,197,94,.15)";
-                badge.style.color = "#22c55e";
-                badge.textContent = "✓ Instalado";
-                installBtn.remove();
-                addUninstallBtn();
-              } else if (d.error === "scope_missing") {
-                showToast("⚠️", "Reconecta la tienda en Ajustes → Tiendas para conceder el permiso", "#f59e0b");
-                installBtn.textContent = "Instalar automáticamente";
-                installBtn.disabled = false;
-                addCopyBtn();
-              } else {
-                showToast("❌", d.error || "Error al instalar", "#ef4444");
-                installBtn.textContent = "Instalar automáticamente";
-                installBtn.disabled = false;
-              }
-            } catch {
-              showToast("❌", "Error de red", "#ef4444");
-              installBtn.textContent = "Instalar automáticamente";
-              installBtn.disabled = false;
-            }
-          });
-          actions.appendChild(installBtn);
-          if (scopeError) addCopyBtn();
-        } else {
-          addUninstallBtn();
-        }
-
-        function addUninstallBtn() {
-          const u = document.createElement("button");
-          u.textContent = "Desinstalar";
-          u.style.cssText = "padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;font-family:inherit;";
-          u.addEventListener("click", async () => {
-            u.disabled = true;
-            const r = await fetch(`${API_BASE}/api/shopify/cod-script/uninstall/${encodeURIComponent(s.domain)}`, {
-              method: "DELETE",
-              headers: { Authorization: "Bearer " + getActiveToken() },
-            }).catch(() => null);
-            if (r && r.ok) {
-              showToast("✅", "Script desinstalado", "#22c55e");
-              badge.style.background = "rgba(107,114,128,.12)";
-              badge.style.color = "#9ca3af";
-              badge.textContent = "Sin instalar";
-              u.remove();
-              // Re-add install button
-              loadLeadsCOD(container);
-            } else {
-              showToast("❌", "Error al desinstalar", "#ef4444");
-              u.disabled = false;
-            }
-          });
-          actions.appendChild(u);
-        }
-
-        function addCopyBtn() {
-          const c = document.createElement("button");
-          c.textContent = "Copiar script manual";
-          c.style.cssText = "padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;font-family:inherit;";
-          c.addEventListener("click", () => navigator.clipboard.writeText(scriptTag).then(() => showToast("✅", "Script copiado — pégalo antes de </body> en theme.liquid", "#22c55e")));
-          actions.appendChild(c);
-        }
-
-        row.appendChild(badge);
-        row.appendChild(name);
-        row.appendChild(actions);
-        installList.appendChild(row);
-      });
-    }
-  } catch(e) { console.error("loadLeadsCOD stores:", e); }
-}
-
-async function refreshLeads() {
-  try {
-    const shop = document.getElementById("leads-filter-shop")?.value || "";
-    const status = document.getElementById("leads-filter-status")?.value || "";
-    let url = `${API_BASE}/api/cod-tracker/sessions?limit=80`;
-    if (shop) url += `&shop=${encodeURIComponent(shop)}`;
-    if (status) url += `&status=${status}`;
-    const res = await fetch(url, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    const sessions = await res.json();
-
-    const list = document.getElementById("leads-list");
-    if (list) list.innerHTML = sessions.length
-      ? sessions.map(renderLeadRow).join("")
-      : `<div style="padding:40px;text-align:center;color:#6b7280;font-size:13px;">Sin leads todavía — instala el script en tu tienda</div>`;
-
-    // Stats
-    const statsEl = document.getElementById("leads-stats");
-    const sr2 = await fetch(`${API_BASE}/api/cod-tracker/stats`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    const stats = await sr2.json();
-    if (statsEl) {
-      statsEl.innerHTML = stats.map(s => `
-        <div style="display:flex;flex-direction:column;gap:2px;">
-          <span style="font-size:10px;color:#6b7280;">${escapeHtml(s.shop_domain)}</span>
-          <div style="display:flex;gap:10px;">
-            <span style="font-size:13px;font-weight:700;color:#3b82f6;">${s.live} <span style="font-size:10px;font-weight:400;">en vivo</span></span>
-            <span style="font-size:13px;font-weight:700;color:#ef4444;">${s.abandoned} <span style="font-size:10px;font-weight:400;">abandonados</span></span>
-            <span style="font-size:13px;font-weight:700;color:#22c55e;">${s.submitted} <span style="font-size:10px;font-weight:400;">enviados</span></span>
-          </div>
-        </div>`).join('<div style="width:1px;background:var(--border);"></div>');
-    }
-  } catch (e) { console.error("Leads error:", e); }
-}
-window.filterLeads = refreshLeads;
-
-// Actualizar lead existente desde SSE en tiempo real
-function handleCodEvent(data) {
-  // Actualizar fila si existe, sino prepend
-  const existing = document.getElementById(`lead-row-${data.sid}`);
-  const list = document.getElementById("leads-list");
-  if (!list) return;
-
-  const fakeSession = {
-    session_id: data.sid,
-    shop_domain: data.shopDomain,
-    status: data.eventType === "form_submit" ? "submitted"
-          : data.eventType === "form_abandon" ? "abandoned"
-          : data.eventType === "form_open" ? "open" : "filling",
-    form_data: data.formData || {},
-    updated_at: new Date().toISOString(),
-  };
-
-  const html = renderLeadRow(fakeSession);
-  if (existing) {
-    existing.outerHTML = html;
-  } else {
-    list.insertAdjacentHTML("afterbegin", html);
-  }
-
-  // Refrescar stats cada vez que llega un evento
-  refreshLeads();
-}
-window.handleCodEvent = handleCodEvent;
 
 function toggleColorPicker(storeId, e) {
   e.stopPropagation();
@@ -11057,7 +10776,6 @@ function connectOrderWebSocket(token) {
     try {
       const data = JSON.parse(e.data);
       if (data.type === "new_order") handleOrderEvent(data);
-      if (data.type === "cod_event") handleCodEvent(data);
     } catch {}
   };
 
