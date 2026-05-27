@@ -2687,10 +2687,24 @@ if (id === "tiendas") {
       });
       const data = await res.json();
       if (data.ok) {
-        const msg = data.procesados > 0
-          ? `✓ ${data.procesados} reembolso(s) marcados como cobrados`
+        let msg = data.procesados > 0
+          ? `✓ ${data.procesados} reembolso(s) marcados como cobrados\nEmails: ${data.emailsLeidos} | PDFs: ${data.pdfsProcesados} | Envíos: ${data.enviosEncontrados}`
           : `Sin reembolsos nuevos\nEmails encontrados: ${data.emailsLeidos ?? 0}\nPDFs: ${data.pdfsProcesados ?? 0}\nNº Envíos en PDF: ${data.enviosEncontrados ?? 0}`;
-        alert(msg + (data.errores?.length ? `\nErrores: ${data.errores.map(e=>e.error).join(", ")}` : ""));
+        if (data.debug?.length) {
+          msg += "\n\n── Detalle por email ──";
+          data.debug.forEach(e => {
+            msg += `\n📧 ${e.asunto} (${e.fecha?.slice(0,16) || "?"})`;
+            msg += `\n   PDFs adjuntos: ${e.adjuntosPDF ?? 0}`;
+            if (e.pdfs?.length) {
+              e.pdfs.forEach(p => {
+                msg += `\n   📄 ${p.nombre}: ${p.trackings?.length ?? 0} trackings encontrados`;
+                if (p.trackings?.length) msg += ` → ${p.trackings.slice(0,3).join(", ")}${p.trackings.length > 3 ? "..." : ""}`;
+                if (p.error) msg += ` ⚠️ ${p.error}`;
+              });
+            }
+          });
+        }
+        alert(msg + (data.errores?.length ? `\n\nErrores: ${data.errores.map(e=>e.error).join(", ")}` : ""));
         if (data.procesados > 0) loadSidebarReembolsos();
       } else if (data.error === "GMAIL_RECONNECT" || res.status === 401) {
         if (confirm("⚠️ La sesión de Gmail ha expirado.\n\n¿Reconectar ahora automáticamente?")) {

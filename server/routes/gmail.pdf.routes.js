@@ -81,9 +81,9 @@ function parsearPDFMRW(texto) {
 router.post("/sync-pdf", async (req, res) => {
   const userId = req.user.id;
   const db = req.db;
+  const verbose = req.query.debug === "1";
 
   try {
-    // 1. Buscar emails de MRW con PDF adjunto (desde 2025-01-01)
     const query = encodeURIComponent(
       'from:mrw has:attachment filename:pdf after:2025/1/1'
     );
@@ -102,22 +102,27 @@ router.post("/sync-pdf", async (req, res) => {
     let totalPDFs = 0;
     let totalEnvios = 0;
     const errores = [];
+    const debugEmails = [];
 
     for (const msg of messages) {
+      const debugEmail = { id: msg.id, asunto: "?", fecha: "?", pdfs: [] };
       try {
-        // 2. Obtener detalle del email
         const msgRes = await gmailFetch(
           db, userId,
           `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`
         );
         const msgData = await msgRes.json();
-        // Fecha del email en zona horaria española (el servidor corre en UTC)
+
+        const hdrs = msgData.payload?.headers || [];
+        debugEmail.asunto = hdrs.find(h => h.name === "Subject")?.value || "?";
+        debugEmail.de     = hdrs.find(h => h.name === "From")?.value || "?";
+        debugEmail.fecha  = hdrs.find(h => h.name === "Date")?.value || "?";
+
         const toMadridDate = d => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(d);
         const emailFecha = msgData.internalDate
           ? toMadridDate(new Date(parseInt(msgData.internalDate)))
           : toMadridDate(new Date());
 
-        // 3. Encontrar adjuntos PDF (buscar también en partes anidadas)
         const todasPartes = [];
         function recogerPartes(parts) {
           for (const p of parts || []) {
@@ -128,15 +133,19 @@ router.post("/sync-pdf", async (req, res) => {
         recogerPartes(msgData.payload?.parts || []);
         const pdfs = todasPartes.filter(p =>
           p.mimeType === "application/pdf" ||
+          p.mimeType === "application/octet-stream" ||
           p.filename?.toLowerCase().endsWith(".pdf")
         );
 
+        debugEmail.adjuntosTotales = todasPartes.length;
+        debugEmail.adjuntosPDF = pdfs.length;
+
         for (const parte of pdfs) {
           const attachId = parte.body?.attachmentId;
-          if (!attachId) continue;
+          const debugPDF = { nombre: parte.filename || "?", trackings: [], coincidencias: 0 };
+          if (!attachId) { debugPDF.error = "sin attachmentId"; debugEmail.pdfs.push(debugPDF); continue; }
           totalPDFs++;
 
-          // 4. Descargar el PDF
           const attRes = await gmailFetch(
             db, userId,
             `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}/attachments/${attachId}`
@@ -144,17 +153,15 @@ router.post("/sync-pdf", async (req, res) => {
           const attData = await attRes.json();
           const pdfBuffer = Buffer.from(attData.data, "base64url");
 
-          // 5. Parsear el PDF
           const parsed = await pdfParse(pdfBuffer);
-          // Debug: loguear muestra del texto para ajustar regex
-          console.log(`[PDF DEBUG] Muestra texto (primeros 800 chars):\n${parsed.text.slice(0, 800)}`);
           const registros = parsearPDFMRW(parsed.text);
           totalEnvios += registros.length;
 
-          // 6. Marcar cada pedido como cobrado en la BD
+          debugPDF.trackings = registros.map(r => r.nEnvio);
+          if (verbose) debugPDF.textoPDF = parsed.text.slice(0, 1200);
+
           for (const { nEnvio } of registros) {
             if (!nEnvio) continue;
-            // Buscar el pedido por tracking_number (orders no tiene user_id directo, va por shop)
             const order = await db.get(
               `SELECT o.id FROM orders o
                WHERE o.tracking_number = ?
@@ -163,7 +170,6 @@ router.post("/sync-pdf", async (req, res) => {
             );
             if (!order) continue;
 
-            // Marcar como cobrado en reembolsos_estado con fecha del email
             await db.run(
               `INSERT INTO reembolsos_estado (user_id, order_id, estado, fecha_pago)
                VALUES (?, ?, 'cobrado', ?)
@@ -171,11 +177,15 @@ router.post("/sync-pdf", async (req, res) => {
               [userId, String(order.id), emailFecha]
             );
             totalMarcados++;
+            debugPDF.coincidencias++;
           }
+          debugEmail.pdfs.push(debugPDF);
         }
       } catch (e) {
+        debugEmail.error = e.message;
         errores.push({ msgId: msg.id, error: e.message });
       }
+      debugEmails.push(debugEmail);
     }
 
     res.json({
@@ -185,7 +195,7 @@ router.post("/sync-pdf", async (req, res) => {
       enviosEncontrados: totalEnvios,
       procesados: totalMarcados,
       errores,
-      _debug: "Ver logs de Render para muestra del texto PDF",
+      debug: debugEmails,
     });
 
   } catch (e) {
