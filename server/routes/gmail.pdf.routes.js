@@ -85,7 +85,7 @@ router.post("/sync-pdf", async (req, res) => {
   try {
     // 1. Buscar emails de MRW con PDF adjunto (desde 2025-01-01)
     const query = encodeURIComponent(
-      'from:mrw subject:"Factura de Reembolsos" has:attachment filename:pdf after:2025/1/1'
+      'from:mrw has:attachment filename:pdf after:2025/1/1'
     );
     const listRes = await gmailFetch(
       db, userId,
@@ -202,9 +202,9 @@ router.get("/debug-mrw", async (req, res) => {
   const userId = req.user.id;
   const db = req.db;
   try {
-    // Buscar SIN filtro from, solo por asunto+adjunto para ver qué hay
+    // Buscar TODOS los emails de MRW con PDF adjunto (sin filtro de asunto)
     const query = encodeURIComponent(
-      'from:mrw subject:"Factura de Reembolsos" has:attachment filename:pdf after:2025/1/1'
+      'from:mrw has:attachment filename:pdf after:2025/1/1'
     );
     const listRes = await gmailFetch(
       db, userId,
@@ -214,7 +214,7 @@ router.get("/debug-mrw", async (req, res) => {
     const messages = listData.messages || [];
 
     const senders = [];
-    for (const msg of messages.slice(0, 5)) {
+    for (const msg of messages.slice(0, 8)) {
       const msgRes = await gmailFetch(
         db, userId,
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`

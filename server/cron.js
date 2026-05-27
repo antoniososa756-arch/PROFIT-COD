@@ -238,7 +238,7 @@ async function syncAllGmailPDF() {
     for (const { user_id } of usuarios) {
       try {
         const query = encodeURIComponent(
-          'from:mrw subject:"Factura de Reembolsos" has:attachment filename:pdf newer_than:40d'
+          'from:mrw has:attachment filename:pdf newer_than:40d'
         );
         const listRes = await gmailFetch(
           user_id,
