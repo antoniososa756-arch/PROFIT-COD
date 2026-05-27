@@ -85,7 +85,7 @@ router.post("/sync-pdf", async (req, res) => {
   try {
     // 1. Buscar emails de MRW con PDF adjunto (desde 2025-01-01)
     const query = encodeURIComponent(
-      'from:@grupomrw.com subject:"Factura de Reembolsos" has:attachment filename:pdf after:2025/1/1'
+      'from:grupomrw.com subject:"Factura de Reembolsos" has:attachment filename:pdf after:2025/1/1'
     );
     const listRes = await gmailFetch(
       db, userId,
