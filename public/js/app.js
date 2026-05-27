@@ -2615,6 +2615,9 @@ if (id === "tiendas") {
               <button onclick="sincronizarPDFsMRW()" style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 ↓ Importar PDFs ahora
               </button>
+              <button onclick="diagnosticarMRW()" style="padding:7px 16px;background:transparent;color:#9ca3af;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">
+                🔍 Diagnóstico
+              </button>
               <button onclick="desconectarGmail()" style="padding:7px 16px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Desconectar</button>
             </div>
           </div>`;
@@ -2656,6 +2659,22 @@ if (id === "tiendas") {
       await fetch(`${API_BASE}/api/gmail/config`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
       cargarConfigGmail();
     } catch {}
+  };
+
+  window.diagnosticarMRW = async function() {
+    try {
+      const res = await fetch(`${API_BASE}/api/gmail/debug-mrw`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      });
+      const data = await res.json();
+      if (data.error) { alert("❌ " + data.error); return; }
+      if (data.total === 0) {
+        alert("Gmail no encontró ningún email con asunto \"Factura de Reembolsos\" y PDF adjunto.\n\nComprueba que los correos de MRW están en tu bandeja de entrada (no en Spam).");
+        return;
+      }
+      const lines = data.muestra.map(m => `De: ${m.from}\nAsunto: ${m.subject}\nFecha: ${m.date}`).join("\n\n");
+      alert(`Encontrados ${data.total} email(s).\n\nRemitentes (primeros ${data.muestra.length}):\n\n${lines}`);
+    } catch { alert("❌ Error de conexión"); }
   };
 
   window.sincronizarPDFsMRW = async function() {

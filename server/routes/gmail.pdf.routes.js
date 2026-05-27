@@ -197,4 +197,40 @@ router.post("/sync-pdf", async (req, res) => {
   }
 });
 
+// ─── GET /api/gmail/debug-mrw — diagnóstico: qué correos de reembolsos hay ───
+router.get("/debug-mrw", async (req, res) => {
+  const userId = req.user.id;
+  const db = req.db;
+  try {
+    // Buscar SIN filtro from, solo por asunto+adjunto para ver qué hay
+    const query = encodeURIComponent(
+      'subject:"Factura de Reembolsos" has:attachment filename:pdf after:2025/1/1'
+    );
+    const listRes = await gmailFetch(
+      db, userId,
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=20`
+    );
+    const listData = await listRes.json();
+    const messages = listData.messages || [];
+
+    const senders = [];
+    for (const msg of messages.slice(0, 5)) {
+      const msgRes = await gmailFetch(
+        db, userId,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`
+      );
+      const msgData = await msgRes.json();
+      const headers = msgData.payload?.headers || [];
+      const from    = headers.find(h => h.name === "From")?.value || "?";
+      const subject = headers.find(h => h.name === "Subject")?.value || "?";
+      const date    = headers.find(h => h.name === "Date")?.value || "?";
+      senders.push({ from, subject, date });
+    }
+    res.json({ total: messages.length, muestra: senders });
+  } catch (e) {
+    if (e.message === "GMAIL_RECONNECT") return res.status(401).json({ error: "GMAIL_RECONNECT" });
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
