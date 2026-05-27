@@ -85,7 +85,7 @@ router.post("/sync-pdf", async (req, res) => {
 
   try {
     const query = encodeURIComponent(
-      'from:mrw has:attachment filename:pdf after:2025/1/1'
+      '{from:mrw.es from:grupomrw.com} has:attachment filename:pdf after:2025/1/1'
     );
     const listRes = await gmailFetch(
       db, userId,
@@ -214,7 +214,7 @@ router.get("/debug-mrw", async (req, res) => {
   try {
     // Buscar TODOS los emails de MRW con PDF adjunto (sin filtro de asunto)
     const query = encodeURIComponent(
-      'from:mrw has:attachment filename:pdf after:2025/1/1'
+      '{from:mrw.es from:grupomrw.com} has:attachment filename:pdf after:2025/1/1'
     );
     const listRes = await gmailFetch(
       db, userId,
