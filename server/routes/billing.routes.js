@@ -115,9 +115,8 @@ router.get("/plan", auth, async (req, res) => {
   }
 });
 
-// POST /api/billing/start-trial — activa 7 días gratis (solo si nunca ha tenido trial)
+// POST /api/billing/start-trial — activa 30 días gratis (solo si nunca ha tenido trial)
 router.post("/start-trial", auth, async (req, res) => {
-  // El trial siempre usa el plan Starter (100 pedidos/mes)
   const plan = "starter";
   try {
     const user = await db.get(
@@ -127,7 +126,7 @@ router.post("/start-trial", auth, async (req, res) => {
     if (user?.plan_status === "active") return res.status(400).json({ error: "Ya tienes un plan activo" });
 
     const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const cycleStart  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     await db.run(

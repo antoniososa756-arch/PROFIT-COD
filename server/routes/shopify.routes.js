@@ -4,6 +4,21 @@ const crypto = require("crypto");
 const db = require("../db");
 const router = express.Router();
 
+async function autoStartTrial(userId) {
+  try {
+    const u = await db.get("SELECT plan_status, trial_started_at FROM users WHERE id = $1", [userId]);
+    if (u?.trial_started_at || u?.plan_status === "active") return; // ya tiene trial o plan
+    const now = new Date();
+    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const cycleStart  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    await db.run(
+      `UPDATE users SET plan = 'starter', plan_status = 'trial', plan_expires_at = $1,
+       trial_started_at = $2, billing_cycle_start = $3 WHERE id = $4`,
+      [trialEndsAt, now.toISOString(), cycleStart, userId]
+    );
+  } catch(e) { console.error("autoStartTrial error:", e.message); }
+}
+
 router.get("/connect", async (req, res) => {
   let { shop, token } = req.query;
   if (!shop || !token) return res.status(400).send("Faltan parámetros");
@@ -99,6 +114,9 @@ router.get("/callback", async (req, res) => {
       }).catch(() => {});
     }
 
+    // Auto-arrancar trial de 30 días si el usuario aún no tiene trial ni plan activo
+    await autoStartTrial(userId);
+
     res.redirect("/?shopify=connected");
   } catch (err) {
     console.error("Shopify callback error:", err);
@@ -145,6 +163,9 @@ if (!appSecret) appSecret = process.env.SHOPIFY_API_SECRET || "";
         body: JSON.stringify({ webhook: { topic, address: webhookUrl, format: "json" } }),
       });
     }
+
+    // Auto-arrancar trial de 30 días si el usuario aún no tiene trial ni plan activo
+    await autoStartTrial(userId);
 
     res.json({ ok: true, shop: { name: data.shop.name, domain: myshopifyDomain, status: "active", lastSync: new Date().toISOString() } });
 

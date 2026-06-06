@@ -28,6 +28,9 @@ module.exports = async (req, res, next) => {
     return res.status(402).json({ error: "PLAN_REQUERIDO", message: "Tu plan ha caducado. Renueva para continuar." });
   }
 
+  // Trial: sin límite de pedidos en ningún caso
+  if (status === "trial") return next();
+
   // Verificar límite de pedidos del mes actual
   const orderLimit = PLAN_ORDER_LIMITS[plan];
   if (orderLimit) {
