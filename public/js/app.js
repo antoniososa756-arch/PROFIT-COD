@@ -8052,30 +8052,6 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
     </div>
   `;
 
-  const tablaIMP = `
-    <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;margin-bottom:16px;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead>
-          <tr style="background:#22c55e;">
-            <th style="${thStyle}left;">IMPUESTO</th>
-            <th style="${thStyle}right;">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${impuestos.map(imp => `
-          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">IVA</td>
-            <td style="padding:10px 14px;border:1px solid #374151;text-align:right;">
-              <input type="number" min="0" step="0.01" value="${fmt(imp.porcentaje)}"
-                data-id="${imp.id}" data-field="porcentaje"
-                onchange="updateImpuesto(this)"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
-                style="${inp}text-align:right;">
-            </td>
-          </tr>`).join("")}
-        </tbody>
-      </table>
-    </div>
     <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
@@ -8117,10 +8093,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
     <div style="margin-bottom:16px;padding:10px 16px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:8px;font-size:13px;color:#22c55e;font-weight:600;">
       📅 Trabajando en: ${mesLabel}
     </div>
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
-      <div>${tablaGF}</div>
-      <div>${tablaIMP}</div>
-    </div>
+    <div>${tablaGF}</div>
   `;
   window.__hideLoadingBar?.();
 }
