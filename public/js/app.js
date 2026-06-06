@@ -8052,6 +8052,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
     </div>
   `;
 
+  const tablaPreciosEnvio = `
     <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
@@ -8093,7 +8094,10 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
     <div style="margin-bottom:16px;padding:10px 16px;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:8px;font-size:13px;color:#22c55e;font-weight:600;">
       📅 Trabajando en: ${mesLabel}
     </div>
-    <div>${tablaGF}</div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
+      <div>${tablaGF}</div>
+      <div>${tablaPreciosEnvio}</div>
+    </div>
   `;
   window.__hideLoadingBar?.();
 }
