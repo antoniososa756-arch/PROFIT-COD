@@ -27,8 +27,9 @@ router.get("/metrics", auth, async (req, res) => {
 // Devuelve: conteos por estado + facturación (con lógica cancelados por fecha)
 router.get("/stats", auth, async (req, res) => {
   const userId = req.user.id;
-  const from   = req.query.from || null;
-  const to     = req.query.to   || null;
+  const from         = req.query.from || null;
+  const to           = req.query.to   || null;
+  const paymentType  = req.query.payment_type || "all"; // "all" | "cod" | "card"
 
   // shops puede venir como ?shops=a,b,c o como ?shops[]=a&shops[]=b
   let shops = req.query.shops || null;
@@ -51,6 +52,13 @@ router.get("/stats", auth, async (req, res) => {
       params.push(shops);
     }
 
+    let paymentCond = "";
+    if (paymentType === "cod") {
+      paymentCond = `AND LOWER(COALESCE(o.financial_status, '')) IN ('pending', 'pendiente', 'cod')`;
+    } else if (paymentType === "card") {
+      paymentCond = `AND LOWER(COALESCE(o.financial_status, '')) IN ('paid', 'pagado')`;
+    }
+
     // Query principal: conteos + ingresos brutos
     const statsRow = await db.get(
       `SELECT
@@ -66,7 +74,7 @@ router.get("/stats", auth, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
-         ${dateCondFrom} ${dateCondTo} ${shopCond}`,
+         ${dateCondFrom} ${dateCondTo} ${shopCond} ${paymentCond}`,
       params
     );
 
@@ -91,7 +99,7 @@ router.get("/stats", auth, async (req, res) => {
        WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
          AND o.fulfillment_status = 'cancelado'
          AND o.cancelled_at IS NOT NULL
-         ${cancelDateFrom} ${cancelDateTo} ${cancelShopCond}`,
+         ${cancelDateFrom} ${cancelDateTo} ${cancelShopCond} ${paymentCond}`,
       cancelParams
     );
 

@@ -1389,6 +1389,21 @@ const now = new Date();
         </div>
       </div>
 
+      <div style="display:flex;gap:6px;margin-bottom:14px;">
+        <button onclick="setMetPaymentFilter('all')" id="met-pay-all"
+          style="padding:5px 14px;border-radius:7px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#22c55e;color:#fff;transition:all .15s;">
+          Ambos
+        </button>
+        <button onclick="setMetPaymentFilter('cod')" id="met-pay-cod"
+          style="padding:5px 14px;border-radius:7px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
+          Solo COD
+        </button>
+        <button onclick="setMetPaymentFilter('card')" id="met-pay-card"
+          style="padding:5px 14px;border-radius:7px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
+          Solo Tarjeta
+        </button>
+      </div>
+
       <div style="display:flex;gap:20px;align-items:stretch;">
       <div style="flex:55;min-width:0;">
       <div class="stats-grid" id="statsGrid" style="flex:1;align-content:flex-start;">
@@ -1704,6 +1719,20 @@ const now = new Date();
     </div>`;
     metReposition();
   }
+
+  window.setMetPaymentFilter = function(type) {
+    window.__metPaymentFilter = type;
+    ["all","cod","card"].forEach(k => {
+      const btn = document.getElementById("met-pay-" + k);
+      if (!btn) return;
+      if (k === type) {
+        btn.style.background = "#22c55e"; btn.style.color = "#fff"; btn.style.border = "none";
+      } else {
+        btn.style.background = "transparent"; btn.style.color = "var(--muted)"; btn.style.border = "1px solid var(--border)";
+      }
+    });
+    if (window.__refreshMetrics) window.__refreshMetrics();
+  };
 
   window.toggleMetDatePicker = function() {
     const s=window.__metPicker, panel=document.getElementById('met-picker-panel'); if(!panel) return;
@@ -6008,6 +6037,7 @@ async function disableStore(storeId) {
 // =========================
 // CARGAR MÉTRICAS REALES
 // =========================
+window.__refreshMetrics = () => loadMetricas();
 async function loadMetricas() {
   const now = new Date();
   const _lmY = toMadridPart(now,'year'), _lmM = toMadridPart(now,'month');
@@ -6033,6 +6063,8 @@ async function loadMetricas() {
     // Llamada al nuevo endpoint de stats — toda la lógica queda en el servidor
     const statsParams = new URLSearchParams({ from: dateFrom, to: dateTo });
     if (dominiosFiltro.length > 0) statsParams.set("shops", dominiosFiltro.join(","));
+    const _payFilter = window.__metPaymentFilter || "all";
+    if (_payFilter !== "all") statsParams.set("payment_type", _payFilter);
     const statsRes = await fetch(`${API_BASE}/api/metrics/stats?${statsParams}`, { headers: h });
     const stats = await statsRes.json();
 
