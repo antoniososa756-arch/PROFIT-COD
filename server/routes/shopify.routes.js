@@ -153,8 +153,10 @@ if (!appSecret) appSecret = process.env.SHOPIFY_API_SECRET || "";
     if (shopRow) {
       (async () => {
         try {
-          console.log(`Importando pedidos históricos para ${myshopifyDomain}...`);
-          let importUrl = `https://${myshopifyDomain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=2026-02-01T00:00:00Z`;
+          const _now = new Date();
+          const _desde = new Date(_now.getFullYear(), _now.getMonth() - 1, 1).toISOString().split("T")[0];
+          console.log(`Importando pedidos históricos para ${myshopifyDomain} desde ${_desde}...`);
+          let importUrl = `https://${myshopifyDomain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=${_desde}T00:00:00Z`;
           let importado = 0;
           while (importUrl) {
             const ir = await fetch(importUrl, { headers: { "X-Shopify-Access-Token": accessToken } });
@@ -288,7 +290,7 @@ router.post("/sync-orders", auth, async (req, res) => {
         );
         const since = lastOrder?.created_at
           ? new Date(new Date(lastOrder.created_at).getTime() - 60 * 60 * 1000).toISOString()
-          : "2026-02-01T00:00:00Z";
+          : (() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth() - 1, 1).toISOString().split("T")[0] + "T00:00:00Z"; })();
         let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=${since}`;
 
         while (url) {
