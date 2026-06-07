@@ -1160,7 +1160,7 @@ window.startTrialAndReload = async function() {
     const d = await r.json();
     if (d.ok) {
       window.__userPlan = { ...window.__userPlan, plan: "starter", status: "trial", trial_active: true, trial_ends_at: d.trial_ends_at, had_trial: true };
-      showToast("🎉 ¡Prueba activada!", "Tienes 7 días gratuitos. Disfrútalo.", "#22c55e");
+      showToast("🎉 ¡Prueba activada!", "Tienes 30 días gratuitos. Disfrútalo.", "#22c55e");
       setSection(localStorage.getItem("section") || "metricas");
     } else {
       alert(d.error || "No se pudo activar el período de prueba");
@@ -1262,17 +1262,17 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
     if (box) {
       box.className = "card";
       const planCards = [
-        { key:"starter",  color:"#10b981", name:"Starter",  price:"9,99",  ppo:"0,09", limit:"100" },
-        { key:"growth",   color:"#3b82f6", name:"Growth",   price:"19,99", ppo:"0,07", limit:"500" },
-        { key:"pro",      color:"#8b5cf6", name:"Pro",      price:"29,99", ppo:"0,05", limit:"1.000" },
-        { key:"business", color:"#f59e0b", name:"Business", price:"39,99", ppo:"0,03", limit:"∞" },
+        { key:"starter",  color:"#10b981", name:"Starter",  price:"0",   ppo:"0",    limit:"120",   free:true },
+        { key:"growth",   color:"#3b82f6", name:"Growth",   price:"39",  ppo:"0,05", limit:"420"  },
+        { key:"pro",      color:"#8b5cf6", name:"Pro",      price:"89",  ppo:"0,04", limit:"1.000"},
+        { key:"business", color:"#f59e0b", name:"Business", price:"149", ppo:"0,03", limit:"3.000"},
       ];
       const trialExpired = up.had_trial && up.status !== "active";
       const headline = trialExpired
         ? "Tu período de prueba ha terminado"
         : "Activa tu plan para acceder a tus tiendas";
       const subline = trialExpired
-        ? "Los 7 días gratuitos han expirado. Elige un plan para seguir usando la app."
+        ? "El mes gratuito ha expirado. Elige un plan para seguir usando la app."
         : "Tu suscripción ha caducado o no tienes un plan activo. Tiendas ilimitadas en todos los planes.";
       box.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:20px;">
@@ -1288,13 +1288,13 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
             ${planCards.map(p => `
               <div style="border:2px solid ${p.color};border-radius:12px;padding:16px 20px;min-width:140px;text-align:left;">
                 <div style="font-size:11px;font-weight:700;color:${p.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${p.name}</div>
-                <div style="font-size:22px;font-weight:800;color:#f9fafb;">${p.price}€<span style="font-size:12px;font-weight:400;color:#6b7280;">/mes</span></div>
-                <div style="font-size:11px;color:#6b7280;margin-top:2px;">+ ${p.ppo}€/pedido</div>
+                <div style="font-size:22px;font-weight:800;color:#f9fafb;">${p.free ? "Gratis" : p.price+"€"}<span style="font-size:12px;font-weight:400;color:#6b7280;">${p.free ? "" : "/mes"}</span></div>
+                <div style="font-size:11px;color:#6b7280;margin-top:2px;">${p.free ? "sin coste" : "+ "+p.ppo+"€/pedido"}</div>
                 <div style="font-size:11px;color:#6b7280;">hasta ${p.limit} pedidos/mes</div>
               </div>`).join("")}
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
-            ${!up.had_trial ? `<button onclick="startTrialAndReload()" style="padding:12px 32px;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">🎁 Probar gratis 7 días</button>` : ""}
+            ${!up.had_trial ? `<button onclick="startTrialAndReload()" style="padding:12px 32px;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">🎁 Probar gratis 30 días</button>` : ""}
             <button onclick="setSection('plan')" style="padding:12px 32px;background:${up.had_trial ? "#22c55e" : "#f9fafb"};color:${up.had_trial ? "#fff" : "#374151"};border:1px solid #374151;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">Ver planes y activar</button>
           </div>
         </div>`;
@@ -3710,10 +3710,10 @@ if (id === "plan") {
   const isAdmin = currentUser.role === "Administrador";
 
   const PLAN_DEFS = {
-    starter:  { name:"Starter",  price:"9,99",  ppo:"0,09", limit:"100",    color:"#10b981", features:["Tiendas ilimitadas","Hasta 100 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
-    growth:   { name:"Growth",   price:"19,99", ppo:"0,07", limit:"500",    color:"#3b82f6", features:["Tiendas ilimitadas","Hasta 500 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
-    pro:      { name:"Pro",      price:"29,99", ppo:"0,05", limit:"1.000",  color:"#8b5cf6", features:["Tiendas ilimitadas","Hasta 1.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
-    business: { name:"Business", price:"39,99", ppo:"0,03", limit:"∞",     color:"#f59e0b", features:["Tiendas ilimitadas","Pedidos ilimitados","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
+    starter:  { name:"Starter",  price:"0",   ppo:"0",    limit:"120",   color:"#10b981", free:true, features:["Tiendas ilimitadas","Hasta 120 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
+    growth:   { name:"Growth",   price:"39",  ppo:"0,05", limit:"420",   color:"#3b82f6", features:["Tiendas ilimitadas","Hasta 420 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
+    pro:      { name:"Pro",      price:"89",  ppo:"0,04", limit:"1.000", color:"#8b5cf6", features:["Tiendas ilimitadas","Hasta 1.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
+    business: { name:"Business", price:"149", ppo:"0,03", limit:"3.000", color:"#f59e0b", features:["Tiendas ilimitadas","Hasta 3.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
   };
 
   box.className = "card";
@@ -3732,10 +3732,10 @@ if (id === "plan") {
         <div id="plan-card-${p}" style="border:2px solid #374151;border-radius:14px;padding:20px;display:flex;flex-direction:column;position:relative;transition:border-color .2s;">
           <div style="font-size:12px;font-weight:700;color:${info.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${info.name}</div>
           <div style="display:flex;align-items:baseline;gap:3px;margin-bottom:2px;">
-            <span style="font-size:26px;font-weight:800;color:#f9fafb;">${info.price}€</span>
-            <span style="font-size:12px;color:#6b7280;">/mes</span>
+            <span style="font-size:26px;font-weight:800;color:#f9fafb;">${info.free ? "Gratis" : info.price+"€"}</span>
+            <span style="font-size:12px;color:#6b7280;">${info.free ? "" : "/mes"}</span>
           </div>
-          <div style="font-size:12px;color:${info.color};font-weight:600;margin-bottom:2px;">+ ${info.ppo}€ por pedido</div>
+          <div style="font-size:12px;color:${info.color};font-weight:600;margin-bottom:2px;">${info.free ? "sin coste adicional" : "+ "+info.ppo+"€ por pedido"}</div>
           <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">hasta ${info.limit} pedidos/mes</div>
           <ul style="list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;flex:1;">
             ${info.features.map(f => `<li style="display:flex;align-items:center;gap:6px;font-size:11px;color:#e5e7eb;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
@@ -3745,7 +3745,7 @@ if (id === "plan") {
     </div>
     <div id="plan-invoice-preview" style="display:none;"></div>
     <div style="border-top:1px solid #f3f4f6;padding-top:14px;font-size:12px;color:#9ca3af;text-align:center;">
-      Los pagos se procesan de forma segura. Cada pago activa el plan por 30 días. 7 días gratis en tu primera suscripción.
+      Los pagos se procesan de forma segura. Cada pago activa el plan por 30 días. 30 días gratis en tu primera suscripción.
     </div>
   </div>`;
 
@@ -3862,7 +3862,7 @@ if (id === "plan") {
           ${isCurrent ? `<div style="text-align:center;padding:7px;background:rgba(34,197,94,.08);border-radius:8px;font-size:12px;font-weight:700;color:#22c55e;">✓ Plan actual${d.status === "trial" ? " (prueba)" : ""}</div>` : ""}
           ${canTrial ? `<button onclick="startTrial('${p}')"
             style="width:100%;padding:9px;background:rgba(34,197,94,.08);color:#22c55e;border:1.5px solid #86efac;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
-            🎁 Probar gratis 7 días
+            🎁 Probar gratis 30 días
           </button>` : ""}
           ${isCurrent && d.status === "active" ? `<button onclick="gestionarSuscripcion()"
             style="width:100%;padding:9px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
@@ -3917,7 +3917,7 @@ if (id === "plan") {
       });
       const d = await r.json();
       if (d.ok) {
-        showToast("🎉 ¡Prueba activada!", `Tienes 7 días gratuitos con el plan ${plan}. Disfrútalo.`, "#22c55e");
+        showToast("🎉 ¡Prueba activada!", `Tienes 30 días gratuitos con el plan ${plan}. Disfrútalo.`, "#22c55e");
         loadPlanUI();
       } else {
         alert(d.error || "No se pudo activar el período de prueba");

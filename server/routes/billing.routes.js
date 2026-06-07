@@ -4,10 +4,10 @@ const db = require("../db");
 const router = express.Router();
 
 const PLANS = {
-  starter:  { name: "Starter",  base_price: 9.99,  price_per_order: 0.09, order_limit: 100  },
-  growth:   { name: "Growth",   base_price: 19.99, price_per_order: 0.07, order_limit: 500  },
-  pro:      { name: "Pro",      base_price: 29.99, price_per_order: 0.05, order_limit: 1000 },
-  business: { name: "Business", base_price: 39.99, price_per_order: 0.03, order_limit: null }, // null = sin límite
+  starter:  { name: "Starter",  base_price: 0,   price_per_order: 0,    order_limit: 120  }, // gratis hasta 120
+  growth:   { name: "Growth",   base_price: 39,  price_per_order: 0.05, order_limit: 420  },
+  pro:      { name: "Pro",      base_price: 89,  price_per_order: 0.04, order_limit: 1000 },
+  business: { name: "Business", base_price: 149, price_per_order: 0.03, order_limit: 3000 },
 };
 
 // Obtener configuración de pagos desde DB (con fallback a env vars)

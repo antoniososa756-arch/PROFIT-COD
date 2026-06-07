@@ -6,7 +6,7 @@
 const db = require("../db");
 
 // Límites de pedidos por mes según plan
-const PLAN_ORDER_LIMITS = { basic: 500, pro: 5000, business: 15000 };
+const PLAN_ORDER_LIMITS = { starter: 120, growth: 420, pro: 1000, business: 3000 };
 
 module.exports = async (req, res, next) => {
   const user = req.user;
