@@ -77,7 +77,7 @@ router.get("/plan", auth, async (req, res) => {
     // ¿Está en trial?
     const trialStarted = user?.trial_started_at || null;
     const trialEndsAt  = trialStarted
-      ? new Date(new Date(trialStarted).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      ? new Date(new Date(trialStarted).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
       : null;
     const trialActive  = trialStarted && new Date() < new Date(trialEndsAt);
 

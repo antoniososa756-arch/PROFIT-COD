@@ -3868,7 +3868,7 @@ if (id === "plan") {
             style="width:100%;padding:9px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
             ⚙️ Gestionar suscripción
           </button>` : ""}
-          ${!(isCurrent && d.status === "active") ? `<button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
+          ${(!PLAN_DEFS[p].free && !(isCurrent && d.status === "active")) ? `<button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
             style="width:100%;padding:10px;background:#635bff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             Suscribirse
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -6384,7 +6384,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
 
     const pedEnt = ordersRango.filter(o => o.shop_domain === store.domain && o.fulfillment_status === "entregado");
     const pedCOD = pedEnt.filter(o => { try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="pending"||fin==="cod"||fin==="pendiente"; } catch{return false;} });
-    const pedPag = pedidosTarjeta.filter(o => o.shop_domain === store.domain && (()=>{ try{ const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"; }catch{return false;} })());
+    const pedPag = ordersRango.filter(o => { if(o.shop_domain!==store.domain)return false; const fin=(o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"||fin==="authorized"; });
     const tCOD = pedCOD.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
     const tPag = pedPag.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
     const man1 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===1)||{valor:0};
@@ -6992,7 +6992,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
 
     const pedEnt = ordersRango.filter(o => o.shop_domain === store.domain && o.fulfillment_status === "entregado");
     const pedCOD = pedEnt.filter(o => { try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="pending"||fin==="cod"||fin==="pendiente"; } catch{return false;} });
-    const pedPag = pedidosTarjeta.filter(o => o.shop_domain === store.domain && (()=>{ try{ const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"; }catch{return false;} })());
+    const pedPag = ordersRango.filter(o => { if(o.shop_domain!==store.domain)return false; const fin=(o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"||fin==="authorized"; });
     const tCOD = pedCOD.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
     const tPag = pedPag.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
     const man1 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===1)||{valor:0};
@@ -8803,12 +8803,10 @@ async function renderInformesIngresos() {
     });
 
     const pedidosTiendaTarjeta = pedidosMesTarjeta.filter(o => o.shop_domain === store.domain);
-    const pedidosPagado = pedidosTiendaTarjeta.filter(o => {
-      try {
-        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
-        return fin === "paid" || fin === "pagado";
-      } catch { return false; }
+    const pedidosPagado = orders.filter(o => {
+      if (o.shop_domain !== store.domain) return false;
+      const fin = (o.financial_status || "").toLowerCase().trim();
+      return fin === "paid" || fin === "pagado" || fin === "authorized";
     });
 
     const totalCOD    = pedidosCOD.reduce((s,o) => s+(parseFloat(o.total_price)||0), 0);
@@ -9047,13 +9045,10 @@ async function renderInformesBalance() {
       } catch { return false; }
     });
 
-    const pedPag = pedidosTarjeta.filter(o => {
+    const pedPag = orders.filter(o => {
       if (o.shop_domain !== store.domain) return false;
-      try {
-        const raw = o.raw_json ? (typeof o.raw_json === "string" ? JSON.parse(o.raw_json) : o.raw_json) : null;
-        const fin = (raw?.financial_status || o.financial_status || "").toLowerCase().trim();
-        return fin === "paid" || fin === "pagado";
-      } catch { return false; }
+      const fin = (o.financial_status || "").toLowerCase().trim();
+      return fin === "paid" || fin === "pagado" || fin === "authorized";
     });
 
     const tCOD = pedCOD.reduce((s,o) => s + (parseFloat(o.total_price)||0), 0);
