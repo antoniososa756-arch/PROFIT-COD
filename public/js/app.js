@@ -2448,7 +2448,11 @@ if (id === "tiendas") {
     if (tab === "tiendas") {
       content.innerHTML = `
         <div class="card">
-          <div style="display:flex; justify-content:flex-end; margin-bottom:20px;">
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:20px;">
+            <button onclick="window.open('about:blank','_blank')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Extraer Token
+            </button>
             <button class="btn-primary" onclick="openShopifyConnect()" style="display:inline-flex;align-items:center;gap:8px;">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
               Conectar tienda Shopify
