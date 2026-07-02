@@ -79,6 +79,9 @@ app.get("/", (req, res) => {
 app.get("/privacidad", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../public/privacidad.html"));
 });
+app.get("/shopify-token", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "../public/shopify-token.html"));
+});
 
 // SSE — sin auth middleware (verifica JWT internamente)
 app.use("/api/events", require("./routes/events.routes"));

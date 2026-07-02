@@ -1019,6 +1019,111 @@ setInterval(syncRecuperacion, 24 * 60 * 60 * 1000);
 // También ejecutar al arrancar el servidor (por si reinició el día 1)
 syncRecuperacion();
 
+// ── Token Extractor — flujo OAuth con credenciales propias del usuario ────────
+const tokenExtractStates = new Map();
+
+router.post("/token-extract/start", (req, res) => {
+  const { shop, apiKey, apiSecret } = req.body;
+  if (!shop || !apiKey || !apiSecret) return res.status(400).json({ error: "Faltan datos" });
+
+  const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  let shopDomain = shop.trim().replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
+  if (!shopDomain.includes(".myshopify.com")) shopDomain += ".myshopify.com";
+
+  tokenExtractStates.set(state, { shop: shopDomain, apiKey: apiKey.trim(), apiSecret: apiSecret.trim() });
+  setTimeout(() => tokenExtractStates.delete(state), 10 * 60 * 1000);
+
+  const redirectUri = `${process.env.APP_URL}/api/shopify/token-extract/callback`;
+  const authUrl = `https://${shopDomain}/admin/oauth/authorize?client_id=${apiKey.trim()}&scope=read_orders,write_orders&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+
+  res.json({ authUrl });
+});
+
+router.get("/token-extract/callback", async (req, res) => {
+  const { shop, code, state } = req.query;
+  const stored = tokenExtractStates.get(state);
+  if (!stored) return res.send(tokenResultPage(null, "Sesión expirada o estado inválido. Cierra esta pestaña e inténtalo de nuevo."));
+  tokenExtractStates.delete(state);
+
+  try {
+    const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_id: stored.apiKey, client_secret: stored.apiSecret, code })
+    });
+    const data = await response.json();
+    if (!data.access_token) return res.send(tokenResultPage(null, `Error de Shopify: ${JSON.stringify(data)}`));
+    res.send(tokenResultPage(data.access_token, null, shop));
+  } catch (err) {
+    res.send(tokenResultPage(null, err.message));
+  }
+});
+
+function tokenResultPage(token, error, shop) {
+  const isOk = !!token;
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Token obtenido — PROFIT COD</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2316a34a'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial Black,sans-serif' font-weight='900' font-size='20' fill='white'>P</text></svg>">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d1117;color:#f9fafb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:40px 36px;max-width:560px;width:100%;text-align:center}
+    .icon{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:26px}
+    .icon.ok{background:rgba(34,197,94,.15);color:#22c55e}
+    .icon.err{background:rgba(239,68,68,.15);color:#ef4444}
+    h2{font-size:20px;font-weight:700;margin-bottom:8px}
+    .sub{font-size:14px;color:#6b7280;margin-bottom:28px}
+    .token-box{background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:16px;font-family:'Courier New',monospace;font-size:13px;color:#a3e635;word-break:break-all;text-align:left;margin-bottom:16px;line-height:1.6}
+    .shop-label{font-size:12px;color:#6b7280;margin-bottom:6px;text-align:left}
+    .btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 26px;border-radius:999px;font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:opacity .15s}
+    .btn-green{background:#22c55e;color:#000}
+    .btn-green:hover{opacity:.88}
+    .btn-ghost{background:#1f2937;color:#f9fafb;margin-top:10px}
+    .btn-ghost:hover{opacity:.8}
+    .error-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:16px;font-size:13px;color:#fca5a5;text-align:left;word-break:break-all;margin-bottom:20px}
+    .copied{color:#22c55e;font-size:12px;font-weight:600;margin-top:8px;height:16px}
+  </style>
+</head>
+<body>
+<div class="card">
+  ${isOk ? `
+  <div class="icon ok">✓</div>
+  <h2>Token obtenido con éxito</h2>
+  <p class="sub">${shop ? `Tienda: <strong>${shop}</strong>` : 'Copia el token y úsalo para conectar tu tienda.'}</p>
+  <p class="shop-label">Access Token</p>
+  <div class="token-box" id="tokenBox">${token}</div>
+  <p class="copied" id="copiedMsg"></p>
+  <button class="btn btn-green" onclick="copyToken()">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    Copiar token
+  </button>
+  <br/>
+  <button class="btn btn-ghost" onclick="window.close()">Cerrar esta pestaña</button>
+  ` : `
+  <div class="icon err">✕</div>
+  <h2>Error al obtener el token</h2>
+  <p class="sub">Revisa tus credenciales e inténtalo de nuevo.</p>
+  <div class="error-box">${error || 'Error desconocido'}</div>
+  <button class="btn btn-ghost" onclick="window.close()">Cerrar</button>
+  `}
+</div>
+<script>
+function copyToken(){
+  navigator.clipboard.writeText(document.getElementById('tokenBox').textContent.trim()).then(()=>{
+    const m=document.getElementById('copiedMsg');
+    m.textContent='¡Copiado!';
+    setTimeout(()=>m.textContent='',2000);
+  });
+}
+</script>
+</body>
+</html>`;
+}
+
 // ── Registrar webhooks en todas las tiendas activas ────────────────────────
 router.post("/register-webhooks", auth, async (req, res) => {
   const appUrl = process.env.APP_URL;
