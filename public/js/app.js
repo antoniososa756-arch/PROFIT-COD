@@ -2458,18 +2458,37 @@ if (id === "tiendas") {
               Conectar tienda Shopify
             </button>
           </div>
-          <div style="background:var(--input);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:20px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="background:var(--input);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span style="font-size:13px;font-weight:700;color:var(--text);">¿Cómo obtener el Token de Shopify?</span>
+              <span style="font-size:13px;font-weight:700;color:var(--text);">¿Cómo configurar tu app en Shopify para obtener el Token?</span>
             </div>
-            <ol style="font-size:13px;color:var(--muted);line-height:1.9;padding-left:18px;margin:0;">
-              <li>Entra en <a href="https://dev.shopify.com/" target="_blank" style="color:#2563eb;font-weight:600;text-decoration:none;">dev.shopify.com</a> e inicia sesión con tu cuenta de Shopify Partners.</li>
-              <li>Crea una nueva app o selecciona la existente (ej. <strong style="color:var(--text);">PFCOD</strong>).</li>
-              <li>En <strong style="color:var(--text);">Configuración → URLs de redireccionamiento</strong> añade:<br/><code style="background:var(--border);padding:2px 7px;border-radius:5px;font-size:12px;color:var(--text);">https://profitcod.com/api/shopify/token-extract/callback</code></li>
-              <li>En <strong style="color:var(--text);">URL de la app</strong> pon: <code style="background:var(--border);padding:2px 7px;border-radius:5px;font-size:12px;color:var(--text);">https://profitcod.com</code></li>
-              <li>Copia el <strong style="color:var(--text);">API Key</strong> y el <strong style="color:var(--text);">API Secret</strong> de la app y pégalos en el formulario de <em>Extraer Token</em>.</li>
-            </ol>
+            <div style="font-size:13px;color:var(--muted);line-height:1.8;">
+              <p style="margin-bottom:10px;">Accede a <a href="https://dev.shopify.com/" target="_blank" style="color:#2563eb;font-weight:600;text-decoration:none;">dev.shopify.com</a>, inicia sesión y crea una nueva app o selecciona la existente. Luego rellena cada campo así:</p>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+                  <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Nombre de la app</span>
+                  <p style="margin-top:3px;color:var(--text);">El que quieras, ej: <code style="background:var(--input);padding:1px 6px;border-radius:4px;font-size:12px;">PFCOD</code></p>
+                </div>
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+                  <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Alcances (Scopes)</span>
+                  <p style="margin-top:3px;color:var(--text);word-break:break-all;"><code style="background:var(--input);padding:1px 6px;border-radius:4px;font-size:12px;">read_fulfillments,write_fulfillments,read_orders,write_orders,read_products,write_products</code></p>
+                </div>
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+                  <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">URLs de redireccionamiento</span>
+                  <p style="margin-top:3px;color:var(--text);word-break:break-all;"><code style="background:var(--input);padding:1px 6px;border-radius:4px;font-size:12px;">https://profitcod.com/api/shopify/token-extract/callback</code></p>
+                </div>
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+                  <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">URL de la app</span>
+                  <p style="margin-top:3px;color:var(--text);"><code style="background:var(--input);padding:1px 6px;border-radius:4px;font-size:12px;">https://profitcod.com</code></p>
+                </div>
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+                  <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">URL de preferencias (opcional)</span>
+                  <p style="margin-top:3px;color:var(--text);"><code style="background:var(--input);padding:1px 6px;border-radius:4px;font-size:12px;">https://profitcod.com</code></p>
+                </div>
+              </div>
+              <p style="margin-top:12px;">Una vez guardado, copia el <strong style="color:var(--text);">API Key</strong> y el <strong style="color:var(--text);">API Secret</strong> de tu app y úsalos en el botón <strong style="color:var(--text);">Extraer Token</strong>.</p>
+            </div>
           </div>
           <div id="storesGrid" class="stores-grid"></div>
         </div>
