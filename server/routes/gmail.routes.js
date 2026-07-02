@@ -5,7 +5,7 @@ const fetch   = (...a) => import("node-fetch").then(({ default: f }) => f(...a))
 
 const CLIENT_ID     = process.env.GMAIL_CLIENT_ID;
 const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
-const REDIRECT_URI  = "https://profit-cod.onrender.com/api/gmail/callback";
+const REDIRECT_URI  = process.env.APP_URL ? `${process.env.APP_URL}/api/gmail/callback` : "https://profitcod.com/api/gmail/callback";
 const JWT_SECRET    = process.env.JWT_SECRET || "secret";
 
 // Crear tabla si no existe

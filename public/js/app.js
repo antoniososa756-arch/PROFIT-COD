@@ -1,4 +1,4 @@
-const API_BASE = "https://profit-cod.onrender.com";
+const API_BASE = "https://profitcod.com";
 
 function getActiveToken() {
   const params = new URLSearchParams(window.location.search);
