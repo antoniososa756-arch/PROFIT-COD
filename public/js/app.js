@@ -2458,13 +2458,14 @@ if (id === "tiendas") {
               Conectar tienda Shopify
             </button>
           </div>
-          <div style="background:var(--input);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:20px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span style="font-size:13px;font-weight:700;color:var(--text);">¿Cómo configurar tu app en Shopify para obtener el Token?</span>
-            </div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.8;">
-              <p style="margin-bottom:10px;">Accede a <a href="https://dev.shopify.com/" target="_blank" style="color:#2563eb;font-weight:600;text-decoration:none;">dev.shopify.com</a>, inicia sesión y crea una nueva app o selecciona la existente. Luego rellena cada campo así:</p>
+          <details style="background:var(--input);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden;">
+            <summary style="display:flex;align-items:center;gap:8px;padding:14px 18px;cursor:pointer;list-style:none;user-select:none;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span style="font-size:13px;font-weight:700;color:var(--text);flex:1;">¿Cómo configurar tu app en Shopify para obtener el Token?</span>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s;" class="chevron-token"><polyline points="6 9 12 15 18 9"/></svg>
+            </summary>
+            <div style="padding:0 18px 18px;font-size:13px;color:var(--muted);line-height:1.8;">
+              <p style="margin-bottom:12px;">Accede a <a href="https://dev.shopify.com/" target="_blank" style="color:#2563eb;font-weight:600;text-decoration:none;">dev.shopify.com</a>, inicia sesión y crea una nueva app o selecciona la existente. Luego rellena cada campo así:</p>
               <div style="display:flex;flex-direction:column;gap:8px;">
                 <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
                   <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Nombre de la app</span>
@@ -2489,7 +2490,7 @@ if (id === "tiendas") {
               </div>
               <p style="margin-top:12px;">Una vez guardado, copia el <strong style="color:var(--text);">API Key</strong> y el <strong style="color:var(--text);">API Secret</strong> de tu app y úsalos en el botón <strong style="color:var(--text);">Extraer Token</strong>.</p>
             </div>
-          </div>
+          </details>
           <div id="storesGrid" class="stores-grid"></div>
         </div>
       `;
