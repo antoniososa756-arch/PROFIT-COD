@@ -2449,7 +2449,7 @@ if (id === "tiendas") {
       content.innerHTML = `
         <div class="card">
           <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:20px;">
-            <button class="btn-secondary" onclick="window.open('/shopify-token','_blank')" style="display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 26px;border-radius:999px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+            <button onclick="window.open('/shopify-token','_blank')" style="display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 26px;border-radius:999px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:#2563eb;color:#fff;border:none;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
               Extraer Token
             </button>
