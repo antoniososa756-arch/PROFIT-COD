@@ -2465,7 +2465,7 @@ if (id === "tiendas") {
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s;" class="chevron-token"><polyline points="6 9 12 15 18 9"/></svg>
             </summary>
             <div style="padding:0 18px 18px;font-size:13px;color:var(--muted);line-height:1.8;">
-              <p style="margin-bottom:12px;">Accede a <a href="https://dev.shopify.com/" target="_blank" style="color:#2563eb;font-weight:600;text-decoration:none;">dev.shopify.com</a>, inicia sesión y crea una nueva app o selecciona la existente. Luego rellena cada campo así:</p>
+              <p style="margin-bottom:12px;">Accede a <a href="https://dev.shopify.com/dashboard/" target="_blank" style="color:#2563eb;font-weight:600;text-decoration:none;">dev.shopify.com</a>, inicia sesión y crea una nueva app o selecciona la existente. Luego rellena cada campo así:</p>
               <div style="display:flex;flex-direction:column;gap:8px;">
                 <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
                   <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Nombre de la app</span>
