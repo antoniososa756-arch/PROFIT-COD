@@ -1,5 +1,10 @@
 const API_BASE = "https://profitcod.com";
 
+function shopLabel(s) {
+  const name = s.shop_name || s.domain;
+  return s.status && s.status !== 'active' ? name + ' (inactiva)' : name;
+}
+
 function getActiveToken() {
   const params = new URLSearchParams(window.location.search);
   return params.get("impersonated") === "1"
@@ -1830,15 +1835,15 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
   loadOrdersChart(window.__chartPeriod || 'day');
 
 // Cargar tiendas en el panel de filtro de métricas
-  fetch(`${API_BASE}/api/shopify/stores`, {
+  fetch(`${API_BASE}/api/shopify/stores?all=true`, {
     headers: { Authorization: "Bearer " + getActiveToken() }
   }).then(r => r.json()).then(stores => {
     const panel = document.getElementById("met-shop-filter-panel");
     if (panel && Array.isArray(stores) && stores.length > 0) {
       const checkboxes = stores.map(s =>
         `<label class="shop-check-label shop-check-row">
-          <input type="checkbox" checked value="${s.domain}" onchange="recalcMetricasFiltro()">
-          ${escapeHtml(s.shop_name || s.domain)}
+          <input type="checkbox" ${s.status === 'active' ? 'checked' : ''} value="${s.domain}" onchange="recalcMetricasFiltro()">
+          ${escapeHtml(shopLabel(s))}${s.status !== 'active' ? ` <span style="font-size:10px;color:var(--muted);background:var(--border);padding:1px 5px;border-radius:4px;margin-left:2px;">inactiva</span>` : ''}
         </label>`
       ).join("");
       const _filterBody = document.getElementById('met-filter-body');
@@ -2309,14 +2314,14 @@ if (id === "rentabilidad") {
   };
 
   // Cargar tiendas en el panel de filtro de rentabilidad
-  fetch(`${API_BASE}/api/shopify/stores`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+  fetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: { Authorization: "Bearer " + getActiveToken() } })
     .then(r => r.json()).then(storesR => {
       const bodyEl = document.getElementById("rent-filter-body");
       if (bodyEl && Array.isArray(storesR) && storesR.length > 0) {
         const chks = storesR.map(s =>
           `<label class="shop-check-label shop-check-row">
-            <input type="checkbox" checked value="${s.domain}" onchange="recalcRentFiltro();loadRentabilidad();">
-            ${escapeHtml(s.shop_name || s.domain)}
+            <input type="checkbox" ${s.status === 'active' ? 'checked' : ''} value="${s.domain}" onchange="recalcRentFiltro();loadRentabilidad();">
+            ${escapeHtml(shopLabel(s))}${s.status !== 'active' ? ` <span style="font-size:10px;color:var(--muted);background:var(--border);padding:1px 5px;border-radius:4px;margin-left:2px;">inactiva</span>` : ''}
           </label>`
         ).join("");
         bodyEl.innerHTML = `
@@ -2809,7 +2814,7 @@ if (id === "productos") {
 
   loadProductos();
   // Cargar tiendas en filtro
-  fetch(`${API_BASE}/api/shopify/stores`, {
+  fetch(`${API_BASE}/api/shopify/stores?all=true`, {
     headers: { Authorization: "Bearer " + getActiveToken() }
   }).then(r => r.json()).then(stores => {
     const sel = document.getElementById("productos-shop-filter");
@@ -2817,7 +2822,7 @@ if (id === "productos") {
       stores.forEach(s => {
         const opt = document.createElement("option");
         opt.value = s.domain;
-        opt.textContent = s.shop_name || s.domain;
+        opt.textContent = shopLabel(s);
         sel.appendChild(opt);
       });
     }
@@ -2914,7 +2919,7 @@ if (id === "pedidos") {
     checkMRWIntegration();
 
     // Cargar tiendas en filtro inline
-    fetch(`${API_BASE}/api/shopify/stores`, {
+    fetch(`${API_BASE}/api/shopify/stores?all=true`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json()).then(stores => {
       const sel = document.getElementById("filter-shop-inline");
@@ -2922,7 +2927,7 @@ if (id === "pedidos") {
         stores.forEach(s => {
           const opt = document.createElement("option");
           opt.value = s.domain;
-          opt.textContent = s.shop_name || s.domain;
+          opt.textContent = shopLabel(s);
           sel.appendChild(opt);
         });
       }
@@ -3019,13 +3024,13 @@ if (id === "gastos-ads") {
   }
 
   // Cargar tiendas
-  fetch(`${API_BASE}/api/shopify/stores`, {
+  fetch(`${API_BASE}/api/shopify/stores?all=true`, {
     headers: { Authorization: "Bearer " + getActiveToken() }
   }).then(r=>r.json()).then(stores => {
     const sel = document.getElementById("ads-shop-sel");
     if (!sel || !Array.isArray(stores)) return;
     sel.innerHTML = stores.map(s =>
-      `<option value="${s.domain}">${escapeHtml(s.shop_name || s.domain)}</option>`
+      `<option value="${s.domain}">${escapeHtml(shopLabel(s))}</option>`
     ).join("");
     document.getElementById("ads-shop-sel")?.addEventListener("change", loadAdsTable);
     document.getElementById("ads-month-sel")?.addEventListener("change", loadAdsTable);
@@ -4545,7 +4550,7 @@ function switchFacturasTab(key) {
       </div>
     `;
     window.__DPF.create('ree', '', '', 'personalizado', 'Período', null, null, function() { window.renderReembolsos(); });
-    fetch(`${API_BASE}/api/shopify/stores`, {
+    fetch(`${API_BASE}/api/shopify/stores?all=true`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json()).then(stores => {
       const sel = document.getElementById("ree-shop");
@@ -4553,7 +4558,7 @@ function switchFacturasTab(key) {
         stores.forEach(s => {
           const opt = document.createElement("option");
           opt.value = s.domain;
-          opt.textContent = s.shop_name || s.domain;
+          opt.textContent = shopLabel(s);
           sel.appendChild(opt);
         });
       }
@@ -4577,7 +4582,7 @@ function switchFacturasTab(key) {
               </div>
       <div id="ads-table-wrap" style="overflow-x:auto;"></div>
     `;
-    fetch(`${API_BASE}/api/shopify/stores`, {
+    fetch(`${API_BASE}/api/shopify/stores?all=true`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r=>r.json()).then(stores => {
       const sel = document.getElementById("ads-shop-sel");
@@ -6136,7 +6141,7 @@ async function loadMetricas() {
         mesesRangoAds.push({ m: curAds.getMonth()+1, y: curAds.getFullYear() });
         curAds.setMonth(curAds.getMonth() + 1);
       }
-      const allStoresAds = await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }).catch(()=>[]);
+      const allStoresAds = await cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: h }).catch(()=>[]);
       const adsFetches = (Array.isArray(allStoresAds) ? allStoresAds : []).flatMap(store =>
         mesesRangoAds.map(({ m, y }) =>
           cachedFetch(`${API_BASE}/api/ads?shop=${encodeURIComponent(store.domain)}&month=${m}&year=${y}`, { headers: h })
@@ -6288,7 +6293,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     if (dateFrom) _balParams.set("from", dateFrom);
     if (dateTo)   _balParams.set("to",   dateTo);
     [stores, orders] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(d => Array.isArray(d) ? d : []),
+      cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: h }).then(d => Array.isArray(d) ? d : []),
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
   } catch {}
@@ -6629,7 +6634,7 @@ async function loadOrdersChart(period) {
   try {
     const [rows, storesRes] = await Promise.all([
       fetch(`${API_BASE}/api/orders?from=${from}&to=${to}&light=1&limit=5000`, {headers:h}).then(r=>r.json()),
-      fetch(`${API_BASE}/api/shopify/stores`, {headers:h}).then(r=>r.json()).catch(()=>[]),
+      fetch(`${API_BASE}/api/shopify/stores?all=true`, {headers:h}).then(r=>r.json()).catch(()=>[]),
     ]);
     const orders = (Array.isArray(rows) ? rows : (rows.orders||[])).filter(o => o.fulfillment_status !== 'cancelado' && o.created_at);
 
@@ -6896,7 +6901,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     if (dateFrom) _balParams.set("from", dateFrom);
     if (dateTo)   _balParams.set("to",   dateTo);
     [stores, orders] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }).then(d => Array.isArray(d) ? d : []),
+      cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: h }).then(d => Array.isArray(d) ? d : []),
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
     stores = stores.filter(s => s.status === 'active');
@@ -8409,7 +8414,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
   // 1. Tiendas activas
   let stores = [];
   try {
-    const all = await cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: _hGV });
+    const all = await cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: _hGV });
     stores = Array.isArray(all) ? all : [];
   } catch {}
 
@@ -8746,7 +8751,7 @@ async function switchInformesTab(tab) {
       </div>
     `;
     window.__DPF.create('ree', '', '', 'personalizado', 'Período', null, null, function() { window.renderReembolsos(); });
-    fetch(`${API_BASE}/api/shopify/stores`, {
+    fetch(`${API_BASE}/api/shopify/stores?all=true`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     }).then(r => r.json()).then(stores => {
       const sel = document.getElementById("ree-shop");
@@ -8754,7 +8759,7 @@ async function switchInformesTab(tab) {
         stores.forEach(s => {
           const opt = document.createElement("option");
           opt.value = s.domain;
-          opt.textContent = s.shop_name || s.domain;
+          opt.textContent = shopLabel(s);
           sel.appendChild(opt);
         });
       }
@@ -8808,7 +8813,7 @@ async function renderInformesIngresos() {
     const _mesFrom  = `${year}-${_monthStr}-01`;
     const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
     const [_s, _o, _m] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: _hInf }),
+      cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: _hInf }),
       fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}`, { headers: _hInf }).then(r => r.json()),
       cachedFetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: _hInf })
     ]);
@@ -9046,7 +9051,7 @@ async function renderInformesBalance() {
     const _mesFrom  = `${year}-${_monthStr}-01`;
     const _mesTo    = `${year}-${_monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2,"0")}`;
     const [_s, _o, _m] = await Promise.all([
-      cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: h }),
+      cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: h }),
       fetch(`${API_BASE}/api/orders?from=${_mesFrom}&to=${_mesTo}`, { headers: h }).then(r => r.json()),
       cachedFetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mes}`, { headers: h })
     ]);
@@ -9398,7 +9403,7 @@ async function refreshCacheBackground() {
   const mes = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
 
   const urls = [
-    `${API_BASE}/api/shopify/stores`,
+    `${API_BASE}/api/shopify/stores?all=true`,
     `${API_BASE}/api/shopify/stock`,
     `${API_BASE}/api/shopify/variantes-config`,
     `${API_BASE}/api/shopify/products`,
@@ -10008,7 +10013,7 @@ async function toggleFilterPanel() {
   // Obtener tiendas para el selector
   let stores = [];
   try {
-    const r = await fetch(`${API_BASE}/api/shopify/stores`, {
+    const r = await fetch(`${API_BASE}/api/shopify/stores?all=true`, {
       headers: { Authorization: "Bearer " + getActiveToken() },
     });
     stores = await r.json();
@@ -10084,7 +10089,7 @@ async function toggleFilterPanel() {
             >
               <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${activeFilters.shop===s.domain ? '#22c55e' : '#d1d5db'};
                 background:${activeFilters.shop===s.domain ? '#22c55e' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
-              ${escapeHtml(s.shop_name || s.domain)}
+              ${escapeHtml(shopLabel(s))}
             </div>
           `).join("")}
         </div>
