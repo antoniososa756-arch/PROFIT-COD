@@ -1842,8 +1842,8 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
     if (panel && Array.isArray(stores) && stores.length > 0) {
       const checkboxes = stores.map(s =>
         `<label class="shop-check-label shop-check-row">
-          <input type="checkbox" ${s.status === 'active' ? 'checked' : ''} value="${s.domain}" onchange="recalcMetricasFiltro()">
-          ${escapeHtml(shopLabel(s))}${s.status !== 'active' ? ` <span style="font-size:10px;color:var(--muted);background:var(--border);padding:1px 5px;border-radius:4px;margin-left:2px;">inactiva</span>` : ''}
+          <input type="checkbox" checked value="${s.domain}" onchange="recalcMetricasFiltro()">
+          ${escapeHtml(s.shop_name || s.domain)}${s.status !== 'active' ? ` <span style="font-size:10px;color:var(--muted);background:var(--border);padding:1px 5px;border-radius:4px;margin-left:2px;">desconectada</span>` : ''}
         </label>`
       ).join("");
       const _filterBody = document.getElementById('met-filter-body');
@@ -2320,8 +2320,8 @@ if (id === "rentabilidad") {
       if (bodyEl && Array.isArray(storesR) && storesR.length > 0) {
         const chks = storesR.map(s =>
           `<label class="shop-check-label shop-check-row">
-            <input type="checkbox" ${s.status === 'active' ? 'checked' : ''} value="${s.domain}" onchange="recalcRentFiltro();loadRentabilidad();">
-            ${escapeHtml(shopLabel(s))}${s.status !== 'active' ? ` <span style="font-size:10px;color:var(--muted);background:var(--border);padding:1px 5px;border-radius:4px;margin-left:2px;">inactiva</span>` : ''}
+            <input type="checkbox" checked value="${s.domain}" onchange="recalcRentFiltro();loadRentabilidad();">
+            ${escapeHtml(s.shop_name || s.domain)}${s.status !== 'active' ? ` <span style="font-size:10px;color:var(--muted);background:var(--border);padding:1px 5px;border-radius:4px;margin-left:2px;">desconectada</span>` : ''}
           </label>`
         ).join("");
         bodyEl.innerHTML = `
