@@ -1840,10 +1840,11 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
   }).then(r => r.json()).then(stores => {
     const panel = document.getElementById("met-shop-filter-panel");
     if (panel && Array.isArray(stores) && stores.length > 0) {
-      const checkboxes = stores.map(s =>
+      window.__inactiveShopDomains = stores.filter(s => s.status !== 'active').map(s => s.domain);
+      const checkboxes = stores.filter(s => s.status === 'active').map(s =>
         `<label class="shop-check-label shop-check-row">
           <input type="checkbox" checked value="${s.domain}" onchange="recalcMetricasFiltro()">
-          ${escapeHtml(s.shop_name || s.domain)}${s.status !== 'active' ? ` <span style="font-size:10px;color:var(--muted);background:var(--border);padding:1px 5px;border-radius:4px;margin-left:2px;">desconectada</span>` : ''}
+          ${escapeHtml(s.shop_name || s.domain)}
         </label>`
       ).join("");
       const _filterBody = document.getElementById('met-filter-body');
@@ -2318,10 +2319,10 @@ if (id === "rentabilidad") {
     .then(r => r.json()).then(storesR => {
       const bodyEl = document.getElementById("rent-filter-body");
       if (bodyEl && Array.isArray(storesR) && storesR.length > 0) {
-        const chks = storesR.map(s =>
+        const chks = storesR.filter(s => s.status === 'active').map(s =>
           `<label class="shop-check-label shop-check-row">
             <input type="checkbox" checked value="${s.domain}" onchange="recalcRentFiltro();loadRentabilidad();">
-            ${escapeHtml(s.shop_name || s.domain)}${s.status !== 'active' ? ` <span style="font-size:10px;color:var(--muted);background:var(--border);padding:1px 5px;border-radius:4px;margin-left:2px;">desconectada</span>` : ''}
+            ${escapeHtml(s.shop_name || s.domain)}
           </label>`
         ).join("");
         bodyEl.innerHTML = `
@@ -6096,6 +6097,10 @@ async function loadMetricas() {
     // Si están todas marcadas, no filtrar (mostrar todas)
     if (dominiosFiltro.length === checkboxes.length) dominiosFiltro = [];
   }
+  // Las tiendas inactivas siempre se incluyen aunque no estén en el filtro
+  if (dominiosFiltro.length > 0 && window.__inactiveShopDomains?.length > 0) {
+    dominiosFiltro = [...new Set([...dominiosFiltro, ...window.__inactiveShopDomains])];
+  }
 
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
@@ -6904,9 +6909,13 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: h }).then(d => Array.isArray(d) ? d : []),
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
+    const _inactiveStores = stores.filter(s => s.status !== 'active');
     stores = stores.filter(s => s.status === 'active');
     totalTiendasActivas = stores.length || 1;
     if (shopsFiltro.length > 0) stores = stores.filter(s => shopsFiltro.includes(s.domain));
+    // Añadir tiendas inactivas que tienen pedidos en este período
+    const _inactiveWithOrders = _inactiveStores.filter(s => orders.some(o => o.shop_domain === s.domain));
+    stores = [...stores, ..._inactiveWithOrders];
     // Facturación exacta por tienda (mismo cálculo que Gastos Ads: bruto - cancelados por cancelled_at)
     await Promise.all(stores.map(async store => {
       try {
@@ -6919,7 +6928,10 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     }));
   } catch {}
 
-  const ordersRango = shopsFiltro.length > 0 ? orders.filter(o => shopsFiltro.includes(o.shop_domain)) : orders;
+  const _inactiveDomains = _inactiveStores?.map(s => s.domain) || [];
+  const ordersRango = shopsFiltro.length > 0
+    ? orders.filter(o => shopsFiltro.includes(o.shop_domain) || _inactiveDomains.includes(o.shop_domain))
+    : orders;
 
   const now = new Date();
   const mesActual = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
