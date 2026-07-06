@@ -1840,6 +1840,7 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
   }).then(r => r.json()).then(stores => {
     const panel = document.getElementById("met-shop-filter-panel");
     if (panel && Array.isArray(stores) && stores.length > 0) {
+      window.__allStores = stores;
       window.__inactiveShopDomains = stores.filter(s => s.status !== 'active').map(s => s.domain);
       const checkboxes = stores.filter(s => s.status === 'active').map(s =>
         `<label class="shop-check-label shop-check-row">
@@ -6097,15 +6098,10 @@ async function loadMetricas() {
     // Si están todas marcadas, no filtrar (mostrar todas)
     if (dominiosFiltro.length === checkboxes.length) dominiosFiltro = [];
   }
-  // Las tiendas inactivas siempre se incluyen aunque no estén en el filtro
-  if (dominiosFiltro.length > 0 && window.__inactiveShopDomains?.length > 0) {
-    dominiosFiltro = [...new Set([...dominiosFiltro, ...window.__inactiveShopDomains])];
-  }
-
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
+  const h = { Authorization: "Bearer " + getActiveToken() };
   try {
-    const h = { Authorization: "Bearer " + getActiveToken() };
 
     // Llamada al nuevo endpoint de stats — toda la lógica queda en el servidor
     const statsParams = new URLSearchParams({ from: dateFrom, to: dateTo });
@@ -6198,6 +6194,35 @@ async function loadMetricas() {
 
   } catch(e) {
     console.error("Error cargando métricas:", e);
+  }
+
+  // Actualizar filtro con tiendas inactivas que tienen pedidos en este período
+  if (window.__inactiveShopDomains?.length > 0 && window.__allStores) {
+    const _ordParamsMet = new URLSearchParams();
+    if (dateFrom) _ordParamsMet.set("from", dateFrom);
+    if (dateTo)   _ordParamsMet.set("to",   dateTo);
+    cachedFetch(`${API_BASE}/api/orders?${_ordParamsMet}`, { headers: h })
+      .then(allOrdsMet => {
+        if (!Array.isArray(allOrdsMet)) return;
+        const _ordDomains = new Set(allOrdsMet.map(o => o.shop_domain).filter(Boolean));
+        const _inactWithOrdsMet = window.__allStores.filter(
+          s => s.status !== 'active' && _ordDomains.has(s.domain)
+        );
+        const _metFB = document.getElementById('met-filter-body');
+        if (!_metFB) return;
+        const _prevInact = [..._metFB.querySelectorAll('.inactive-chk-row input')].map(i => i.value);
+        _metFB.querySelectorAll('.inactive-chk-row').forEach(el => el.remove());
+        _inactWithOrdsMet.forEach(s => {
+          const _lbl = document.createElement('label');
+          _lbl.className = 'shop-check-label shop-check-row inactive-chk-row';
+          const _wasChecked = !_prevInact.length || _prevInact.includes(s.domain);
+          _lbl.innerHTML = `<input type="checkbox" ${_wasChecked ? 'checked' : ''} value="${escapeHtml(s.domain)}" onchange="recalcMetricasFiltro();">${escapeHtml(s.shop_name||s.domain)}<span style="font-size:10px;color:var(--muted,#9ca3af);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>`;
+          _metFB.appendChild(_lbl);
+        });
+        const _chks = _metFB.querySelectorAll("input[type='checkbox'][value]");
+        const _allChk = document.getElementById("met-shop-check-all");
+        if (_allChk) _allChk.checked = [..._chks].every(c => c.checked);
+      }).catch(() => {});
   }
 
   loadTopProductos();
@@ -6914,9 +6939,25 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     stores = stores.filter(s => s.status === 'active');
     totalTiendasActivas = stores.length || 1;
     if (shopsFiltro.length > 0) stores = stores.filter(s => shopsFiltro.includes(s.domain));
-    // Añadir tiendas inactivas que tienen pedidos en este período
+    // Tiendas inactivas con pedidos en este período
     const _inactiveWithOrders = _inactiveStores.filter(s => orders.some(o => o.shop_domain === s.domain));
-    stores = [...stores, ..._inactiveWithOrders];
+    stores = [...stores, ...(shopsFiltro.length > 0
+      ? _inactiveWithOrders.filter(s => shopsFiltro.includes(s.domain))
+      : _inactiveWithOrders)];
+    // Actualizar filtro de rentabilidad: mostrar tiendas inactivas con pedidos en este período
+    const _rentFB = document.getElementById("rent-filter-body");
+    if (_rentFB) {
+      const _prevRentInact = [..._rentFB.querySelectorAll('.inactive-chk-row input')].map(i => i.value);
+      _rentFB.querySelectorAll('.inactive-chk-row').forEach(el => el.remove());
+      _inactiveWithOrders.forEach(s => {
+        const _lbl = document.createElement('label');
+        _lbl.className = 'shop-check-label shop-check-row inactive-chk-row';
+        const _wasChecked = !_prevRentInact.length || _prevRentInact.includes(s.domain);
+        _lbl.innerHTML = `<input type="checkbox" ${_wasChecked ? 'checked' : ''} value="${escapeHtml(s.domain)}" onchange="recalcRentFiltro();loadRentabilidad();">${escapeHtml(s.shop_name||s.domain)}<span style="font-size:10px;color:var(--muted,#9ca3af);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>`;
+        _rentFB.appendChild(_lbl);
+      });
+      if (window.recalcRentFiltro) window.recalcRentFiltro();
+    }
     // Facturación exacta por tienda
     await Promise.all(stores.map(async store => {
       try {
@@ -6929,9 +6970,8 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     }));
   } catch {}
 
-  const _inactiveDomains = _inactiveStores.map(s => s.domain);
   const ordersRango = shopsFiltro.length > 0
-    ? orders.filter(o => shopsFiltro.includes(o.shop_domain) || _inactiveDomains.includes(o.shop_domain))
+    ? orders.filter(o => shopsFiltro.includes(o.shop_domain))
     : orders;
 
   const now = new Date();
