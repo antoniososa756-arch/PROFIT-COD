@@ -6898,6 +6898,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
 
   let stores = [], orders = [], manuales = [];
   let totalTiendasActivas = 1;
+  let _inactiveStores = [];
   const facturacionPorTienda = {};
   try {
     const token = getActiveToken();
@@ -6909,14 +6910,14 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: h }).then(d => Array.isArray(d) ? d : []),
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
-    const _inactiveStores = stores.filter(s => s.status !== 'active');
+    _inactiveStores = stores.filter(s => s.status !== 'active');
     stores = stores.filter(s => s.status === 'active');
     totalTiendasActivas = stores.length || 1;
     if (shopsFiltro.length > 0) stores = stores.filter(s => shopsFiltro.includes(s.domain));
     // Añadir tiendas inactivas que tienen pedidos en este período
     const _inactiveWithOrders = _inactiveStores.filter(s => orders.some(o => o.shop_domain === s.domain));
     stores = [...stores, ..._inactiveWithOrders];
-    // Facturación exacta por tienda (mismo cálculo que Gastos Ads: bruto - cancelados por cancelled_at)
+    // Facturación exacta por tienda
     await Promise.all(stores.map(async store => {
       try {
         const p = new URLSearchParams({ shops: store.domain });
@@ -6928,7 +6929,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     }));
   } catch {}
 
-  const _inactiveDomains = _inactiveStores?.map(s => s.domain) || [];
+  const _inactiveDomains = _inactiveStores.map(s => s.domain);
   const ordersRango = shopsFiltro.length > 0
     ? orders.filter(o => shopsFiltro.includes(o.shop_domain) || _inactiveDomains.includes(o.shop_domain))
     : orders;
