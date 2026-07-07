@@ -6290,6 +6290,9 @@ async function loadMetricasBalance(dateFrom, dateTo) {
       cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: h }).then(d => Array.isArray(d) ? d : []),
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
+    // Solo tiendas con pedidos reales en el período
+    const _ordActMB = orders.filter(o => o.fulfillment_status !== 'cancelado' && !o.cancelled_at);
+    if (_ordActMB.length > 0) stores = stores.filter(s => _ordActMB.some(o => o.shop_domain === s.domain));
   } catch {}
 
   // Orders already filtered server-side by dateFrom/dateTo
@@ -6301,10 +6304,10 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   const mesActual = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
   const mesFrom = dateFrom ? dateFrom.slice(0,7) : mesActual;
 
-  try { 
+  try {
     const r = await fetch(`${API_BASE}/api/shopify/informes-ingresos?mes=${mesFrom}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    manuales = await r.json(); 
-    if (!Array.isArray(manuales)) manuales = []; 
+    manuales = await r.json();
+    if (!Array.isArray(manuales)) manuales = [];
   } catch {}
 
   const numTiendas = stores.length || 1;
@@ -6901,9 +6904,10 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     ]);
     _inactiveStores = stores.filter(s => s.status !== 'active');
     const _activeStoresAll = stores.filter(s => s.status === 'active');
-    // Solo tiendas con pedidos en este período (activas + inactivas)
-    const _activeWithOrders   = _activeStoresAll.filter(s => orders.some(o => o.shop_domain === s.domain));
-    const _inactiveWithOrders = _inactiveStores.filter(s => orders.some(o => o.shop_domain === s.domain));
+    // Solo tiendas con pedidos REALES (no cancelados) en este período
+    const _ordersActivos = orders.filter(o => o.fulfillment_status !== 'cancelado' && !o.cancelled_at);
+    const _activeWithOrders   = _activeStoresAll.filter(s => _ordersActivos.some(o => o.shop_domain === s.domain));
+    const _inactiveWithOrders = _inactiveStores.filter(s => _ordersActivos.some(o => o.shop_domain === s.domain));
     const _storesInPeriod = [..._activeWithOrders, ..._inactiveWithOrders];
     // Divisor de gastos fijos = tiendas con actividad real en el período
     totalTiendasActivas = _storesInPeriod.length || 1;
@@ -8432,13 +8436,18 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
     } catch {}
   }
 
-  // 1. Tiendas activas
+  // 1. Tiendas con actividad real en el período
   let stores = [];
   try {
     const all = await cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: _hGV });
     stores = Array.isArray(all) ? all : [];
   } catch {}
 
+  // Filtrar a solo tiendas con pedidos no cancelados en el mes
+  const _ordActGV = (window.__allOrdersCache || []).filter(o => o.fulfillment_status !== 'cancelado' && !o.cancelled_at);
+  if (_ordActGV.length > 0) {
+    stores = stores.filter(s => _ordActGV.some(o => o.shop_domain === s.domain));
+  }
   const numTiendas = stores.length || 1;
 
   // 2. Gastos Ads del mes (Meta y TikTok por tienda) — EN PARALELO
@@ -9079,6 +9088,9 @@ async function renderInformesBalance() {
     stores = Array.isArray(_s) ? _s : [];
     orders = Array.isArray(_o) ? _o : (_o?.orders || []);
     manuales = Array.isArray(_m) ? _m : [];
+    // Solo tiendas con pedidos reales en el período
+    const _ordActBal = orders.filter(o => o.fulfillment_status !== 'cancelado' && !o.cancelled_at);
+    if (_ordActBal.length > 0) stores = stores.filter(s => _ordActBal.some(o => o.shop_domain === s.domain));
   } catch(e) {
     wrap.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando datos</div>`;
     window.__hideLoadingBar?.();
