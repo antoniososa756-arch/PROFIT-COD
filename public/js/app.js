@@ -1834,32 +1834,13 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
   loadMetricas();
   loadOrdersChart(window.__chartPeriod || 'day');
 
-// Cargar tiendas en el panel de filtro de métricas
-  fetch(`${API_BASE}/api/shopify/stores?all=true`, {
+// Cargar tiendas para uso interno (filtro dinámico por período)
+  cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, {
     headers: { Authorization: "Bearer " + getActiveToken() }
-  }).then(r => r.json()).then(stores => {
-    const panel = document.getElementById("met-shop-filter-panel");
-    if (panel && Array.isArray(stores) && stores.length > 0) {
+  }).then(stores => {
+    if (Array.isArray(stores)) {
       window.__allStores = stores;
       window.__inactiveShopDomains = stores.filter(s => s.status !== 'active').map(s => s.domain);
-      const checkboxes = stores.filter(s => s.status === 'active').map(s =>
-        `<label class="shop-check-label shop-check-row">
-          <input type="checkbox" checked value="${s.domain}" onchange="recalcMetricasFiltro()">
-          ${escapeHtml(s.shop_name || s.domain)}
-        </label>`
-      ).join("");
-      const _filterBody = document.getElementById('met-filter-body');
-      if (_filterBody) {
-        _filterBody.innerHTML = `
-          <label class="shop-check-label all">
-            <input type="checkbox" id="met-shop-check-all" checked onchange="toggleAllMetricasFiltro(this.checked)">
-            Todas las tiendas
-          </label>
-          ${checkboxes}
-        `;
-      }
-    } else if (panel) {
-      panel.innerHTML = `<div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Filtrar tiendas</div><div style="color:#9ca3af;font-size:12px;">Sin tiendas</div>`;
     }
   }).catch(() => {});
   closeAllDrops();
@@ -2315,25 +2296,6 @@ if (id === "rentabilidad") {
     loadRentabilidad();
   };
 
-  // Cargar tiendas en el panel de filtro de rentabilidad
-  fetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: { Authorization: "Bearer " + getActiveToken() } })
-    .then(r => r.json()).then(storesR => {
-      const bodyEl = document.getElementById("rent-filter-body");
-      if (bodyEl && Array.isArray(storesR) && storesR.length > 0) {
-        const chks = storesR.filter(s => s.status === 'active').map(s =>
-          `<label class="shop-check-label shop-check-row">
-            <input type="checkbox" checked value="${s.domain}" onchange="recalcRentFiltro();loadRentabilidad();">
-            ${escapeHtml(s.shop_name || s.domain)}
-          </label>`
-        ).join("");
-        bodyEl.innerHTML = `
-          <label class="shop-check-label all">
-            <input type="checkbox" id="rent-shop-check-all" checked onchange="toggleAllRentFiltro(this.checked)">
-            Todas las tiendas
-          </label>
-          ${chks}`;
-      }
-    }).catch(() => {});
 
   function filtroRentabilidadHoy() {
     const hoy = madridHoy();
@@ -6196,32 +6158,34 @@ async function loadMetricas() {
     console.error("Error cargando métricas:", e);
   }
 
-  // Actualizar filtro con tiendas inactivas que tienen pedidos en este período
-  if (window.__inactiveShopDomains?.length > 0 && window.__allStores) {
+  // Actualizar filtro con todas las tiendas que tuvieron pedidos en el período
+  {
     const _ordParamsMet = new URLSearchParams();
     if (dateFrom) _ordParamsMet.set("from", dateFrom);
     if (dateTo)   _ordParamsMet.set("to",   dateTo);
-    cachedFetch(`${API_BASE}/api/orders?${_ordParamsMet}`, { headers: h })
-      .then(allOrdsMet => {
-        if (!Array.isArray(allOrdsMet)) return;
+    Promise.all([
+      window.__allStores
+        ? Promise.resolve(window.__allStores)
+        : cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: h }).then(s => { if (Array.isArray(s)) window.__allStores = s; return s; }),
+      cachedFetch(`${API_BASE}/api/orders?${_ordParamsMet}`, { headers: h })
+    ])
+      .then(([allStoresMet, allOrdsMet]) => {
+        if (!Array.isArray(allOrdsMet) || !Array.isArray(allStoresMet)) return;
         const _ordDomains = new Set(allOrdsMet.map(o => o.shop_domain).filter(Boolean));
-        const _inactWithOrdsMet = window.__allStores.filter(
-          s => s.status !== 'active' && _ordDomains.has(s.domain)
-        );
+        const _storesInPeriodMet = allStoresMet.filter(s => _ordDomains.has(s.domain));
         const _metFB = document.getElementById('met-filter-body');
         if (!_metFB) return;
-        const _prevInact = [..._metFB.querySelectorAll('.inactive-chk-row input')].map(i => i.value);
-        _metFB.querySelectorAll('.inactive-chk-row').forEach(el => el.remove());
-        _inactWithOrdsMet.forEach(s => {
-          const _lbl = document.createElement('label');
-          _lbl.className = 'shop-check-label shop-check-row inactive-chk-row';
-          const _wasChecked = !_prevInact.length || _prevInact.includes(s.domain);
-          _lbl.innerHTML = `<input type="checkbox" ${_wasChecked ? 'checked' : ''} value="${escapeHtml(s.domain)}" onchange="recalcMetricasFiltro();">${escapeHtml(s.shop_name||s.domain)}<span style="font-size:10px;color:var(--muted,#9ca3af);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>`;
-          _metFB.appendChild(_lbl);
-        });
-        const _chks = _metFB.querySelectorAll("input[type='checkbox'][value]");
-        const _allChk = document.getElementById("met-shop-check-all");
-        if (_allChk) _allChk.checked = [..._chks].every(c => c.checked);
+        const _prevChecked = new Set([..._metFB.querySelectorAll('input[type="checkbox"][value]:checked')].map(i => i.value));
+        const _hadAny = _metFB.querySelectorAll('input[type="checkbox"][value]').length > 0;
+        const _allCheckedMet = _hadAny ? _storesInPeriodMet.every(s => _prevChecked.has(s.domain)) : true;
+        const _metChksHtml = _storesInPeriodMet.map(s => {
+          const _isChecked = !_hadAny || _prevChecked.has(s.domain);
+          const _badge = s.status !== 'active' ? `<span style="font-size:10px;color:var(--muted,#9ca3af);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>` : '';
+          return `<label class="shop-check-label shop-check-row"><input type="checkbox" ${_isChecked ? 'checked' : ''} value="${escapeHtml(s.domain)}" onchange="recalcMetricasFiltro();">${escapeHtml(s.shop_name||s.domain)}${_badge}</label>`;
+        }).join('');
+        _metFB.innerHTML = _storesInPeriodMet.length
+          ? `<label class="shop-check-label all"><input type="checkbox" id="met-shop-check-all" ${_allCheckedMet ? 'checked' : ''} onchange="toggleAllMetricasFiltro(this.checked)">Todas las tiendas</label>${_metChksHtml}`
+          : '<div style="color:#9ca3af;font-size:12px;">Sin pedidos en este período</div>';
       }).catch(() => {});
   }
 
@@ -6936,26 +6900,30 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
     _inactiveStores = stores.filter(s => s.status !== 'active');
-    stores = stores.filter(s => s.status === 'active');
-    totalTiendasActivas = stores.length || 1;
-    if (shopsFiltro.length > 0) stores = stores.filter(s => shopsFiltro.includes(s.domain));
-    // Tiendas inactivas con pedidos en este período
+    const _activeStoresAll = stores.filter(s => s.status === 'active');
+    // Solo tiendas con pedidos en este período (activas + inactivas)
+    const _activeWithOrders   = _activeStoresAll.filter(s => orders.some(o => o.shop_domain === s.domain));
     const _inactiveWithOrders = _inactiveStores.filter(s => orders.some(o => o.shop_domain === s.domain));
-    stores = [...stores, ...(shopsFiltro.length > 0
-      ? _inactiveWithOrders.filter(s => shopsFiltro.includes(s.domain))
-      : _inactiveWithOrders)];
-    // Actualizar filtro de rentabilidad: mostrar tiendas inactivas con pedidos en este período
+    const _storesInPeriod = [..._activeWithOrders, ..._inactiveWithOrders];
+    // Divisor de gastos fijos = tiendas con actividad real en el período
+    totalTiendasActivas = _storesInPeriod.length || 1;
+    stores = shopsFiltro.length > 0
+      ? _storesInPeriod.filter(s => shopsFiltro.includes(s.domain))
+      : _storesInPeriod;
+    // Reconstruir filtro con solo las tiendas que tuvieron pedidos en el período
     const _rentFB = document.getElementById("rent-filter-body");
     if (_rentFB) {
-      const _prevRentInact = [..._rentFB.querySelectorAll('.inactive-chk-row input')].map(i => i.value);
-      _rentFB.querySelectorAll('.inactive-chk-row').forEach(el => el.remove());
-      _inactiveWithOrders.forEach(s => {
-        const _lbl = document.createElement('label');
-        _lbl.className = 'shop-check-label shop-check-row inactive-chk-row';
-        const _wasChecked = !_prevRentInact.length || _prevRentInact.includes(s.domain);
-        _lbl.innerHTML = `<input type="checkbox" ${_wasChecked ? 'checked' : ''} value="${escapeHtml(s.domain)}" onchange="recalcRentFiltro();loadRentabilidad();">${escapeHtml(s.shop_name||s.domain)}<span style="font-size:10px;color:var(--muted,#9ca3af);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>`;
-        _rentFB.appendChild(_lbl);
-      });
+      const _prevChecked = new Set([..._rentFB.querySelectorAll('input[type="checkbox"][value]:checked')].map(i => i.value));
+      const _hadAny = _rentFB.querySelectorAll('input[type="checkbox"][value]').length > 0;
+      const _allChecked = _hadAny ? _storesInPeriod.every(s => _prevChecked.has(s.domain)) : true;
+      const _chksHtml = _storesInPeriod.map(s => {
+        const _chk = !_hadAny || _prevChecked.has(s.domain);
+        const _badge = s.status !== 'active' ? `<span style="font-size:10px;color:var(--muted,#9ca3af);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>` : '';
+        return `<label class="shop-check-label shop-check-row"><input type="checkbox" ${_chk ? 'checked' : ''} value="${escapeHtml(s.domain)}" onchange="recalcRentFiltro();loadRentabilidad();">${escapeHtml(s.shop_name||s.domain)}${_badge}</label>`;
+      }).join('');
+      _rentFB.innerHTML = _storesInPeriod.length
+        ? `<label class="shop-check-label all"><input type="checkbox" id="rent-shop-check-all" ${_allChecked ? 'checked' : ''} onchange="toggleAllRentFiltro(this.checked)">Todas las tiendas</label>${_chksHtml}`
+        : '<div style="color:#9ca3af;font-size:12px;">Sin pedidos en este período</div>';
       if (window.recalcRentFiltro) window.recalcRentFiltro();
     }
     // Facturación exacta por tienda
