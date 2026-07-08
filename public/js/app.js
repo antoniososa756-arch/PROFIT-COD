@@ -486,6 +486,13 @@ const icons = {
       <line x1="3" y1="20" x2="21" y2="20" stroke-linecap="round"/>
     </svg>
   `,
+  exprod: `
+    <svg viewBox="0 0 24 24">
+      <rect x="2" y="3" width="20" height="14" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="8" y1="21" x2="16" y2="21" stroke-linecap="round"/>
+      <line x1="12" y1="17" x2="12" y2="21" stroke-linecap="round"/>
+    </svg>
+  `,
   ayuda: `
     <svg viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9"/>
@@ -517,6 +524,7 @@ const I18N = {
       pedidos: "Pedidos",
       facturas: "Gastos",
       informes: "Ingresos",
+      exprod: "Exprod",
       ayuda: "Centro de ayuda",
       plan: "Plan de facturación",
     },
@@ -558,6 +566,7 @@ const I18N = {
       pedidos: "Orders",
       facturas: "Expenses",
       informes: "Income",
+      exprod: "Exprod",
       ayuda: "Help center",
       plan: "Billing plan",
     },
@@ -873,7 +882,7 @@ function loadApp(section) {
         </div>
       </div>
 
-      ${(["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"]).map(sec => {
+      ${(["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","exprod","ayuda"]).map(sec => {
         const isApoyo = currentUser.role === "Apoyo";
         const perms   = currentUser.permissions;
         const allowed = !isApoyo || !perms || perms.includes(sec);
@@ -1787,7 +1796,7 @@ const now = new Date();
     if (from) from.value=s.startDate; if (to) to.value=s.endDate;
     localStorage.setItem('met_from',s.startDate); localStorage.setItem('met_to',s.endDate);
     const lbl=document.getElementById('met-picker-label'); if(lbl) lbl.textContent=s.presetLabel;
-    window.__metPClose(); loadMetricas();
+    window.__metExplicitFilter = null; window.__metPClose(); loadMetricas();
   };
   document.addEventListener('click', e=>{
     if (!window.__metPicker.open) return;
@@ -1803,7 +1812,8 @@ const now = new Date();
   window.filtroMetricasMesAnterior  = ()=>{ window.__metPPreset('mes-ant');  window.__metPApply(); };
   window.aplicarFiltroMetricas      = ()=>{
     const from=document.getElementById('metrics-date-from')?.value, to=document.getElementById('metrics-date-to')?.value;
-    if(from) localStorage.setItem('met_from',from); if(to) localStorage.setItem('met_to',to); loadMetricas();
+    if(from) localStorage.setItem('met_from',from); if(to) localStorage.setItem('met_to',to);
+    window.__metExplicitFilter = null; loadMetricas();
   };
 })();
 
@@ -1818,15 +1828,19 @@ window.toggleMetShopFilter = function() {
 };
 
 function recalcMetricasFiltro() {
-  const checks = document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]");
+  const checks = [...document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]")];
   const allCheck = document.getElementById("met-shop-check-all");
-  if (allCheck) allCheck.checked = [...checks].every(c => c.checked);
+  const _allChecked = checks.every(c => c.checked);
+  if (allCheck) allCheck.checked = _allChecked;
+  // Guardar selección explícita del usuario (null = todas)
+  window.__metExplicitFilter = _allChecked ? null : new Set(checks.filter(c => c.checked).map(c => c.value));
   loadMetricas();
 }
 window.recalcMetricasFiltro = recalcMetricasFiltro;
 
 function toggleAllMetricasFiltro(checked) {
   document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]").forEach(c => c.checked = checked);
+  window.__metExplicitFilter = null; // "todas" = sin filtro explícito
   loadMetricas();
 }
 window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
@@ -3089,6 +3103,18 @@ if (id === "gastos-varios") {
     `;
   }
   loadGastosVarios();
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
+if (id === "exprod") {
+  if (t) t.textContent = "Exprod";
+  if (s) s.textContent = "";
+  if (c) c.textContent = "Exprod";
+  box.className = "";
+  box.removeAttribute("style");
+  box.innerHTML = `<div id="sec-exprod" style="padding:32px;color:var(--text);"></div>`;
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -6043,8 +6069,10 @@ async function disableStore(storeId) {
 // =========================
 // CARGAR MÉTRICAS REALES
 // =========================
+let __metricasLoadId = 0;
 window.__refreshMetrics = () => loadMetricas();
 async function loadMetricas() {
+  const _myLoadId = ++__metricasLoadId;
   const now = new Date();
   const _lmY = toMadridPart(now,'year'), _lmM = toMadridPart(now,'month');
 
@@ -6052,13 +6080,16 @@ async function loadMetricas() {
   const dateTo   = document.getElementById("metrics-date-to")?.value   || madridHoy();
   const shop     = document.getElementById("metrics-shop")?.value       || "";
 
-  // Leer tiendas seleccionadas por checkbox del panel de filtro
-  const checkboxes = document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]");
+  // Leer tiendas seleccionadas — usar selección explícita del usuario si existe
   let dominiosFiltro = [];
-  if (checkboxes.length > 0) {
-    dominiosFiltro = [...checkboxes].filter(c => c.checked).map(c => c.value);
-    // Si están todas marcadas, no filtrar (mostrar todas)
-    if (dominiosFiltro.length === checkboxes.length) dominiosFiltro = [];
+  if (window.__metExplicitFilter !== null && window.__metExplicitFilter !== undefined) {
+    dominiosFiltro = [...window.__metExplicitFilter];
+  } else {
+    const checkboxes = document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]");
+    if (checkboxes.length > 0) {
+      dominiosFiltro = [...checkboxes].filter(c => c.checked).map(c => c.value);
+      if (dominiosFiltro.length === checkboxes.length) dominiosFiltro = [];
+    }
   }
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
@@ -6072,6 +6103,7 @@ async function loadMetricas() {
     if (_payFilter !== "all") statsParams.set("payment_type", _payFilter);
     const statsRes = await fetch(`${API_BASE}/api/metrics/stats?${statsParams}`, { headers: h });
     const stats = await statsRes.json();
+    if (_myLoadId !== __metricasLoadId) return;
 
     const total          = stats.total          || 0;
     const pendientes     = stats.pendientes      || 0;
@@ -6170,16 +6202,26 @@ async function loadMetricas() {
       cachedFetch(`${API_BASE}/api/orders?${_ordParamsMet}`, { headers: h })
     ])
       .then(([allStoresMet, allOrdsMet]) => {
+        if (_myLoadId !== __metricasLoadId) return;
         if (!Array.isArray(allOrdsMet) || !Array.isArray(allStoresMet)) return;
         const _ordDomains = new Set(allOrdsMet.map(o => o.shop_domain).filter(Boolean));
         const _storesInPeriodMet = allStoresMet.filter(s => _ordDomains.has(s.domain));
         const _metFB = document.getElementById('met-filter-body');
         if (!_metFB) return;
-        const _prevChecked = new Set([..._metFB.querySelectorAll('input[type="checkbox"][value]:checked')].map(i => i.value));
-        const _hadAny = _metFB.querySelectorAll('input[type="checkbox"][value]').length > 0;
-        const _allCheckedMet = _hadAny ? _storesInPeriodMet.every(s => _prevChecked.has(s.domain)) : true;
+        // Determinar qué tiendas marcar: respetar selección explícita del usuario si existe
+        let _isCheckedFn;
+        let _allCheckedMet;
+        if (window.__metExplicitFilter !== null && window.__metExplicitFilter !== undefined) {
+          _isCheckedFn = s => window.__metExplicitFilter.has(s.domain);
+          _allCheckedMet = _storesInPeriodMet.every(s => window.__metExplicitFilter.has(s.domain));
+        } else {
+          const _prevChecked = new Set([..._metFB.querySelectorAll('input[type="checkbox"][value]:checked')].map(i => i.value));
+          const _hadAny = _metFB.querySelectorAll('input[type="checkbox"][value]').length > 0;
+          _isCheckedFn = s => !_hadAny || _prevChecked.has(s.domain);
+          _allCheckedMet = _hadAny ? _storesInPeriodMet.every(s => _prevChecked.has(s.domain)) : true;
+        }
         const _metChksHtml = _storesInPeriodMet.map(s => {
-          const _isChecked = !_hadAny || _prevChecked.has(s.domain);
+          const _isChecked = _isCheckedFn(s);
           const _badge = s.status !== 'active' ? `<span style="font-size:10px;color:var(--muted,#9ca3af);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>` : '';
           return `<label class="shop-check-label shop-check-row"><input type="checkbox" ${_isChecked ? 'checked' : ''} value="${escapeHtml(s.domain)}" onchange="recalcMetricasFiltro();">${escapeHtml(s.shop_name||s.domain)}${_badge}</label>`;
         }).join('');
