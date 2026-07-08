@@ -3140,13 +3140,6 @@ if (id === "exprod") {
     <div id="exprod-result" style="display:none;margin-top:20px;background:var(--card);border:1px solid #22c55e;border-radius:16px;padding:24px;">
     </div>
 
-    <div style="margin-top:24px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Ejemplos de URL válida</div>
-      <div style="font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px;">
-        <code style="background:var(--input);padding:4px 10px;border-radius:6px;font-size:12px;color:#22c55e;">https://mi-tienda.myshopify.com/products/nombre-producto</code>
-        <code style="background:var(--input);padding:4px 10px;border-radius:6px;font-size:12px;color:#22c55e;">https://mi-tienda.com/products/nombre-producto</code>
-      </div>
-    </div>
   </div>`;
   closeAllDrops();
   closeSearchDrop();
