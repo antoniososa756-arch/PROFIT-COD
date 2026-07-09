@@ -3114,18 +3114,26 @@ if (id === "exprod") {
   if (t) t.textContent = "Exprod";
   if (s) s.textContent = "Exportar productos de Shopify a CSV";
   if (c) c.textContent = "Exprod";
-  box.className = "card";
+  box.className = "";
   box.removeAttribute("style");
-  box.innerHTML = `<div style="max-width:640px;">
-    <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:14px;">
-      <span id="exprod-count" style="font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0;">0 de 100</span>
+  box.innerHTML = `<div style="max-width:440px;margin:36px auto 0;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="width:52px;height:52px;border-radius:14px;background:rgba(34,197,94,.12);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">Exportar producto Shopify</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.5;">Pega la URL del producto y descarga el CSV listo para importar</div>
     </div>
 
-    <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;padding-right:4px;margin-bottom:16px;"></div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+      <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;">
+        <span id="exprod-count" style="font-size:11.5px;color:var(--muted);font-weight:600;">0 de 100</span>
+      </div>
 
-    <div style="display:flex;justify-content:flex-end;">
+      <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:2px;margin-bottom:16px;"></div>
+
       <button onclick="exprodExtraerCSV()" id="exprod-btn" class="btn-primary"
-        style="display:inline-flex;align-items:center;gap:8px;">
+        style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:8px;">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M12 3v13"/><path d="m8 12 4 4 4-4"/></svg>
         Vista previa
       </button>
