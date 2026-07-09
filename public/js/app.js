@@ -3117,23 +3117,20 @@ if (id === "exprod") {
   box.innerHTML = `<div id="sec-exprod" style="padding:32px;max-width:720px;margin:0 auto;">
     <div style="margin-bottom:28px;">
       <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px;">Exportar producto Shopify</div>
-      <div style="font-size:14px;color:var(--muted);">Pega la URL de un producto de Shopify y descarga el CSV listo para importar en cualquier tienda.</div>
+      <div style="font-size:14px;color:var(--muted);">Pega las URLs de los productos de Shopify. Al rellenar un campo se añade el siguiente automáticamente (hasta 100).</div>
     </div>
 
     <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;">
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">URL del producto</label>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <input id="exprod-url" type="url"
-          placeholder="https://mi-tienda.myshopify.com/products/nombre-del-producto"
-          style="flex:1;min-width:240px;background:var(--input);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:14px;color:var(--text);font-family:inherit;outline:none;"
-          onkeydown="if(event.key==='Enter')exprodExtraerCSV()"
-        />
-        <button onclick="exprodExtraerCSV()" id="exprod-btn"
-          style="height:46px;padding:0 24px;background:#22c55e;color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px;">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Extraer CSV
-        </button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <label style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;">URL del producto</label>
+        <span id="exprod-count" style="font-size:12px;color:var(--muted);font-weight:600;">0 de 100</span>
       </div>
+      <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;padding-right:4px;"></div>
+      <button onclick="exprodExtraerCSV()" id="exprod-btn"
+        style="margin-top:18px;height:46px;padding:0 24px;background:#22c55e;color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Extraer CSV
+      </button>
       <div id="exprod-status" style="margin-top:16px;display:none;"></div>
     </div>
 
@@ -3141,6 +3138,7 @@ if (id === "exprod") {
     </div>
 
   </div>`;
+  exprodInitList();
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -9498,65 +9496,155 @@ window.invalidateCache = invalidateCache;
 // =========================
 // EXPROD — EXPORTAR PRODUCTO SHOPIFY A CSV
 // =========================
+const EXPROD_MAX = 100;
+
+function exprodInitList() {
+  const list = document.getElementById("exprod-url-list");
+  if (!list) return;
+  list.innerHTML = "";
+  exprodAddRow(false);
+  exprodUpdateCount();
+}
+
+function exprodAddRow(focus) {
+  const list = document.getElementById("exprod-url-list");
+  if (!list || list.children.length >= EXPROD_MAX) return null;
+  const idx = list.children.length;
+  const row = document.createElement("div");
+  row.className = "exprod-row";
+  row.style.cssText = "display:flex;gap:8px;align-items:center;";
+  row.innerHTML = `
+    <span class="exprod-row-num" style="width:26px;text-align:right;font-size:12px;color:var(--muted);flex-shrink:0;">${idx + 1}.</span>
+    <input type="url" class="exprod-url-input"
+      placeholder="https://mi-tienda.myshopify.com/products/nombre-del-producto"
+      style="flex:1;min-width:200px;background:var(--input);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);font-family:inherit;outline:none;"
+      oninput="exprodOnInput(this)"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();exprodExtraerCSV();}"
+    />
+    <button type="button" onclick="exprodRemoveRow(this)" title="Eliminar"
+      style="width:30px;height:30px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;border-radius:8px;display:flex;align-items:center;justify-content:center;">×</button>
+  `;
+  list.appendChild(row);
+  if (focus) row.querySelector("input").focus();
+  return row;
+}
+
+window.exprodOnInput = function(input) {
+  const list = document.getElementById("exprod-url-list");
+  if (!list) return;
+  const row = input.closest(".exprod-row");
+  const isLast = row === list.lastElementChild;
+  if (isLast && input.value.trim() !== "" && list.children.length < EXPROD_MAX) {
+    exprodAddRow(false);
+  }
+  exprodUpdateCount();
+};
+
+window.exprodRemoveRow = function(btn) {
+  const list = document.getElementById("exprod-url-list");
+  if (!list) return;
+  const row = btn.closest(".exprod-row");
+  if (list.children.length <= 1) {
+    row.querySelector("input").value = "";
+  } else {
+    row.remove();
+    Array.from(list.children).forEach((r, i) => {
+      r.querySelector(".exprod-row-num").textContent = (i + 1) + ".";
+    });
+  }
+  exprodUpdateCount();
+};
+
+function exprodUpdateCount() {
+  const list = document.getElementById("exprod-url-list");
+  const countEl = document.getElementById("exprod-count");
+  if (!list || !countEl) return;
+  const filled = Array.from(list.querySelectorAll(".exprod-url-input")).filter(i => i.value.trim() !== "").length;
+  countEl.textContent = `${filled} de ${EXPROD_MAX}`;
+}
+
 window.exprodExtraerCSV = async function() {
-  const urlInput = document.getElementById("exprod-url");
+  const list     = document.getElementById("exprod-url-list");
   const btn      = document.getElementById("exprod-btn");
   const statusEl = document.getElementById("exprod-status");
   const resultEl = document.getElementById("exprod-result");
-  if (!urlInput || !btn) return;
+  if (!list || !btn) return;
 
-  const url = urlInput.value.trim();
-  if (!url) { urlInput.focus(); return; }
+  const inputs = Array.from(list.querySelectorAll(".exprod-url-input"));
+  const urls = inputs.map(i => i.value.trim()).filter(v => v !== "");
+  if (urls.length === 0) {
+    if (inputs[0]) inputs[0].focus();
+    return;
+  }
 
   btn.disabled = true;
   btn.style.opacity = "0.6";
   statusEl.style.display = "block";
-  statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;"><div style="width:16px;height:16px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Obteniendo datos del producto...</div>`;
   resultEl.style.display = "none";
 
-  try {
-    const res = await fetch(`${API_BASE}/api/exprod/product?url=${encodeURIComponent(url)}`, {
-      headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const data = await res.json();
-    if (!res.ok || !data.product) throw new Error(data.error || "No se pudo obtener el producto");
+  const token    = getActiveToken();
+  const products = [];
+  const errores  = [];
 
-    const product = data.product;
-    const csv = exprodGenerarCSV(product);
-    const ts  = new Date().toISOString().replace(/[:.]/g, "_");
-    const filename = `exprod__${ts}.csv`;
-    exprodDescargar(csv, filename);
+  for (let i = 0; i < urls.length; i++) {
+    statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;"><div style="width:16px;height:16px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Obteniendo producto ${i + 1} de ${urls.length}...</div>`;
+    try {
+      const res = await fetch(`${API_BASE}/api/exprod/product?url=${encodeURIComponent(urls[i])}`, {
+        headers: { Authorization: "Bearer " + token }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.product) throw new Error(data.error || "No se pudo obtener el producto");
+      products.push(data.product);
+    } catch (e) {
+      errores.push({ url: urls[i], error: e.message || "Error desconocido" });
+    }
+  }
 
-    const numVariants = (product.variants || []).length;
-    const numImages   = (product.images   || []).length;
-
-    statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:#22c55e;font-size:13px;font-weight:600;">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      CSV descargado correctamente
-    </div>`;
-
-    resultEl.style.display = "block";
-    resultEl.innerHTML = `
-      <div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
-        Producto exportado
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
-        ${exprodStatCard("Producto", escapeHtml(product.title || product.handle))}
-        ${exprodStatCard("Variantes", numVariants)}
-        ${exprodStatCard("Imágenes", numImages)}
-        ${exprodStatCard("Archivo", escapeHtml(filename))}
-      </div>`;
-
-  } catch(e) {
+  if (products.length === 0) {
     statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:#f87171;font-size:13px;">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5" fill="currentColor"/></svg>
-      ${escapeHtml(e.message || "Error desconocido")}
+      ${escapeHtml(errores[0]?.error || "No se pudo obtener ningún producto")}
     </div>`;
-  } finally {
     btn.disabled = false;
     btn.style.opacity = "1";
+    return;
   }
+
+  const csv = exprodGenerarCSV(products);
+  const ts  = new Date().toISOString().replace(/[:.]/g, "_");
+  const filename = products.length > 1 ? `exprod__${products.length}productos__${ts}.csv` : `exprod__${ts}.csv`;
+  exprodDescargar(csv, filename);
+
+  const numVariants = products.reduce((a, p) => a + (p.variants || []).length, 0);
+  const numImages   = products.reduce((a, p) => a + (p.images   || []).length, 0);
+
+  statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:#22c55e;font-size:13px;font-weight:600;">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    CSV descargado (${products.length} producto${products.length > 1 ? "s" : ""}${errores.length ? `, ${errores.length} con error` : ""})
+  </div>`;
+
+  resultEl.style.display = "block";
+  resultEl.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
+      Producto${products.length > 1 ? "s" : ""} exportado${products.length > 1 ? "s" : ""}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+      ${exprodStatCard("Productos", products.length)}
+      ${exprodStatCard("Variantes", numVariants)}
+      ${exprodStatCard("Imágenes", numImages)}
+      ${exprodStatCard("Archivo", escapeHtml(filename))}
+    </div>
+    ${errores.length ? `<div style="margin-top:14px;">
+      <div style="font-size:12px;font-weight:700;color:#f87171;margin-bottom:8px;">No se pudieron exportar (${errores.length}):</div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--muted);">
+        ${errores.map(e => `<li>${escapeHtml(e.url)} — ${escapeHtml(e.error)}</li>`).join("")}
+      </ul>
+    </div>` : ""}
+  `;
+
+  btn.disabled = false;
+  btn.style.opacity = "1";
 };
 
 function exprodStatCard(label, value) {
@@ -9566,28 +9654,36 @@ function exprodStatCard(label, value) {
   </div>`;
 }
 
-function exprodGenerarCSV(product) {
-  const HEADERS = [
-    "Handle","Title","Body (HTML)","Vendor","Tags","Published",
-    "Option1 Name","Option2 Name","Option3 Name",
-    "Option1 Value","Option2 Value","Option3 Value",
-    "Variant SKU","Variant Grams","Variant Inventory Tracker","Variant Inventory Qty",
-    "Variant Inventory Policy","Variant Fulfillment Service",
-    "Variant Price","Variant Compare At Price",
-    "Variant Requires Shipping","Variant Taxable","Variant Barcode",
-    "Image Src","Image Position","Image Alt Text","Gift Card",
-    "SEO Title","SEO Description",
-    "Google Shopping / Google Product Category","Google Shopping / Gender",
-    "Google Shopping / Age Group","Google Shopping / MPN",
-    "Google Shopping / AdWords Grouping","Google Shopping / AdWords Labels",
-    "Google Shopping / Condition","Google Shopping / Custom Product",
-    "Google Shopping / Custom Label 0","Google Shopping / Custom Label 1",
-    "Google Shopping / Custom Label 2","Google Shopping / Custom Label 3",
-    "Google Shopping / Custom Label 4",
-    "Variant Image","Variant Weight Unit","Variant Tax Code","Cost per item",
-    "Status","Standard Product Type","Custom Product Type","Collection"
-  ];
+const EXPROD_HEADERS = [
+  "Handle","Title","Body (HTML)","Vendor","Tags","Published",
+  "Option1 Name","Option2 Name","Option3 Name",
+  "Option1 Value","Option2 Value","Option3 Value",
+  "Variant SKU","Variant Grams","Variant Inventory Tracker","Variant Inventory Qty",
+  "Variant Inventory Policy","Variant Fulfillment Service",
+  "Variant Price","Variant Compare At Price",
+  "Variant Requires Shipping","Variant Taxable","Variant Barcode",
+  "Image Src","Image Position","Image Alt Text","Gift Card",
+  "SEO Title","SEO Description",
+  "Google Shopping / Google Product Category","Google Shopping / Gender",
+  "Google Shopping / Age Group","Google Shopping / MPN",
+  "Google Shopping / AdWords Grouping","Google Shopping / AdWords Labels",
+  "Google Shopping / Condition","Google Shopping / Custom Product",
+  "Google Shopping / Custom Label 0","Google Shopping / Custom Label 1",
+  "Google Shopping / Custom Label 2","Google Shopping / Custom Label 3",
+  "Google Shopping / Custom Label 4",
+  "Variant Image","Variant Weight Unit","Variant Tax Code","Cost per item",
+  "Status","Standard Product Type","Custom Product Type","Collection"
+];
 
+function exprodGenerarCSV(products) {
+  const rows = [EXPROD_HEADERS.join(",")];
+  products.forEach(product => {
+    exprodFilasProducto(product).forEach(r => rows.push(r));
+  });
+  return rows.join("\n");
+}
+
+function exprodFilasProducto(product) {
   const cell = v => {
     if (v == null || v === "") return '""';
     const s = String(v);
@@ -9597,7 +9693,7 @@ function exprodGenerarCSV(product) {
     return s;
   };
 
-  const emptyRow = () => new Array(HEADERS.length).fill('""');
+  const emptyRow = () => new Array(EXPROD_HEADERS.length).fill('""');
 
   const variants      = product.variants || [];
   const images        = product.images   || [];
@@ -9615,7 +9711,7 @@ function exprodGenerarCSV(product) {
   const standaloneImgs = images.filter(img => !img.variant_ids || img.variant_ids.length === 0);
   const fallbackImg    = images[0] || null;
 
-  const rows = [HEADERS.join(",")];
+  const rows = [];
   let imgPos = 0;
 
   variants.forEach((v, vi) => {
@@ -9690,7 +9786,7 @@ function exprodGenerarCSV(product) {
     }
   });
 
-  return rows.join("\n");
+  return rows;
 }
 
 function exprodDescargar(csvContent, filename) {
