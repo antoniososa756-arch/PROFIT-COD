@@ -3123,11 +3123,13 @@ if (id === "exprod") {
 
     <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;padding-right:4px;margin-bottom:16px;"></div>
 
-    <button onclick="exprodExtraerCSV()" id="exprod-btn" class="btn-primary"
-      style="display:inline-flex;align-items:center;gap:8px;">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M12 3v13"/><path d="m8 12 4 4 4-4"/></svg>
-      Ver vista previa
-    </button>
+    <div style="display:flex;justify-content:flex-end;">
+      <button onclick="exprodExtraerCSV()" id="exprod-btn" class="btn-primary"
+        style="display:inline-flex;align-items:center;gap:8px;">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M12 3v13"/><path d="m8 12 4 4 4-4"/></svg>
+        Vista previa
+      </button>
+    </div>
 
     <div id="exprod-status" style="margin-top:14px;display:none;"></div>
   </div>`;
