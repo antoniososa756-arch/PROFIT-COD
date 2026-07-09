@@ -7868,8 +7868,26 @@ function parseCsv(text) {
   return text.split(/\r\n|\n|\r/).filter(l => l.length > 0).map(parseCsvLine);
 }
 
+// Normaliza texto de cabecera: quita BOM/acentos/mayúsculas para poder comparar
+function normalizeHeader(s) {
+  return (s || "")
+    .replace(/^﻿/, "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+// Busca el índice de la columna cuya cabecera contenga alguno de los términos dados
+function findCsvColumn(header, candidates) {
+  for (let i = 0; i < header.length; i++) {
+    const h = normalizeHeader(header[i]);
+    if (candidates.some(c => h.includes(c))) return i;
+  }
+  return -1;
+}
+
 // Importa un CSV exportado del Administrador de anuncios (Meta/TikTok):
-// columna A = Día (YYYY-MM-DD), columna D = Importe gastado (EUR)
+// detecta la columna de fecha y la de "Importe gastado" por su cabecera
 window.handleAdsCsvImport = async function(event, type) {
   const file = event.target.files[0];
   event.target.value = "";
@@ -7884,11 +7902,19 @@ window.handleAdsCsvImport = async function(event, type) {
   try {
     const text = await file.text();
     const rows = parseCsv(text);
+    if (rows.length < 2) throw new Error("Archivo vacío");
+
+    const header   = rows[0];
+    let dateCol    = findCsvColumn(header, ["dia", "day", "fecha", "date"]);
+    let spendCol   = findCsvColumn(header, ["importe gastado", "amount spent", "gasto"]);
+    if (dateCol  === -1) dateCol  = 0; // fallback: primera columna
+    if (spendCol === -1) spendCol = 3; // fallback: cuarta columna (posición habitual en Meta)
+
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i];
-      if (!r || r.length < 4) continue;
-      const dateStr = (r[0] || "").trim();
-      const spend   = parseFloat((r[3] || "0").replace(",", "."));
+      if (!r || r.length <= Math.max(dateCol, spendCol)) continue;
+      const dateStr = (r[dateCol] || "").trim();
+      const spend   = parseFloat((r[spendCol] || "0").replace(",", "."));
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || isNaN(spend)) continue;
       entries.push({ date: dateStr, spend });
     }
@@ -7898,7 +7924,7 @@ window.handleAdsCsvImport = async function(event, type) {
   }
 
   if (entries.length === 0) {
-    alert("No se detectaron filas válidas en el archivo (se esperaba fecha en la columna A e importe en la columna D).");
+    alert("No se detectaron filas válidas en el archivo (se esperaba una columna de fecha y otra de \"Importe gastado\").");
     return;
   }
 
