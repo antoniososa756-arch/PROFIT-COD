@@ -3116,30 +3116,37 @@ if (id === "exprod") {
   if (c) c.textContent = "Exprod";
   box.className = "";
   box.removeAttribute("style");
-  box.innerHTML = `<div style="max-width:440px;margin:36px auto 0;">
-    <div style="text-align:center;margin-bottom:24px;">
-      <div style="width:52px;height:52px;border-radius:14px;background:rgba(34,197,94,.12);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+  box.innerHTML = `<div style="max-width:460px;margin:56px auto 0;">
+    <div style="text-align:center;margin-bottom:36px;">
+      <div style="display:inline-flex;align-items:center;gap:9px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:#22c55e;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <span style="font-size:23px;font-weight:800;letter-spacing:.5px;color:var(--text);">EXPROD</span>
       </div>
-      <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">Exportar producto Shopify</div>
-      <div style="font-size:13px;color:var(--muted);line-height:1.5;">Pega la URL del producto y descarga el CSV listo para importar</div>
     </div>
 
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.06);">
-      <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;">
-        <span id="exprod-count" style="font-size:11.5px;color:var(--muted);font-weight:600;">0 de 100</span>
-      </div>
-
-      <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:2px;margin-bottom:16px;"></div>
-
-      <button onclick="exprodExtraerCSV()" id="exprod-btn" class="btn-primary"
-        style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:8px;">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M12 3v13"/><path d="m8 12 4 4 4-4"/></svg>
+    <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">URL del producto</label>
+    <div style="display:flex;gap:8px;">
+      <input id="exprod-url-first" type="url"
+        placeholder="[tienda].myshopify.com/products/[nombre-producto]"
+        oninput="exprodOnFirstInput(this)"
+        onfocus="this.style.borderColor='#22c55e'" onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();exprodExtraerCSV();}"
+        style="flex:1;min-width:0;background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13.5px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s;" />
+      <button onclick="exprodExtraerCSV()" id="exprod-btn" class="btn-primary" style="white-space:nowrap;flex-shrink:0;">
         Vista previa
       </button>
     </div>
 
-    <div id="exprod-status" style="margin-top:14px;display:none;"></div>
+    <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-top:8px;"></div>
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-top:10px;">
+      <div style="font-size:11.5px;color:var(--muted);line-height:1.5;">Se añade un campo nuevo automáticamente al completar el anterior.</div>
+      <span id="exprod-count" style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0;">0 de 100</span>
+    </div>
+
+    <div id="exprod-status" style="margin-top:16px;display:none;"></div>
   </div>`;
   exprodInitList();
   closeAllDrops();
@@ -9562,25 +9569,23 @@ window.invalidateCache = invalidateCache;
 const EXPROD_MAX = 100;
 
 function exprodInitList() {
+  const firstInput = document.getElementById("exprod-url-first");
   const list = document.getElementById("exprod-url-list");
-  if (!list) return;
-  list.innerHTML = "";
-  exprodAddRow(false);
+  if (firstInput) firstInput.value = "";
+  if (list) list.innerHTML = "";
   exprodUpdateCount();
 }
 
 function exprodAddRow(focus) {
   const list = document.getElementById("exprod-url-list");
-  if (!list || list.children.length >= EXPROD_MAX) return null;
-  const idx = list.children.length;
+  if (!list || list.children.length >= EXPROD_MAX - 1) return null;
   const row = document.createElement("div");
   row.className = "exprod-row";
   row.style.cssText = "display:flex;gap:8px;align-items:center;";
   row.innerHTML = `
-    <span class="exprod-row-num" style="width:20px;text-align:right;font-size:12px;color:var(--muted);flex-shrink:0;">${idx + 1}.</span>
     <input type="url" class="exprod-url-input"
-      placeholder="https://mi-tienda.myshopify.com/products/nombre-del-producto"
-      style="flex:1;min-width:180px;background:var(--input);border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s;"
+      placeholder="[tienda].myshopify.com/products/[nombre-producto]"
+      style="flex:1;min-width:0;background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13.5px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s;"
       oninput="exprodOnInput(this)"
       onfocus="this.style.borderColor='#22c55e'"
       onblur="this.style.borderColor='var(--border)'"
@@ -9596,50 +9601,53 @@ function exprodAddRow(focus) {
   return row;
 }
 
+window.exprodOnFirstInput = function(input) {
+  const list = document.getElementById("exprod-url-list");
+  if (!list) return;
+  if (list.children.length === 0 && input.value.trim() !== "") {
+    exprodAddRow(false);
+  }
+  exprodUpdateCount();
+};
+
 window.exprodOnInput = function(input) {
   const list = document.getElementById("exprod-url-list");
   if (!list) return;
   const row = input.closest(".exprod-row");
   const isLast = row === list.lastElementChild;
-  if (isLast && input.value.trim() !== "" && list.children.length < EXPROD_MAX) {
+  if (isLast && input.value.trim() !== "" && list.children.length < EXPROD_MAX - 1) {
     exprodAddRow(false);
   }
   exprodUpdateCount();
 };
 
 window.exprodRemoveRow = function(btn) {
-  const list = document.getElementById("exprod-url-list");
-  if (!list) return;
   const row = btn.closest(".exprod-row");
-  if (list.children.length <= 1) {
-    row.querySelector("input").value = "";
-  } else {
-    row.remove();
-    Array.from(list.children).forEach((r, i) => {
-      r.querySelector(".exprod-row-num").textContent = (i + 1) + ".";
-    });
-  }
+  if (row) row.remove();
   exprodUpdateCount();
 };
 
 function exprodUpdateCount() {
+  const firstInput = document.getElementById("exprod-url-first");
   const list = document.getElementById("exprod-url-list");
   const countEl = document.getElementById("exprod-count");
-  if (!list || !countEl) return;
-  const filled = Array.from(list.querySelectorAll(".exprod-url-input")).filter(i => i.value.trim() !== "").length;
+  if (!countEl) return;
+  let filled = firstInput && firstInput.value.trim() !== "" ? 1 : 0;
+  if (list) filled += Array.from(list.querySelectorAll(".exprod-url-input")).filter(i => i.value.trim() !== "").length;
   countEl.textContent = `${filled} de ${EXPROD_MAX}`;
 }
 
 window.exprodExtraerCSV = async function() {
-  const list     = document.getElementById("exprod-url-list");
-  const btn      = document.getElementById("exprod-btn");
-  const statusEl = document.getElementById("exprod-status");
-  if (!list || !btn) return;
+  const firstInput = document.getElementById("exprod-url-first");
+  const list       = document.getElementById("exprod-url-list");
+  const btn        = document.getElementById("exprod-btn");
+  const statusEl   = document.getElementById("exprod-status");
+  if (!firstInput || !btn) return;
 
-  const inputs = Array.from(list.querySelectorAll(".exprod-url-input"));
-  const urls = inputs.map(i => i.value.trim()).filter(v => v !== "");
+  const extraInputs = list ? Array.from(list.querySelectorAll(".exprod-url-input")) : [];
+  const urls = [firstInput, ...extraInputs].map(i => i.value.trim()).filter(v => v !== "");
   if (urls.length === 0) {
-    if (inputs[0]) inputs[0].focus();
+    firstInput.focus();
     return;
   }
 
