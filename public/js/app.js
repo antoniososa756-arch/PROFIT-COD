@@ -3116,6 +3116,9 @@ if (id === "exprod") {
   if (c) c.textContent = "Exprod";
   box.className = "";
   box.removeAttribute("style");
+  box.style.background = "var(--card)";
+  box.style.borderRadius = "16px";
+  box.style.minHeight = "calc(100vh - 220px)";
   box.innerHTML = `<div style="max-width:460px;margin:56px auto 0;">
     <div style="text-align:center;margin-bottom:36px;">
       <div style="display:inline-flex;align-items:center;gap:9px;">
