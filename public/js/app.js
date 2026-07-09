@@ -3112,31 +3112,23 @@ if (id === "exprod") {
   if (t) t.textContent = "Exprod";
   if (s) s.textContent = "Exportar productos de Shopify a CSV";
   if (c) c.textContent = "Exprod";
-  box.className = "";
+  box.className = "card";
   box.removeAttribute("style");
-  box.innerHTML = `<div id="sec-exprod" style="padding:32px;max-width:720px;margin:0 auto;">
-    <div style="margin-bottom:28px;">
-      <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px;">Exportar producto Shopify</div>
-      <div style="font-size:14px;color:var(--muted);">Pega las URLs de los productos de Shopify. Al rellenar un campo se añade el siguiente automáticamente (hasta 100).</div>
+  box.innerHTML = `<div style="max-width:640px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="font-size:13px;color:var(--muted);line-height:1.5;">Pega las URLs de los productos de Shopify. Al rellenar un campo se añade el siguiente automáticamente.</div>
+      <span id="exprod-count" style="font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0;">0 de 100</span>
     </div>
 
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <label style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;">URL del producto</label>
-        <span id="exprod-count" style="font-size:12px;color:var(--muted);font-weight:600;">0 de 100</span>
-      </div>
-      <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;padding-right:4px;"></div>
-      <button onclick="exprodExtraerCSV()" id="exprod-btn"
-        style="margin-top:18px;height:46px;padding:0 24px;background:#22c55e;color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px;">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Extraer CSV
-      </button>
-      <div id="exprod-status" style="margin-top:16px;display:none;"></div>
-    </div>
+    <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;padding-right:4px;margin-bottom:16px;"></div>
 
-    <div id="exprod-result" style="display:none;margin-top:20px;background:var(--card);border:1px solid #22c55e;border-radius:16px;padding:24px;">
-    </div>
+    <button onclick="exprodExtraerCSV()" id="exprod-btn" class="btn-primary"
+      style="display:inline-flex;align-items:center;gap:8px;">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M12 3v13"/><path d="m8 12 4 4 4-4"/></svg>
+      Ver vista previa
+    </button>
 
+    <div id="exprod-status" style="margin-top:14px;display:none;"></div>
   </div>`;
   exprodInitList();
   closeAllDrops();
@@ -9514,15 +9506,19 @@ function exprodAddRow(focus) {
   row.className = "exprod-row";
   row.style.cssText = "display:flex;gap:8px;align-items:center;";
   row.innerHTML = `
-    <span class="exprod-row-num" style="width:26px;text-align:right;font-size:12px;color:var(--muted);flex-shrink:0;">${idx + 1}.</span>
+    <span class="exprod-row-num" style="width:20px;text-align:right;font-size:12px;color:var(--muted);flex-shrink:0;">${idx + 1}.</span>
     <input type="url" class="exprod-url-input"
       placeholder="https://mi-tienda.myshopify.com/products/nombre-del-producto"
-      style="flex:1;min-width:200px;background:var(--input);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);font-family:inherit;outline:none;"
+      style="flex:1;min-width:180px;background:var(--input);border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s;"
       oninput="exprodOnInput(this)"
+      onfocus="this.style.borderColor='#22c55e'"
+      onblur="this.style.borderColor='var(--border)'"
       onkeydown="if(event.key==='Enter'){event.preventDefault();exprodExtraerCSV();}"
     />
     <button type="button" onclick="exprodRemoveRow(this)" title="Eliminar"
-      style="width:30px;height:30px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;border-radius:8px;display:flex;align-items:center;justify-content:center;">×</button>
+      style="width:26px;height:26px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;"
+      onmouseover="this.style.background='rgba(239,68,68,.12)';this.style.color='#ef4444';"
+      onmouseout="this.style.background='transparent';this.style.color='var(--muted)';">×</button>
   `;
   list.appendChild(row);
   if (focus) row.querySelector("input").focus();
@@ -9567,7 +9563,6 @@ window.exprodExtraerCSV = async function() {
   const list     = document.getElementById("exprod-url-list");
   const btn      = document.getElementById("exprod-btn");
   const statusEl = document.getElementById("exprod-status");
-  const resultEl = document.getElementById("exprod-result");
   if (!list || !btn) return;
 
   const inputs = Array.from(list.querySelectorAll(".exprod-url-input"));
@@ -9580,7 +9575,6 @@ window.exprodExtraerCSV = async function() {
   btn.disabled = true;
   btn.style.opacity = "0.6";
   statusEl.style.display = "block";
-  resultEl.style.display = "none";
 
   const token    = getActiveToken();
   const products = [];
@@ -9600,59 +9594,186 @@ window.exprodExtraerCSV = async function() {
     }
   }
 
+  btn.disabled = false;
+  btn.style.opacity = "1";
+
   if (products.length === 0) {
     statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:#f87171;font-size:13px;">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5" fill="currentColor"/></svg>
       ${escapeHtml(errores[0]?.error || "No se pudo obtener ningún producto")}
     </div>`;
-    btn.disabled = false;
-    btn.style.opacity = "1";
     return;
   }
+
+  statusEl.style.display = errores.length ? "block" : "none";
+  if (errores.length) {
+    statusEl.innerHTML = `<div style="font-size:12px;color:#f87171;">
+      No se pudieron cargar ${errores.length} URL${errores.length > 1 ? "s" : ""}:
+      <ul style="margin:6px 0 0;padding-left:18px;color:var(--muted);">
+        ${errores.map(e => `<li>${escapeHtml(e.url)} — ${escapeHtml(e.error)}</li>`).join("")}
+      </ul>
+    </div>`;
+  }
+
+  exprodAbrirPreview(products);
+};
+
+// =========================
+// EXPROD — VISTA PREVIA / EDICIÓN ANTES DE EXPORTAR
+// =========================
+let exprodPreviewData = [];
+
+function exprodStripHtml(html) {
+  if (!html) return "";
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  div.querySelectorAll("br").forEach(br => br.replaceWith("\n"));
+  div.querySelectorAll("p,div,li,h1,h2,h3,h4,h5,h6").forEach(el => el.insertAdjacentText("afterend", "\n"));
+  return div.textContent.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function exprodPlainToHtml(text) {
+  if (!text || !text.trim()) return "";
+  return text.split("\n").map(l => l.trim()).filter(l => l !== "").map(l => `<p>${escapeHtml(l)}</p>`).join("");
+}
+
+function exprodAbrirPreview(products) {
+  exprodPreviewData = products.map(p => {
+    const clone = JSON.parse(JSON.stringify(p));
+    clone._descText = exprodStripHtml(clone.body_html);
+    return clone;
+  });
+
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.id = "exprod-preview-modal";
+  modal.innerHTML = `
+    <div class="modal" style="max-width:640px;width:95%;max-height:88vh;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
+          <h3 id="exprod-preview-title" style="margin:0;font-size:16px;font-weight:700;color:var(--text);">Vista previa</h3>
+        </div>
+        <span onclick="exprodCerrarPreview()" style="cursor:pointer;font-size:22px;color:var(--muted);line-height:1;">×</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px;flex-shrink:0;">Edita el título, la descripción o elimina fotos antes de exportar el CSV.</div>
+      <div id="exprod-preview-list" style="overflow-y:auto;flex:1;padding-right:4px;"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;flex-shrink:0;">
+        <button class="btn btn-secondary" onclick="exprodCerrarPreview()">Cancelar</button>
+        <button class="btn btn-primary" id="exprod-confirm-btn" onclick="exprodConfirmarExport()" style="flex:1;">Exportar CSV</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  exprodRenderPreviewList();
+}
+
+function exprodRenderPreviewList() {
+  const wrap  = document.getElementById("exprod-preview-list");
+  const title = document.getElementById("exprod-preview-title");
+  const confirmBtn = document.getElementById("exprod-confirm-btn");
+  if (!wrap) return;
+
+  if (title) title.textContent = `Vista previa (${exprodPreviewData.length})`;
+  if (confirmBtn) {
+    confirmBtn.disabled = exprodPreviewData.length === 0;
+    confirmBtn.style.opacity = exprodPreviewData.length === 0 ? "0.5" : "1";
+    confirmBtn.textContent = exprodPreviewData.length > 1 ? `Exportar CSV (${exprodPreviewData.length})` : "Exportar CSV";
+  }
+
+  if (exprodPreviewData.length === 0) {
+    wrap.innerHTML = `<div class="muted" style="padding:16px;text-align:center;">No quedan productos por exportar.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = exprodPreviewData.map((p, i) => `
+    <div class="exprod-preview-card" style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;background:var(--input);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Producto ${i + 1} de ${exprodPreviewData.length}</div>
+        <span onclick="exprodQuitarProducto(${i})" title="Quitar producto de la exportación"
+          style="cursor:pointer;font-size:11px;color:#f87171;font-weight:700;">Quitar</span>
+      </div>
+
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Título</label>
+      <input value="${escapeHtml(p.title || "")}" oninput="exprodEditarCampo(${i},'title',this.value)"
+        style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:600;color:var(--text);background:var(--card);font-family:inherit;outline:none;margin-bottom:12px;" />
+
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Descripción</label>
+      <textarea oninput="exprodEditarCampo(${i},'desc',this.value)" rows="3"
+        style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--card);font-family:inherit;outline:none;resize:vertical;margin-bottom:12px;">${escapeHtml(p._descText || "")}</textarea>
+
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Fotos (${(p.images || []).length})</label>
+      <div class="exprod-gallery" id="exprod-gallery-${i}" style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${exprodGalleryHtml(i)}
+      </div>
+    </div>
+  `).join("");
+}
+
+function exprodGalleryHtml(i) {
+  const images = exprodPreviewData[i].images || [];
+  if (images.length === 0) return `<div style="font-size:12px;color:var(--muted);">Sin imágenes</div>`;
+  return images.map((img, gi) => `
+    <div style="position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--border);flex-shrink:0;">
+      <img src="${escapeHtml(img.src)}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+      <span onclick="exprodQuitarFoto(${i},${gi})" title="Quitar foto"
+        style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,.65);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;line-height:1;">×</span>
+    </div>
+  `).join("");
+}
+
+window.exprodEditarCampo = function(i, field, value) {
+  const p = exprodPreviewData[i];
+  if (!p) return;
+  if (field === "title") p.title = value;
+  if (field === "desc") p._descText = value;
+};
+
+window.exprodQuitarFoto = function(i, gi) {
+  const p = exprodPreviewData[i];
+  if (!p || !p.images) return;
+  p.images.splice(gi, 1);
+  const gallery = document.getElementById(`exprod-gallery-${i}`);
+  if (gallery) gallery.innerHTML = exprodGalleryHtml(i);
+};
+
+window.exprodQuitarProducto = function(i) {
+  exprodPreviewData.splice(i, 1);
+  exprodRenderPreviewList();
+};
+
+window.exprodCerrarPreview = function() {
+  const m = document.getElementById("exprod-preview-modal");
+  if (m) m.remove();
+};
+
+window.exprodConfirmarExport = function() {
+  if (exprodPreviewData.length === 0) return;
+
+  const products = exprodPreviewData.map(p => {
+    const { _descText, ...rest } = p;
+    rest.body_html = exprodPlainToHtml(_descText);
+    return rest;
+  });
 
   const csv = exprodGenerarCSV(products);
   const ts  = new Date().toISOString().replace(/[:.]/g, "_");
   const filename = products.length > 1 ? `exprod__${products.length}productos__${ts}.csv` : `exprod__${ts}.csv`;
   exprodDescargar(csv, filename);
 
-  const numVariants = products.reduce((a, p) => a + (p.variants || []).length, 0);
-  const numImages   = products.reduce((a, p) => a + (p.images   || []).length, 0);
+  exprodCerrarPreview();
 
-  statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:#22c55e;font-size:13px;font-weight:600;">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-    CSV descargado (${products.length} producto${products.length > 1 ? "s" : ""}${errores.length ? `, ${errores.length} con error` : ""})
-  </div>`;
+  const statusEl = document.getElementById("exprod-status");
+  if (statusEl) {
+    statusEl.style.display = "block";
+    statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:#22c55e;font-size:13px;font-weight:600;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      CSV descargado (${products.length} producto${products.length > 1 ? "s" : ""})
+    </div>`;
+  }
 
-  resultEl.style.display = "block";
-  resultEl.innerHTML = `
-    <div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
-      Producto${products.length > 1 ? "s" : ""} exportado${products.length > 1 ? "s" : ""}
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
-      ${exprodStatCard("Productos", products.length)}
-      ${exprodStatCard("Variantes", numVariants)}
-      ${exprodStatCard("Imágenes", numImages)}
-      ${exprodStatCard("Archivo", escapeHtml(filename))}
-    </div>
-    ${errores.length ? `<div style="margin-top:14px;">
-      <div style="font-size:12px;font-weight:700;color:#f87171;margin-bottom:8px;">No se pudieron exportar (${errores.length}):</div>
-      <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--muted);">
-        ${errores.map(e => `<li>${escapeHtml(e.url)} — ${escapeHtml(e.error)}</li>`).join("")}
-      </ul>
-    </div>` : ""}
-  `;
-
-  btn.disabled = false;
-  btn.style.opacity = "1";
+  exprodInitList();
 };
-
-function exprodStatCard(label, value) {
-  return `<div style="background:var(--input);border-radius:10px;padding:12px 14px;">
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">${label}</div>
-    <div style="font-size:13px;font-weight:600;color:var(--text);word-break:break-all;">${value}</div>
-  </div>`;
-}
 
 const EXPROD_HEADERS = [
   "Handle","Title","Body (HTML)","Vendor","Tags","Published",
