@@ -3121,7 +3121,7 @@ if (id === "exprod") {
   box.style.minHeight = "calc(100vh - 220px)";
   box.innerHTML = `<div style="max-width:460px;margin:56px auto 0;">
     <div style="text-align:center;margin-bottom:36px;">
-      <img src="/img/exprod-logo.png" alt="Exprod" style="height:34px;width:auto;" />
+      <img src="/img/exprod-logo.png" alt="Exprod" style="height:52px;width:auto;" />
     </div>
 
     <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">URL del producto</label>
