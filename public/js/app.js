@@ -3117,8 +3117,7 @@ if (id === "exprod") {
   box.className = "card";
   box.removeAttribute("style");
   box.innerHTML = `<div style="max-width:640px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-      <div style="font-size:13px;color:var(--muted);line-height:1.5;">Pega las URLs de los productos de Shopify. Al rellenar un campo se añade el siguiente automáticamente.</div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:14px;">
       <span id="exprod-count" style="font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0;">0 de 100</span>
     </div>
 
