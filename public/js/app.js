@@ -3121,12 +3121,7 @@ if (id === "exprod") {
   box.style.minHeight = "calc(100vh - 220px)";
   box.innerHTML = `<div style="max-width:460px;margin:56px auto 0;">
     <div style="text-align:center;margin-bottom:36px;">
-      <div style="display:inline-flex;align-items:center;gap:9px;">
-        <div style="width:30px;height:30px;border-radius:8px;background:#22c55e;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        </div>
-        <span style="font-size:23px;font-weight:800;letter-spacing:.5px;color:var(--text);">EXPROD</span>
-      </div>
+      <img src="/img/exprod-logo.png" alt="Exprod" style="height:34px;width:auto;" />
     </div>
 
     <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">URL del producto</label>
