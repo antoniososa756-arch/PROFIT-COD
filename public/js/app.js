@@ -4655,6 +4655,13 @@ function switchFacturasTab(key) {
         <select id="ads-year-sel" style="padding:7px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
           ${Array.from({length:27},(_,i)=>2024+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?"selected":""}>${y}</option>`).join("")}
         </select>
+        <input type="file" id="ads-csv-meta-input" accept=".csv" style="display:none" onchange="handleAdsCsvImport(event,'meta')" />
+        <button onclick="document.getElementById('ads-csv-meta-input').click()"
+          style="display:inline-flex;align-items:center;gap:7px;padding:7px 14px;background:rgba(24,119,242,.1);color:#1877f2;border:1.5px solid rgba(24,119,242,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;"
+          onmouseover="this.style.background='rgba(24,119,242,.18)';" onmouseout="this.style.background='rgba(24,119,242,.1)';">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Importar CSV Meta Ads
+        </button>
               </div>
       <div id="ads-table-wrap" style="overflow-x:auto;"></div>
     `;
@@ -7834,6 +7841,91 @@ window.loadMetricas = loadMetricas;
 // =========================
 // GASTOS ADS
 // =========================
+
+// Parser CSV simple (soporta campos entre comillas con comas internas)
+function parseCsvLine(line) {
+  const out = [];
+  let cur = "", inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ",") { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+function parseCsv(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // BOM
+  return text.split(/\r\n|\n|\r/).filter(l => l.length > 0).map(parseCsvLine);
+}
+
+// Importa un CSV exportado del Administrador de anuncios (Meta/TikTok):
+// columna A = Día (YYYY-MM-DD), columna D = Importe gastado (EUR)
+window.handleAdsCsvImport = async function(event, type) {
+  const file = event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+
+  const shopSel   = document.getElementById("ads-shop-sel");
+  const shop      = shopSel?.value;
+  const shopLabel = shopSel?.selectedOptions?.[0]?.textContent || shop;
+  if (!shop) { alert("Selecciona primero una tienda."); return; }
+
+  let entries = [];
+  try {
+    const text = await file.text();
+    const rows = parseCsv(text);
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.length < 4) continue;
+      const dateStr = (r[0] || "").trim();
+      const spend   = parseFloat((r[3] || "0").replace(",", "."));
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || isNaN(spend)) continue;
+      entries.push({ date: dateStr, spend });
+    }
+  } catch (e) {
+    alert("No se pudo leer el archivo CSV.");
+    return;
+  }
+
+  if (entries.length === 0) {
+    alert("No se detectaron filas válidas en el archivo (se esperaba fecha en la columna A e importe en la columna D).");
+    return;
+  }
+
+  const tipoLabel = type === "tiktok" ? "TikTok" : "Meta";
+  const ok = confirm(`Se importarán ${entries.length} día${entries.length > 1 ? "s" : ""} de gasto ${tipoLabel} Ads para la tienda "${shopLabel}".\n\n¿Continuar?`);
+  if (!ok) return;
+
+  window.__showLoadingBar?.("Importando CSV...");
+  const token = getActiveToken();
+  try {
+    await Promise.all(entries.map(e =>
+      fetch(`${API_BASE}/api/ads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ shop, date: e.date, type: type || "meta", spend: e.spend })
+      })
+    ));
+    invalidateCache("/api/ads");
+    await loadAdsTable();
+    showToast?.("Importación completada", `${entries.length} día${entries.length > 1 ? "s" : ""} actualizados`, "#22c55e");
+  } catch (e) {
+    alert("Error al importar: " + (e.message || "desconocido"));
+  } finally {
+    window.__hideLoadingBar?.();
+  }
+};
+
 async function loadAdsTable() {
   const shop  = document.getElementById("ads-shop-sel")?.value;
   const month = document.getElementById("ads-month-sel")?.value;
