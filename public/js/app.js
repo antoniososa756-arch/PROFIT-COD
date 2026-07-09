@@ -1185,11 +1185,11 @@ window.startTrialAndReload = async function() {
 function setSection(id) {
   // Cuentas apoyo nunca pueden ver el plan de facturación
   if (currentUser?.role === "Apoyo" && id === "plan") {
-    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"];
+    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","exprod","ayuda"];
     id = (currentUser.permissions ? PERM_SECTIONS.find(s => currentUser.permissions.includes(s)) : null) || "metricas";
   }
   // Bloquear acceso a secciones sin permiso para cuentas apoyo
-  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","ayuda"];
+  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","exprod","ayuda"];
   if (currentUser?.role === "Apoyo" && currentUser.permissions && PERM_SECTIONS.includes(id)) {
     if (!currentUser.permissions.includes(id)) {
       // Redirigir a la primera sección permitida
@@ -2083,6 +2083,7 @@ if (id === "gestion-clientes") {
     pedidos:           "🛒 Pedidos",
     facturas:          "🧾 Gastos",
     informes:          "📈 Ingresos",
+    exprod:            "🖥️ Exprod",
     ayuda:             "❓ Centro de ayuda",
     reembolsos_widget: "💳 Widget Pendiente MRW",
   };
@@ -2160,6 +2161,7 @@ if (id === "mi-equipo") {
     pedidos:           "🛒 Pedidos",
     facturas:          "🧾 Gastos",
     informes:          "📈 Ingresos",
+    exprod:            "🖥️ Exprod",
     ayuda:             "❓ Centro de ayuda",
     reembolsos_widget: "💳 Widget Pendiente MRW",
   };
