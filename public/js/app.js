@@ -3199,6 +3199,7 @@ if (id === "ayuda") {
       <div class="hc-nav-card" onclick="hcTab('gastos',this)"><span class="hc-icon">🧾</span>Gastos</div>
       <div class="hc-nav-card" onclick="hcTab('ingresos',this)"><span class="hc-icon">📈</span>Ingresos</div>
       <div class="hc-nav-card" onclick="hcTab('integraciones',this)"><span class="hc-icon">🔗</span>Integraciones</div>
+      <div class="hc-nav-card" onclick="hcTab('exprod',this)"><span class="hc-icon">🖥️</span>Exprod</div>
     </div>
 
     <!-- ══════════ MÉTRICAS ══════════ -->
@@ -3557,6 +3558,65 @@ if (id === "ayuda") {
             <div class="hc-step"><span class="hc-step-num">4</span><span class="hc-step-text">Una vez conectado, el sistema detectará automáticamente los emails con PDFs y marcará los reembolsos como cobrados.</span></div>
           </div>
           <div class="hc-info">ℹ️ Solo se accede a los emails de MRW — nunca a conversaciones personales.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════ EXPROD ══════════ -->
+    <div id="hcp-exprod" class="hc-panel">
+
+      <div class="hc-accordion open">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Para qué sirve Exprod?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>Exprod exporta cualquier producto público de una tienda Shopify (aunque no sea la tuya) a un archivo <strong>CSV</strong> listo para importar en Shopify, con título, descripción, variantes, precios e imágenes incluidos.</p>
+          <div class="hc-tip">💡 Útil para clonar rápidamente un producto de otra tienda a la tuya sin cargarlo manualmente.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo exporto uno o varios productos?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <div class="hc-steps">
+            <div class="hc-step"><span class="hc-step-num">1</span><span class="hc-step-text">Pega la URL del producto (ej: <code>https://tienda.myshopify.com/products/nombre</code>) en el primer campo.</span></div>
+            <div class="hc-step"><span class="hc-step-num">2</span><span class="hc-step-text">Al rellenarlo se añade automáticamente un campo nuevo debajo, hasta 100 productos.</span></div>
+            <div class="hc-step"><span class="hc-step-num">3</span><span class="hc-step-text">Pulsa <strong>Vista previa</strong> para cargar los datos de todos los productos.</span></div>
+          </div>
+          <div class="hc-info">ℹ️ Si añades varias URLs, se exportan todas juntas en un único CSV listo para importar de una vez.</div>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Qué puedo editar antes de exportar?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>La vista previa abre una ventana con cada producto cargado, donde puedes:</p>
+          <ul>
+            <li>Editar el <strong>título</strong>.</li>
+            <li>Editar la <strong>descripción</strong>.</li>
+            <li>Eliminar cualquier <strong>foto</strong> que no quieras exportar.</li>
+            <li>Quitar por completo un producto de la exportación con <strong>Quitar</strong>.</li>
+          </ul>
+          <p>Los cambios solo se aplican al pulsar <strong>Exportar CSV</strong>; si cierras la ventana con <strong>Cancelar</strong>, no se descarga nada.</p>
+        </div>
+      </div>
+
+      <div class="hc-accordion">
+        <div class="hc-acc-head" onclick="hcToggle(this)">
+          <span class="hc-acc-title">¿Cómo importo el CSV en Shopify?</span>
+          <span class="hc-acc-arrow">▼</span>
+        </div>
+        <div class="hc-acc-body">
+          <p>En tu tienda Shopify ve a <strong>Productos → Importar</strong>, sube el archivo CSV descargado y confirma. Los productos se crean como <strong>borrador</strong> (no publicados) para que puedas revisarlos antes de activarlos.</p>
+          <div class="hc-warn">⚠️ Exprod solo puede acceder a productos publicados y visibles públicamente en la tienda de origen.</div>
         </div>
       </div>
 
