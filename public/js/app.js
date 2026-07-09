@@ -3130,21 +3130,15 @@ if (id === "exprod") {
     </div>
 
     <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">URL del producto</label>
-    <div style="display:flex;gap:8px;">
-      <input id="exprod-url-first" type="url"
-        placeholder="[tienda].myshopify.com/products/[nombre-producto]"
-        oninput="exprodOnFirstInput(this)"
-        onfocus="this.style.borderColor='#22c55e'" onblur="this.style.borderColor='var(--border)'"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();exprodExtraerCSV();}"
-        style="flex:1;min-width:0;background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13.5px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s;" />
-      <button onclick="exprodExtraerCSV()" id="exprod-btn" class="btn-primary" style="white-space:nowrap;flex-shrink:0;">
-        Vista previa
-      </button>
-    </div>
 
-    <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-top:8px;"></div>
+    <div id="exprod-url-list" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
 
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-top:10px;">
+    <button onclick="exprodExtraerCSV()" id="exprod-btn" class="btn-primary"
+      style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;">
+      Vista previa
+    </button>
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-top:12px;">
       <div style="font-size:11.5px;color:var(--muted);line-height:1.5;">Se añade un campo nuevo automáticamente al completar el anterior.</div>
       <span id="exprod-count" style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0;">0 de 100</span>
     </div>
@@ -9572,16 +9566,16 @@ window.invalidateCache = invalidateCache;
 const EXPROD_MAX = 100;
 
 function exprodInitList() {
-  const firstInput = document.getElementById("exprod-url-first");
   const list = document.getElementById("exprod-url-list");
-  if (firstInput) firstInput.value = "";
-  if (list) list.innerHTML = "";
+  if (!list) return;
+  list.innerHTML = "";
+  exprodAddRow(false);
   exprodUpdateCount();
 }
 
 function exprodAddRow(focus) {
   const list = document.getElementById("exprod-url-list");
-  if (!list || list.children.length >= EXPROD_MAX - 1) return null;
+  if (!list || list.children.length >= EXPROD_MAX) return null;
   const row = document.createElement("div");
   row.className = "exprod-row";
   row.style.cssText = "display:flex;gap:8px;align-items:center;";
@@ -9604,53 +9598,47 @@ function exprodAddRow(focus) {
   return row;
 }
 
-window.exprodOnFirstInput = function(input) {
-  const list = document.getElementById("exprod-url-list");
-  if (!list) return;
-  if (list.children.length === 0 && input.value.trim() !== "") {
-    exprodAddRow(false);
-  }
-  exprodUpdateCount();
-};
-
 window.exprodOnInput = function(input) {
   const list = document.getElementById("exprod-url-list");
   if (!list) return;
   const row = input.closest(".exprod-row");
   const isLast = row === list.lastElementChild;
-  if (isLast && input.value.trim() !== "" && list.children.length < EXPROD_MAX - 1) {
+  if (isLast && input.value.trim() !== "" && list.children.length < EXPROD_MAX) {
     exprodAddRow(false);
   }
   exprodUpdateCount();
 };
 
 window.exprodRemoveRow = function(btn) {
+  const list = document.getElementById("exprod-url-list");
+  if (!list) return;
   const row = btn.closest(".exprod-row");
-  if (row) row.remove();
+  if (list.children.length <= 1) {
+    row.querySelector("input").value = "";
+  } else {
+    row.remove();
+  }
   exprodUpdateCount();
 };
 
 function exprodUpdateCount() {
-  const firstInput = document.getElementById("exprod-url-first");
   const list = document.getElementById("exprod-url-list");
   const countEl = document.getElementById("exprod-count");
-  if (!countEl) return;
-  let filled = firstInput && firstInput.value.trim() !== "" ? 1 : 0;
-  if (list) filled += Array.from(list.querySelectorAll(".exprod-url-input")).filter(i => i.value.trim() !== "").length;
+  if (!list || !countEl) return;
+  const filled = Array.from(list.querySelectorAll(".exprod-url-input")).filter(i => i.value.trim() !== "").length;
   countEl.textContent = `${filled} de ${EXPROD_MAX}`;
 }
 
 window.exprodExtraerCSV = async function() {
-  const firstInput = document.getElementById("exprod-url-first");
-  const list       = document.getElementById("exprod-url-list");
-  const btn        = document.getElementById("exprod-btn");
-  const statusEl   = document.getElementById("exprod-status");
-  if (!firstInput || !btn) return;
+  const list     = document.getElementById("exprod-url-list");
+  const btn      = document.getElementById("exprod-btn");
+  const statusEl = document.getElementById("exprod-status");
+  if (!list || !btn) return;
 
-  const extraInputs = list ? Array.from(list.querySelectorAll(".exprod-url-input")) : [];
-  const urls = [firstInput, ...extraInputs].map(i => i.value.trim()).filter(v => v !== "");
+  const inputs = Array.from(list.querySelectorAll(".exprod-url-input"));
+  const urls = inputs.map(i => i.value.trim()).filter(v => v !== "");
   if (urls.length === 0) {
-    firstInput.focus();
+    if (inputs[0]) inputs[0].focus();
     return;
   }
 
