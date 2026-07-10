@@ -10459,7 +10459,9 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
     } catch(e) { paymentBadge = "-"; }
 
     return `
-    <div class="orders-row" style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;">
+    <div class="orders-row" onclick="handleOrderRowClick(event, ${o.id})"
+      onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''"
+      style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;cursor:pointer;">
       <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;overflow:hidden;">${numero}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${paymentBadge}</div>
@@ -10467,7 +10469,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
-      <div style="display:flex;align-items:center;gap:6px;overflow:visible;">
+      <div data-row-actions="1" style="display:flex;align-items:center;gap:6px;overflow:visible;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
         ${(() => {
           const claimed = window.__reclamosSet && o.order_id && window.__reclamosSet.has(o.order_id);
@@ -10558,6 +10560,122 @@ function goToOrdersPage(page) {
   fetchOrdersFiltered();
   const table = document.querySelector(".orders-table");
   if (table) table.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// =========================
+// DETALLE DE PEDIDO
+// =========================
+
+// Abre el detalle solo si el clic no vino de un botón/enlace/menú dentro de la fila
+window.handleOrderRowClick = function(e, orderId) {
+  if (e.target.closest("button, a, [data-row-actions]")) return;
+  abrirDetallePedido(orderId);
+};
+
+window.abrirDetallePedido = async function(orderId) {
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.id = "modal-detalle-pedido";
+  modal.innerHTML = `
+    <div class="modal" style="max-width:640px;width:95%;max-height:88vh;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--text);">Detalle del pedido</h3>
+        <span onclick="closeModal()" style="cursor:pointer;font-size:22px;color:var(--muted);line-height:1;">×</span>
+      </div>
+      <div id="detalle-pedido-body" style="overflow-y:auto;flex:1;padding-right:4px;">
+        <div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:32px 0;justify-content:center;">
+          <div style="width:16px;height:16px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
+          Cargando pedido...
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${orderId}`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+    renderDetallePedido(data);
+  } catch (e) {
+    const body = document.getElementById("detalle-pedido-body");
+    if (body) body.innerHTML = `<div style="color:#dc2626;padding:24px;text-align:center;">No se pudo cargar el detalle del pedido.</div>`;
+  }
+};
+
+function _dpRow(label, value) {
+  if (value == null || value === "") return "";
+  return `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);">
+    <span style="color:var(--muted);">${label}</span>
+    <span style="color:var(--text);font-weight:600;text-align:right;">${value}</span>
+  </div>`;
+}
+
+function _dpSection(title) {
+  return `<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 8px;">${title}</div>`;
+}
+
+function renderDetallePedido(order) {
+  const body = document.getElementById("detalle-pedido-body");
+  if (!body) return;
+
+  let raw = {};
+  try { raw = order.raw_json ? (typeof order.raw_json === "string" ? JSON.parse(order.raw_json) : order.raw_json) : {}; } catch (e) { raw = {}; }
+
+  const shipping = raw.shipping_address || {};
+  const customer = raw.customer || {};
+  const lineItems = Array.isArray(raw.line_items) ? raw.line_items : [];
+  const currency = order.currency || raw.currency || "";
+
+  const fmtMoney = v => v != null ? `${parseFloat(v).toFixed(2)} ${currency}` : "-";
+  const fecha = order.created_at ? new Date(order.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
+
+  const direccion = [shipping.address1, shipping.address2, shipping.city, shipping.province, shipping.zip, shipping.country]
+    .filter(Boolean).map(escapeHtml).join(", ");
+
+  const itemsHtml = lineItems.length
+    ? lineItems.map(li => `
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+        <div style="flex:1;min-width:0;">
+          <div style="color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(li.title || li.name || "-")}</div>
+          ${li.variant_title ? `<div style="color:var(--muted);font-size:12px;">${escapeHtml(li.variant_title)}</div>` : ""}
+          ${li.sku ? `<div style="color:var(--muted);font-size:11px;">SKU: ${escapeHtml(li.sku)}</div>` : ""}
+        </div>
+        <div style="text-align:right;flex-shrink:0;color:var(--text);">
+          <div>${li.quantity || 1} × ${fmtMoney(li.price)}</div>
+        </div>
+      </div>
+    `).join("")
+    : `<div class="muted" style="padding:12px 0;font-size:13px;">Sin detalle de productos disponible.</div>`;
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
+      <div style="font-size:18px;font-weight:800;color:var(--text);">${escapeHtml(order.order_number || "-")}</div>
+      <span class="status ${statusClass(order.fulfillment_status)}">${statusLabel(order.fulfillment_status)}</span>
+    </div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:6px;">${fecha} · ${escapeHtml(order.shop_domain || "-")}</div>
+
+    ${_dpSection("Cliente")}
+    ${_dpRow("Nombre", escapeHtml(order.customer_name || `${customer.first_name || ""} ${customer.last_name || ""}`.trim() || "-"))}
+    ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
+    ${_dpRow("Teléfono", escapeHtml(shipping.phone || customer.phone || "-"))}
+
+    ${direccion ? `${_dpSection("Dirección de envío")}<div style="font-size:13px;color:var(--text);line-height:1.6;">${direccion}</div>` : ""}
+
+    ${_dpSection(`Productos (${lineItems.length})`)}
+    <div>${itemsHtml}</div>
+
+    ${_dpSection("Pago y envío")}
+    ${_dpRow("Estado de pago", escapeHtml(order.financial_status || "-"))}
+    ${_dpRow("Subtotal", fmtMoney(raw.subtotal_price))}
+    ${_dpRow("Envío", fmtMoney(raw.total_shipping_price_set?.shop_money?.amount))}
+    ${_dpRow("Total", fmtMoney(order.total_price))}
+    ${_dpRow("Nº seguimiento", order.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(order.tracking_number)}" target="_blank" style="color:#22c55e;">${escapeHtml(order.tracking_number)}</a>` : "-")}
+
+    ${raw.note ? `${_dpSection("Nota del pedido")}<div style="font-size:13px;color:var(--text);background:var(--input);border-radius:8px;padding:10px 12px;">${escapeHtml(raw.note)}</div>` : ""}
+  `;
 }
 
 // =========================
