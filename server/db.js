@@ -285,6 +285,17 @@ await pool.query(`
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reclamos_mrw (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      order_id TEXT NOT NULL,
+      observacion TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT now()::text,
+      UNIQUE(user_id, order_id)
+    )
+  `);
+
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active INTEGER NOT NULL DEFAULT 1`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);

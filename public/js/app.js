@@ -2907,6 +2907,7 @@ if (id === "pedidos") {
 
     // Cargar pedidos reales
     fetchOrders();
+    loadReclamosSet();
     checkMRWIntegration();
 
     // Cargar tiendas en filtro inline
@@ -2953,14 +2954,85 @@ if (id === "reclamos") {
   if (t) t.textContent = "Reclamos MRW";
   if (s) s.textContent = "Gestión de reclamos a la agencia de envío";
   if (c) c.textContent = "Reclamos MRW";
+
   box.className = "card";
   box.removeAttribute("style");
   box.innerHTML = `
-    <div style="padding:24px;text-align:center;color:var(--muted);">
-      <div style="font-weight:600;color:var(--text);margin-bottom:6px;">Reclamos MRW</div>
-      <div class="muted">Próximamente</div>
-    </div>
-  `;
+      <div class="orders-header">
+
+       <div class="filters">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:10px;width:100%;">
+
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              ${window.__DPF.triggerBtn('reclamos', 'Este mes')}
+              <input type="date" id="reclamos-date-from" value="${new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]}" style="display:none;">
+              <input type="date" id="reclamos-date-to" value="${new Date().toISOString().split('T')[0]}" style="display:none;">
+              <select id="reclamos-shop-inline"
+                onchange="applyReclamosFilters()"
+                style="padding:7px 10px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
+                <option value="">Todas las tiendas</option>
+              </select>
+              <button onclick="clearReclamosFiltersInline()" style="padding:7px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="tabs">
+          <span class="tab active" onclick="filterReclamosByTab(this, '')">Todos</span>
+          <span class="tab" onclick="filterReclamosByTab(this, 'pendiente')">Pendiente</span>
+          <span class="tab" onclick="filterReclamosByTab(this, 'enviado')">Enviado</span>
+          <span class="tab" onclick="filterReclamosByTab(this, 'en_transito')">En tránsito</span>
+          <span class="tab" onclick="filterReclamosByTab(this, 'entregado')">Entregado</span>
+          <span class="tab" onclick="filterReclamosByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
+          <span class="tab" onclick="filterReclamosByTab(this, 'franquicia')">Franquicia</span>
+          <span class="tab" onclick="filterReclamosByTab(this, 'cancelado')">Cancelado</span>
+        </div>
+
+        <div id="reclamos-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
+
+        <div class="orders-table">
+          <div class="orders-row head" style="display:grid;grid-template-columns:30px 18% 15% 18% 15% 1fr;gap:0;">
+            <div>#</div>
+            <div>Pedido</div>
+            <div>Fecha de creación</div>
+            <div>Nº seguimiento</div>
+            <div>Estado logístico</div>
+            <div>Observación</div>
+          </div>
+          <div id="reclamosBody">
+            <div class="muted" style="padding:16px;">Cargando reclamos...</div>
+          </div>
+        </div>
+
+        <div id="reclamosPagination" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:18px 0 4px;flex-wrap:wrap;"></div>
+
+      </div>
+    `;
+
+    // Init date picker
+    const _recNow = new Date();
+    const _recFrom = new Date(_recNow.getFullYear(), _recNow.getMonth(), 1).toISOString().split('T')[0];
+    const _recTo   = _recNow.toISOString().split('T')[0];
+    window.__DPF.create('reclamos', _recFrom, _recTo, 'mes', 'Este mes', null, null, function() { window.applyReclamosFilters(); });
+
+    fetchReclamos();
+
+    // Cargar tiendas en filtro inline
+    fetch(`${API_BASE}/api/shopify/stores?all=true`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    }).then(r => r.json()).then(stores => {
+      const sel = document.getElementById("reclamos-shop-inline");
+      if (sel && Array.isArray(stores)) {
+        stores.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s.domain;
+          opt.textContent = shopLabel(s);
+          sel.appendChild(opt);
+        });
+      }
+    }).catch(() => {});
+
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -10246,6 +10318,43 @@ async function fetchOrders() {
 
 let currentDisplayOrders = [];
 
+// ── RECLAMOS MRW: set de order_id ya reclamados, para pintar el botón en Pedidos ──
+async function loadReclamosSet() {
+  try {
+    const ids = await fetch(`${API_BASE}/api/reclamos-mrw/ids`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    }).then(r => r.json());
+    window.__reclamosSet = new Set(Array.isArray(ids) ? ids : []);
+  } catch (e) {
+    window.__reclamosSet = window.__reclamosSet || new Set();
+  }
+  if (currentDisplayOrders && currentDisplayOrders.length) renderOrdersPage();
+}
+
+window.reclamarPedido = async function(btn, orderId, orderNumber) {
+  if (!orderId || btn.disabled) return;
+  btn.disabled = true;
+  const oldBg = btn.style.background;
+  try {
+    const res = await fetch(`${API_BASE}/api/reclamos-mrw`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ order_id: orderId })
+    });
+    if (!res.ok) throw new Error();
+    window.__reclamosSet = window.__reclamosSet || new Set();
+    window.__reclamosSet.add(orderId);
+    btn.style.background = "#9ca3af";
+    btn.style.cursor = "default";
+    btn.title = "Ya reclamado a MRW";
+    showToast("Reclamo registrado", `Pedido #${orderNumber} añadido a Reclamos MRW.`, "#22c55e");
+  } catch (e) {
+    btn.disabled = false;
+    btn.style.background = oldBg;
+    showToast("Error", "No se pudo registrar el reclamo.", "#dc2626");
+  }
+};
+
 function renderOrders(orders, total, page, pages) {
   currentDisplayOrders = orders;
   renderOrdersPage(orders, total || orders.length, page || 1, pages || 1);
@@ -10308,6 +10417,14 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
       <div style="display:flex;align-items:center;gap:6px;overflow:visible;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
+        ${(() => {
+          const claimed = window.__reclamosSet && o.order_id && window.__reclamosSet.has(o.order_id);
+          return `<button onclick="reclamarPedido(this,'${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}')"
+            title="${claimed ? "Ya reclamado a MRW" : "Reclamar a MRW"}" ${claimed ? "disabled" : ""}
+            style="width:22px;height:22px;background:${claimed ? "#9ca3af" : "#f59e0b"};border:none;border-radius:50%;cursor:${claimed ? "default" : "pointer"};display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".5" fill="white"/></svg>
+          </button>`;
+        })()}
         ${o.tracking_number ? `
         <button id="mrw-sync-btn-${o.id}" onclick="syncEnvioMRW(this,${o.id})" title="Sincronizar estado MRW"
           style="width:22px;height:22px;background:#0ea5e9;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
@@ -10390,6 +10507,190 @@ function goToOrdersPage(page) {
   const table = document.querySelector(".orders-table");
   if (table) table.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+// =========================
+// RECLAMOS MRW
+// =========================
+let reclamosState = { status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
+let reclamosTotal = 0, reclamosPages = 0;
+let currentDisplayReclamos = [];
+
+async function fetchReclamosFiltered() {
+  const body = document.getElementById("reclamosBody");
+  if (!body) return;
+  body.style.opacity = "0.5";
+
+  const params = new URLSearchParams({ page: reclamosState.page, limit: 50 });
+  if (reclamosState.status)   params.set("status", reclamosState.status);
+  if (reclamosState.shop)     params.set("shop",   reclamosState.shop);
+  if (reclamosState.dateFrom) params.set("from",   reclamosState.dateFrom);
+  if (reclamosState.dateTo)   params.set("to",     reclamosState.dateTo);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/reclamos-mrw?${params}`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await res.json();
+    const rows = data.orders || [];
+    reclamosTotal = data.total || 0;
+    reclamosPages = data.pages || 1;
+    renderReclamosPage(rows, reclamosTotal, reclamosState.page, reclamosPages);
+  } catch (e) {
+    body.innerHTML = `<div style="color:#dc2626;padding:16px;">Error cargando reclamos</div>`;
+  } finally {
+    body.style.opacity = "1";
+  }
+}
+
+async function fetchReclamos() {
+  reclamosState = {
+    status: "",
+    shop: "",
+    dateFrom: document.getElementById("reclamos-date-from")?.value || "",
+    dateTo:   document.getElementById("reclamos-date-to")?.value   || "",
+    page: 1
+  };
+  await fetchReclamosFiltered();
+}
+
+function renderReclamosPage(rows, total, page, totalPages) {
+  currentDisplayReclamos = rows;
+  const body = document.getElementById("reclamosBody");
+  const pagination = document.getElementById("reclamosPagination");
+  const counter = document.getElementById("reclamos-counter");
+  if (!body) return;
+
+  if (!rows.length) {
+    body.innerHTML = `<div class="muted" style="padding:16px;">No hay reclamos todavía. Usa el botón 🚩 junto a un pedido en Pedidos para añadirlo aquí.</div>`;
+    if (pagination) pagination.innerHTML = "";
+    if (counter) counter.textContent = "";
+    return;
+  }
+
+  const PER_PAGE = 50;
+  const start = (page - 1) * PER_PAGE;
+
+  if (counter) {
+    const desde = total === 0 ? 0 : start + 1;
+    const hasta = Math.min(start + rows.length, total);
+    counter.textContent = `Mostrando ${desde}–${hasta} de ${total} reclamos`;
+  }
+
+  body.innerHTML = rows.map((o, idx) => {
+    const numero = start + idx + 1;
+    return `
+    <div class="orders-row" style="display:grid;grid-template-columns:30px 18% 15% 18% 15% 1fr;gap:0;">
+      <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;overflow:hidden;">${numero}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="text" value="${escapeAttr(o.observacion || "")}" placeholder="Escribe una observación..."
+          data-order="${escapeAttr(o.order_id || "")}"
+          onchange="guardarObservacionReclamo(this)"
+          style="flex:1;min-width:0;padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--input);color:var(--text);font-family:inherit;outline:none;">
+        <button onclick="quitarReclamo('${escapeAttr(o.order_id || "")}')" title="Quitar de reclamos"
+          style="width:22px;height:22px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;"
+          onmouseover="this.style.background='rgba(239,68,68,.12)';this.style.color='#ef4444';"
+          onmouseout="this.style.background='transparent';this.style.color='var(--muted)';">×</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  if (pagination) {
+    if (totalPages <= 1) {
+      pagination.innerHTML = "";
+    } else {
+      const p = page;
+      let html = `<button onclick="goToReclamosPage(${Math.max(1, p-1)})"
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
+      for (let i = 1; i <= totalPages; i++) {
+        const isActive = i === p;
+        html += `<button onclick="goToReclamosPage(${i})"
+          style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#22c55e":"#e5e7eb"};background:${isActive?"#22c55e":"var(--card)"};color:${isActive?"#fff":"var(--text)"};font-size:13px;font-weight:${isActive?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`;
+      }
+      html += `<button onclick="goToReclamosPage(${Math.min(totalPages, p+1)})"
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===totalPages?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===totalPages?"disabled":""}>›</button>`;
+      pagination.innerHTML = html;
+    }
+  }
+}
+
+function goToReclamosPage(page) {
+  reclamosState = { ...reclamosState, page };
+  fetchReclamosFiltered();
+  const table = document.querySelector(".orders-table");
+  if (table) table.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+window.applyReclamosFilters = function() {
+  const shop     = document.getElementById("reclamos-shop-inline")?.value || "";
+  const dateFrom = document.getElementById("reclamos-date-from")?.value   || "";
+  const dateTo   = document.getElementById("reclamos-date-to")?.value     || "";
+  reclamosState = { ...reclamosState, shop, dateFrom, dateTo, page: 1 };
+  fetchReclamosFiltered();
+};
+
+window.clearReclamosFiltersInline = function() {
+  reclamosState = { status: "", shop: "", dateFrom: "", dateTo: "", page: 1 };
+  const sel = document.getElementById("reclamos-shop-inline");
+  if (sel) sel.value = "";
+  const s = window.__DPF._inst["reclamos"];
+  if (s) { s.startDate = null; s.endDate = null; s.preset = "personalizado"; s.presetLabel = "Período"; }
+  const lbl = document.getElementById("reclamos-picker-label");
+  if (lbl) lbl.textContent = "Período";
+  document.querySelectorAll(".tabs .tab").forEach(el => el.classList.remove("active"));
+  const first = document.querySelector(".tabs .tab");
+  if (first) first.classList.add("active");
+  fetchReclamosFiltered();
+};
+
+window.filterReclamosByTab = function(el, status) {
+  document.querySelectorAll(".tabs .tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  reclamosState = { ...reclamosState, status: status || "", page: 1 };
+  fetchReclamosFiltered();
+};
+
+window.filterReclamosByTabMulti = function(el, statuses) {
+  document.querySelectorAll(".tabs .tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  reclamosState = { ...reclamosState, status: statuses.join(","), page: 1 };
+  fetchReclamosFiltered();
+};
+
+window.guardarObservacionReclamo = async function(input) {
+  const orderId = input.dataset.order;
+  if (!orderId) return;
+  input.disabled = true;
+  try {
+    await fetch(`${API_BASE}/api/reclamos-mrw/${encodeURIComponent(orderId)}/observacion`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ observacion: input.value })
+    });
+  } catch (e) {
+    showToast("Error", "No se pudo guardar la observación.", "#dc2626");
+  } finally {
+    input.disabled = false;
+  }
+};
+
+window.quitarReclamo = async function(orderId) {
+  if (!orderId) return;
+  if (!confirm("¿Quitar este pedido de Reclamos MRW?")) return;
+  try {
+    await fetch(`${API_BASE}/api/reclamos-mrw/${encodeURIComponent(orderId)}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    if (window.__reclamosSet) window.__reclamosSet.delete(orderId);
+    fetchReclamosFiltered();
+  } catch (e) {
+    showToast("Error", "No se pudo quitar el reclamo.", "#dc2626");
+  }
+};
 window.goToOrdersPage = goToOrdersPage;
 
 let __filterOrdersTimer = null;

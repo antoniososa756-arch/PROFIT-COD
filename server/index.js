@@ -63,6 +63,7 @@ app.use("/api/impuestos",    auth, planCheck, require("./routes/impuestos.routes
 app.use("/api/gastos-varios",auth, planCheck, require("./routes/gastos-varios.routes"));
 app.use("/api/nomina",       auth, planCheck, nominaRoutes);
 app.use("/api/exprod",       auth, planCheck, require("./routes/exprod.routes"));
+app.use("/api/reclamos-mrw", auth, planCheck, require("./routes/reclamos.routes"));
 // Gmail: /auth y /callback son redirects del navegador, no llevan Auth header
 // El resto sí requiere auth — lo gestionamos con un middleware condicional
 const gmailRoutes = require("./routes/gmail.routes");
