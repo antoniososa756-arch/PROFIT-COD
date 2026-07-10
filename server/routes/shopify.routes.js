@@ -312,16 +312,23 @@ router.get("/debug-orders", async (req, res) => {
        LIMIT 30`,
       [shop]
     );
-    let shopRow = null, summary = null;
+    let shopRows = null, summary = null, users = null;
     if (shop) {
-      shopRow = await db.get(`SELECT id, user_id, shop_domain, status, created_at FROM shops WHERE shop_domain = $1`, [shop]);
+      shopRows = await db.all(`SELECT id, user_id, shop_domain, status, created_at FROM shops WHERE shop_domain = $1`, [shop]);
       summary = await db.get(
         `SELECT COUNT(*) as total, MIN(created_at) as min_created, MAX(created_at) as max_created
          FROM orders o WHERE o.shop_domain = $1 OR o.shop_id = (SELECT id FROM shops WHERE shop_domain = $1)`,
         [shop]
       );
+      const userIds = [...new Set((shopRows || []).map(r => r.user_id))];
+      if (userIds.length) {
+        users = await db.all(
+          `SELECT id, email, role, active, plan, plan_status, plan_expires_at, parent_user_id FROM users WHERE id = ANY($1::int[])`,
+          [userIds]
+        );
+      }
     }
-    res.json({ shopRow, summary, rows });
+    res.json({ shopRows, summary, users, rows });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
