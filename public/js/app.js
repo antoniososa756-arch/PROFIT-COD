@@ -10331,26 +10331,56 @@ async function loadReclamosSet() {
   if (currentDisplayOrders && currentDisplayOrders.length) renderOrdersPage();
 }
 
-window.reclamarPedido = async function(btn, orderId, orderNumber) {
-  if (!orderId || btn.disabled) return;
-  btn.disabled = true;
-  const oldBg = btn.style.background;
+window.abrirModalReclamo = function(orderId, orderNumber) {
+  if (!orderId) return;
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.id = "modal-reclamo-mrw";
+  modal.innerHTML = `
+    <div class="modal" style="max-width:420px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".5" fill="#f59e0b"/></svg>
+          <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--text);">Reclamar a MRW</h3>
+        </div>
+        <span onclick="closeModal()" style="cursor:pointer;font-size:22px;color:var(--muted);line-height:1;">×</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Pedido <strong style="color:var(--text);">#${escapeHtml(orderNumber)}</strong></div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Observación</label>
+      <textarea id="reclamo-modal-obs" rows="4" placeholder="Describe el motivo del reclamo..."
+        style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--input);font-family:inherit;outline:none;resize:vertical;margin-bottom:16px;"></textarea>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarReclamoModal('${escapeAttr(orderId)}','${escapeAttr(orderNumber)}')" style="flex:1;">Guardar reclamo</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById("reclamo-modal-obs")?.focus(), 50);
+};
+
+window.confirmarReclamoModal = async function(orderId, orderNumber) {
+  const textarea = document.getElementById("reclamo-modal-obs");
+  const observacion = textarea ? textarea.value : "";
   try {
     const res = await fetch(`${API_BASE}/api/reclamos-mrw`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify({ order_id: orderId })
+      body: JSON.stringify({ order_id: orderId, observacion })
     });
     if (!res.ok) throw new Error();
     window.__reclamosSet = window.__reclamosSet || new Set();
     window.__reclamosSet.add(orderId);
-    btn.style.background = "#9ca3af";
-    btn.style.cursor = "default";
-    btn.title = "Ya reclamado a MRW";
+    closeModal();
     showToast("Reclamo registrado", `Pedido #${orderNumber} añadido a Reclamos MRW.`, "#22c55e");
+    const btn = document.querySelector(`button[data-reclamo-order="${CSS.escape(orderId)}"]`);
+    if (btn) {
+      btn.disabled = true;
+      btn.style.background = "#9ca3af";
+      btn.style.cursor = "default";
+      btn.title = "Ya reclamado a MRW";
+    }
   } catch (e) {
-    btn.disabled = false;
-    btn.style.background = oldBg;
     showToast("Error", "No se pudo registrar el reclamo.", "#dc2626");
   }
 };
@@ -10419,7 +10449,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
         ${(() => {
           const claimed = window.__reclamosSet && o.order_id && window.__reclamosSet.has(o.order_id);
-          return `<button onclick="reclamarPedido(this,'${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}')"
+          return `<button data-reclamo-order="${escapeAttr(o.order_id||"")}" onclick="abrirModalReclamo('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}')"
             title="${claimed ? "Ya reclamado a MRW" : "Reclamar a MRW"}" ${claimed ? "disabled" : ""}
             style="width:22px;height:22px;background:${claimed ? "#9ca3af" : "#f59e0b"};border:none;border-radius:50%;cursor:${claimed ? "default" : "pointer"};display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".5" fill="white"/></svg>

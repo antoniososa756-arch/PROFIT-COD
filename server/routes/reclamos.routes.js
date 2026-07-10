@@ -68,10 +68,11 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
-// POST /api/reclamos-mrw  { order_id } — marca un pedido como reclamado
+// POST /api/reclamos-mrw  { order_id, observacion? } — marca un pedido como reclamado
 router.post("/", auth, async (req, res) => {
-  const { order_id } = req.body || {};
+  const { order_id, observacion } = req.body || {};
   if (!order_id) return res.status(400).json({ error: "Falta order_id" });
+  const obs = typeof observacion === "string" ? observacion : "";
   try {
     const owns = await db.get(
       `SELECT o.id FROM orders o
@@ -83,9 +84,9 @@ router.post("/", auth, async (req, res) => {
 
     await db.run(
       `INSERT INTO reclamos_mrw (user_id, order_id, observacion, created_at)
-       VALUES ($1, $2, '', now()::text)
-       ON CONFLICT (user_id, order_id) DO NOTHING`,
-      [req.user.id, order_id]
+       VALUES ($1, $2, $3, now()::text)
+       ON CONFLICT (user_id, order_id) DO UPDATE SET observacion = EXCLUDED.observacion`,
+      [req.user.id, order_id, obs]
     );
     res.json({ ok: true });
   } catch (e) {
