@@ -2975,6 +2975,15 @@ if (id === "reclamos") {
               <button onclick="clearReclamosFiltersInline()" style="padding:7px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Limpiar</button>
             </div>
 
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button id="reclamos-export-btn" onclick="descargarExcelReclamos()"
+                style="display:inline-flex;align-items:center;gap:7px;padding:7px 14px;background:rgba(34,197,94,.1);color:#16a34a;border:1.5px solid rgba(34,197,94,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;"
+                onmouseover="this.style.background='rgba(34,197,94,.18)';" onmouseout="this.style.background='rgba(34,197,94,.1)';">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Descargar Excel
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -10736,6 +10745,38 @@ window.quitarReclamo = async function(orderId) {
     showToast("Error", "No se pudo quitar el reclamo.", "#dc2626");
   }
 };
+
+window.descargarExcelReclamos = async function() {
+  const btn = document.getElementById("reclamos-export-btn");
+  const params = new URLSearchParams();
+  if (reclamosState.status)   params.set("status", reclamosState.status);
+  if (reclamosState.shop)     params.set("shop",   reclamosState.shop);
+  if (reclamosState.dateFrom) params.set("from",   reclamosState.dateFrom);
+  if (reclamosState.dateTo)   params.set("to",     reclamosState.dateTo);
+
+  if (btn) { btn.style.opacity = "0.6"; btn.style.pointerEvents = "none"; }
+  try {
+    const res = await fetch(`${API_BASE}/api/reclamos-mrw/export?${params}`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    if (!res.ok) throw new Error();
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const ts = new Date().toISOString().replace(/[:.]/g, "_");
+    a.href = url;
+    a.download = `reclamos-mrw_${ts}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showToast("Error", "No se pudo descargar el Excel.", "#dc2626");
+  } finally {
+    if (btn) { btn.style.opacity = "1"; btn.style.pointerEvents = "auto"; }
+  }
+};
+
 window.goToOrdersPage = goToOrdersPage;
 
 let __filterOrdersTimer = null;

@@ -1,7 +1,38 @@
 const express = require("express");
+const XLSX = require("xlsx");
 const auth = require("../middlewares/auth");
 const db = require("../db");
 const router = express.Router();
+
+const ESTADOS_LABEL = {
+  pendiente: "Pendiente", enviado: "Enviado", en_transito: "En tránsito",
+  entregado: "Entregado", devuelto: "Devuelto", destruido: "Destruido",
+  franquicia: "Franquicia", cancelado: "Cancelado",
+};
+
+function buildReclamosWhere(req, startIndex) {
+  const conditions = [
+    `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`
+  ];
+  const params = [req.user.id];
+  let i = startIndex;
+
+  const shop   = req.query.shop   || null;
+  const status = req.query.status || null;
+  const from   = req.query.from   || null;
+  const to     = req.query.to     || null;
+
+  if (shop) { conditions.push(`COALESCE(o.shop_domain, s.shop_domain) = $${i++}`); params.push(shop); }
+  if (status) {
+    const statuses = status.split(",").map(s => s.trim()).filter(Boolean);
+    if (statuses.length === 1) { conditions.push(`o.fulfillment_status = $${i++}`); params.push(statuses[0]); }
+    else { conditions.push(`o.fulfillment_status = ANY($${i++}::text[])`); params.push(statuses); }
+  }
+  if (from) { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
+  if (to)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
+
+  return { where: conditions.join(" AND "), params, nextIndex: i };
+}
 
 // GET /api/reclamos-mrw/ids — order_id de todos los pedidos ya reclamados por el usuario
 router.get("/ids", auth, async (req, res) => {
@@ -11,37 +42,55 @@ router.get("/ids", auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error" }); }
 });
 
+// GET /api/reclamos-mrw/export — descarga en Excel de los reclamos según los filtros aplicados
+router.get("/export", auth, async (req, res) => {
+  try {
+    const { where, params } = buildReclamosWhere(req, 2);
+
+    const rows = await db.all(
+      `SELECT o.order_number, o.created_at, o.tracking_number, o.fulfillment_status,
+              COALESCE(o.shop_domain, s.shop_domain) as shop_domain, rm.observacion
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       INNER JOIN reclamos_mrw rm ON rm.order_id = o.order_id AND rm.user_id = $1
+       WHERE ${where}
+       ORDER BY rm.created_at DESC`,
+      params
+    );
+
+    const data = (rows || []).map((r, idx) => ({
+      "#": idx + 1,
+      "Pedido": r.order_number || "",
+      "Fecha de creación": r.created_at ? new Date(r.created_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" }) : "",
+      "Nº seguimiento": r.tracking_number || "",
+      "Estado logístico": ESTADOS_LABEL[r.fulfillment_status] || r.fulfillment_status || "",
+      "Tienda": r.shop_domain || "",
+      "Observación": r.observacion || "",
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws["!cols"] = [{ wch: 5 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 26 }, { wch: 45 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Reclamos MRW");
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="reclamos-mrw.xlsx"`);
+    res.send(buffer);
+  } catch (e) {
+    console.error("reclamos-mrw export error:", e);
+    res.status(500).json({ error: "Error generando Excel" });
+  }
+});
+
 // GET /api/reclamos-mrw — lista paginada de pedidos reclamados, con los mismos filtros que /api/orders
 router.get("/", auth, async (req, res) => {
-  const userId = req.user.id;
-  const shop   = req.query.shop   || null;
-  const status = req.query.status || null;
-  const from   = req.query.from   || null;
-  const to     = req.query.to     || null;
   const page   = Math.max(1, parseInt(req.query.page) || 1);
   const limit  = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 50));
   const offset = (page - 1) * limit;
 
   try {
-    const conditions = [
-      `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`
-    ];
-    const params = [userId];
-    let i = 2;
-
-    if (shop) { conditions.push(`COALESCE(o.shop_domain, s.shop_domain) = $${i++}`); params.push(shop); }
-    if (status) {
-      const statuses = status.split(",").map(s => s.trim()).filter(Boolean);
-      if (statuses.length === 1) {
-        conditions.push(`o.fulfillment_status = $${i++}`); params.push(statuses[0]);
-      } else {
-        conditions.push(`o.fulfillment_status = ANY($${i++}::text[])`); params.push(statuses);
-      }
-    }
-    if (from) { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
-    if (to)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
-
-    const where = conditions.join(" AND ");
+    const { where, params, nextIndex } = buildReclamosWhere(req, 2);
     const baseQuery = `FROM orders o
       LEFT JOIN shops s ON s.id = o.shop_id
       INNER JOIN reclamos_mrw rm ON rm.order_id = o.order_id AND rm.user_id = $1
@@ -55,7 +104,7 @@ router.get("/", auth, async (req, res) => {
                 rm.observacion, rm.created_at as reclamo_created_at
          ${baseQuery}
          ORDER BY rm.created_at DESC
-         LIMIT $${i} OFFSET $${i + 1}`,
+         LIMIT $${nextIndex} OFFSET $${nextIndex + 1}`,
         [...params, limit, offset]
       )
     ]);
