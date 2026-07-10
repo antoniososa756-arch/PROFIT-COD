@@ -329,8 +329,6 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_cach
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_month TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda","reembolsos_widget"]'`);
-// La columna ya existía en producción: ADD COLUMN IF NOT EXISTS no actualiza su DEFAULT, hace falta forzarlo
-await pool.query(`ALTER TABLE users ALTER COLUMN permissions SET DEFAULT '["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda","reembolsos_widget"]'`);
 await pool.query(`
   CREATE TABLE IF NOT EXISTS billing_invoices (
     id SERIAL PRIMARY KEY,
