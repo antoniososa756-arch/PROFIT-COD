@@ -48,14 +48,17 @@ function getPriceId(cfg, plan) {
   }[plan] || "";
 }
 
-// Contar pedidos del mes actual para un usuario
-async function getMonthlyOrders(userId) {
-  const month = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+// Contar pedidos desde que arrancó el ciclo de facturación actual (no desde el día 1 del mes,
+// así los pedidos del período de prueba no cuentan contra el límite del plan de pago)
+async function getMonthlyOrders(userId, billingCycleStart) {
+  const cycleStart = billingCycleStart
+    ? new Date(billingCycleStart)
+    : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const countRow = await db.get(`
     SELECT COUNT(*) as cnt FROM orders o
     WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
-      AND o.created_at LIKE $2
-  `, [userId, month + "%"]);
+      AND o.created_at >= $2
+  `, [userId, cycleStart.toISOString()]);
   return parseInt(countRow?.cnt || 0);
 }
 
@@ -71,7 +74,7 @@ router.get("/plan", auth, async (req, res) => {
 
     let monthlyOrders = 0;
     if (planInfo && req.user.role !== "admin") {
-      monthlyOrders = await getMonthlyOrders(req.user.id);
+      monthlyOrders = await getMonthlyOrders(req.user.id, user?.billing_cycle_start);
     }
 
     // ¿Está en trial?
@@ -85,10 +88,17 @@ router.get("/plan", auth, async (req, res) => {
     const orderLimit = planInfo?.order_limit ?? null;
     const isBlocked  = !trialActive && orderLimit !== null && monthlyOrders > orderLimit;
 
-    // Días para fin de mes
+    // Días para el reinicio del ciclo de facturación (un mes después de la última activación/renovación)
     const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = lastDay - now.getDate();
+    let daysLeft;
+    if (user?.billing_cycle_start) {
+      const nextReset = new Date(user.billing_cycle_start);
+      nextReset.setMonth(nextReset.getMonth() + 1);
+      daysLeft = Math.max(0, Math.ceil((nextReset - now) / (1000 * 60 * 60 * 24)));
+    } else {
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      daysLeft = lastDay - now.getDate();
+    }
 
     // Coste variable estimado del mes
     const variableCost = planInfo ? +(monthlyOrders * planInfo.price_per_order).toFixed(2) : 0;
@@ -148,11 +158,14 @@ router.get("/invoice-preview", auth, async (req, res) => {
     const planInfo = PLANS[planKey];
     if (!planInfo || user?.plan_status === "inactive") return res.json({ available: false });
 
-    const ordersUsed = await getMonthlyOrders(req.user.id);
+    const ordersUsed = await getMonthlyOrders(req.user.id, user?.billing_cycle_start);
     const variableCost = +(ordersUsed * planInfo.price_per_order).toFixed(2);
     const total = +(planInfo.base_price + variableCost).toFixed(2);
     const now = new Date();
-    const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    const cycleEndDate = user?.billing_cycle_start ? new Date(user.billing_cycle_start) : new Date(now.getFullYear(), now.getMonth(), 1);
+    if (user?.billing_cycle_start) cycleEndDate.setMonth(cycleEndDate.getMonth() + 1);
+    else cycleEndDate.setMonth(cycleEndDate.getMonth() + 1, 0);
+    const cycleEnd = cycleEndDate.toISOString().slice(0, 10);
 
     res.json({
       available:       true,
@@ -264,7 +277,9 @@ router.post("/stripe/webhook", async (req, res) => {
       if (userId && PLANS[plan]) {
         const subId = session.subscription;
         const now = new Date();
-        const cycleStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        // Ciclo de pedidos arranca en el momento exacto de activación, no el día 1 del mes
+        // (así los pedidos del período de prueba no cuentan contra el límite del plan de pago)
+        const cycleStart = now.toISOString();
         await db.run(
           `UPDATE users SET plan = $1, plan_status = 'active',
            plan_expires_at = $2, billing_cycle_start = $3,
@@ -285,7 +300,7 @@ router.post("/stripe/webhook", async (req, res) => {
         if (user) {
           const now = new Date();
           const expiresAt = new Date(now.getTime() + 35 * 24 * 60 * 60 * 1000).toISOString();
-          const cycleStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+          const cycleStart = now.toISOString();
           await db.run(
             `UPDATE users SET plan_status = 'active', plan_expires_at = $1, billing_cycle_start = $2 WHERE id = $3`,
             [expiresAt, cycleStart, user.id]
@@ -407,7 +422,7 @@ router.post("/paypal/capture", auth, async (req, res) => {
     if (data.status === "COMPLETED") {
       const now = new Date();
       const expiresAt  = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      const cycleStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const cycleStart = now.toISOString();
       await db.run(
         `UPDATE users SET plan = $1, plan_status = 'active', plan_expires_at = $2,
          billing_cycle_start = $3 WHERE id = $4`,

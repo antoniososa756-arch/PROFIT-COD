@@ -31,18 +31,21 @@ module.exports = async (req, res, next) => {
   // Trial: sin límite de pedidos en ningún caso
   if (status === "trial") return next();
 
-  // Verificar límite de pedidos del mes actual
+  // Verificar límite de pedidos del ciclo de facturación actual
+  // (desde que se activó el plan de pago, no desde el día 1 del mes — así no cuenta pedidos del trial)
   const orderLimit = PLAN_ORDER_LIMITS[plan];
   if (orderLimit) {
     try {
-      const month = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+      const cycleStart = user.billing_cycle_start
+        ? new Date(user.billing_cycle_start)
+        : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
       const countRow = await db.get(`
         SELECT COUNT(*) as cnt
         FROM orders o
         LEFT JOIN shops s ON s.id = o.shop_id
         WHERE (s.user_id = $1 OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
-          AND o.created_at LIKE $2
-      `, [user.id, month + "%"]);
+          AND o.created_at >= $2
+      `, [user.id, cycleStart.toISOString()]);
       const monthlyCount = parseInt(countRow?.cnt || 0);
       if (monthlyCount > orderLimit) {
         return res.status(402).json({

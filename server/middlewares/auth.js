@@ -15,21 +15,22 @@ module.exports = async (req, res, next) => {
     // si no, el admin impersonando ve la cuenta como si no tuviera plan y todo se bloquea en silencio)
     {
       const row = await db.get(
-        "SELECT active, role, plan, plan_status, plan_expires_at, parent_user_id, permissions FROM users WHERE id = ?",
+        "SELECT active, role, plan, plan_status, plan_expires_at, billing_cycle_start, parent_user_id, permissions FROM users WHERE id = ?",
         [decoded.id]
       );
       if (!row || row.active === 0) {
         return res.status(403).json({ error: "CUENTA_DESACTIVADA" });
       }
-      decoded.role            = row.role;
-      decoded.plan            = row.plan || "free";
-      decoded.plan_status     = row.plan_status || "inactive";
-      decoded.plan_expires_at = row.plan_expires_at || null;
+      decoded.role               = row.role;
+      decoded.plan               = row.plan || "free";
+      decoded.plan_status        = row.plan_status || "inactive";
+      decoded.plan_expires_at    = row.plan_expires_at || null;
+      decoded.billing_cycle_start = row.billing_cycle_start || null;
 
       // Cuentas de apoyo: redirigir al usuario padre para todas las consultas
       if (row.role === "apoyo" && row.parent_user_id) {
         const parent = await db.get(
-          "SELECT active, role, plan, plan_status, plan_expires_at FROM users WHERE id = ?",
+          "SELECT active, role, plan, plan_status, plan_expires_at, billing_cycle_start FROM users WHERE id = ?",
           [row.parent_user_id]
         );
         if (!parent || parent.active === 0) {
@@ -43,10 +44,12 @@ module.exports = async (req, res, next) => {
           decoded.plan            = "business";
           decoded.plan_status     = "active";
           decoded.plan_expires_at = "2099-12-31T23:59:59.000Z";
+          decoded.billing_cycle_start = null;
         } else {
           decoded.plan            = parent.plan || "free";
           decoded.plan_status     = parent.plan_status || "inactive";
           decoded.plan_expires_at = parent.plan_expires_at || null;
+          decoded.billing_cycle_start = parent.billing_cycle_start || null;
         }
         try {
           const permsRaw = row.permissions;
