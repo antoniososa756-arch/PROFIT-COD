@@ -4434,10 +4434,10 @@ function doSearch(value) {
   }));
   window.__searchProductosIds = productosAll.map(p => String(p.id));
 
-  // Render immediately with what we have (sections + products)
-  // Pedidos placeholder while API loads
+  // Render immediately con lo que ya tenemos (secciones + productos).
+  // Si no hay nada local todavía, no abrir el cuadro solo para mostrar "Buscando..." vacío.
   const localResults = [...secciones, ...productos];
-  _renderSearchDrop(drop, localResults, true);
+  if (localResults.length > 0) _renderSearchDrop(drop, localResults, true);
 
   // Debounce API call for orders/tracking
   clearTimeout(__searchDebounceTimer);

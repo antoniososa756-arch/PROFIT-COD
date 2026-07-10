@@ -354,13 +354,13 @@
     /* Search results dropdown */
     .search-results{
       position:absolute;
-      top:44px;
+      top:calc(100% + 8px);
       left:0;
       right:0;
       background:var(--card);
       border:1px solid var(--border);
-      border-radius:14px;
-      box-shadow:var(--shadow);
+      border-radius:20px;
+      box-shadow:0 8px 24px rgba(0,0,0,.12);
       padding:8px;
       display:none;
       z-index:60;
