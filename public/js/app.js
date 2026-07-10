@@ -10661,11 +10661,17 @@ function renderDetallePedido(order) {
   const direccion = [shipping.address1, shipping.address2, shipping.city, shipping.province, shipping.zip, shipping.country]
     .filter(Boolean).map(escapeHtml).join(", ");
 
-  const fin = _DP_FINANCIAL[order.financial_status] || { label: order.financial_status || "-", bg: "rgba(107,114,128,.12)", color: "#6b7280", border: "rgba(107,114,128,.35)", icon: "" };
+  // El COD en Shopify se queda en "pending" para siempre — si en Reembolsos ya se marcó como
+  // cobrado, ese es el estado real de pago, no el de Shopify.
+  const cobradoEnReembolsos = order.estado_cobro === "cobrado";
+  const fin = cobradoEnReembolsos
+    ? { label: "Cobrado", bg: "rgba(34,197,94,.12)", color: "#16a34a", border: "rgba(34,197,94,.35)", icon: "✓" }
+    : (_DP_FINANCIAL[order.financial_status] || { label: order.financial_status || "-", bg: "rgba(107,114,128,.12)", color: "#6b7280", border: "rgba(107,114,128,.35)", icon: "" });
 
   const totalPrice = parseFloat(order.total_price || raw.total_price || 0);
   let pagado;
-  if (raw.total_outstanding != null) pagado = totalPrice - parseFloat(raw.total_outstanding);
+  if (cobradoEnReembolsos) pagado = totalPrice;
+  else if (raw.total_outstanding != null) pagado = totalPrice - parseFloat(raw.total_outstanding);
   else pagado = order.financial_status === "paid" ? totalPrice : 0;
   const saldo = Math.max(0, totalPrice - pagado);
 
@@ -10709,7 +10715,7 @@ function renderDetallePedido(order) {
 
     ${_dpCard(
       `${fin.icon} Pago`,
-      `${order.financial_status === "pending" ? `<div style="margin:12px 18px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12.5px;color:var(--text);">⚠️ El pago contra reembolso (COD) todavía está pendiente de cobrar.</div>` : ""}
+      `${order.financial_status === "pending" && !cobradoEnReembolsos ? `<div style="margin:12px 18px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12.5px;color:var(--text);">⚠️ El pago contra reembolso (COD) todavía está pendiente de cobrar.</div>` : ""}
        <div>
          ${_dpRow("Subtotal", fmtMoney(raw.subtotal_price))}
          ${_dpRow("Envío", fmtMoney(shippingLine?.price))}

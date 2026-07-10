@@ -232,9 +232,11 @@ router.get("/:id", auth, async (req, res) => {
       `SELECT o.id, o.order_id, o.order_number, o.created_at, o.tracking_number, o.carrier,
               o.fulfillment_status, o.financial_status, o.customer_name,
               o.total_price, o.currency, o.cancelled_at, o.raw_json,
-              COALESCE(o.shop_domain, s.shop_domain) as shop_domain
+              COALESCE(o.shop_domain, s.shop_domain) as shop_domain,
+              re.estado as estado_cobro, re.fecha_pago
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
+       LEFT JOIN reembolsos_estado re ON re.order_id = o.id::text AND re.user_id = $2
        WHERE o.id = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
       [id, userId]
