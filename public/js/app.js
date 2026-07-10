@@ -470,6 +470,13 @@ const icons = {
       <line x1="9" y1="16" x2="12" y2="16" stroke-linecap="round"/>
     </svg>
   `,
+  reclamos: `
+    <svg viewBox="0 0 24 24">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="9" x2="12" y2="13" stroke-linecap="round"/>
+      <circle cx="12" cy="17" r=".5" fill="currentColor"/>
+    </svg>
+  `,
   facturas: `
     <svg viewBox="0 0 24 24">
       <path d="M6 2h12v20l-3-2-3 2-3-2-3 2z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -522,6 +529,7 @@ const I18N = {
       tiendas: "Integraciones",
       productos: "Productos",
       pedidos: "Pedidos",
+      reclamos: "Reclamos MRW",
       facturas: "Gastos",
       informes: "Ingresos",
       exprod: "Exprod",
@@ -564,6 +572,7 @@ const I18N = {
       tiendas: "Stores",
       productos: "Products",
       pedidos: "Orders",
+      reclamos: "MRW Claims",
       facturas: "Expenses",
       informes: "Income",
       exprod: "Exprod",
@@ -882,7 +891,7 @@ function loadApp(section) {
         </div>
       </div>
 
-      ${(["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","exprod","ayuda"]).map(sec => {
+      ${(["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda"]).map(sec => {
         const isApoyo = currentUser.role === "Apoyo";
         const perms   = currentUser.permissions;
         const allowed = !isApoyo || !perms || perms.includes(sec);
@@ -1185,11 +1194,11 @@ window.startTrialAndReload = async function() {
 function setSection(id) {
   // Cuentas apoyo nunca pueden ver el plan de facturación
   if (currentUser?.role === "Apoyo" && id === "plan") {
-    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","exprod","ayuda"];
+    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda"];
     id = (currentUser.permissions ? PERM_SECTIONS.find(s => currentUser.permissions.includes(s)) : null) || "metricas";
   }
   // Bloquear acceso a secciones sin permiso para cuentas apoyo
-  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","facturas","informes","exprod","ayuda"];
+  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda"];
   if (currentUser?.role === "Apoyo" && currentUser.permissions && PERM_SECTIONS.includes(id)) {
     if (!currentUser.permissions.includes(id)) {
       // Redirigir a la primera sección permitida
@@ -2081,6 +2090,7 @@ if (id === "gestion-clientes") {
     tiendas:           "🔗 Integraciones",
     productos:         "📦 Productos",
     pedidos:           "🛒 Pedidos",
+    reclamos:          "📋 Reclamos MRW",
     facturas:          "🧾 Gastos",
     informes:          "📈 Ingresos",
     exprod:            "🖥️ Exprod",
@@ -2159,6 +2169,7 @@ if (id === "mi-equipo") {
     tiendas:           "🔗 Integraciones",
     productos:         "📦 Productos",
     pedidos:           "🛒 Pedidos",
+    reclamos:          "📋 Reclamos MRW",
     facturas:          "🧾 Gastos",
     informes:          "📈 Ingresos",
     exprod:            "🖥️ Exprod",
@@ -2930,6 +2941,26 @@ if (id === "pedidos") {
       } catch(e) {}
     }, 60 * 1000);
 
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
+// =========================
+// SECCIÓN RECLAMOS MRW
+// =========================
+if (id === "reclamos") {
+  if (t) t.textContent = "Reclamos MRW";
+  if (s) s.textContent = "Gestión de reclamos a la agencia de envío";
+  if (c) c.textContent = "Reclamos MRW";
+  box.className = "card";
+  box.removeAttribute("style");
+  box.innerHTML = `
+    <div style="padding:24px;text-align:center;color:var(--muted);">
+      <div style="font-weight:600;color:var(--text);margin-bottom:6px;">Reclamos MRW</div>
+      <div class="muted">Próximamente</div>
+    </div>
+  `;
   closeAllDrops();
   closeSearchDrop();
   return;
