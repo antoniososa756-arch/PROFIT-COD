@@ -261,41 +261,35 @@ if (location.pathname.includes("login")) {
 
   window.__showLoadingBar = function(msg) {
     window.__loadingCount = (window.__loadingCount || 0) + 1;
-    let ind = document.getElementById("__status-indicator");
-    if (!ind) {
-      ind = document.createElement("div");
-      ind.id = "__status-indicator";
-      ind.style.cssText = `
-        position:fixed;bottom:20px;right:20px;z-index:99999;
-        background:#1f2937;color:#fff;
-        font-size:12px;font-weight:500;font-family:inherit;
-        padding:8px 14px;border-radius:20px;
-        display:flex;align-items:center;gap:7px;
-        box-shadow:0 4px 12px rgba(0,0,0,0.2);
-        opacity:0;transition:opacity 0.2s ease;
-        pointer-events:none;
-      `;
-      document.body.appendChild(ind);
-      setTimeout(() => { if (ind) ind.style.opacity = "1"; }, 10);
-    }
+    const ind  = document.getElementById("__status-indicator");
+    const icon = document.getElementById("__status-indicator-icon");
+    const text = document.getElementById("__status-indicator-text");
+    if (!ind || !icon || !text) return;
     if (!document.getElementById("__spin-style")) {
       const s = document.createElement("style");
       s.id = "__spin-style";
       s.textContent = `@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`;
       document.head.appendChild(s);
     }
-    ind.innerHTML = `<span style="display:inline-block;animation:spin 0.8s linear infinite;font-size:13px;">⏳</span><span>${msg || "Guardando..."}</span>`;
+    ind.style.display = "flex";
+    icon.style.animation = "spin 0.8s linear infinite";
+    icon.textContent = "⏳";
+    text.textContent = msg || "Guardando...";
   };
 
   window.__hideLoadingBar = function() {
     window.__loadingCount = Math.max(0, (window.__loadingCount || 1) - 1);
     if (window.__loadingCount > 0) return;
-    const ind = document.getElementById("__status-indicator");
-    if (!ind) return;
-    ind.innerHTML = `<span style="font-size:13px;">✅</span><span>Guardado</span>`;
+    const ind  = document.getElementById("__status-indicator");
+    const icon = document.getElementById("__status-indicator-icon");
+    const text = document.getElementById("__status-indicator-text");
+    if (!ind || !icon || !text) return;
+    icon.style.animation = "none";
+    icon.textContent = "✅";
+    text.textContent = "Guardado";
     setTimeout(() => {
-      ind.style.opacity = "0";
-      setTimeout(() => { if (ind) ind.remove(); }, 300);
+      if (window.__loadingCount > 0) return; // se inició otra carga mientras tanto
+      ind.style.display = "none";
     }, 1200);
   };
 
@@ -998,6 +992,10 @@ function loadApp(section) {
               <div id="mrw-sync-indicator" title="" style="display:none;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.35);font-size:11px;font-weight:700;color:#16a34a;white-space:nowrap;flex-shrink:0;">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;flex-shrink:0;"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                 <span id="mrw-sync-indicator-text">MRW</span>
+              </div>
+              <div id="__status-indicator" style="display:none;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;background:var(--input);border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;flex-shrink:0;">
+                <span id="__status-indicator-icon" style="display:inline-flex;font-size:12px;line-height:1;">⏳</span>
+                <span id="__status-indicator-text">Guardando...</span>
               </div>
             </div>
 
