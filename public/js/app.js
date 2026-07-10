@@ -995,6 +995,10 @@ function loadApp(section) {
                 <input id="search" placeholder="${d.ui.searchPH}" oninput="doSearch(this.value)" onfocus="doSearch(this.value)" onkeydown="doSearchKeydown(event)" />
                 <div class="search-results" id="searchDrop"></div>
               </div>
+              <div id="mrw-sync-indicator" title="" style="display:none;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.35);font-size:11px;font-weight:700;color:#16a34a;white-space:nowrap;flex-shrink:0;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;flex-shrink:0;"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span id="mrw-sync-indicator-text">MRW</span>
+              </div>
             </div>
 
             <div id="topbar-plan-chip" onclick="setSection('plan')" style="display:none;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:#1f2937;border:1px solid #374151;cursor:pointer;font-size:12px;font-weight:600;color:#e5e7eb;white-space:nowrap;flex-shrink:0;" title="Ver plan"></div>
@@ -12930,26 +12934,24 @@ async function guardarCredencialesMRW() {
 }
 
 function mostrarBarraProgresoMRW(done, total) {
-  let bar = document.getElementById("mrw-progress-bar");
-  if (!bar) {
-    bar = document.createElement("div");
-    bar.id = "mrw-progress-bar";
-    bar.style.cssText = `position:fixed;bottom:20px;right:20px;background:#1e293b;color:#fff;padding:14px 20px;border-radius:12px;font-size:13px;z-index:9999;min-width:260px;box-shadow:0 4px 20px rgba(0,0,0,0.3);`;
-    document.body.appendChild(bar);
+  const ind = document.getElementById("mrw-sync-indicator");
+  const txt = document.getElementById("mrw-sync-indicator-text");
+  if (!ind || !txt) return;
+  if (!document.getElementById("__spin-style")) {
+    const s = document.createElement("style");
+    s.id = "__spin-style";
+    s.textContent = `@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`;
+    document.head.appendChild(s);
   }
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  bar.innerHTML = `
-    <div style="font-weight:700;margin-bottom:8px;">🔄 Sincronizando MRW...</div>
-    <div style="background:#374151;border-radius:6px;overflow:hidden;height:8px;margin-bottom:6px;">
-      <div style="background:#22c55e;height:8px;width:${pct}%;transition:width 0.3s;border-radius:6px;"></div>
-    </div>
-    <div style="color:#9ca3af;font-size:12px;">${done} de ${total} pedidos (${pct}%)</div>
-  `;
+  ind.style.display = "flex";
+  ind.title = `Sincronizando MRW: ${done} de ${total} pedidos`;
+  txt.textContent = `MRW ${pct}%`;
 }
 
 function ocultarBarraProgresoMRW() {
-  const bar = document.getElementById("mrw-progress-bar");
-  if (bar) bar.remove();
+  const ind = document.getElementById("mrw-sync-indicator");
+  if (ind) ind.style.display = "none";
 }
 
 async function sincronizarMRW(esAutomatico = false) {
