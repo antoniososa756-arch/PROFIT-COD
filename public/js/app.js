@@ -10578,6 +10578,7 @@ function renderReclamosPage(rows, total, page, totalPages) {
 
   body.innerHTML = rows.map((o, idx) => {
     const numero = start + idx + 1;
+    if (o.order_id) __reclamoObsLastSaved[o.order_id] = o.observacion || "";
     return `
     <div class="orders-row" style="display:grid;grid-template-columns:30px 18% 15% 18% 15% 1fr;gap:0;">
       <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;overflow:hidden;">${numero}</div>
@@ -10588,7 +10589,8 @@ function renderReclamosPage(rows, total, page, totalPages) {
       <div style="display:flex;align-items:center;gap:6px;">
         <input type="text" value="${escapeAttr(o.observacion || "")}" placeholder="Escribe una observación..."
           data-order="${escapeAttr(o.order_id || "")}"
-          onchange="guardarObservacionReclamo(this)"
+          oninput="guardarObservacionReclamoDebounced(this)"
+          onblur="guardarObservacionReclamo(this)"
           style="flex:1;min-width:0;padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--input);color:var(--text);font-family:inherit;outline:none;">
         <button onclick="quitarReclamo('${escapeAttr(o.order_id || "")}')" title="Quitar de reclamos"
           style="width:22px;height:22px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;"
@@ -10660,20 +10662,33 @@ window.filterReclamosByTabMulti = function(el, statuses) {
   fetchReclamosFiltered();
 };
 
+const __reclamoObsTimers = {};
+const __reclamoObsLastSaved = {};
+
+// Autoguardado mientras se escribe (con debounce para no saturar el servidor)
+window.guardarObservacionReclamoDebounced = function(input) {
+  const orderId = input.dataset.order;
+  if (!orderId) return;
+  clearTimeout(__reclamoObsTimers[orderId]);
+  __reclamoObsTimers[orderId] = setTimeout(() => guardarObservacionReclamo(input), 600);
+};
+
+// Guardado inmediato: al perder el foco (cambiar de campo, de sección, etc.)
 window.guardarObservacionReclamo = async function(input) {
   const orderId = input.dataset.order;
   if (!orderId) return;
-  input.disabled = true;
+  clearTimeout(__reclamoObsTimers[orderId]);
+  const value = input.value;
+  if (__reclamoObsLastSaved[orderId] === value) return; // sin cambios, no repetir guardado
   try {
     await fetch(`${API_BASE}/api/reclamos-mrw/${encodeURIComponent(orderId)}/observacion`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify({ observacion: input.value })
+      body: JSON.stringify({ observacion: value })
     });
+    __reclamoObsLastSaved[orderId] = value;
   } catch (e) {
     showToast("Error", "No se pudo guardar la observación.", "#dc2626");
-  } finally {
-    input.disabled = false;
   }
 };
 
