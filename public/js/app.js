@@ -10460,8 +10460,9 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
 
     return `
     <div class="orders-row" onclick="handleOrderRowClick(event, ${o.id})"
-      onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''"
-      style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;cursor:pointer;">
+      onmouseover="this.style.background='var(--hover)';this.style.boxShadow='inset 0 0 0 1px rgba(34,197,94,.4)';this.style.borderRadius='8px';"
+      onmouseout="this.style.background='';this.style.boxShadow='';this.style.borderRadius='';"
+      style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;cursor:pointer;transition:box-shadow .12s,background .12s;">
       <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;overflow:hidden;">${numero}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${paymentBadge}</div>
