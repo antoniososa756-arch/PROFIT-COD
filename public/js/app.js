@@ -10664,6 +10664,7 @@ function renderDetallePedido(order) {
   try { raw = order.raw_json ? (typeof order.raw_json === "string" ? JSON.parse(order.raw_json) : order.raw_json) : {}; } catch (e) { raw = {}; }
 
   const shipping   = raw.shipping_address || {};
+  const billing    = raw.billing_address || {};
   const customer   = raw.customer || {};
   const lineItems  = Array.isArray(raw.line_items) ? raw.line_items : [];
   const shippingLine = Array.isArray(raw.shipping_lines) ? raw.shipping_lines[0] : null;
@@ -10717,6 +10718,8 @@ function renderDetallePedido(order) {
   const shopifyUrl = order.shop_domain && order.order_id ? `https://${order.shop_domain}/admin/orders/${order.order_id}` : null;
   const nombreCliente = order.customer_name || `${customer.first_name || ""} ${customer.last_name || ""}`.trim() || "-";
   const nombreEnvio = `${shipping.first_name || ""} ${shipping.last_name || ""}`.trim() || nombreCliente;
+  const nombreFacturacion = `${billing.first_name || ""} ${billing.last_name || ""}`.trim() || nombreCliente;
+  const tags = (raw.tags || "").split(",").map(t => t.trim()).filter(Boolean);
 
   body.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
@@ -10775,6 +10778,44 @@ function renderDetallePedido(order) {
                 ${shipping.phone ? escapeHtml(shipping.phone) : ""}
                </div>`
             : `<div class="muted" style="padding:14px 18px;font-size:13px;">Sin dirección de envío.</div>`
+        )}
+
+        ${_dpCard(
+          `<span style="flex:1;">🧾 Dirección de facturación</span><span onclick="showToast('Próximamente','La edición de la dirección de facturación estará disponible pronto.','#6b7280')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          billing.address1
+            ? `<div style="padding:14px 18px;font-size:13px;color:var(--text);line-height:1.7;">
+                ${escapeHtml(nombreFacturacion)}<br>
+                ${escapeHtml(billing.address1)}<br>
+                ${billing.address2 ? `${escapeHtml(billing.address2)}<br>` : ""}
+                ${[billing.zip, billing.city].filter(Boolean).map(escapeHtml).join(" ")}<br>
+                ${billing.province ? `${escapeHtml(billing.province)}<br>` : ""}
+                ${escapeHtml(billing.country || "")}<br>
+                ${billing.phone ? escapeHtml(billing.phone) : ""}
+               </div>`
+            : `<div class="muted" style="padding:14px 18px;font-size:13px;">Igual que la dirección de envío.</div>`
+        )}
+
+        ${_dpCard(
+          `📊 Resumen de conversión`,
+          `<div style="padding:14px 18px;">
+            <div class="muted" style="font-size:13px;line-height:1.6;">No hay detalles de la conversión disponibles para este pedido.</div>
+          </div>`
+        )}
+
+        ${_dpCard(
+          `⚠️ Riesgo del pedido`,
+          `<div style="padding:14px 18px;">
+            <div class="muted" style="font-size:13px;">Análisis no disponible.</div>
+          </div>`
+        )}
+
+        ${_dpCard(
+          `<span style="flex:1;">🏷️ Etiquetas</span><span onclick="showToast('Próximamente','La edición de etiquetas estará disponible pronto.','#6b7280')" title="Editar etiquetas" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          tags.length
+            ? `<div style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:6px;">
+                ${tags.map(t => `<span style="background:var(--input);color:var(--text);font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--border);">${escapeHtml(t)}</span>`).join("")}
+               </div>`
+            : `<div class="muted" style="padding:14px 18px;font-size:13px;">Sin etiquetas.</div>`
         )}
       </div>
     </div>
