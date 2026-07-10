@@ -963,13 +963,20 @@ body:not(.dark) [style*="color: #d1d5db"]:not(.dpf-panel):not(.dpf-panel *) { co
 body:not(.dark) [style*="color:#9ca3af"]:not(.dpf-panel):not(.dpf-panel *),
 body:not(.dark) [style*="color: #9ca3af"]:not(.dpf-panel):not(.dpf-panel *) { color: #6b7280 !important; }
 
-/* Inputs y selects (excluye picker) */
-body:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([style*="display:none"]):not(.dpf-panel *),
+/* Inputs y selects (excluye picker y la barra de búsqueda del topbar) */
+body:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([style*="display:none"]):not(.dpf-panel *):not(#search),
 body:not(.dark) select:not(.dpf-panel *),
 body:not(.dark) textarea:not(.dpf-panel *) {
   background: #f9fafb !important;
   color: #111827 !important;
   border-color: #d1d5db !important;
+}
+
+/* La barra de búsqueda gestiona su propio fondo (transparente, lo pinta el contenedor .search).
+   Selector por ID + !important para ganarle a las reglas genéricas de input en claro y oscuro. */
+#search {
+  background: transparent !important;
+  border-color: transparent !important;
 }
 
 body:not(.dark) input::placeholder,
