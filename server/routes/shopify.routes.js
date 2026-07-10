@@ -300,16 +300,28 @@ const DEBUG_ORDERS_SECRET = "4e150761d22c35d0f1a17b75cbe4be064d2c3264a94b0d52";
 router.get("/debug-orders", async (req, res) => {
   if (req.query.secret !== DEBUG_ORDERS_SECRET) return res.status(403).json({ error: "forbidden" });
   try {
+    const shop = req.query.shop || null;
     const rows = await db.all(
       `SELECT o.id, o.order_id, o.order_number, o.shop_id, o.shop_domain,
               s.shop_domain as shop_table_domain, s.user_id as shop_user_id, s.status as shop_status,
               o.created_at, o.fulfillment_status, o.financial_status
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE $1::text IS NULL OR o.shop_domain = $1 OR s.shop_domain = $1
        ORDER BY o.id DESC
-       LIMIT 20`
+       LIMIT 30`,
+      [shop]
     );
-    res.json(rows);
+    let shopRow = null, summary = null;
+    if (shop) {
+      shopRow = await db.get(`SELECT id, user_id, shop_domain, status, created_at FROM shops WHERE shop_domain = $1`, [shop]);
+      summary = await db.get(
+        `SELECT COUNT(*) as total, MIN(created_at) as min_created, MAX(created_at) as max_created
+         FROM orders o WHERE o.shop_domain = $1 OR o.shop_id = (SELECT id FROM shops WHERE shop_domain = $1)`,
+        [shop]
+      );
+    }
+    res.json({ shopRow, summary, rows });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
