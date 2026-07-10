@@ -986,7 +986,7 @@ function loadApp(section) {
                   <circle cx="11" cy="11" r="7"></circle>
                   <path d="M20 20l-3.5-3.5"></path>
                 </svg>
-                <input id="search" placeholder="${d.ui.searchPH}" oninput="doSearch(this.value)" onfocus="doSearch(this.value)" onkeydown="doSearchKeydown(event)" />
+                <input id="search" placeholder="${d.ui.searchPH}" autocomplete="off" oninput="doSearch(this.value)" onfocus="doSearch(this.value)" onkeydown="doSearchKeydown(event)" />
                 <div class="search-results" id="searchDrop"></div>
               </div>
               <div id="mrw-sync-indicator" title="" style="display:none;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.35);font-size:11px;font-weight:700;color:#16a34a;white-space:nowrap;flex-shrink:0;">
