@@ -10292,6 +10292,14 @@ async function fetchOrdersFiltered() {
     });
     if (fetchId !== __ordersFetchId) return; // respuesta obsoleta
     const data = await res.json();
+    if (!res.ok) {
+      body.innerHTML = `<div style="color:#dc2626;padding:16px;">${escapeHtml(data.message || data.error || "Error cargando pedidos")}</div>`;
+      const counter = document.getElementById("orders-counter");
+      if (counter) counter.textContent = "";
+      const pagination = document.getElementById("ordersPagination");
+      if (pagination) pagination.innerHTML = "";
+      return;
+    }
     const orders = data.orders || [];
     ordersTotal = data.total || 0;
     ordersPages = data.pages || 1;

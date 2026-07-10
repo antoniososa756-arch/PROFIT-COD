@@ -11,8 +11,9 @@ module.exports = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Si NO es impersonación, verificar que el usuario sigue activo en BD
-    if (!decoded.isImpersonated) {
+    // Cargar siempre el estado real desde BD (también para tokens de impersonación:
+    // si no, el admin impersonando ve la cuenta como si no tuviera plan y todo se bloquea en silencio)
+    {
       const row = await db.get(
         "SELECT active, role, plan, plan_status, plan_expires_at, parent_user_id, permissions FROM users WHERE id = ?",
         [decoded.id]
