@@ -10656,6 +10656,54 @@ function _dpRow(label, value) {
   </div>`;
 }
 
+function _dpTagPill(tag, orderId) {
+  return `<span class="dp-tag-pill" data-tag="${escapeAttr(tag)}"
+    onmouseover="this.querySelector('.dp-tag-x').style.opacity='1'" onmouseout="this.querySelector('.dp-tag-x').style.opacity='0'"
+    style="display:inline-flex;align-items:center;gap:3px;background:var(--input);color:var(--text);font-size:12px;font-weight:600;padding:4px 4px 4px 10px;border-radius:999px;border:1px solid var(--border);">
+    <span>${escapeHtml(tag)}</span>
+    <span class="dp-tag-x" onclick="quitarEtiquetaPedido(${orderId},'${escapeAttr(tag)}')" title="Quitar etiqueta"
+      style="opacity:0;transition:opacity .12s;cursor:pointer;color:#ef4444;font-size:14px;line-height:1;width:16px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:50%;">×</span>
+  </span>`;
+}
+
+window.agregarEtiquetaPedido = async function(orderId) {
+  const input = document.getElementById("dp-tag-input");
+  if (!input) return;
+  const nueva = input.value.trim();
+  if (!nueva) return;
+  const current = Array.from(document.querySelectorAll("#dp-tags-list .dp-tag-pill")).map(el => el.dataset.tag);
+  if (current.includes(nueva)) { input.value = ""; return; }
+  input.disabled = true;
+  await _guardarEtiquetasPedido(orderId, [...current, nueva]);
+  input.value = "";
+  input.disabled = false;
+  input.focus();
+};
+
+window.quitarEtiquetaPedido = async function(orderId, tag) {
+  const current = Array.from(document.querySelectorAll("#dp-tags-list .dp-tag-pill")).map(el => el.dataset.tag);
+  await _guardarEtiquetasPedido(orderId, current.filter(t => t !== tag));
+};
+
+async function _guardarEtiquetasPedido(orderId, tagsArray) {
+  const list = document.getElementById("dp-tags-list");
+  if (list) list.style.opacity = "0.5";
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${orderId}/tags`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ tags: tagsArray.join(", ") })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+    if (list) list.innerHTML = tagsArray.length ? tagsArray.map(t => _dpTagPill(t, orderId)).join("") : `<span class="muted" style="font-size:12px;">Sin etiquetas.</span>`;
+  } catch (e) {
+    showToast("Error", "No se pudieron actualizar las etiquetas.", "#dc2626");
+  } finally {
+    if (list) list.style.opacity = "1";
+  }
+}
+
 function renderDetallePedido(order) {
   const body = document.getElementById("detalle-pedido-body");
   if (!body) return;
@@ -10810,12 +10858,16 @@ function renderDetallePedido(order) {
         )}
 
         ${_dpCard(
-          `<span style="flex:1;">🏷️ Etiquetas</span><span onclick="showToast('Próximamente','La edición de etiquetas estará disponible pronto.','#6b7280')" title="Editar etiquetas" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
-          tags.length
-            ? `<div style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:6px;">
-                ${tags.map(t => `<span style="background:var(--input);color:var(--text);font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--border);">${escapeHtml(t)}</span>`).join("")}
-               </div>`
-            : `<div class="muted" style="padding:14px 18px;font-size:13px;">Sin etiquetas.</div>`
+          `🏷️ Etiquetas`,
+          `<div style="padding:14px 18px;">
+            <input type="text" id="dp-tag-input" placeholder="Añadir etiqueta y pulsar Enter"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();agregarEtiquetaPedido(${order.id})}"
+              style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--input);font-family:inherit;outline:none;margin-bottom:10px;transition:border-color .15s;"
+              onfocus="this.style.borderColor='#22c55e'" onblur="this.style.borderColor='var(--border)'">
+            <div id="dp-tags-list" style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${tags.length ? tags.map(t => _dpTagPill(t, order.id)).join("") : `<span class="muted" style="font-size:12px;">Sin etiquetas.</span>`}
+            </div>
+          </div>`
         )}
       </div>
     </div>

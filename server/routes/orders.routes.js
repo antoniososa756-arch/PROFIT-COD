@@ -221,6 +221,53 @@ router.post("/marcar-estado", auth, async (req, res) => {
   } catch(e) { console.error("marcar-estado:", e); res.status(500).json({ error: "Error" }); }
 });
 
+// PATCH /api/orders/:id/tags  { tags: "tag1, tag2" } — reemplaza las etiquetas en Shopify y localmente
+router.patch("/:id/tags", auth, async (req, res) => {
+  const userId = req.user.id;
+  const id = parseInt(req.params.id);
+  const { tags } = req.body || {};
+  if (!Number.isInteger(id)) return res.status(400).json({ error: "id inválido" });
+  if (typeof tags !== "string") return res.status(400).json({ error: "tags debe ser texto" });
+
+  try {
+    const row = await db.get(
+      `SELECT o.order_id, COALESCE(o.shop_domain, s.shop_domain) as shop_domain
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.id = $1
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+      [id, userId]
+    );
+    if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
+
+    const shopRow = await db.get(
+      `SELECT access_token FROM shops WHERE shop_domain = $1 AND user_id = $2`,
+      [row.shop_domain, userId]
+    );
+    if (!shopRow) return res.status(404).json({ error: "Tienda no encontrada" });
+
+    const shopifyRes = await fetch(`https://${row.shop_domain}/admin/api/2024-10/orders/${row.order_id}.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": shopRow.access_token },
+      body: JSON.stringify({ order: { id: parseInt(row.order_id), tags } }),
+    });
+    if (!shopifyRes.ok) {
+      console.error("Shopify tags update error:", shopifyRes.status, await shopifyRes.text());
+      return res.status(502).json({ error: "No se pudo actualizar la etiqueta en Shopify" });
+    }
+    const shopifyData = await shopifyRes.json();
+
+    if (shopifyData.order) {
+      await db.run(`UPDATE orders SET raw_json = $1 WHERE id = $2`, [JSON.stringify(shopifyData.order), id]);
+    }
+
+    res.json({ ok: true, tags });
+  } catch (e) {
+    console.error("update tags error:", e);
+    res.status(500).json({ error: "Error actualizando etiquetas" });
+  }
+});
+
 // GET /api/orders/:id — detalle completo de un pedido (incluye raw_json de Shopify)
 // Nota: se registra al final para no capturar las rutas fijas de arriba (/reembolsos, etc.)
 router.get("/:id", auth, async (req, res) => {
