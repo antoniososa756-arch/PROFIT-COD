@@ -294,6 +294,25 @@ function mapSyncStatus(o) {
   return "pendiente";
 }
 
+// ── TEMPORAL: diagnóstico de solo lectura para investigar pedidos "invisibles" ──
+// Ninguna escritura, ningún lock. Quitar en cuanto se resuelva el caso.
+const DEBUG_ORDERS_SECRET = "4e150761d22c35d0f1a17b75cbe4be064d2c3264a94b0d52";
+router.get("/debug-orders", async (req, res) => {
+  if (req.query.secret !== DEBUG_ORDERS_SECRET) return res.status(403).json({ error: "forbidden" });
+  try {
+    const rows = await db.all(
+      `SELECT o.id, o.order_id, o.order_number, o.shop_id, o.shop_domain,
+              s.shop_domain as shop_table_domain, s.user_id as shop_user_id, s.status as shop_status,
+              o.created_at, o.fulfillment_status, o.financial_status
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       ORDER BY o.id DESC
+       LIMIT 20`
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.post("/sync-orders", auth, async (req, res) => {
   const userId = req.user.id;
   try {
