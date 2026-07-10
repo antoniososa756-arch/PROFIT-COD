@@ -10591,7 +10591,7 @@ window.abrirDetallePedido = async function(orderId) {
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
       Volver a pedidos
     </button>
-    <div id="detalle-pedido-body" style="max-width:640px;">
+    <div id="detalle-pedido-body" style="max-width:720px;">
       <div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:32px 0;justify-content:center;">
         <div style="width:16px;height:16px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
         Cargando pedido...
@@ -10614,16 +10614,33 @@ window.abrirDetallePedido = async function(orderId) {
   }
 };
 
-function _dpRow(label, value) {
-  if (value == null || value === "") return "";
-  return `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);">
-    <span style="color:var(--muted);">${label}</span>
-    <span style="color:var(--text);font-weight:600;text-align:right;">${value}</span>
+const _DP_FINANCIAL = {
+  pending:         { label: "Pago pendiente",  bg: "rgba(245,158,11,.12)", color: "#d97706", border: "rgba(245,158,11,.35)",  icon: "⏱" },
+  authorized:      { label: "Pago autorizado", bg: "rgba(59,130,246,.12)", color: "#2563eb", border: "rgba(59,130,246,.35)",  icon: "◐" },
+  partially_paid:  { label: "Pago parcial",    bg: "rgba(59,130,246,.12)", color: "#2563eb", border: "rgba(59,130,246,.35)",  icon: "◐" },
+  paid:            { label: "Pagado",          bg: "rgba(34,197,94,.12)",  color: "#16a34a", border: "rgba(34,197,94,.35)",   icon: "✓" },
+  partially_refunded: { label: "Reembolso parcial", bg: "rgba(239,68,68,.12)", color: "#dc2626", border: "rgba(239,68,68,.35)", icon: "↩" },
+  refunded:        { label: "Reembolsado",     bg: "rgba(239,68,68,.12)", color: "#dc2626", border: "rgba(239,68,68,.35)",   icon: "↩" },
+  voided:          { label: "Anulado",         bg: "rgba(107,114,128,.12)", color: "#6b7280", border: "rgba(107,114,128,.35)", icon: "✕" },
+};
+
+function _dpPill(label, bg, color, border, icon) {
+  return `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;background:${bg};color:${color};border:1px solid ${border};white-space:nowrap;">${icon ? `<span>${icon}</span>` : ""}${escapeHtml(label)}</span>`;
+}
+
+function _dpCard(headerHtml, bodyHtml) {
+  return `<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px;overflow:hidden;">
+    ${headerHtml ? `<div style="padding:14px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:13.5px;color:var(--text);display:flex;align-items:center;gap:8px;">${headerHtml}</div>` : ""}
+    ${bodyHtml}
   </div>`;
 }
 
-function _dpSection(title) {
-  return `<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 8px;">${title}</div>`;
+function _dpRow(label, value) {
+  if (value == null || value === "") return "";
+  return `<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 18px;font-size:13px;border-bottom:1px solid var(--border);">
+    <span style="color:var(--muted);">${label}</span>
+    <span style="color:var(--text);font-weight:600;text-align:right;">${value}</span>
+  </div>`;
 }
 
 function renderDetallePedido(order) {
@@ -10633,57 +10650,87 @@ function renderDetallePedido(order) {
   let raw = {};
   try { raw = order.raw_json ? (typeof order.raw_json === "string" ? JSON.parse(order.raw_json) : order.raw_json) : {}; } catch (e) { raw = {}; }
 
-  const shipping = raw.shipping_address || {};
-  const customer = raw.customer || {};
-  const lineItems = Array.isArray(raw.line_items) ? raw.line_items : [];
-  const currency = order.currency || raw.currency || "";
+  const shipping   = raw.shipping_address || {};
+  const customer   = raw.customer || {};
+  const lineItems  = Array.isArray(raw.line_items) ? raw.line_items : [];
+  const shippingLine = Array.isArray(raw.shipping_lines) ? raw.shipping_lines[0] : null;
+  const currency   = order.currency || raw.currency || "";
 
-  const fmtMoney = v => v != null ? `${parseFloat(v).toFixed(2)} ${currency}` : "-";
-  const fecha = order.created_at ? new Date(order.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
-
+  const fmtMoney = v => v != null && v !== "" ? `${parseFloat(v).toFixed(2)} ${currency}` : "-";
+  const fecha = order.created_at ? new Date(order.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
   const direccion = [shipping.address1, shipping.address2, shipping.city, shipping.province, shipping.zip, shipping.country]
     .filter(Boolean).map(escapeHtml).join(", ");
 
+  const fin = _DP_FINANCIAL[order.financial_status] || { label: order.financial_status || "-", bg: "rgba(107,114,128,.12)", color: "#6b7280", border: "rgba(107,114,128,.35)", icon: "" };
+
+  const totalPrice = parseFloat(order.total_price || raw.total_price || 0);
+  let pagado;
+  if (raw.total_outstanding != null) pagado = totalPrice - parseFloat(raw.total_outstanding);
+  else pagado = order.financial_status === "paid" ? totalPrice : 0;
+  const saldo = Math.max(0, totalPrice - pagado);
+
   const itemsHtml = lineItems.length
     ? lineItems.map(li => `
-      <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);">
+        <div style="width:42px;height:42px;border-radius:8px;background:var(--input);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📦</div>
         <div style="flex:1;min-width:0;">
-          <div style="color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(li.title || li.name || "-")}</div>
-          ${li.variant_title ? `<div style="color:var(--muted);font-size:12px;">${escapeHtml(li.variant_title)}</div>` : ""}
-          ${li.sku ? `<div style="color:var(--muted);font-size:11px;">SKU: ${escapeHtml(li.sku)}</div>` : ""}
+          <div style="color:var(--text);font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(li.title || li.name || "-")}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px;">
+            ${li.variant_title ? `<span style="color:var(--muted);font-size:12px;">${escapeHtml(li.variant_title)}</span>` : ""}
+            ${li.sku ? `<span style="background:var(--input);color:var(--muted);font-size:11px;padding:1px 7px;border-radius:5px;">${escapeHtml(li.sku)}</span>` : ""}
+          </div>
         </div>
-        <div style="text-align:right;flex-shrink:0;color:var(--text);">
-          <div>${li.quantity || 1} × ${fmtMoney(li.price)}</div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="color:var(--muted);font-size:12px;">${fmtMoney(li.price)} × ${li.quantity || 1}</div>
+          <div style="color:var(--text);font-weight:700;font-size:13.5px;">${fmtMoney((parseFloat(li.price) || 0) * (li.quantity || 1))}</div>
         </div>
       </div>
     `).join("")
-    : `<div class="muted" style="padding:12px 0;font-size:13px;">Sin detalle de productos disponible.</div>`;
+    : `<div class="muted" style="padding:16px 18px;font-size:13px;">Sin detalle de productos disponible.</div>`;
+
+  const shopifyUrl = order.shop_domain && order.order_id ? `https://${order.shop_domain}/admin/orders/${order.order_id}` : null;
 
   body.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
-      <div style="font-size:18px;font-weight:800;color:var(--text);">${escapeHtml(order.order_number || "-")}</div>
-      <span class="status ${statusClass(order.fulfillment_status)}">${statusLabel(order.fulfillment_status)}</span>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="font-size:19px;font-weight:800;color:var(--text);">${escapeHtml(order.order_number || "-")}</div>
+        ${_dpPill(fin.label, fin.bg, fin.color, fin.border, fin.icon)}
+        <span class="status ${statusClass(order.fulfillment_status)}">${statusLabel(order.fulfillment_status)}</span>
+      </div>
+      ${shopifyUrl ? `<a href="${shopifyUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--input);border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text);text-decoration:none;">Ver en Shopify ↗</a>` : ""}
     </div>
-    <div style="font-size:12.5px;color:var(--muted);margin-bottom:6px;">${fecha} · ${escapeHtml(order.shop_domain || "-")}</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:20px;">${fecha} · ${escapeHtml(order.shop_domain || "-")}</div>
 
-    ${_dpSection("Cliente")}
-    ${_dpRow("Nombre", escapeHtml(order.customer_name || `${customer.first_name || ""} ${customer.last_name || ""}`.trim() || "-"))}
-    ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
-    ${_dpRow("Teléfono", escapeHtml(shipping.phone || customer.phone || "-"))}
+    ${_dpCard(
+      `📦 Productos (${lineItems.length})`,
+      `${shippingLine ? `<div style="padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;">🚚 ${escapeHtml(shippingLine.title || "Envío")}</div>` : ""}
+       <div>${itemsHtml}</div>`
+    )}
 
-    ${direccion ? `${_dpSection("Dirección de envío")}<div style="font-size:13px;color:var(--text);line-height:1.6;">${direccion}</div>` : ""}
+    ${_dpCard(
+      `${fin.icon} Pago`,
+      `${order.financial_status === "pending" ? `<div style="margin:12px 18px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12.5px;color:var(--text);">⚠️ El pago contra reembolso (COD) todavía está pendiente de cobrar.</div>` : ""}
+       <div>
+         ${_dpRow("Subtotal", fmtMoney(raw.subtotal_price))}
+         ${_dpRow("Envío", fmtMoney(shippingLine?.price))}
+         ${_dpRow("Total", fmtMoney(totalPrice))}
+         ${_dpRow("Pagado", fmtMoney(pagado))}
+         ${_dpRow("Saldo", fmtMoney(saldo))}
+       </div>`
+    )}
 
-    ${_dpSection(`Productos (${lineItems.length})`)}
-    <div>${itemsHtml}</div>
+    ${_dpCard(
+      `👤 Cliente`,
+      `<div>
+        ${_dpRow("Nombre", escapeHtml(order.customer_name || `${customer.first_name || ""} ${customer.last_name || ""}`.trim() || "-"))}
+        ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
+        ${_dpRow("Teléfono", escapeHtml(shipping.phone || customer.phone || "-"))}
+        ${direccion ? _dpRow("Dirección", direccion) : ""}
+        ${_dpRow("Nº seguimiento", order.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(order.tracking_number)}" target="_blank" style="color:#22c55e;">${escapeHtml(order.tracking_number)}</a>` : "-")}
+      </div>`
+    )}
 
-    ${_dpSection("Pago y envío")}
-    ${_dpRow("Estado de pago", escapeHtml(order.financial_status || "-"))}
-    ${_dpRow("Subtotal", fmtMoney(raw.subtotal_price))}
-    ${_dpRow("Envío", fmtMoney(raw.total_shipping_price_set?.shop_money?.amount))}
-    ${_dpRow("Total", fmtMoney(order.total_price))}
-    ${_dpRow("Nº seguimiento", order.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(order.tracking_number)}" target="_blank" style="color:#22c55e;">${escapeHtml(order.tracking_number)}</a>` : "-")}
-
-    ${raw.note ? `${_dpSection("Nota del pedido")}<div style="font-size:13px;color:var(--text);background:var(--input);border-radius:8px;padding:10px 12px;">${escapeHtml(raw.note)}</div>` : ""}
+    ${raw.note ? _dpCard(`📝 Nota del pedido`, `<div style="padding:12px 18px;font-size:13px;color:var(--text);">${escapeHtml(raw.note)}</div>`) : ""}
   `;
 }
 
