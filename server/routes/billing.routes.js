@@ -81,9 +81,9 @@ router.get("/plan", auth, async (req, res) => {
       : null;
     const trialActive  = trialStarted && new Date() < new Date(trialEndsAt);
 
-    // ¿Bloqueado por exceder pedidos?
+    // ¿Bloqueado por exceder pedidos? Durante el trial no hay límite de pedidos (igual que en planCheck).
     const orderLimit = planInfo?.order_limit ?? null;
-    const isBlocked  = orderLimit !== null && monthlyOrders > orderLimit;
+    const isBlocked  = !trialActive && orderLimit !== null && monthlyOrders > orderLimit;
 
     // Días para fin de mes
     const now = new Date();

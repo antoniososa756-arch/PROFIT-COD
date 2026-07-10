@@ -1158,8 +1158,11 @@ function updateOrderLimitBanner() {
   }
 
   // ── Barra de límite de pedidos ───────────────────────────────
+  // Durante el trial no hay límite real de pedidos (ver planCheck.js), así que no se muestra este aviso.
   if (!banner) return;
-  if (up.is_blocked) {
+  if (up.trial_active) {
+    banner.style.display = "none";
+  } else if (up.is_blocked) {
     banner.style.cssText = "display:flex;background:#dc2626;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
     const textEl = document.getElementById("order-limit-banner-text");
     if (textEl) textEl.textContent =
