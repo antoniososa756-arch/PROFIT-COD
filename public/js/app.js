@@ -10587,11 +10587,13 @@ window.abrirDetallePedido = async function(orderId) {
   box.className = "card";
   box.removeAttribute("style");
   box.innerHTML = `
-    <button onclick="setSection('pedidos')" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;margin-bottom:16px;background:var(--input);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);">
+    <button onclick="setSection('pedidos')"
+      style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;margin-bottom:16px;background:var(--input);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);transition:border-color .15s,color .15s;"
+      onmouseover="this.style.borderColor='#22c55e';this.style.color='#16a34a';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)';">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
       Volver a pedidos
     </button>
-    <div id="detalle-pedido-body" style="max-width:720px;">
+    <div id="detalle-pedido-body" style="max-width:960px;">
       <div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:32px 0;justify-content:center;">
         <div style="width:16px;height:16px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
         Cargando pedido...
@@ -10602,11 +10604,22 @@ window.abrirDetallePedido = async function(orderId) {
   closeSearchDrop();
 
   try {
-    const res = await fetch(`${API_BASE}/api/orders/${orderId}`, {
+    const pedidoPromise = fetch(`${API_BASE}/api/orders/${orderId}`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error");
+    }).then(async r => ({ ok: r.ok, data: await r.json() }));
+
+    // Para poder mostrar la foto real del producto, aseguramos tener el catálogo cargado
+    const productosPromise = window.__allProductos
+      ? Promise.resolve()
+      : fetch(`${API_BASE}/api/shopify/products`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+          .then(r => r.json())
+          .then(data => {
+            window.__allProductos = (data || []).flatMap(s => (s.products || []).map(p => ({ ...p, shop_name: s.shop_name, shop_domain: s.shop_domain })));
+          })
+          .catch(() => {});
+
+    const [{ ok, data }] = await Promise.all([pedidoPromise, productosPromise]);
+    if (!ok) throw new Error(data.error || "Error");
     renderDetallePedido(data);
   } catch (e) {
     const body = document.getElementById("detalle-pedido-body");
@@ -10676,9 +10689,15 @@ function renderDetallePedido(order) {
   const saldo = Math.max(0, totalPrice - pagado);
 
   const itemsHtml = lineItems.length
-    ? lineItems.map(li => `
+    ? lineItems.map(li => {
+        const prodMatch = (window.__allProductos || []).find(p => p.id === li.product_id && p.shop_domain === order.shop_domain);
+        const imgSrc = prodMatch?.image || null;
+        const thumb = imgSrc
+          ? `<img src="${escapeAttr(imgSrc)}" style="width:42px;height:42px;object-fit:cover;border-radius:8px;flex-shrink:0;background:var(--input);">`
+          : `<div style="width:42px;height:42px;border-radius:8px;background:var(--input);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📦</div>`;
+        return `
       <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);">
-        <div style="width:42px;height:42px;border-radius:8px;background:var(--input);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📦</div>
+        ${thumb}
         <div style="flex:1;min-width:0;">
           <div style="color:var(--text);font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(li.title || li.name || "-")}</div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px;">
@@ -10691,10 +10710,13 @@ function renderDetallePedido(order) {
           <div style="color:var(--text);font-weight:700;font-size:13.5px;">${fmtMoney((parseFloat(li.price) || 0) * (li.quantity || 1))}</div>
         </div>
       </div>
-    `).join("")
+    `;
+      }).join("")
     : `<div class="muted" style="padding:16px 18px;font-size:13px;">Sin detalle de productos disponible.</div>`;
 
   const shopifyUrl = order.shop_domain && order.order_id ? `https://${order.shop_domain}/admin/orders/${order.order_id}` : null;
+  const nombreCliente = order.customer_name || `${customer.first_name || ""} ${customer.last_name || ""}`.trim() || "-";
+  const nombreEnvio = `${shipping.first_name || ""} ${shipping.last_name || ""}`.trim() || nombreCliente;
 
   body.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
@@ -10703,38 +10725,60 @@ function renderDetallePedido(order) {
         ${_dpPill(fin.label, fin.bg, fin.color, fin.border, fin.icon)}
         <span class="status ${statusClass(order.fulfillment_status)}">${statusLabel(order.fulfillment_status)}</span>
       </div>
-      ${shopifyUrl ? `<a href="${shopifyUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--input);border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text);text-decoration:none;">Ver en Shopify ↗</a>` : ""}
+      ${shopifyUrl ? `<a href="${shopifyUrl}" target="_blank"
+        style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#22c55e;border:none;border-radius:8px;font-size:12.5px;font-weight:700;color:#fff;text-decoration:none;box-shadow:0 2px 10px rgba(34,197,94,.3);transition:background .15s,box-shadow .15s;"
+        onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 4px 16px rgba(34,197,94,.45)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 2px 10px rgba(34,197,94,.3)';">Ver en Shopify ↗</a>` : ""}
     </div>
     <div style="font-size:12.5px;color:var(--muted);margin-bottom:20px;">${fecha} · ${escapeHtml(order.shop_domain || "-")}</div>
 
-    ${_dpCard(
-      `📦 Productos (${lineItems.length})`,
-      `${shippingLine ? `<div style="padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;">🚚 ${escapeHtml(shippingLine.title || "Envío")}</div>` : ""}
-       <div>${itemsHtml}</div>`
-    )}
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;">
+      <div style="min-width:0;">
+        ${_dpCard(
+          `📦 Productos (${lineItems.length})`,
+          `${shippingLine ? `<div style="padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;">🚚 ${escapeHtml(shippingLine.title || "Envío")}</div>` : ""}
+           <div>${itemsHtml}</div>`
+        )}
 
-    ${_dpCard(
-      `${fin.icon} Pago`,
-      `${order.financial_status === "pending" && !cobradoEnReembolsos ? `<div style="margin:12px 18px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12.5px;color:var(--text);">⚠️ El pago contra reembolso (COD) todavía está pendiente de cobrar.</div>` : ""}
-       <div>
-         ${_dpRow("Subtotal", fmtMoney(raw.subtotal_price))}
-         ${_dpRow("Envío", fmtMoney(shippingLine?.price))}
-         ${_dpRow("Total", fmtMoney(totalPrice))}
-         ${_dpRow("Pagado", fmtMoney(pagado))}
-         ${_dpRow("Saldo", fmtMoney(saldo))}
-       </div>`
-    )}
+        ${_dpCard(
+          `${fin.icon} Pago`,
+          `${order.financial_status === "pending" && !cobradoEnReembolsos ? `<div style="margin:12px 18px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12.5px;color:var(--text);">⚠️ El pago contra reembolso (COD) todavía está pendiente de cobrar.</div>` : ""}
+           <div>
+             ${_dpRow("Subtotal", fmtMoney(raw.subtotal_price))}
+             ${_dpRow("Envío", fmtMoney(shippingLine?.price))}
+             ${_dpRow("Total", fmtMoney(totalPrice))}
+             ${_dpRow("Pagado", fmtMoney(pagado))}
+             ${_dpRow("Saldo", fmtMoney(saldo))}
+           </div>`
+        )}
+      </div>
 
-    ${_dpCard(
-      `👤 Cliente`,
-      `<div>
-        ${_dpRow("Nombre", escapeHtml(order.customer_name || `${customer.first_name || ""} ${customer.last_name || ""}`.trim() || "-"))}
-        ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
-        ${_dpRow("Teléfono", escapeHtml(shipping.phone || customer.phone || "-"))}
-        ${direccion ? _dpRow("Dirección", direccion) : ""}
-        ${_dpRow("Nº seguimiento", order.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(order.tracking_number)}" target="_blank" style="color:#22c55e;">${escapeHtml(order.tracking_number)}</a>` : "-")}
-      </div>`
-    )}
+      <div style="min-width:0;">
+        ${_dpCard(
+          `👤 Cliente`,
+          `<div>
+            ${_dpRow("Nombre", escapeHtml(nombreCliente))}
+            ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
+            ${_dpRow("Teléfono", escapeHtml(shipping.phone || customer.phone || "-"))}
+            ${_dpRow("Nº seguimiento", order.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(order.tracking_number)}" target="_blank" style="color:#22c55e;">${escapeHtml(order.tracking_number)}</a>` : "-")}
+          </div>`
+        )}
+
+        ${_dpCard(
+          `<span style="flex:1;">📍 Dirección de envío</span><span onclick="showToast('Próximamente','La edición de la dirección de envío estará disponible pronto.','#6b7280')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          shipping.address1
+            ? `<div style="padding:14px 18px;font-size:13px;color:var(--text);line-height:1.7;">
+                ${escapeHtml(nombreEnvio)}<br>
+                ${escapeHtml(shipping.address1)}<br>
+                ${shipping.address2 ? `${escapeHtml(shipping.address2)}<br>` : ""}
+                ${[shipping.zip, shipping.city].filter(Boolean).map(escapeHtml).join(" ")}<br>
+                ${shipping.province ? `${escapeHtml(shipping.province)}<br>` : ""}
+                ${escapeHtml(shipping.country || "")}<br>
+                ${shipping.phone ? escapeHtml(shipping.phone) : ""}
+               </div>`
+            : `<div class="muted" style="padding:14px 18px;font-size:13px;">Sin dirección de envío.</div>`
+        )}
+      </div>
+    </div>
 
     ${raw.note ? _dpCard(`📝 Nota del pedido`, `<div style="padding:12px 18px;font-size:13px;color:var(--text);">${escapeHtml(raw.note)}</div>`) : ""}
   `;
