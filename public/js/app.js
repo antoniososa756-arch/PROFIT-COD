@@ -10593,7 +10593,7 @@ window.abrirDetallePedido = async function(orderId) {
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
       Volver a pedidos
     </button>
-    <div id="detalle-pedido-body" style="max-width:960px;">
+    <div id="detalle-pedido-body" style="max-width:1300px;">
       <div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:32px 0;justify-content:center;">
         <div style="width:16px;height:16px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
         Cargando pedido...
@@ -10731,10 +10731,10 @@ function renderDetallePedido(order) {
     </div>
     <div style="font-size:12.5px;color:var(--muted);margin-bottom:20px;">${fecha} · ${escapeHtml(order.shop_domain || "-")}</div>
 
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;">
+    <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(320px,1fr);gap:24px;align-items:start;max-width:1300px;">
       <div style="min-width:0;">
         ${_dpCard(
-          `📦 Productos (${lineItems.length})`,
+          `<span style="flex:1;">📦 Productos (${lineItems.length})</span><span style="font-size:12.5px;font-weight:600;color:var(--muted);">${order.tracking_number ? `Nº seg.: <a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(order.tracking_number)}" target="_blank" style="color:#22c55e;font-weight:700;">${escapeHtml(order.tracking_number)}</a>` : "Sin seguimiento"}</span>`,
           `${shippingLine ? `<div style="padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;">🚚 ${escapeHtml(shippingLine.title || "Envío")}</div>` : ""}
            <div>${itemsHtml}</div>`
         )}
@@ -10759,7 +10759,6 @@ function renderDetallePedido(order) {
             ${_dpRow("Nombre", escapeHtml(nombreCliente))}
             ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
             ${_dpRow("Teléfono", escapeHtml(shipping.phone || customer.phone || "-"))}
-            ${_dpRow("Nº seguimiento", order.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(order.tracking_number)}" target="_blank" style="color:#22c55e;">${escapeHtml(order.tracking_number)}</a>` : "-")}
           </div>`
         )}
 
