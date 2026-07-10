@@ -10573,24 +10573,32 @@ window.handleOrderRowClick = function(e, orderId) {
 };
 
 window.abrirDetallePedido = async function(orderId) {
-  const modal = document.createElement("div");
-  modal.className = "modal-bg";
-  modal.id = "modal-detalle-pedido";
-  modal.innerHTML = `
-    <div class="modal" style="max-width:640px;width:95%;max-height:88vh;display:flex;flex-direction:column;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
-        <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--text);">Detalle del pedido</h3>
-        <span onclick="closeModal()" style="cursor:pointer;font-size:22px;color:var(--muted);line-height:1;">×</span>
-      </div>
-      <div id="detalle-pedido-body" style="overflow-y:auto;flex:1;padding-right:4px;">
-        <div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:32px 0;justify-content:center;">
-          <div style="width:16px;height:16px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
-          Cargando pedido...
-        </div>
+  const box = document.getElementById("cardBox");
+  const t = document.getElementById("title");
+  const s = document.getElementById("subtitle");
+  const c = document.getElementById("crumb");
+  if (!box) return;
+
+  if (t) t.textContent = "Detalle del pedido";
+  if (s) s.textContent = "Información completa extraída de Shopify";
+  if (c) c.textContent = "Detalle del pedido";
+
+  box.className = "card";
+  box.removeAttribute("style");
+  box.innerHTML = `
+    <button onclick="setSection('pedidos')" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;margin-bottom:16px;background:var(--input);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+      Volver a pedidos
+    </button>
+    <div id="detalle-pedido-body" style="max-width:640px;">
+      <div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:32px 0;justify-content:center;">
+        <div style="width:16px;height:16px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
+        Cargando pedido...
       </div>
     </div>
   `;
-  document.body.appendChild(modal);
+  closeAllDrops();
+  closeSearchDrop();
 
   try {
     const res = await fetch(`${API_BASE}/api/orders/${orderId}`, {
