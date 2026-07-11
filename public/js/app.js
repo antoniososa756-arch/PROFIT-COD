@@ -10790,6 +10790,16 @@ function renderDetallePedido(order) {
            <div>${itemsHtml}</div>`
         )}
 
+        ${order.tracking_number ? _dpCard(
+          `🚚 Seguimiento MRW`,
+          `<div id="dp-mrw-history">
+            <div style="padding:16px 18px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;">
+              <div style="width:14px;height:14px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
+              Consultando MRW...
+            </div>
+          </div>`
+        ) : ""}
+
         ${_dpCard(
           `${fin.icon} Pago`,
           `${order.financial_status === "pending" && !cobradoEnReembolsos ? `<div style="margin:12px 18px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12.5px;color:var(--text);">⚠️ El pago contra reembolso (COD) todavía está pendiente de cobrar.</div>` : ""}
@@ -10874,6 +10884,48 @@ function renderDetallePedido(order) {
       </div>
     </div>
   `;
+
+  if (order.tracking_number) cargarSeguimientoMRW(order.id);
+}
+
+async function cargarSeguimientoMRW(orderId) {
+  const box = document.getElementById("dp-mrw-history");
+  if (!box) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/tracking/mrw-history/${orderId}`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+
+    if (!data.history || !data.history.length) {
+      box.innerHTML = `<div class="muted" style="padding:14px 18px;font-size:13px;">${data.mrwError ? escapeHtml(data.mrwError) : "MRW aún no tiene información de seguimiento para este envío."}</div>`;
+      return;
+    }
+
+    const rows = [...data.history].reverse().map(h => `
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:9px 14px;font-size:12.5px;color:var(--text);white-space:nowrap;">${escapeHtml(h.fecha)}</td>
+        <td style="padding:9px 14px;font-size:12.5px;color:var(--text);white-space:nowrap;">${escapeHtml(h.hora)}</td>
+        <td style="padding:9px 14px;font-size:12.5px;color:var(--text);">${escapeHtml(h.estado)}${h.personaEntrega ? `<div class="muted" style="font-size:11.5px;margin-top:2px;">Recibido por: ${escapeHtml(h.personaEntrega)}</div>` : ""}</td>
+      </tr>`).join("");
+
+    box.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);">
+              <th style="padding:8px 14px;text-align:left;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Fecha</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Hora</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Estado envío</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    box.innerHTML = `<div style="padding:14px 18px;font-size:13px;color:#dc2626;">No se pudo consultar el seguimiento MRW.</div>`;
+  }
 }
 
 // =========================
