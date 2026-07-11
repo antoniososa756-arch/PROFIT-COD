@@ -13317,6 +13317,8 @@ async function sincronizarMRW(esAutomatico = false) {
         if (document.getElementById("sec-metricas")?.style.display !== "none") {
           await loadMetricas();
         }
+      } else if (data.mrwError) {
+        showToast("⚠️ MRW rechazó la consulta", data.mrwError, "#f59e0b");
       } else {
         showToast("— MRW sincronizado", "Sin cambios de estado esta vez", "#6b7280");
       }

@@ -211,9 +211,14 @@ router.post("/mrw-sync", auth, async (req, res) => {
 
     let updated = 0;
     const errors = [];
+    let mrwFault = null; // primer mensaje de rechazo de MRW visto en esta pasada (si lo hay)
 
     global.__mrwSyncStatus[req.user.id] = { running: true, total: orders.length, done: 0 };
 
+    // IMPORTANTE: cada pedido de esta tanda debe intentarse y actualizar su last_mrw_check
+    // siempre (éxito, fallo o rechazo de MRW). Si no, ORDER BY last_mrw_check ASC NULLS FIRST
+    // vuelve a seleccionar los mismos pedidos fallidos una y otra vez, dejando al resto
+    // sin comprobar nunca — por eso el try/catch/finally de abajo actualiza siempre.
     for (const order of orders) {
       try {
         await new Promise(r => setTimeout(r, 140));
@@ -256,15 +261,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
         if (!allEstados.length && horaEntregaMatch) {
           estadoTexto = "entregado";
         } else if (!allEstados.length) {
-          // Si MRW rechaza el primer pedido por credenciales/franquicia, todos los demás
-          // fallarán igual — cortamos aquí en vez de agotar los 170 pedidos en vano.
-          if (updated === 0 && errors.length === 0) {
-            const mrwFault = extractMrwFault(xml);
-            if (mrwFault) {
-              global.__mrwSyncStatus[req.user.id] = { running: false, total: orders.length, done: orders.length };
-              return res.json({ ok: false, error: `MRW rechazó la consulta: ${mrwFault}. Revisa las credenciales en Integraciones → Agencia de envío.` });
-            }
-          }
+          if (!mrwFault) mrwFault = extractMrwFault(xml);
           errors.push(order.tracking_number);
           continue;
         } else {
@@ -289,18 +286,23 @@ router.post("/mrw-sync", auth, async (req, res) => {
           );
           updated++;
         }
-        global.__mrwSyncStatus[req.user.id].done++;
-        await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]);
-    } catch(e) {
-        global.__mrwSyncStatus[req.user.id].done++;
-        await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]);
+      } catch(e) {
         console.error(`MRW fetch ERROR para ${order.tracking_number}:`, e.message);
         errors.push(order.tracking_number);
+      } finally {
+        global.__mrwSyncStatus[req.user.id].done++;
+        await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]).catch(() => {});
       }
     }
 
     global.__mrwSyncStatus[req.user.id] = { running: false, total: orders.length, done: orders.length };
-    res.json({ ok: true, updated, total: orders.length, errors });
+    res.json({
+      ok: true,
+      updated,
+      total: orders.length,
+      errors,
+      mrwError: mrwFault ? `MRW rechazó ${errors.length} consulta${errors.length === 1 ? "" : "s"}: ${mrwFault}. Revisa las credenciales en Integraciones → Agencia de envío.` : null,
+    });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
