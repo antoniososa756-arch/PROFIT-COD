@@ -10827,7 +10827,7 @@ function renderDetallePedido(order) {
         ${raw.note ? _dpCard(`📝 Nota del pedido`, `<div style="padding:12px 18px;font-size:13px;color:var(--text);">${escapeHtml(raw.note)}</div>`, "cliente") : ""}
 
         ${_dpCard(
-          `👤 Cliente`,
+          `<span style="flex:1;">👤 Cliente</span><span onclick="showToast('Próximamente','La edición de los datos del cliente estará disponible pronto.','#6b7280')" title="Editar cliente" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
           `<div>
             ${_dpRow("Nombre", escapeHtml(nombreCliente))}
             ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
