@@ -60,7 +60,7 @@
 
     body{
       margin:0;
-      font-family:"Source Serif 4", serif;
+      font-family:"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       background:var(--bg);
       color:var(--text);
     }
