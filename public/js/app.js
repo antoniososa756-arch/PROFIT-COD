@@ -10804,6 +10804,8 @@ function renderDetallePedido(order) {
       </div>
 
       <div style="min-width:0;">
+        ${raw.note ? _dpCard(`📝 Nota del pedido`, `<div style="padding:12px 18px;font-size:13px;color:var(--text);">${escapeHtml(raw.note)}</div>`) : ""}
+
         ${_dpCard(
           `👤 Cliente`,
           `<div>
@@ -10871,8 +10873,6 @@ function renderDetallePedido(order) {
         )}
       </div>
     </div>
-
-    ${raw.note ? _dpCard(`📝 Nota del pedido`, `<div style="padding:12px 18px;font-size:13px;color:var(--text);">${escapeHtml(raw.note)}</div>`) : ""}
   `;
 }
 
