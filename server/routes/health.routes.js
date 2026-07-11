@@ -29,7 +29,7 @@ router.get("/debug-mrw-history/:tracking", async (req, res) => {
       <tem:valorFiltroHasta>${req.params.tracking}</tem:valorFiltroHasta>
       <tem:fechaDesde></tem:fechaDesde>
       <tem:fechaHasta></tem:fechaHasta>
-      <tem:tipoInformacion>1</tem:tipoInformacion>
+      <tem:tipoInformacion>${req.query.tipo || 1}</tem:tipoInformacion>
     </tem:GetEnvios>
   </soapenv:Body>
 </soapenv:Envelope>`;
