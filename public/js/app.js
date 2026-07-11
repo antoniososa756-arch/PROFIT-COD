@@ -12377,6 +12377,9 @@ async function syncEnvioMRW(btn, orderId) {
       invalidateCache("orders");
       allOrders = [];
       await fetchOrdersFiltered();
+    } else if (data.mrwError) {
+      // MRW rechazó la consulta (ej. el envío no pertenece a la cuenta/franquicia configurada)
+      showToast("⚠️ MRW rechazó la consulta", `${data.mrwError} — revisa las credenciales en Integraciones → Agencia de envío.`, "#f59e0b");
     } else if (data.debug) {
       // MRW no devolvió EstadoDescripcion — mostrar qué devolvió para diagnóstico
       const info = data.debug.length ? data.debug.join(" | ") : "Respuesta vacía";

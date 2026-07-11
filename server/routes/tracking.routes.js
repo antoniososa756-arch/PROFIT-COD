@@ -15,6 +15,13 @@ function mapMRWStatus(texto) {
   return "en_transito";
 }
 
+// Extrae el mensaje de error/rechazo que MRW devuelve en <MensajeSeguimiento>
+// cuando el envío consultado no pertenece a la cuenta/franquicia autenticada.
+function extractMrwFault(xml) {
+  const m = xml.match(/<[^:]*:?MensajeSeguimiento[^>]*>([^<]+)<\/[^:]*:?MensajeSeguimiento>/);
+  return m && m[1].trim() ? m[1].trim() : null;
+}
+
 // El histórico de MRW viene en orden ascendente (más antiguo primero).
 // Prioriza estados finales (entregado/devuelto/destruido) si aparecen en algún punto;
 // si no, usa el último elemento (más reciente).
@@ -161,6 +168,10 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
     }
 
     if (!allEstados.length) {
+      const mrwFault = extractMrwFault(xml);
+      if (mrwFault) {
+        return res.json({ ok: true, updated: false, status: order.fulfillment_status, mrwError: mrwFault });
+      }
       const allTags = [...xml.matchAll(/<([A-Za-z:]+)[^>]*>([^<]{1,80})</g)].map(m => `${m[1]}: ${m[2]}`).slice(0, 10);
       return res.json({ ok: true, updated: false, status: order.fulfillment_status, debug: allTags });
     }
@@ -245,6 +256,15 @@ router.post("/mrw-sync", auth, async (req, res) => {
         if (!allEstados.length && horaEntregaMatch) {
           estadoTexto = "entregado";
         } else if (!allEstados.length) {
+          // Si MRW rechaza el primer pedido por credenciales/franquicia, todos los demás
+          // fallarán igual — cortamos aquí en vez de agotar los 170 pedidos en vano.
+          if (updated === 0 && errors.length === 0) {
+            const mrwFault = extractMrwFault(xml);
+            if (mrwFault) {
+              global.__mrwSyncStatus[req.user.id] = { running: false, total: orders.length, done: orders.length };
+              return res.json({ ok: false, error: `MRW rechazó la consulta: ${mrwFault}. Revisa las credenciales en Integraciones → Agencia de envío.` });
+            }
+          }
           errors.push(order.tracking_number);
           continue;
         } else {
