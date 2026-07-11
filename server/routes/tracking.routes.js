@@ -26,7 +26,11 @@ function extractMrwFault(xml) {
 // cuando MRW rechaza explícitamente el usuario/contraseña — cualquier otra respuesta
 // (incluido "no pertenecen a esta franquicia", que es un problema de otro tipo, o un
 // fallo de red/timeout) deja guardar igualmente para no bloquear al usuario.
-async function validateMrwCredentials(login, pass) {
+async function validateMrwCredentials(login, pass, sampleTracking) {
+  // "0" como filtro no dispara la misma comprobación de credenciales que MRW hace con
+  // un número de seguimiento real — hay que usar algo con pinta de tracking de verdad
+  // (real si lo tenemos, o uno con formato plausible) para que el rechazo de login sea fiable.
+  const testValue = sampleTracking || "00000F000000";
   const soapBody = `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
   <soapenv:Header/>
@@ -36,8 +40,8 @@ async function validateMrwCredentials(login, pass) {
       <tem:pass>${pass}</tem:pass>
       <tem:codigoIdioma>3082</tem:codigoIdioma>
       <tem:tipoFiltro>0</tem:tipoFiltro>
-      <tem:valorFiltroDesde>0</tem:valorFiltroDesde>
-      <tem:valorFiltroHasta>0</tem:valorFiltroHasta>
+      <tem:valorFiltroDesde>${testValue}</tem:valorFiltroDesde>
+      <tem:valorFiltroHasta>${testValue}</tem:valorFiltroHasta>
       <tem:fechaDesde></tem:fechaDesde>
       <tem:fechaHasta></tem:fechaHasta>
       <tem:tipoInformacion>1</tem:tipoInformacion>
@@ -52,6 +56,13 @@ async function validateMrwCredentials(login, pass) {
       signal: AbortSignal.timeout(8000),
     });
     const xml = await response.text();
+
+    // Si la respuesta no es el XML/SOAP esperado (p.ej. una página de error del
+    // proxy/firewall de MRW), no podemos concluir nada — no lo demos por válido a ciegas.
+    if (!response.ok || !/<[^:]*:?Envelope/i.test(xml)) {
+      return { valid: true, warning: "No se pudo verificar con MRW en este momento (respuesta inesperada). Se guardó igualmente — revisa que la sincronización funcione." };
+    }
+
     const fault = extractMrwFault(xml);
     if (fault && /usuario.*(password|contraseñ)|password.*usuario|no son correctos/i.test(fault)) {
       return { valid: false, reason: fault };
@@ -113,7 +124,15 @@ router.post("/mrw-credentials", auth, async (req, res) => {
   const { login, pass, franquicia, abonado } = req.body || {};
   if (!login || !pass) return res.status(400).json({ error: "Login y contraseña requeridos" });
 
-  const check = await validateMrwCredentials(login, pass);
+  const sample = await req.db.get(
+    `SELECT tracking_number FROM orders o
+     WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+       AND tracking_number IS NOT NULL AND tracking_number != ''
+     LIMIT 1`,
+    [req.user.id]
+  ).catch(() => null);
+
+  const check = await validateMrwCredentials(login, pass, sample?.tracking_number);
   if (!check.valid) {
     return res.status(400).json({ error: `MRW rechazó estas credenciales: ${check.reason}` });
   }
