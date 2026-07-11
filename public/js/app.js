@@ -10641,9 +10641,16 @@ function _dpPill(label, bg, color, border, icon) {
   return `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;background:${bg};color:${color};border:1px solid ${border};white-space:nowrap;">${icon ? `<span>${icon}</span>` : ""}${escapeHtml(label)}</span>`;
 }
 
-function _dpCard(headerHtml, bodyHtml) {
-  return `<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px;overflow:hidden;">
-    ${headerHtml ? `<div style="padding:14px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:13.5px;color:var(--text);display:flex;align-items:center;gap:8px;">${headerHtml}</div>` : ""}
+const _DP_ACCENTS = {
+  pedido:  { border: "#22c55e", bg: "rgba(34,197,94,.07)"  },
+  mrw:     { border: "#3b82f6", bg: "rgba(59,130,246,.07)" },
+  cliente: { border: "#8b5cf6", bg: "rgba(139,92,246,.07)" },
+};
+
+function _dpCard(headerHtml, bodyHtml, accentKey) {
+  const a = _DP_ACCENTS[accentKey] || { border: "var(--border)", bg: "transparent" };
+  return `<div style="background:var(--card);border:1px solid var(--border);border-left:3px solid ${a.border};border-radius:14px;margin-bottom:16px;overflow:hidden;">
+    ${headerHtml ? `<div style="padding:14px 18px;border-bottom:1px solid var(--border);background:${a.bg};font-weight:700;font-size:13.5px;color:var(--text);display:flex;align-items:center;gap:8px;">${headerHtml}</div>` : ""}
     ${bodyHtml}
   </div>`;
 }
@@ -10787,7 +10794,8 @@ function renderDetallePedido(order) {
         ${_dpCard(
           `<span style="flex:1;">📦 Productos (${lineItems.length})</span><span style="font-size:12.5px;font-weight:600;color:var(--muted);">${order.tracking_number ? `Nº seg.: <a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(order.tracking_number)}" target="_blank" style="color:#22c55e;font-weight:700;">${escapeHtml(order.tracking_number)}</a>` : "Sin seguimiento"}</span>`,
           `${shippingLine ? `<div style="padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;">🚚 ${escapeHtml(shippingLine.title || "Envío")}</div>` : ""}
-           <div>${itemsHtml}</div>`
+           <div>${itemsHtml}</div>`,
+          "pedido"
         )}
 
         ${_dpCard(
@@ -10799,7 +10807,8 @@ function renderDetallePedido(order) {
              ${_dpRow("Total", fmtMoney(totalPrice))}
              ${_dpRow("Pagado", fmtMoney(pagado))}
              ${_dpRow("Saldo", fmtMoney(saldo))}
-           </div>`
+           </div>`,
+          "pedido"
         )}
 
         ${order.tracking_number ? _dpCard(
@@ -10809,12 +10818,13 @@ function renderDetallePedido(order) {
               <div style="width:14px;height:14px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
               Consultando MRW...
             </div>
-          </div>`
+          </div>`,
+          "mrw"
         ) : ""}
       </div>
 
-      <div style="min-width:0;">
-        ${raw.note ? _dpCard(`📝 Nota del pedido`, `<div style="padding:12px 18px;font-size:13px;color:var(--text);">${escapeHtml(raw.note)}</div>`) : ""}
+      <div style="min-width:0;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:14px;">
+        ${raw.note ? _dpCard(`📝 Nota del pedido`, `<div style="padding:12px 18px;font-size:13px;color:var(--text);">${escapeHtml(raw.note)}</div>`, "cliente") : ""}
 
         ${_dpCard(
           `👤 Cliente`,
@@ -10822,7 +10832,8 @@ function renderDetallePedido(order) {
             ${_dpRow("Nombre", escapeHtml(nombreCliente))}
             ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
             ${_dpRow("Teléfono", escapeHtml(shipping.phone || customer.phone || "-"))}
-          </div>`
+          </div>`,
+          "cliente"
         )}
 
         ${_dpCard(
@@ -10837,7 +10848,8 @@ function renderDetallePedido(order) {
                 ${escapeHtml(shipping.country || "")}<br>
                 ${shipping.phone ? escapeHtml(shipping.phone) : ""}
                </div>`
-            : `<div class="muted" style="padding:14px 18px;font-size:13px;">Sin dirección de envío.</div>`
+            : `<div class="muted" style="padding:14px 18px;font-size:13px;">Sin dirección de envío.</div>`,
+          "cliente"
         )}
 
         ${_dpCard(
@@ -10852,21 +10864,24 @@ function renderDetallePedido(order) {
                 ${escapeHtml(billing.country || "")}<br>
                 ${billing.phone ? escapeHtml(billing.phone) : ""}
                </div>`
-            : `<div class="muted" style="padding:14px 18px;font-size:13px;">Igual que la dirección de envío.</div>`
+            : `<div class="muted" style="padding:14px 18px;font-size:13px;">Igual que la dirección de envío.</div>`,
+          "cliente"
         )}
 
         ${_dpCard(
           `📊 Resumen de conversión`,
           `<div style="padding:14px 18px;">
             <div class="muted" style="font-size:13px;line-height:1.6;">No hay detalles de la conversión disponibles para este pedido.</div>
-          </div>`
+          </div>`,
+          "cliente"
         )}
 
         ${_dpCard(
           `⚠️ Riesgo del pedido`,
           `<div style="padding:14px 18px;">
             <div class="muted" style="font-size:13px;">Análisis no disponible.</div>
-          </div>`
+          </div>`,
+          "cliente"
         )}
 
         ${_dpCard(
@@ -10879,7 +10894,8 @@ function renderDetallePedido(order) {
             <div id="dp-tags-list" style="display:flex;flex-wrap:wrap;gap:6px;">
               ${tags.length ? tags.map(t => _dpTagPill(t, order.id)).join("") : `<span class="muted" style="font-size:12px;">Sin etiquetas.</span>`}
             </div>
-          </div>`
+          </div>`,
+          "cliente"
         )}
       </div>
     </div>
