@@ -13243,7 +13243,7 @@ async function guardarCredencialesMRW() {
   const abonado    = document.getElementById("mrw-abonado")?.value.trim();
   const msg = document.getElementById("mrw-modal-msg");
   if (!login || !pass) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = "Login y contraseña son obligatorios"; } return; }
-  if (msg) { msg.style.color = "#6b7280"; msg.textContent = "Guardando..."; }
+  if (msg) { msg.style.color = "#6b7280"; msg.textContent = "Verificando credenciales con MRW..."; }
   try {
     const res = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
       method: "POST",
@@ -13253,7 +13253,11 @@ async function guardarCredencialesMRW() {
     const data = await res.json();
     if (data.ok) {
       closeModal();
-      showToast("✅ MRW integrado", "La sincronización automática está activa", "#22c55e");
+      if (data.warning) {
+        showToast("⚠️ MRW integrado", data.warning, "#f59e0b");
+      } else {
+        showToast("✅ MRW integrado", "La sincronización automática está activa", "#22c55e");
+      }
       checkMRWIntegration();
     } else {
       if (msg) { msg.style.color = "#dc2626"; msg.textContent = data.error || "Error guardando"; }

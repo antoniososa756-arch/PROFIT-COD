@@ -22,6 +22,46 @@ function extractMrwFault(xml) {
   return m && m[1].trim() ? m[1].trim() : null;
 }
 
+// Comprueba el login/pass contra MRW antes de guardarlos. Solo bloquea el guardado
+// cuando MRW rechaza explícitamente el usuario/contraseña — cualquier otra respuesta
+// (incluido "no pertenecen a esta franquicia", que es un problema de otro tipo, o un
+// fallo de red/timeout) deja guardar igualmente para no bloquear al usuario.
+async function validateMrwCredentials(login, pass) {
+  const soapBody = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tem:GetEnvios>
+      <tem:login>${login}</tem:login>
+      <tem:pass>${pass}</tem:pass>
+      <tem:codigoIdioma>3082</tem:codigoIdioma>
+      <tem:tipoFiltro>0</tem:tipoFiltro>
+      <tem:valorFiltroDesde>0</tem:valorFiltroDesde>
+      <tem:valorFiltroHasta>0</tem:valorFiltroHasta>
+      <tem:fechaDesde></tem:fechaDesde>
+      <tem:fechaHasta></tem:fechaHasta>
+      <tem:tipoInformacion>1</tem:tipoInformacion>
+    </tem:GetEnvios>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+  try {
+    const response = await fetch("https://trackingservice.mrw.es/TrackingService.svc/TrackingServices", {
+      method: "POST",
+      headers: { "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "http://tempuri.org/ITrackingService/GetEnvios" },
+      body: soapBody,
+      signal: AbortSignal.timeout(8000),
+    });
+    const xml = await response.text();
+    const fault = extractMrwFault(xml);
+    if (fault && /usuario.*(password|contraseñ)|password.*usuario|no son correctos/i.test(fault)) {
+      return { valid: false, reason: fault };
+    }
+    return { valid: true };
+  } catch (e) {
+    return { valid: true, warning: "No se pudo verificar con MRW en este momento (puede estar caído). Se guardó igualmente." };
+  }
+}
+
 // El histórico de MRW viene en orden ascendente (más antiguo primero).
 // Prioriza estados finales (entregado/devuelto/destruido) si aparecen en algún punto;
 // si no, usa el último elemento (más reciente).
@@ -72,6 +112,12 @@ router.get("/mrw-credentials", auth, async (req, res) => {
 router.post("/mrw-credentials", auth, async (req, res) => {
   const { login, pass, franquicia, abonado } = req.body || {};
   if (!login || !pass) return res.status(400).json({ error: "Login y contraseña requeridos" });
+
+  const check = await validateMrwCredentials(login, pass);
+  if (!check.valid) {
+    return res.status(400).json({ error: `MRW rechazó estas credenciales: ${check.reason}` });
+  }
+
   try {
     await req.db.run(`
       INSERT INTO mrw_credentials (user_id, login, pass, franquicia, abonado)
@@ -79,7 +125,7 @@ router.post("/mrw-credentials", auth, async (req, res) => {
       ON CONFLICT (user_id) DO UPDATE SET login = EXCLUDED.login, pass = EXCLUDED.pass,
         franquicia = EXCLUDED.franquicia, abonado = EXCLUDED.abonado
     `, [req.user.id, login, pass, franquicia || "", abonado || ""]);
-    res.json({ ok: true });
+    res.json({ ok: true, warning: check.warning || null });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
