@@ -10790,16 +10790,6 @@ function renderDetallePedido(order) {
            <div>${itemsHtml}</div>`
         )}
 
-        ${order.tracking_number ? _dpCard(
-          `🚚 Seguimiento MRW`,
-          `<div id="dp-mrw-history">
-            <div style="padding:16px 18px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;">
-              <div style="width:14px;height:14px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
-              Consultando MRW...
-            </div>
-          </div>`
-        ) : ""}
-
         ${_dpCard(
           `${fin.icon} Pago`,
           `${order.financial_status === "pending" && !cobradoEnReembolsos ? `<div style="margin:12px 18px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12.5px;color:var(--text);">⚠️ El pago contra reembolso (COD) todavía está pendiente de cobrar.</div>` : ""}
@@ -10811,6 +10801,16 @@ function renderDetallePedido(order) {
              ${_dpRow("Saldo", fmtMoney(saldo))}
            </div>`
         )}
+
+        ${order.tracking_number ? _dpCard(
+          `🚚 Seguimiento MRW`,
+          `<div id="dp-mrw-history">
+            <div style="padding:16px 18px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;">
+              <div style="width:14px;height:14px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
+              Consultando MRW...
+            </div>
+          </div>`
+        ) : ""}
       </div>
 
       <div style="min-width:0;">
