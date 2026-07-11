@@ -91,6 +91,14 @@ app.use("/api/events", require("./routes/events.routes"));
 // Push notifications
 app.use("/api/push", require("./routes/push.routes").router);
 
+// SPA fallback: cualquier ruta GET que no sea de la API ni un archivo estático
+// (p.ej. /pedidos, /pedido/12345) sirve el mismo index.html — el router del
+// frontend decide qué mostrar según la URL. Debe ir después de la API y de
+// express.static, y antes del 404 final.
+app.get(/^\/(?!api\/).*/, (req, res) => {
+  res.sendFile(path.resolve(__dirname, "../public/index.html"));
+});
+
 // 404
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });

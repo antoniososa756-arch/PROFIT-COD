@@ -364,8 +364,8 @@ if (location.pathname.includes("login")) {
             const planOk = p.plan && p.plan !== "free"
               && (p.status === "active" || p.status === "trial")
               && (!p.expires_at || new Date(p.expires_at) > new Date());
-            if (planOk) {
-              const cur = localStorage.getItem("section") || "metricas";
+            if (planOk && window.__currentRoute?.type !== "order") {
+              const cur = window.__currentRoute?.id || localStorage.getItem("section") || "metricas";
               if (cur !== "plan") setSection(cur);
             }
           }).catch(() => {});
@@ -395,7 +395,17 @@ if (location.pathname.includes("login")) {
         }, 800);
         history.replaceState(null, "", "/");
       } else {
-        loadApp(localStorage.getItem("section") || "metricas");
+        __skipPush = true;
+        const _pathParts = window.location.pathname.split("/").filter(Boolean);
+        if (_pathParts[0] === "pedido" && _pathParts[1]) {
+          loadApp("pedidos");
+          abrirDetallePedido(_pathParts[1]);
+        } else if (VALID_ROUTE_SECTIONS.includes(_pathParts[0])) {
+          loadApp(_pathParts[0]);
+        } else {
+          loadApp(localStorage.getItem("section") || "metricas");
+        }
+        __skipPush = false;
       }
     })
     .catch(() => {
@@ -809,6 +819,38 @@ function escapeAttr(str) {
     const badge = document.querySelector(".notify-badge");
     if (badge) badge.textContent = String(count || 0);
   }
+
+// =========================
+// ROUTING POR URL
+// Cada sección y cada pedido tiene su propia URL (/seccion, /pedido/:id) para que
+// F5 o compartir el link no pierda dónde estabas. __skipPush evita generar una
+// entrada nueva en el historial cuando estamos restaurando desde popstate/carga inicial.
+// =========================
+const VALID_ROUTE_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
+let __skipPush = false;
+
+function _syncUrlForRoute(path) {
+  if (window.location.pathname === path) return;
+  if (__skipPush) history.replaceState(null, "", path);
+  else history.pushState(null, "", path);
+}
+
+function restoreFromPath(pathname) {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts[0] === "pedido" && parts[1] && typeof window.abrirDetallePedido === "function") {
+    window.abrirDetallePedido(parts[1]);
+    return;
+  }
+  const id = VALID_ROUTE_SECTIONS.includes(parts[0]) ? parts[0] : (localStorage.getItem("section") || "metricas");
+  setSection(id);
+}
+
+window.addEventListener("popstate", () => {
+  __skipPush = true;
+  restoreFromPath(window.location.pathname);
+  __skipPush = false;
+});
+
 function menuItem(id, labels) {
   return `<div class="menu-item" data-id="${id}">
     ${icons[id] || ""}${labels[id] || id}
@@ -1213,6 +1255,8 @@ function setSection(id) {
   }
   const d = dict();
   localStorage.setItem("section", id);
+  window.__currentRoute = { type: "section", id };
+  _syncUrlForRoute("/" + id);
 
   document.querySelectorAll(".menu-item").forEach((i) => i.classList.remove("active"));
   const activeEl = document.querySelector('.menu-item[data-id="' + id + '"]');
@@ -1244,6 +1288,9 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
       window.__planRetryCount = retryCount;
       if (retryCount <= 10) {
         setTimeout(() => {
+          // Si mientras tanto se navegó al detalle de un pedido, este reintento
+          // ya no aplica — no pisar esa vista con el spinner de la sección.
+          if (window.__currentRoute?.type === "order") return;
           if (window.__userPlan?.plan) {
             window.__planRetryCount = 0;
             setSection(id);
@@ -10579,6 +10626,11 @@ window.abrirDetallePedido = async function(orderId) {
   const s = document.getElementById("subtitle");
   const c = document.getElementById("crumb");
   if (!box) return;
+
+  window.__currentRoute = { type: "order", id: orderId };
+  _syncUrlForRoute(`/pedido/${orderId}`);
+  document.querySelectorAll(".menu-item").forEach((i) => i.classList.remove("active"));
+  document.querySelector('.menu-item[data-id="pedidos"]')?.classList.add("active");
 
   if (t) t.textContent = "Detalle del pedido";
   if (s) s.textContent = "Información completa extraída de Shopify";
