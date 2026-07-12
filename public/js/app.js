@@ -2931,9 +2931,19 @@ if (id === "pedidos") {
 
         <div id="orders-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
 
+        <div id="orders-bulk-bar" style="display:none;align-items:center;gap:10px;background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.3);border-radius:8px;padding:8px 14px;margin-bottom:10px;flex-wrap:wrap;">
+          <span id="orders-bulk-count" style="font-size:12.5px;font-weight:700;color:var(--text);"></span>
+          <span style="font-size:12.5px;color:var(--muted);">Marcar como:</span>
+          <button onclick="bulkCambiarEstadoPedidos('entregado')" style="padding:6px 12px;border:1px solid #22c55e;border-radius:7px;background:transparent;color:#22c55e;font-size:12px;font-weight:600;cursor:pointer;">✓ Entregado</button>
+          <button onclick="bulkCambiarEstadoPedidos('devuelto')" style="padding:6px 12px;border:1px solid #ea580c;border-radius:7px;background:transparent;color:#ea580c;font-size:12px;font-weight:600;cursor:pointer;">↩ Devuelto</button>
+          <button onclick="bulkCambiarEstadoPedidos('destruido')" style="padding:6px 12px;border:1px solid #7c3aed;border-radius:7px;background:transparent;color:#7c3aed;font-size:12px;font-weight:600;cursor:pointer;">✕ Destruido</button>
+          <button onclick="bulkCambiarEstadoPedidos('cancelado')" style="padding:6px 12px;border:1px solid #dc2626;border-radius:7px;background:transparent;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;">✕ Cancelado</button>
+          <button onclick="clearOrdersSelection()" style="margin-left:auto;padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;">Cancelar selección</button>
+        </div>
+
         <div class="orders-table">
           <div class="orders-row head" style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;">
-            <div>#</div>
+            <div><input type="checkbox" id="orders-select-all" onclick="toggleSelectAllOrders(this)" style="cursor:pointer;"></div>
             <div>Pedido</div>
             <div>Tipo de pago</div>
             <div>Fecha de creación</div>
@@ -10512,7 +10522,9 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       onmouseover="this.style.background='var(--hover)';this.style.boxShadow='inset 0 0 0 1px rgba(34,197,94,.4)';this.style.borderRadius='8px';"
       onmouseout="this.style.background='';this.style.boxShadow='';this.style.borderRadius='';"
       style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;cursor:pointer;transition:box-shadow .12s,background .12s;">
-      <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;overflow:hidden;">${numero}</div>
+      <div data-row-actions="1" style="display:flex;align-items:center;overflow:hidden;" onclick="event.stopPropagation()">
+        <input type="checkbox" class="order-select-cb" data-order-id="${o.id}" onclick="toggleSelectOrder(event, ${o.id})" style="cursor:pointer;">
+      </div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${paymentBadge}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
@@ -10607,6 +10619,7 @@ if (pagination) {
 
 function goToOrdersPage(page) {
   ordersState = { ...ordersState, page };
+  clearOrdersSelection();
   fetchOrdersFiltered();
   const table = document.querySelector(".orders-table");
   if (table) table.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -11349,6 +11362,75 @@ window.toggleEstadoMenu    = toggleEstadoMenu;
 window.cambiarEstadoPedido = cambiarEstadoPedido;
 window.cambiarEstadoPedidoDetalle = cambiarEstadoPedidoDetalle;
 
+// =========================
+// SELECCIÓN MÚLTIPLE DE PEDIDOS (cambio de estado en bloque)
+// =========================
+let ordersSelected = new Set();
+
+function updateOrdersBulkBar() {
+  const bar = document.getElementById("orders-bulk-bar");
+  const countEl = document.getElementById("orders-bulk-count");
+  if (!bar || !countEl) return;
+  if (ordersSelected.size > 0) {
+    bar.style.display = "flex";
+    countEl.textContent = `${ordersSelected.size} pedido${ordersSelected.size > 1 ? "s" : ""} seleccionado${ordersSelected.size > 1 ? "s" : ""}`;
+  } else {
+    bar.style.display = "none";
+  }
+  const selectAll = document.getElementById("orders-select-all");
+  const cbs = document.querySelectorAll(".order-select-cb");
+  if (selectAll) {
+    selectAll.checked = cbs.length > 0 && Array.from(cbs).every(cb => ordersSelected.has(Number(cb.dataset.orderId)));
+  }
+}
+
+function toggleSelectOrder(e, orderId) {
+  e.stopPropagation();
+  if (ordersSelected.has(orderId)) ordersSelected.delete(orderId);
+  else ordersSelected.add(orderId);
+  updateOrdersBulkBar();
+}
+
+function toggleSelectAllOrders(el) {
+  document.querySelectorAll(".order-select-cb").forEach(cb => {
+    const id = Number(cb.dataset.orderId);
+    cb.checked = el.checked;
+    if (el.checked) ordersSelected.add(id);
+    else ordersSelected.delete(id);
+  });
+  updateOrdersBulkBar();
+}
+
+function clearOrdersSelection() {
+  ordersSelected.clear();
+  document.querySelectorAll(".order-select-cb").forEach(cb => cb.checked = false);
+  updateOrdersBulkBar();
+}
+
+async function bulkCambiarEstadoPedidos(estado) {
+  const label = _estadoLabels[estado] || estado;
+  const ids = Array.from(ordersSelected);
+  if (!ids.length) return;
+  if (!confirm(`¿Estás seguro de que quieres marcar ${ids.length} pedido${ids.length > 1 ? "s" : ""} como ${label}?\n\nEsta acción no se puede revertir.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/marcar-estado-bulk`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getActiveToken(), "Content-Type": "application/json" },
+      body: JSON.stringify({ ids, estado })
+    });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || "Error al actualizar los pedidos"); return; }
+    showToast(`${data.updated} pedido${data.updated > 1 ? "s" : ""} marcado${data.updated > 1 ? "s" : ""} como ${label}`, "", _estadoColors[estado] || "#374151");
+    clearOrdersSelection();
+    invalidateCache("orders");
+    await fetchOrdersFiltered();
+  } catch(e) { alert("Error de conexión"); }
+}
+window.toggleSelectOrder = toggleSelectOrder;
+window.toggleSelectAllOrders = toggleSelectAllOrders;
+window.clearOrdersSelection = clearOrdersSelection;
+window.bulkCambiarEstadoPedidos = bulkCambiarEstadoPedidos;
+
 window.fetchOrders = fetchOrders;
 window.filterOrders = filterOrders;
 
@@ -11754,17 +11836,20 @@ function applyFilters() {
   }
 
   ordersState = { ...ordersState, status, shop, dateFrom, dateTo, page: 1 };
+  clearOrdersSelection();
   fetchOrdersFiltered();
 }
 
 function clearFilters() {
   ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false };
+  clearOrdersSelection();
   fetchOrdersFiltered();
   toggleFilterPanel();
 }
 
 function clearFiltersInline() {
   ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false };
+  clearOrdersSelection();
   const df = document.getElementById("filter-date-from");
   const dt = document.getElementById("filter-date-to");
   const sh = document.getElementById("filter-shop-inline");
@@ -11785,6 +11870,7 @@ function _clearSearchOnTabSwitch() {
   const searchEl = document.getElementById("search");
   if (searchEl) searchEl.value = "";
   ordersState = { ...ordersState, q: "" };
+  clearOrdersSelection();
 }
 function filterByTab(el, status) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));

@@ -223,6 +223,21 @@ router.post("/marcar-estado", auth, async (req, res) => {
   } catch(e) { console.error("marcar-estado:", e); res.status(500).json({ error: "Error" }); }
 });
 
+// POST /api/orders/marcar-estado-bulk  { ids: [...], estado }
+router.post("/marcar-estado-bulk", auth, async (req, res) => {
+  const { ids, estado } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: "Faltan pedidos" });
+  if (!ESTADOS_FINALES.includes(estado)) return res.status(400).json({ error: "Estado no válido" });
+  try {
+    const result = await db.run(
+      `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text
+       WHERE id = ANY($2::int[]) AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status = 'active')`,
+      [estado, ids, req.user.id]
+    );
+    res.json({ ok: true, updated: result.changes || 0 });
+  } catch(e) { console.error("marcar-estado-bulk:", e); res.status(500).json({ error: "Error" }); }
+});
+
 // PATCH /api/orders/:id/tags  { tags: "tag1, tag2" } — reemplaza las etiquetas en Shopify y localmente
 router.patch("/:id/tags", auth, async (req, res) => {
   const userId = req.user.id;
