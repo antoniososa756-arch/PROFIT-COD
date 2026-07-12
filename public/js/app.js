@@ -12167,7 +12167,7 @@ async function checkNotificaciones() {
   }
 }
 
-function showToast(title, text, color) {
+function showToast(title, text, color, action) {
   const id = "toast_" + Date.now();
   const toast = document.createElement("div");
   toast.id = id;
@@ -12181,7 +12181,7 @@ function showToast(title, text, color) {
     border-radius:10px;
     box-shadow:0 4px 20px rgba(0,0,0,0.12);
     padding:14px 18px;
-    max-width:320px;
+    max-width:340px;
     z-index:99999;
     font-family:inherit;
     display:flex;
@@ -12191,21 +12191,23 @@ function showToast(title, text, color) {
     transition:opacity 0.6s ease, transform 0.6s ease;
     transform:translateY(0);
   `;
+  if (action?.onClick) window["__toastAction_" + id] = action.onClick;
   toast.innerHTML = `
     <div style="flex:1;">
       <div style="font-size:13px;font-weight:700;color:#f9fafb;margin-bottom:3px;">${escapeHtml(title)}</div>
       <div style="font-size:12px;color:#6b7280;">${escapeHtml(text)}</div>
+      ${action?.label ? `<div onclick="window['__toastAction_${id}']?.();document.getElementById('${id}')?.remove();" style="margin-top:8px;display:inline-block;font-size:12px;font-weight:700;color:#22c55e;cursor:pointer;text-decoration:underline;">${escapeHtml(action.label)}</div>` : ""}
     </div>
     <div onclick="document.getElementById('${id}')?.remove()" style="cursor:pointer;color:#9ca3af;font-size:16px;line-height:1;flex-shrink:0;">×</div>
   `;
   document.body.appendChild(toast);
 
-  // Desvanece después de 4 segundos
+  // Desvanece después de unos segundos (más tiempo si tiene una acción para leer/clicar)
   setTimeout(() => {
     toast.style.opacity = "0";
     toast.style.transform = "translateY(16px)";
-    setTimeout(() => toast.remove(), 700);
-  }, 4000);
+    setTimeout(() => { toast.remove(); delete window["__toastAction_" + id]; }, 700);
+  }, action?.label ? 9000 : 4000);
 }
 window.showToast = showToast;
 window.checkNotificaciones = checkNotificaciones;
@@ -13442,7 +13444,8 @@ async function sincronizarMRW(esAutomatico = false) {
           await loadMetricas();
         }
       } else if (data.mrwError) {
-        showToast("⚠️ MRW rechazó la consulta", data.mrwError, "#f59e0b");
+        showToast("⚠️ MRW rechazó la consulta", data.mrwError, "#f59e0b",
+          data.errors?.length ? { label: "Ver pedidos afectados", onClick: () => mostrarPedidosFallidosMRW(data.errors) } : null);
       } else {
         showToast("— MRW sincronizado", "Sin cambios de estado esta vez", "#6b7280");
       }
@@ -13474,8 +13477,42 @@ async function desintegrarMRW() {
   } catch(e) { console.error(e); }
 }
 
+function mostrarPedidosFallidosMRW(errores) {
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.id = "modal-mrw-fallidos";
+  const rows = errores.map(e => `
+    <div onclick="closeModal();abrirDetallePedido(${e.orderId})"
+      style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;"
+      onmouseover="this.style.background='var(--input)'" onmouseout="this.style.background='transparent'">
+      <span style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(e.orderNumber || ("#" + e.orderId))}</span>
+      <span style="font-size:12.5px;color:var(--muted);">${escapeHtml(e.tracking || "-")}</span>
+    </div>`).join("");
+
+  modal.innerHTML = `
+    <div class="modal" style="max-width:480px;width:95%;max-height:80vh;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,.1);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">⚠️</div>
+        <div>
+          <h3 style="margin:0;font-size:16px;font-weight:700;">Pedidos que MRW no reconoce</h3>
+          <div style="font-size:12px;color:#6b7280;">${errores.length} pedido${errores.length === 1 ? "" : "s"} · MRW no encuentra este número de albarán en su sistema</div>
+        </div>
+      </div>
+      <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--text);margin:10px 0;">
+        Puede deberse a un número de seguimiento mal escrito, un envío creado con otra agencia/cuenta de MRW, o un envío demasiado antiguo que MRW ya no tiene en su histórico. Haz clic en un pedido para revisarlo.
+      </div>
+      <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:16px;">
+        ${rows}
+      </div>
+      <button onclick="closeModal()" style="padding:10px;border:1px solid #374151;border-radius:8px;background:#111827;color:#f9fafb;font-size:13px;cursor:pointer;font-weight:600;">Cerrar</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
 window.abrirModalMRW         = abrirModalMRW;
 window.guardarCredencialesMRW = guardarCredencialesMRW;
 window.sincronizarMRW        = sincronizarMRW;
 window.desintegrarMRW        = desintegrarMRW;
 window.checkMRWIntegration   = checkMRWIntegration;
+window.mostrarPedidosFallidosMRW = mostrarPedidosFallidosMRW;

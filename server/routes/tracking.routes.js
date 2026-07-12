@@ -342,7 +342,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
     if (!creds) return res.status(400).json({ error: "MRW no integrado" });
 
     const orders = await req.db.all(`
-      SELECT o.id, o.tracking_number, o.fulfillment_status
+      SELECT o.id, o.order_number, o.tracking_number, o.fulfillment_status
       FROM orders o
       LEFT JOIN shops s ON s.id = o.shop_id
       WHERE (s.user_id = $1 OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
@@ -408,7 +408,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
           estadoTexto = "entregado";
         } else if (!allEstados.length) {
           if (!mrwFault) mrwFault = extractMrwFault(xml);
-          errors.push(order.tracking_number);
+          errors.push({ orderId: order.id, orderNumber: order.order_number, tracking: order.tracking_number });
           continue;
         } else {
           estadoTexto = null;
@@ -434,7 +434,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
         }
       } catch(e) {
         console.error(`MRW fetch ERROR para ${order.tracking_number}:`, e.message);
-        errors.push(order.tracking_number);
+        errors.push({ orderId: order.id, orderNumber: order.order_number, tracking: order.tracking_number });
       } finally {
         global.__mrwSyncStatus[req.user.id].done++;
         await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]).catch(() => {});
