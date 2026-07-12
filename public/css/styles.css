@@ -1363,6 +1363,10 @@ body.dark .sidebar .toggle span { color: #9ca3af; }
   border-bottom: 2px solid var(--green);
 }
 
+.tab-warn { color: #f59e0b !important; }
+.tab-warn:hover { color: #d97706 !important; }
+.tab-warn.active { color: #d97706 !important; border-bottom: 2px solid #f59e0b; }
+
 .orders-table {
   width: 100%;
 }

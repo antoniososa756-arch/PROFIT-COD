@@ -103,6 +103,9 @@ router.use(async (req, res, next) => {
   try {
     await req.db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);
   } catch(e) {}
+  try {
+    await req.db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_rejected BOOLEAN DEFAULT false`);
+  } catch(e) {}
   next();
 });
 
@@ -229,12 +232,14 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
       if (nuevoStatus !== order.fulfillment_status) {
         await req.db.run("UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2", [nuevoStatus, order.id]);
       }
+      await req.db.run("UPDATE orders SET mrw_rejected = false WHERE id = $1", [order.id]).catch(() => {});
       return res.json({ ok: true, updated: nuevoStatus !== order.fulfillment_status, status: nuevoStatus });
     }
 
     if (!allEstados.length) {
       const mrwFault = extractMrwFault(xml);
       if (mrwFault) {
+        await req.db.run("UPDATE orders SET mrw_rejected = true WHERE id = $1", [order.id]).catch(() => {});
         return res.json({ ok: true, updated: false, status: order.fulfillment_status, mrwError: mrwFault });
       }
       const allTags = [...xml.matchAll(/<([A-Za-z:]+)[^>]*>([^<]{1,80})</g)].map(m => `${m[1]}: ${m[2]}`).slice(0, 10);
@@ -246,6 +251,7 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
     if (nuevoStatus !== order.fulfillment_status) {
       await req.db.run("UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2", [nuevoStatus, order.id]);
     }
+    await req.db.run("UPDATE orders SET mrw_rejected = false WHERE id = $1", [order.id]).catch(() => {});
     res.json({ ok: true, updated: nuevoStatus !== order.fulfillment_status, status: nuevoStatus });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -366,6 +372,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
     // vuelve a seleccionar los mismos pedidos fallidos una y otra vez, dejando al resto
     // sin comprobar nunca — por eso el try/catch/finally de abajo actualiza siempre.
     for (const order of orders) {
+      let rejected = null; // null = no tocar el flag; true/false = actualizarlo en el finally
       try {
         await new Promise(r => setTimeout(r, 140));
         const soapBody = `<?xml version="1.0" encoding="utf-8"?>
@@ -406,12 +413,15 @@ router.post("/mrw-sync", auth, async (req, res) => {
         let estadoTexto;
         if (!allEstados.length && horaEntregaMatch) {
           estadoTexto = "entregado";
+          rejected = false;
         } else if (!allEstados.length) {
           if (!mrwFault) mrwFault = extractMrwFault(xml);
           errors.push({ orderId: order.id, orderNumber: order.order_number, tracking: order.tracking_number });
+          rejected = true;
           continue;
         } else {
           estadoTexto = null;
+          rejected = false;
         }
 
         const nuevoStatus = estadoTexto === "entregado"
@@ -435,9 +445,14 @@ router.post("/mrw-sync", auth, async (req, res) => {
       } catch(e) {
         console.error(`MRW fetch ERROR para ${order.tracking_number}:`, e.message);
         errors.push({ orderId: order.id, orderNumber: order.order_number, tracking: order.tracking_number });
+        rejected = true;
       } finally {
         global.__mrwSyncStatus[req.user.id].done++;
-        await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]).catch(() => {});
+        if (rejected === null) {
+          await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]).catch(() => {});
+        } else {
+          await req.db.run("UPDATE orders SET last_mrw_check = now()::text, mrw_rejected = $2 WHERE id = $1", [order.id, rejected]).catch(() => {});
+        }
       }
     }
 

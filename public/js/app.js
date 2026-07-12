@@ -2926,6 +2926,7 @@ if (id === "pedidos") {
           <span class="tab" onclick="filterByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
           <span class="tab" onclick="filterByTab(this, 'franquicia')">Franquicia</span>
           <span class="tab" onclick="filterByTab(this, 'cancelado')">Cancelado</span>
+          <span class="tab tab-warn" onclick="filterByTabMrwRechazado(this)">⚠️ Rechazado MRW</span>
         </div>
 
         <div id="orders-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
@@ -10311,7 +10312,7 @@ async function refreshCacheBackground() {
 setInterval(refreshCacheBackground, 55000);
 
 // Estado de filtros de pedidos (server-side)
-let ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false };
+let ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false };
 let ordersTotal = 0, ordersPages = 0;
 let __ordersFetchId = 0;
 
@@ -10332,6 +10333,7 @@ async function fetchOrdersFiltered() {
     if (ordersState.dateTo)     params.set("to",   ordersState.dateTo);
   }
   if (ordersState.hasTracking) params.set("hasTracking", "1");
+  if (ordersState.mrwRejected) params.set("mrwRejected", "1");
 
   try {
     const res = await fetch(`${API_BASE}/api/orders?${params}`, {
@@ -11724,13 +11726,13 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false };
+  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false };
   fetchOrdersFiltered();
   toggleFilterPanel();
 }
 
 function clearFiltersInline() {
-  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false };
+  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false };
   const df = document.getElementById("filter-date-from");
   const dt = document.getElementById("filter-date-to");
   const sh = document.getElementById("filter-shop-inline");
@@ -11756,26 +11758,34 @@ function filterByTab(el, status) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
   _clearSearchOnTabSwitch();
-  ordersState = { ...ordersState, status: status || "", hasTracking: false, page: 1 };
+  ordersState = { ...ordersState, status: status || "", hasTracking: false, mrwRejected: false, page: 1 };
   fetchOrdersFiltered();
 }
 function filterByTabMulti(el, statuses) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
   _clearSearchOnTabSwitch();
-  ordersState = { ...ordersState, status: statuses.join(","), hasTracking: false, page: 1 };
+  ordersState = { ...ordersState, status: statuses.join(","), hasTracking: false, mrwRejected: false, page: 1 };
   fetchOrdersFiltered();
 }
 function filterByTabPendienteMRW(el) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
   _clearSearchOnTabSwitch();
-  ordersState = { ...ordersState, status: "pendiente", hasTracking: true, page: 1 };
+  ordersState = { ...ordersState, status: "pendiente", hasTracking: true, mrwRejected: false, page: 1 };
+  fetchOrdersFiltered();
+}
+function filterByTabMrwRechazado(el) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  _clearSearchOnTabSwitch();
+  ordersState = { ...ordersState, status: "", hasTracking: false, mrwRejected: true, page: 1 };
   fetchOrdersFiltered();
 }
 window.filterByTab = filterByTab;
 window.filterByTabMulti = filterByTabMulti;
 window.filterByTabPendienteMRW = filterByTabPendienteMRW;
+window.filterByTabMrwRechazado = filterByTabMrwRechazado;
 
 
 
