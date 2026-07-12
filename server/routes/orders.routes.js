@@ -59,7 +59,7 @@ router.get("/", auth, async (req, res) => {
       params.push(`%${q}%`); i++;
     }
     if (hasTracking) { conditions.push(`o.tracking_number IS NOT NULL AND o.tracking_number != ''`); }
-    if (mrwRejected) { conditions.push(`o.mrw_rejected = true`); }
+    if (mrwRejected) { conditions.push(`o.mrw_rejected = true AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')`); }
 
     const where = conditions.join(" AND ");
 
@@ -210,12 +210,14 @@ router.post("/marcar-estado", auth, async (req, res) => {
   if (!order_id && !id) return res.status(400).json({ error: "Falta order_id" });
   if (!ESTADOS_FINALES.includes(estado)) return res.status(400).json({ error: "Estado no válido" });
   try {
+    // Sin filtrar por shops.status='active': la tienda puede estar desactivada
+    // y el pedido sigue siendo real y del usuario, debe poder actualizarse igual.
     const result = await db.run(
       order_id
-        ? `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text
-           WHERE order_id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status = 'active')`
-        : `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text
-           WHERE id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status = 'active')`,
+        ? `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text, mrw_rejected = false
+           WHERE order_id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3)`
+        : `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text, mrw_rejected = false
+           WHERE id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3)`,
       [estado, order_id || id, req.user.id]
     );
     if (!result.changes) return res.status(404).json({ error: "Pedido no encontrado" });
@@ -230,8 +232,8 @@ router.post("/marcar-estado-bulk", auth, async (req, res) => {
   if (!ESTADOS_FINALES.includes(estado)) return res.status(400).json({ error: "Estado no válido" });
   try {
     const result = await db.run(
-      `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text
-       WHERE id = ANY($2::int[]) AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status = 'active')`,
+      `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text, mrw_rejected = false
+       WHERE id = ANY($2::int[]) AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3)`,
       [estado, ids, req.user.id]
     );
     res.json({ ok: true, updated: result.changes || 0 });
