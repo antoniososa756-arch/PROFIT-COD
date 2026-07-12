@@ -106,6 +106,9 @@ router.use(async (req, res, next) => {
   try {
     await req.db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_rejected BOOLEAN DEFAULT false`);
   } catch(e) {}
+  try {
+    await req.db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_history_json TEXT`);
+  } catch(e) {}
   next();
 });
 
@@ -268,7 +271,7 @@ router.get("/mrw-history/:orderId", auth, async (req, res) => {
     if (!creds) return res.status(400).json({ error: "MRW no integrado" });
 
     const order = await req.db.get(
-      `SELECT o.id, o.tracking_number
+      `SELECT o.id, o.tracking_number, o.mrw_history_json
        FROM orders o
        WHERE o.id = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
@@ -276,6 +279,12 @@ router.get("/mrw-history/:orderId", auth, async (req, res) => {
       [req.params.orderId, req.user.id]
     );
     if (!order?.tracking_number) return res.status(404).json({ error: "Pedido no encontrado o sin tracking" });
+
+    // Si ya teníamos un histórico guardado de una consulta anterior, es lo que
+    // devolvemos si MRW ahora no da nada (ver más abajo) — así no desaparece
+    // la información cuando MRW purga el envío de su sistema tras un tiempo.
+    let cachedHistory = [];
+    try { cachedHistory = order.mrw_history_json ? JSON.parse(order.mrw_history_json) : []; } catch (e) { cachedHistory = []; }
 
     const soapBody = `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
@@ -309,6 +318,7 @@ router.get("/mrw-history/:orderId", auth, async (req, res) => {
     const scope = xml.match(/<[^:]*:?SeguimientoAbonado[^>]*>([\s\S]*?)<\/[^:]*:?SeguimientoAbonado>/);
     if (!scope) {
       const mrwFault = extractMrwFault(xml);
+      if (cachedHistory.length) return res.json({ history: cachedHistory, stale: true, mrwError: mrwFault || null });
       return res.json({ history: [], mrwError: mrwFault || null });
     }
 
@@ -330,8 +340,13 @@ router.get("/mrw-history/:orderId", auth, async (req, res) => {
 
     if (!history.length) {
       const mrwFault = extractMrwFault(xml);
+      if (cachedHistory.length) return res.json({ history: cachedHistory, stale: true, mrwError: mrwFault || null });
       return res.json({ history: [], mrwError: mrwFault || null });
     }
+
+    // Guardamos el histórico bueno más reciente para poder servirlo si en el
+    // futuro MRW deja de tenerlo (ver arriba).
+    await req.db.run("UPDATE orders SET mrw_history_json = $1 WHERE id = $2", [JSON.stringify(history), order.id]).catch(() => {});
 
     res.json({ history });
   } catch (e) {

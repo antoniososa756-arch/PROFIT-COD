@@ -10995,6 +10995,7 @@ async function cargarSeguimientoMRW(orderId) {
       </tr>`).join("");
 
     box.innerHTML = `
+      ${data.stale ? `<div style="padding:9px 18px;font-size:12px;color:#d97706;background:rgba(245,158,11,.08);border-bottom:1px solid var(--border);">⚠️ MRW ya no tiene este envío en su sistema — se muestra el último histórico guardado.</div>` : ""}
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;">
           <thead>
