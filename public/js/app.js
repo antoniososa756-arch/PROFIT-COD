@@ -10836,6 +10836,20 @@ function renderDetallePedido(order) {
         <div style="font-size:19px;font-weight:800;color:var(--text);">${escapeHtml(order.order_number || "-")}</div>
         ${_dpPill(fin.label, fin.bg, fin.color, fin.border, fin.icon)}
         <span class="status ${statusClass(order.fulfillment_status)}">${statusLabel(order.fulfillment_status)}</span>
+        ${!["entregado","cancelado","destruido","devuelto"].includes(order.fulfillment_status) ? `
+        <div style="position:relative;">
+          <button onclick="toggleEstadoMenu(event,'menu-estado-detalle')" title="Cambiar estado"
+            style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--input);border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit;">
+            Cambiar estado
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="menu-estado-detalle" style="display:none;position:absolute;left:0;top:calc(100% + 4px);background:#111827;border:1px solid #374151;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:150px;overflow:hidden;">
+            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','entregado')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#22c55e;cursor:pointer;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(34,197,94,.08)'" onmouseout="this.style.background=''">✓ Entregado</div>
+            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','devuelto')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#ea580c;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #374151;" onmouseover="this.style.background='rgba(234,88,12,.08)'" onmouseout="this.style.background=''">↩ Devuelto</div>
+            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','destruido')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#c4b5fd;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #374151;" onmouseover="this.style.background='rgba(124,58,237,.08)'" onmouseout="this.style.background=''">✕ Destruido</div>
+            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','cancelado')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #374151;" onmouseover="this.style.background='rgba(220,38,38,.08)'" onmouseout="this.style.background=''">✕ Cancelado</div>
+          </div>
+        </div>` : ""}
       </div>
       ${shopifyUrl ? `<a href="${shopifyUrl}" target="_blank"
         style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#22c55e;border:none;border-radius:8px;font-size:12.5px;font-weight:700;color:#fff;text-decoration:none;box-shadow:0 2px 10px rgba(34,197,94,.3);transition:background .15s,box-shadow .15s;"
@@ -11314,8 +11328,25 @@ async function cambiarEstadoPedido(orderId, orderNumber, internalId, estado) {
     await fetchOrdersFiltered();
   } catch(e) { alert("Error de conexión"); }
 }
+async function cambiarEstadoPedidoDetalle(internalId, orderNumber, estado) {
+  const label = _estadoLabels[estado] || estado;
+  if (!confirm(`¿Estás seguro de que quieres marcar el pedido ${orderNumber} como ${label}?\n\nEsta acción no se puede revertir.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/marcar-estado`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getActiveToken(), "Content-Type": "application/json" },
+      body: JSON.stringify({ estado, id: internalId })
+    });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || "Error al actualizar el pedido"); return; }
+    showToast(`Pedido ${orderNumber} marcado como ${label}`, "", _estadoColors[estado] || "#374151");
+    invalidateCache("orders");
+    await abrirDetallePedido(internalId);
+  } catch(e) { alert("Error de conexión"); }
+}
 window.toggleEstadoMenu    = toggleEstadoMenu;
 window.cambiarEstadoPedido = cambiarEstadoPedido;
+window.cambiarEstadoPedidoDetalle = cambiarEstadoPedidoDetalle;
 
 window.fetchOrders = fetchOrders;
 window.filterOrders = filterOrders;
