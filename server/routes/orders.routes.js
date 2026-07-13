@@ -6,6 +6,62 @@ const router = express.Router();
 // Migración: añadir columna fecha_pago si no existe
 db.run(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS fecha_pago TEXT`).catch(() => {});
 
+// Construye el WHERE + params de filtros de pedidos compartido entre el listado
+// paginado y /ids (navegación anterior/siguiente en el detalle del pedido) —
+// mismos filtros, mismo orden, para que ambos representen la misma lista.
+function buildOrdersWhere(req, userId) {
+  const shop   = req.query.shop   || null;
+  const status = req.query.status || null;
+  const from   = req.query.from   || null;
+  const to     = req.query.to     || null;
+  const q      = req.query.q      || null;
+  const hasTracking = req.query.hasTracking === "1";
+  const mrwRejected = req.query.mrwRejected === "1";
+
+  const conditions = [
+    `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`
+  ];
+  const params = [userId];
+  let i = 2;
+
+  if (shop) { conditions.push(`COALESCE(o.shop_domain, s.shop_domain) = $${i++}`); params.push(shop); }
+  if (status) {
+    const statuses = status.split(",").map(s => s.trim()).filter(Boolean);
+    if (statuses.length === 1) {
+      conditions.push(`o.fulfillment_status = $${i++}`); params.push(statuses[0]);
+    } else {
+      conditions.push(`o.fulfillment_status = ANY($${i++}::text[])`); params.push(statuses);
+    }
+  }
+  if (from)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
+  if (to)     { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
+  if (q) {
+    conditions.push(`(o.order_number ILIKE $${i} OR o.customer_name ILIKE $${i} OR o.tracking_number ILIKE $${i})`);
+    params.push(`%${q}%`); i++;
+  }
+  if (hasTracking) { conditions.push(`o.tracking_number IS NOT NULL AND o.tracking_number != ''`); }
+  if (mrwRejected) { conditions.push(`o.mrw_rejected = true AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')`); }
+
+  return { where: conditions.join(" AND "), params, nextIndex: i };
+}
+
+// GET /api/orders/ids — lista completa (solo ids, en orden) de los pedidos que
+// cumplen los filtros actuales. La usa el detalle del pedido para las flechas
+// anterior/siguiente y el contador "X de Y", igual que el "list view" de Shopify.
+router.get("/ids", auth, async (req, res) => {
+  try {
+    const { where, params } = buildOrdersWhere(req, req.user.id);
+    const rows = await db.all(
+      `SELECT o.id FROM orders o LEFT JOIN shops s ON s.id = o.shop_id WHERE ${where} ORDER BY o.created_at DESC LIMIT 5000`,
+      params
+    );
+    res.json({ ids: (rows || []).map(r => r.id) });
+  } catch (e) {
+    console.error("Orders ids error:", e);
+    res.status(500).json({ error: "Error obteniendo pedidos" });
+  }
+});
+
 // GET /api/orders  — soporta paginación y filtros server-side
 // Params: page, limit, shop, status, from, to, q, light (sin raw_json)
 router.get("/", auth, async (req, res) => {
@@ -13,14 +69,7 @@ router.get("/", auth, async (req, res) => {
   const page   = Math.max(1, parseInt(req.query.page)  || 1);
   const limit  = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 50));
   const offset = (page - 1) * limit;
-  const shop   = req.query.shop   || null;
-  const status = req.query.status || null;
-  const from   = req.query.from   || null;
-  const to     = req.query.to     || null;
-  const q          = req.query.q          || null;
   const light      = req.query.light === "1";
-  const hasTracking = req.query.hasTracking === "1";
-  const mrwRejected = req.query.mrwRejected === "1";
 
   // Paginar solo cuando se pide explícitamente con ?page
   // Los filtros (from, to, shop, status, q) funcionan en ambos modos
@@ -37,31 +86,7 @@ router.get("/", auth, async (req, res) => {
          o.total_price, o.currency, o.cancelled_at, o.raw_json,
          COALESCE(o.shop_domain, s.shop_domain) as shop_domain`;
 
-    const conditions = [
-      `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`
-    ];
-    const params = [userId];
-    let i = 2;
-
-    if (shop) { conditions.push(`COALESCE(o.shop_domain, s.shop_domain) = $${i++}`); params.push(shop); }
-    if (status) {
-      const statuses = status.split(",").map(s => s.trim()).filter(Boolean);
-      if (statuses.length === 1) {
-        conditions.push(`o.fulfillment_status = $${i++}`); params.push(statuses[0]);
-      } else {
-        conditions.push(`o.fulfillment_status = ANY($${i++}::text[])`); params.push(statuses);
-      }
-    }
-    if (from)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
-    if (to)     { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
-    if (q) {
-      conditions.push(`(o.order_number ILIKE $${i} OR o.customer_name ILIKE $${i} OR o.tracking_number ILIKE $${i})`);
-      params.push(`%${q}%`); i++;
-    }
-    if (hasTracking) { conditions.push(`o.tracking_number IS NOT NULL AND o.tracking_number != ''`); }
-    if (mrwRejected) { conditions.push(`o.mrw_rejected = true AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')`); }
-
-    const where = conditions.join(" AND ");
+    const { where, params, nextIndex: i } = buildOrdersWhere(req, userId);
 
     if (!paginate) {
       // Compatibilidad: devuelve array plano sin raw_json para reducir payload

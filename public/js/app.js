@@ -10635,7 +10635,8 @@ window.handleOrderRowClick = function(e, orderId) {
   abrirDetallePedido(orderId);
 };
 
-window.abrirDetallePedido = async function(orderId) {
+window.abrirDetallePedido = async function(orderId, opts = {}) {
+  orderId = Number(orderId);
   const box = document.getElementById("cardBox");
   const t = document.getElementById("title");
   const s = document.getElementById("subtitle");
@@ -10646,6 +10647,15 @@ window.abrirDetallePedido = async function(orderId) {
   _syncUrlForRoute(`/pedido/${orderId}`);
   document.querySelectorAll(".menu-item").forEach((i) => i.classList.remove("active"));
   document.querySelector('.menu-item[data-id="pedidos"]')?.classList.add("active");
+
+  // Contexto de navegación anterior/siguiente (flechas + contador "X de Y"),
+  // basado en los filtros actuales de Pedidos — igual que el list view de Shopify.
+  // Si venimos de una flecha/atajo (keepNavContext), el índice ya se actualizó.
+  if (opts.keepNavContext) {
+    if (window.__orderNavIds) window.__orderNavIndex = window.__orderNavIds.indexOf(orderId);
+  } else {
+    setupOrderNavContext(orderId);
+  }
 
   if (t) t.textContent = "Detalle del pedido";
   if (s) s.textContent = "Información completa extraída de Shopify";
@@ -10693,6 +10703,82 @@ window.abrirDetallePedido = async function(orderId) {
     if (body) body.innerHTML = `<div style="color:#dc2626;padding:24px;text-align:center;">No se pudo cargar el detalle del pedido.</div>`;
   }
 };
+
+// =========================
+// NAVEGACIÓN ANTERIOR/SIGUIENTE EN EL DETALLE DEL PEDIDO (flechas + J/K)
+// =========================
+window.__orderNavIds = null;
+window.__orderNavIndex = -1;
+
+async function setupOrderNavContext(orderId) {
+  window.__orderNavIds = null;
+  window.__orderNavIndex = -1;
+  renderOrderNavControls();
+  try {
+    const params = new URLSearchParams();
+    if (ordersState.status)     params.set("status", ordersState.status);
+    if (ordersState.shop)       params.set("shop", ordersState.shop);
+    if (ordersState.q)          params.set("q", ordersState.q);
+    if (!ordersState.q) {
+      if (ordersState.dateFrom) params.set("from", ordersState.dateFrom);
+      if (ordersState.dateTo)   params.set("to", ordersState.dateTo);
+    }
+    if (ordersState.hasTracking) params.set("hasTracking", "1");
+    if (ordersState.mrwRejected) params.set("mrwRejected", "1");
+
+    const res = await fetch(`${API_BASE}/api/orders/ids?${params}`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await res.json();
+    window.__orderNavIds = (data.ids || []).map(Number);
+    window.__orderNavIndex = window.__orderNavIds.indexOf(orderId);
+  } catch (e) {
+    window.__orderNavIds = null;
+    window.__orderNavIndex = -1;
+  }
+  renderOrderNavControls();
+}
+
+function renderOrderNavControls() {
+  const el = document.getElementById("dp-nav-controls");
+  if (!el) return;
+  const ids = window.__orderNavIds;
+  const idx = window.__orderNavIndex;
+  if (!ids || idx === -1) { el.innerHTML = ""; return; }
+  const hasPrev = idx > 0;
+  const hasNext = idx < ids.length - 1;
+  el.innerHTML = `
+    <div style="display:inline-flex;align-items:center;background:var(--input);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <button onclick="irAOrdenAdyacente(-1)" title="Pedido anterior (J)" ${hasPrev ? "" : "disabled"}
+        style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:${hasPrev ? "pointer" : "default"};color:${hasPrev ? "var(--text)" : "var(--muted)"};opacity:${hasPrev ? "1" : ".4"};">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <span style="font-size:12px;font-weight:600;color:var(--muted);padding:0 8px;white-space:nowrap;">${idx + 1} de ${ids.length}</span>
+      <button onclick="irAOrdenAdyacente(1)" title="Pedido siguiente (K)" ${hasNext ? "" : "disabled"}
+        style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;border-left:1px solid var(--border);cursor:${hasNext ? "pointer" : "default"};color:${hasNext ? "var(--text)" : "var(--muted)"};opacity:${hasNext ? "1" : ".4"};">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>`;
+}
+
+function irAOrdenAdyacente(direction) {
+  const ids = window.__orderNavIds;
+  if (!ids || window.__orderNavIndex === -1) return;
+  const newIndex = window.__orderNavIndex + direction;
+  if (newIndex < 0 || newIndex >= ids.length) return;
+  window.__orderNavIndex = newIndex;
+  abrirDetallePedido(ids[newIndex], { keepNavContext: true });
+}
+window.irAOrdenAdyacente = irAOrdenAdyacente;
+
+document.addEventListener("keydown", (e) => {
+  if (window.__currentRoute?.type !== "order") return;
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === "j" || e.key === "J") { e.preventDefault(); irAOrdenAdyacente(-1); }
+  else if (e.key === "k" || e.key === "K") { e.preventDefault(); irAOrdenAdyacente(1); }
+});
 
 const _DP_FINANCIAL = {
   pending:         { label: "Pago pendiente",  bg: "rgba(245,158,11,.12)", color: "#d97706", border: "rgba(245,158,11,.35)",  icon: "⏱" },
@@ -10864,9 +10950,12 @@ function renderDetallePedido(order) {
           </div>
         </div>` : ""}
       </div>
-      ${shopifyUrl ? `<a href="${shopifyUrl}" target="_blank"
-        style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#22c55e;border:none;border-radius:8px;font-size:12.5px;font-weight:700;color:#fff;text-decoration:none;box-shadow:0 2px 10px rgba(34,197,94,.3);transition:background .15s,box-shadow .15s;"
-        onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 4px 16px rgba(34,197,94,.45)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 2px 10px rgba(34,197,94,.3)';">Ver en Shopify ↗</a>` : ""}
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="dp-nav-controls"></span>
+        ${shopifyUrl ? `<a href="${shopifyUrl}" target="_blank"
+          style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#22c55e;border:none;border-radius:8px;font-size:12.5px;font-weight:700;color:#fff;text-decoration:none;box-shadow:0 2px 10px rgba(34,197,94,.3);transition:background .15s,box-shadow .15s;"
+          onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 4px 16px rgba(34,197,94,.45)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 2px 10px rgba(34,197,94,.3)';">Ver en Shopify ↗</a>` : ""}
+      </div>
     </div>
     <div style="font-size:12.5px;color:var(--muted);margin-bottom:20px;">${fecha} · ${escapeHtml(order.shop_domain || "-")}</div>
 
@@ -10983,6 +11072,7 @@ function renderDetallePedido(order) {
   `;
 
   if (order.tracking_number) cargarSeguimientoMRW(order.id);
+  renderOrderNavControls();
 }
 
 async function cargarSeguimientoMRW(orderId) {
