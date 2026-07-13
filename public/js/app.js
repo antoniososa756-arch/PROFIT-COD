@@ -830,9 +830,14 @@ const VALID_ROUTE_SECTIONS = ["metricas","rentabilidad","tiendas","productos","p
 let __skipPush = false;
 
 function _syncUrlForRoute(path) {
-  if (window.location.pathname === path) return;
-  if (__skipPush) history.replaceState(null, "", path);
-  else history.pushState(null, "", path);
+  // Si estamos impersonando a un cliente, ese estado vive en ?impersonated=1
+  // en la URL (getActiveToken lo lee ahí) — no se puede perder al navegar,
+  // o la app empieza a usar el token del admin en vez del del cliente.
+  const isImpersonated = new URLSearchParams(window.location.search).get("impersonated") === "1";
+  const fullPath = isImpersonated ? `${path}?impersonated=1` : path;
+  if (window.location.pathname === path && window.location.search === (isImpersonated ? "?impersonated=1" : "")) return;
+  if (__skipPush) history.replaceState(null, "", fullPath);
+  else history.pushState(null, "", fullPath);
 }
 
 function restoreFromPath(pathname) {
