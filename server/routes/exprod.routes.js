@@ -7,7 +7,12 @@ router.get("/product", async (req, res) => {
   if (!url) return res.status(400).json({ error: "URL requerida" });
 
   try {
-    let jsonUrl = url.trim().replace(/\/$/, "").replace(/\.json$/, "") + ".json";
+    // Quitar query string (?fbclid=..., ?variant=..., etc.) y hash antes de construir
+    // la URL del JSON — si no, ".json" se pega detrás de esos parámetros y la URL
+    // resultante ya no apunta al endpoint JSON de Shopify (devuelve la página HTML normal).
+    const parsed = new URL(url.trim());
+    const cleanPath = parsed.pathname.replace(/\/$/, "").replace(/\.json$/, "");
+    const jsonUrl = `${parsed.origin}${cleanPath}.json`;
     const r = await fetch(jsonUrl, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; ProfitCOD/1.0)" },
       redirect: "follow",
