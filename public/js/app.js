@@ -1342,10 +1342,10 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
     if (box) {
       box.className = "card";
       const planCards = [
-        { key:"starter",  color:"#10b981", name:"Starter",  price:"0",   ppo:"0",    limit:"120",   free:true },
-        { key:"growth",   color:"#3b82f6", name:"Growth",   price:"39",  ppo:"0,05", limit:"420"  },
-        { key:"pro",      color:"#8b5cf6", name:"Pro",      price:"89",  ppo:"0,04", limit:"1.000"},
-        { key:"business", color:"#f59e0b", name:"Business", price:"149", ppo:"0,03", limit:"3.000"},
+        { key:"starter",  color:"#10b981", name:"Starter",  price:"0",   limit:"120",   free:true },
+        { key:"growth",   color:"#3b82f6", name:"Growth",   price:"39",  limit:"420"  },
+        { key:"pro",      color:"#8b5cf6", name:"Pro",      price:"89",  limit:"1.000"},
+        { key:"business", color:"#f59e0b", name:"Business", price:"149", limit:"3.000"},
       ];
       const trialExpired = up.had_trial && up.status !== "active";
       const headline = trialExpired
@@ -1369,8 +1369,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
               <div style="border:2px solid ${p.color};border-radius:12px;padding:16px 20px;min-width:140px;text-align:left;">
                 <div style="font-size:11px;font-weight:700;color:${p.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${p.name}</div>
                 <div style="font-size:22px;font-weight:800;color:#f9fafb;">${p.free ? "Gratis" : p.price+"€"}<span style="font-size:12px;font-weight:400;color:#6b7280;">${p.free ? "" : "/mes"}</span></div>
-                <div style="font-size:11px;color:#6b7280;margin-top:2px;">${p.free ? "sin coste" : "+ "+p.ppo+"€/pedido"}</div>
-                <div style="font-size:11px;color:#6b7280;">hasta ${p.limit} pedidos/mes</div>
+                <div style="font-size:11px;color:#6b7280;margin-top:2px;">hasta ${p.limit} pedidos/mes</div>
               </div>`).join("")}
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
@@ -4008,10 +4007,10 @@ if (id === "plan") {
   const isAdmin = currentUser.role === "Administrador";
 
   const PLAN_DEFS = {
-    starter:  { name:"Starter",  price:"0",   ppo:"0",    limit:"120",   color:"#10b981", free:true, features:["Tiendas ilimitadas","Hasta 120 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
-    growth:   { name:"Growth",   price:"39",  ppo:"0,05", limit:"420",   color:"#3b82f6", features:["Tiendas ilimitadas","Hasta 420 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
-    pro:      { name:"Pro",      price:"89",  ppo:"0,04", limit:"1.000", color:"#8b5cf6", features:["Tiendas ilimitadas","Hasta 1.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
-    business: { name:"Business", price:"149", ppo:"0,03", limit:"3.000", color:"#f59e0b", features:["Tiendas ilimitadas","Hasta 3.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
+    starter:  { name:"Starter",  price:"0",   limit:"120",   color:"#10b981", free:true, features:["Tiendas ilimitadas","Hasta 120 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
+    growth:   { name:"Growth",   price:"39",  limit:"420",   color:"#3b82f6", features:["Tiendas ilimitadas","Hasta 420 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
+    pro:      { name:"Pro",      price:"89",  limit:"1.000", color:"#8b5cf6", features:["Tiendas ilimitadas","Hasta 1.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
+    business: { name:"Business", price:"149", limit:"3.000", color:"#f59e0b", features:["Tiendas ilimitadas","Hasta 3.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
   };
 
   box.className = "card";
@@ -4024,7 +4023,7 @@ if (id === "plan") {
     <div id="plan-cancel-banner" style="display:none;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:10px;padding:12px 18px;margin-bottom:12px;font-size:13px;color:#fde047;font-weight:600;"></div>
     <div id="plan-trial-banner" style="display:none;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:10px;padding:12px 18px;margin-bottom:20px;font-size:13px;color:#16a34a;font-weight:600;"></div>
     <h3 style="font-size:15px;font-weight:700;margin:0 0 6px;">Elige tu plan</h3>
-    <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Tiendas ilimitadas en todos los planes. Precio base mensual + coste por pedido usado.</p>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Tiendas ilimitadas en todos los planes. Precio fijo mensual, sin coste adicional por pedido.</p>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;" id="plan-cards">
       ${Object.entries(PLAN_DEFS).map(([p, info]) => `
         <div id="plan-card-${p}" style="border:2px solid #374151;border-radius:14px;padding:20px;display:flex;flex-direction:column;position:relative;transition:border-color .2s;">
@@ -4033,7 +4032,6 @@ if (id === "plan") {
             <span style="font-size:26px;font-weight:800;color:#f9fafb;">${info.free ? "Gratis" : info.price+"€"}</span>
             <span style="font-size:12px;color:#6b7280;">${info.free ? "" : "/mes"}</span>
           </div>
-          <div style="font-size:12px;color:${info.color};font-weight:600;margin-bottom:2px;">${info.free ? "sin coste adicional" : "+ "+info.ppo+"€ por pedido"}</div>
           <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">hasta ${info.limit} pedidos/mes</div>
           <ul style="list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;flex:1;">
             ${info.features.map(f => `<li style="display:flex;align-items:center;gap:6px;font-size:11px;color:#e5e7eb;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
@@ -4120,14 +4118,9 @@ if (id === "plan") {
         if (inv.available) {
           invoiceDiv.style.display = "block";
           invoiceDiv.innerHTML = `
-            <div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:16px 20px;margin-top:4px;">
-              <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:10px;">Resumen del mes actual (${inv.cycle_start} → ${inv.cycle_end})</div>
-              <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
-                <div style="display:flex;justify-content:space-between;"><span style="color:#6b7280;">Cuota base:</span><span style="font-weight:600;">${inv.base_price.toFixed(2)}€</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#6b7280;">Pedidos usados:</span><span style="font-weight:600;">${inv.orders_used} × ${inv.price_per_order}€</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#6b7280;">Coste variable:</span><span style="font-weight:600;">${inv.variable_cost.toFixed(2)}€</span></div>
-                <div style="display:flex;justify-content:space-between;border-top:1px solid #1f2937;padding-top:6px;margin-top:2px;"><span style="font-weight:700;color:#f9fafb;">Total estimado:</span><span style="font-weight:800;font-size:15px;color:#f9fafb;">${inv.total.toFixed(2)}€</span></div>
-              </div>
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:16px 20px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+              <span style="font-size:13px;color:#e5e7eb;">Ciclo actual: ${inv.cycle_start} → ${inv.cycle_end}</span>
+              <span style="font-weight:800;font-size:15px;color:#f9fafb;">${inv.total.toFixed(2)}€</span>
             </div>`;
         } else {
           invoiceDiv.style.display = "none";
