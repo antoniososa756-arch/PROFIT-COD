@@ -84,8 +84,14 @@ router.get("/plan", auth, async (req, res) => {
     // arrancar el trial en /start-trial, y es lo que se extiende al regalar días desde
     // Gestión de clientes) — no recalcular aparte desde trial_started_at o esos regalos
     // dejan de reflejarse en la cuenta atrás mostrada al cliente.
+    // IMPORTANTE: exigir plan_status === 'trial' además de trial_started_at.
+    // Si no, un cliente que YA paga (status 'active', trial_started_at aún guardado
+    // de cuando probó la app) quedaría marcado como "en trial" para siempre, porque
+    // su plan_expires_at real (el de su suscripción de Stripe, que se renueva cada
+    // mes) siempre está en el futuro — y eso le apagaría el aviso de límite de
+    // pedidos superado sin que en realidad esté en período de prueba.
     const trialStarted = user?.trial_started_at || null;
-    const trialEndsAt  = trialStarted ? user?.plan_expires_at || null : null;
+    const trialEndsAt  = (trialStarted && user?.plan_status === "trial") ? user?.plan_expires_at || null : null;
     const trialActive  = trialStarted && trialEndsAt && new Date() < new Date(trialEndsAt);
 
     // ¿Bloqueado por exceder pedidos? Durante el trial no hay límite de pedidos (igual que en planCheck).
