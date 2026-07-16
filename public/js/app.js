@@ -6443,6 +6443,14 @@ async function loadMetricas() {
     const stats = await statsRes.json();
     if (_myLoadId !== __metricasLoadId) return;
 
+    // Si el token expiró (p.ej. impersonación de más de 2h) o el plan está bloqueado,
+    // no mostrar en silencio "0 pedidos" como si la cuenta estuviera vacía — eso
+    // confunde con una pérdida real de datos. Avisar claramente en su lugar.
+    if (!statsRes.ok) {
+      showToast("❌ No se pudieron cargar las métricas", stats.message || stats.error || "Vuelve a iniciar sesión e inténtalo de nuevo.", "#dc2626");
+      return;
+    }
+
     const total          = stats.total          || 0;
     const pendientes     = stats.pendientes      || 0;
     const transito       = stats.en_transito     || 0;

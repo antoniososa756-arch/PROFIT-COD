@@ -42,7 +42,7 @@ router.post("/impersonate/:id", auth, admin, async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, impersonatedBy: req.user.id, isImpersonated: true },
       process.env.JWT_SECRET,
-      { expiresIn: "30m" }
+      { expiresIn: "2h" }
     );
     res.json({ token });
   } catch (e) { res.status(500).json({ error: "Error DB" }); }
