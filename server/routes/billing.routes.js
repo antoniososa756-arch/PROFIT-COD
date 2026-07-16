@@ -80,12 +80,13 @@ router.get("/plan", auth, async (req, res) => {
       monthlyOrders = await getMonthlyOrders(req.user.id, user?.billing_cycle_start);
     }
 
-    // ¿Está en trial?
+    // ¿Está en trial? plan_expires_at es la fecha real de fin (se fija a +30 días al
+    // arrancar el trial en /start-trial, y es lo que se extiende al regalar días desde
+    // Gestión de clientes) — no recalcular aparte desde trial_started_at o esos regalos
+    // dejan de reflejarse en la cuenta atrás mostrada al cliente.
     const trialStarted = user?.trial_started_at || null;
-    const trialEndsAt  = trialStarted
-      ? new Date(new Date(trialStarted).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      : null;
-    const trialActive  = trialStarted && new Date() < new Date(trialEndsAt);
+    const trialEndsAt  = trialStarted ? user?.plan_expires_at || null : null;
+    const trialActive  = trialStarted && trialEndsAt && new Date() < new Date(trialEndsAt);
 
     // ¿Bloqueado por exceder pedidos? Durante el trial no hay límite de pedidos (igual que en planCheck).
     const orderLimit = planInfo?.order_limit ?? null;
