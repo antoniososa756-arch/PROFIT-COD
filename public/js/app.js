@@ -2064,6 +2064,7 @@ if (id === "gestion-clientes") {
           <div>Contraseña</div>
           <div>Rol</div>
           <div>Ver</div>
+          <div>Días gratis</div>
           <div>Estado</div>
         </div>
 
@@ -2120,6 +2121,11 @@ if (id === "gestion-clientes") {
                 <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
                 <circle cx="12" cy="12" r="3"/>
               </svg>
+            </div>
+
+            <div style="text-align:center;">
+              ${u.role === "cliente" ? `<button onclick="abrirModalDiasGratis(${u.id},'${escapeAttr(u.email)}')" title="Agregar 15 días gratis"
+                style="padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;border:1px solid #22c55e;background:transparent;color:#22c55e;cursor:pointer;font-family:inherit;white-space:nowrap;">+15 días</button>` : `<span style="color:#9ca3af;font-size:12px;">—</span>`}
             </div>
 
             ${u.role !== "admin" ? `
@@ -5911,9 +5917,71 @@ async function confirmReset(userId) {
   alert("Contraseña actualizada correctamente");
 }
 
+function abrirModalDiasGratis(userId, email) {
+  const old = document.querySelector(".modal-bg");
+  if (old) old.remove();
+
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.innerHTML = `
+    <div class="modal">
+      <h3>Agregar 15 días gratis</h3>
+      <p class="muted">Se sumarán 15 días de acceso a <strong>${escapeHtml(email)}</strong> (si ya tiene días restantes, se suman a partir de ahí).</p>
+      <p class="muted" style="margin-top:-6px;">Por seguridad, confirma con <strong>tu contraseña de administrador</strong>:</p>
+
+      <input
+        id="admin-dias-gratis-password"
+        type="password"
+        placeholder="Tu contraseña de administrador"
+        style="width:100%;margin:10px 0;padding:8px;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarDiasGratis(${userId})}"
+      />
+      <div id="dias-gratis-error" style="color:#dc2626;font-size:12.5px;margin-bottom:6px;"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarDiasGratis(${userId})">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  document.getElementById("admin-dias-gratis-password")?.focus();
+}
+
+async function confirmarDiasGratis(userId) {
+  const input = document.getElementById("admin-dias-gratis-password");
+  const errorEl = document.getElementById("dias-gratis-error");
+  const adminPassword = input.value;
+  if (!adminPassword) {
+    if (errorEl) errorEl.textContent = "Introduce tu contraseña de administrador.";
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users/${userId}/grant-free-days`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ adminPassword, days: 15 }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (errorEl) errorEl.textContent = data.error || "Error al agregar los días";
+      return;
+    }
+    closeModal();
+    showToast("✅ Días agregados", `Nueva fecha de vencimiento: ${new Date(data.plan_expires_at).toLocaleDateString("es-ES")}`, "#22c55e");
+  } catch (e) {
+    if (errorEl) errorEl.textContent = "Error de conexión";
+  }
+}
+
 // exponer funciones al HTML
 window.resetPassword = resetPassword;
 window.confirmReset = confirmReset;
+window.abrirModalDiasGratis = abrirModalDiasGratis;
+window.confirmarDiasGratis = confirmarDiasGratis;
 
 async function viewClient(userId) {
   try {

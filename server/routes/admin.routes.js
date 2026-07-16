@@ -48,6 +48,37 @@ router.post("/impersonate/:id", auth, admin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error DB" }); }
 });
 
+// POST /api/admin/users/:id/grant-free-days — regala N días de acceso a un cliente.
+// Requiere la contraseña de la PROPIA cuenta admin como confirmación de seguridad
+// (no la del cliente) antes de tocar su plan.
+router.post("/users/:id/grant-free-days", auth, admin, async (req, res) => {
+  const { adminPassword, days } = req.body || {};
+  const extraDays = Number.isInteger(days) && days > 0 ? days : 15;
+  if (!adminPassword) return res.status(400).json({ error: "Falta la contraseña de administrador" });
+  try {
+    const adminRow = await db.get("SELECT password_hash FROM users WHERE id = ?", [req.user.id]);
+    const match = adminRow && await bcrypt.compare(adminPassword, adminRow.password_hash);
+    if (!match) return res.status(401).json({ error: "Contraseña de administrador incorrecta" });
+
+    const target = await db.get("SELECT id, role, plan, plan_expires_at FROM users WHERE id = ?", [req.params.id]);
+    if (!target) return res.status(404).json({ error: "Usuario no encontrado" });
+    if (target.role !== "cliente") return res.status(400).json({ error: "Solo se puede aplicar a cuentas de cliente" });
+
+    const now = new Date();
+    const base = target.plan_expires_at && new Date(target.plan_expires_at) > now ? new Date(target.plan_expires_at) : now;
+    const newExpiry = new Date(base.getTime() + extraDays * 24 * 60 * 60 * 1000).toISOString();
+    // Si no tenía plan (o quedó en "free" tras cancelar), le damos Starter — la app
+    // bloquea el acceso a cualquier cuenta con plan "free" sin importar la fecha.
+    const newPlan = target.plan && target.plan !== "free" ? target.plan : "starter";
+
+    await db.run(
+      "UPDATE users SET plan = ?, plan_status = 'active', plan_expires_at = ? WHERE id = ?",
+      [newPlan, newExpiry, target.id]
+    );
+    res.json({ ok: true, plan: newPlan, plan_expires_at: newExpiry });
+  } catch (e) { res.status(500).json({ error: "Error servidor" }); }
+});
+
 router.patch("/users/:id/status", auth, admin, async (req, res) => {
   try {
     const user = await db.get("SELECT id, role, active FROM users WHERE id = ?", [req.params.id]);
