@@ -60,7 +60,7 @@ router.post("/users/:id/grant-free-days", auth, admin, async (req, res) => {
     const match = adminRow && await bcrypt.compare(adminPassword, adminRow.password_hash);
     if (!match) return res.status(401).json({ error: "Contraseña de administrador incorrecta" });
 
-    const target = await db.get("SELECT id, role, plan, plan_expires_at FROM users WHERE id = ?", [req.params.id]);
+    const target = await db.get("SELECT id, role, plan, plan_expires_at, stripe_subscription_id FROM users WHERE id = ?", [req.params.id]);
     if (!target) return res.status(404).json({ error: "Usuario no encontrado" });
     if (target.role !== "cliente") return res.status(400).json({ error: "Solo se puede aplicar a cuentas de cliente" });
 
@@ -70,12 +70,17 @@ router.post("/users/:id/grant-free-days", auth, admin, async (req, res) => {
     // Si no tenía plan (o quedó en "free" tras cancelar), le damos Starter — la app
     // bloquea el acceso a cualquier cuenta con plan "free" sin importar la fecha.
     const newPlan = target.plan && target.plan !== "free" ? target.plan : "starter";
+    // Si ya es cliente de pago real (tiene suscripción de Stripe), se queda "active"
+    // con los límites normales de su plan. Si no, usamos "trial" — ese estado no
+    // aplica el límite de pedidos del plan (ver planCheck.js), que es justo lo que
+    // se espera de "días gratis": acceso sin fricción, no forzar el tope de 120/420/...
+    const newStatus = target.stripe_subscription_id ? "active" : "trial";
 
     await db.run(
-      "UPDATE users SET plan = ?, plan_status = 'active', plan_expires_at = ? WHERE id = ?",
-      [newPlan, newExpiry, target.id]
+      "UPDATE users SET plan = ?, plan_status = ?, plan_expires_at = ? WHERE id = ?",
+      [newPlan, newStatus, newExpiry, target.id]
     );
-    res.json({ ok: true, plan: newPlan, plan_expires_at: newExpiry });
+    res.json({ ok: true, plan: newPlan, status: newStatus, plan_expires_at: newExpiry });
   } catch (e) { res.status(500).json({ error: "Error servidor" }); }
 });
 
