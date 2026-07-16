@@ -1173,14 +1173,18 @@ function updateOrderLimitBanner() {
   if (chip && up.plan && up.plan !== "free" && up.plan !== "admin") {
     const planColors = { starter:"#10b981", growth:"#3b82f6", pro:"#8b5cf6", business:"#f59e0b" };
     const planNames  = { starter:"Starter", growth:"Growth", pro:"Pro", business:"Business" };
-    const col = planColors[up.plan] || "#6b7280";
-    const estimated = up.estimated_total != null ? `· ${Number(up.estimated_total).toFixed(2).replace(".",",")}€ est.` : "";
+    // Durante el período de prueba el plan real (ej. "starter") queda oculto detrás
+    // de "Prueba" — así no se confunde con haber contratado ya ese plan de pago.
+    const isTrial = up.trial_active && up.status !== "active";
+    const col   = isTrial ? "#f59e0b" : (planColors[up.plan] || "#6b7280");
+    const label = isTrial ? "Prueba" : (planNames[up.plan] || up.plan);
+    const price = isTrial ? 0 : (up.estimated_total ?? 0);
     chip.style.display = "flex";
     chip.style.borderColor = col + "44";
     chip.innerHTML = `
       <span style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0;"></span>
-      <span style="color:${col};">${planNames[up.plan] || up.plan}</span>
-      ${estimated ? `<span style="color:#9ca3af;font-weight:400;">${estimated}</span>` : ""}
+      <span style="color:${col};">${label}</span>
+      <span style="color:#9ca3af;font-weight:400;">· ${Number(price).toFixed(2).replace(".",",")}€</span>
     `;
   } else if (chip) {
     chip.style.display = "none";
