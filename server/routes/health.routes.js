@@ -24,7 +24,7 @@ router.get("/debug-client-data", async (req, res) => {
       SELECT COUNT(*) as total,
              MIN(created_at) as oldest,
              MAX(created_at) as newest,
-             COUNT(*) FILTER (WHERE created_at >= date_trunc('month', now())) as this_month
+             COUNT(*) FILTER (WHERE created_at::timestamptz >= date_trunc('month', now())) as this_month
       FROM orders o
       WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = ?) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ?))
     `, [user.id, user.id]);
