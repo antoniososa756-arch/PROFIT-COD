@@ -800,7 +800,7 @@ function escapeAttr(str) {
                         <strong>${escapeHtml(n.title)}</strong>
                         ${fechaLabel ? `<span style="font-size:10px;color:#9ca3af;white-space:nowrap;flex-shrink:0;">${escapeHtml(fechaLabel)}</span>` : ""}
                       </div>
-                      <span>${escapeHtml(n.text)}</span>
+                      <span>${n.html || escapeHtml(n.text)}</span>
                     </div>
                   </div>`;
               }).join("")}
@@ -12398,8 +12398,9 @@ async function checkNotificaciones() {
         if (!permShown.has(notiId)) {
           if (estadoAnterior && estadoAnterior !== "entregado") {
             // Transición detectada: mostrar notificación
-            const txt = `${nombre} — ${o.customer_name || ""} · Pedido realizado el ${fechaPedidoHecho || "-"} · Entregado a las ${horaDetectada}`;
-            nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, date: ahoraISO, orderNumber: nombre });
+            const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Entregado a las ${horaDetectada}`;
+            const html = `${escapeHtml(nombre)} · Pedido realizado el <span style="color:#4169e1;font-weight:600;">${fechaPedidoHecho || "-"}</span> · Entregado a las <span style="color:#16a34a;font-weight:600;">${horaDetectada}</span>`;
+            nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, html, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("✅ Pedido entregado", txt, "#22c55e");
           }
@@ -12415,8 +12416,9 @@ async function checkNotificaciones() {
         if (!permShown.has(notiId)) {
           if (estadoAnterior && estadoAnterior !== "franquicia") {
             // Transición detectada: mostrar notificación
-            const txt = `${nombre} — ${o.customer_name || ""} · Pedido realizado el ${fechaPedidoHecho || "-"} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
-            nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, date: ahoraISO, orderNumber: nombre });
+            const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
+            const html = `${escapeHtml(nombre)} · Pedido realizado el <span style="color:#4169e1;font-weight:600;">${fechaPedidoHecho || "-"}</span> · Dejado en franquicia a las <span style="color:#f59e0b;font-weight:600;">${horaDetectada}</span>. Llamar al cliente.`;
+            nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, html, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
           }
