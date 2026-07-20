@@ -12388,6 +12388,9 @@ async function checkNotificaciones() {
       const ahoraISO = new Date().toISOString();
       const ahoraMadrid = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
       const horaDetectada = ahoraMadrid; // "20/03/2026, 14:35"
+      const fechaPedidoHecho = o.created_at
+        ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric" })
+        : null;
 
       // 1. Entregado — solo UNA VEZ para siempre (usa registro permanente)
       if (estado === "entregado") {
@@ -12395,7 +12398,7 @@ async function checkNotificaciones() {
         if (!permShown.has(notiId)) {
           if (estadoAnterior && estadoAnterior !== "entregado") {
             // Transición detectada: mostrar notificación
-            const txt = `${nombre} — ${o.customer_name || ""} · Su pedido fue entregado a las ${horaDetectada}`;
+            const txt = `${nombre} — ${o.customer_name || ""} · Pedido realizado el ${fechaPedidoHecho || "-"} · Entregado a las ${horaDetectada}`;
             nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("✅ Pedido entregado", txt, "#22c55e");
@@ -12412,7 +12415,7 @@ async function checkNotificaciones() {
         if (!permShown.has(notiId)) {
           if (estadoAnterior && estadoAnterior !== "franquicia") {
             // Transición detectada: mostrar notificación
-            const txt = `${nombre} — ${o.customer_name || ""} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
+            const txt = `${nombre} — ${o.customer_name || ""} · Pedido realizado el ${fechaPedidoHecho || "-"} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
             nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
