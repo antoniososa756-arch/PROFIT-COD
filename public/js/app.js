@@ -800,7 +800,7 @@ function escapeAttr(str) {
                         <strong>${escapeHtml(n.title)}</strong>
                         ${fechaLabel ? `<span style="font-size:10px;color:#9ca3af;white-space:nowrap;flex-shrink:0;">${escapeHtml(fechaLabel)}</span>` : ""}
                       </div>
-                      <span>${n.html || escapeHtml(n.text)}</span>
+                      <div>${n.html || escapeHtml(n.text)}</div>
                     </div>
                   </div>`;
               }).join("")}
@@ -12399,7 +12399,8 @@ async function checkNotificaciones() {
           if (estadoAnterior && estadoAnterior !== "entregado") {
             // Transición detectada: mostrar notificación
             const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Entregado a las ${horaDetectada}`;
-            const html = `${escapeHtml(nombre)} · Pedido realizado el <span style="color:#4169e1;font-weight:600;">${fechaPedidoHecho || "-"}</span> · Entregado a las <span style="color:#16a34a;font-weight:600;">${horaDetectada}</span>`;
+            const html = `<div style="font-weight:700;color:var(--text);margin-bottom:3px;">${escapeHtml(nombre)}</div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.6;">Pedido: <span style="color:#4169e1;font-weight:600;">${fechaPedidoHecho || "-"}</span><br>Entregado: <span style="color:#16a34a;font-weight:600;">${horaDetectada}</span></div>`;
             nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, html, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("✅ Pedido entregado", txt, "#22c55e");
@@ -12417,7 +12418,8 @@ async function checkNotificaciones() {
           if (estadoAnterior && estadoAnterior !== "franquicia") {
             // Transición detectada: mostrar notificación
             const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
-            const html = `${escapeHtml(nombre)} · Pedido realizado el <span style="color:#4169e1;font-weight:600;">${fechaPedidoHecho || "-"}</span> · Dejado en franquicia a las <span style="color:#f59e0b;font-weight:600;">${horaDetectada}</span>. Llamar al cliente.`;
+            const html = `<div style="font-weight:700;color:var(--text);margin-bottom:3px;">${escapeHtml(nombre)}</div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.6;">Pedido: <span style="color:#4169e1;font-weight:600;">${fechaPedidoHecho || "-"}</span><br>En franquicia: <span style="color:#f59e0b;font-weight:600;">${horaDetectada}</span><br>Llamar al cliente.</div>`;
             nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, html, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
