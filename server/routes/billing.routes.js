@@ -1,6 +1,7 @@
 const express = require("express");
 const auth = require("../middlewares/auth");
 const db = require("../db");
+const { getEffectiveCycleStart } = require("../utils/billingCycle");
 const router = express.Router();
 
 // price_per_order queda a 0 en todos los planes: el cobro real es solo la cuota
@@ -54,9 +55,7 @@ function getPriceId(cfg, plan) {
 // Contar pedidos desde que arrancó el ciclo de facturación actual (no desde el día 1 del mes,
 // así los pedidos del período de prueba no cuentan contra el límite del plan de pago)
 async function getMonthlyOrders(userId, billingCycleStart) {
-  const cycleStart = billingCycleStart
-    ? new Date(billingCycleStart)
-    : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const cycleStart = getEffectiveCycleStart(billingCycleStart);
   const countRow = await db.get(`
     SELECT COUNT(*) as cnt FROM orders o
     WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
@@ -102,7 +101,7 @@ router.get("/plan", auth, async (req, res) => {
     const now = new Date();
     let daysLeft;
     if (user?.billing_cycle_start) {
-      const nextReset = new Date(user.billing_cycle_start);
+      const nextReset = getEffectiveCycleStart(user.billing_cycle_start);
       nextReset.setMonth(nextReset.getMonth() + 1);
       daysLeft = Math.max(0, Math.ceil((nextReset - now) / (1000 * 60 * 60 * 24)));
     } else {
@@ -172,9 +171,9 @@ router.get("/invoice-preview", auth, async (req, res) => {
     const variableCost = +(ordersUsed * planInfo.price_per_order).toFixed(2);
     const total = +(planInfo.base_price + variableCost).toFixed(2);
     const now = new Date();
-    const cycleEndDate = user?.billing_cycle_start ? new Date(user.billing_cycle_start) : new Date(now.getFullYear(), now.getMonth(), 1);
-    if (user?.billing_cycle_start) cycleEndDate.setMonth(cycleEndDate.getMonth() + 1);
-    else cycleEndDate.setMonth(cycleEndDate.getMonth() + 1, 0);
+    const cycleStartDate = getEffectiveCycleStart(user?.billing_cycle_start);
+    const cycleEndDate = new Date(cycleStartDate);
+    cycleEndDate.setMonth(cycleEndDate.getMonth() + 1);
     const cycleEnd = cycleEndDate.toISOString().slice(0, 10);
 
     res.json({
@@ -185,7 +184,7 @@ router.get("/invoice-preview", auth, async (req, res) => {
       price_per_order: planInfo.price_per_order,
       variable_cost:   variableCost,
       total,
-      cycle_start:     user?.billing_cycle_start?.slice(0, 10) || now.toISOString().slice(0, 7) + "-01",
+      cycle_start:     cycleStartDate.toISOString().slice(0, 10),
       cycle_end:       cycleEnd,
     });
   } catch(e) { res.status(500).json({ error: e.message }); }

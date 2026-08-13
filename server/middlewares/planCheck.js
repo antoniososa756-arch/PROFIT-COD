@@ -4,6 +4,7 @@
  * Los administradores siempre pasan.
  */
 const db = require("../db");
+const { getEffectiveCycleStart } = require("../utils/billingCycle");
 
 // Límites de pedidos por mes según plan
 const PLAN_ORDER_LIMITS = { starter: 120, growth: 420, pro: 1000, business: 3000 };
@@ -36,9 +37,7 @@ module.exports = async (req, res, next) => {
   const orderLimit = PLAN_ORDER_LIMITS[plan];
   if (orderLimit) {
     try {
-      const cycleStart = user.billing_cycle_start
-        ? new Date(user.billing_cycle_start)
-        : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      const cycleStart = getEffectiveCycleStart(user.billing_cycle_start);
       const countRow = await db.get(`
         SELECT COUNT(*) as cnt
         FROM orders o
