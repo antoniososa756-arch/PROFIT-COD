@@ -1216,13 +1216,15 @@ function updateOrderLimitBanner() {
   } else if (up.is_blocked) {
     banner.style.cssText = "display:flex;background:#dc2626;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
     const textEl = document.getElementById("order-limit-banner-text");
-    if (textEl) textEl.textContent =
-      `⛔ Límite de pedidos alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")}). La app está bloqueada. Cambia de plan o espera al inicio del mes (${daysLeft} día${daysLeft === 1 ? "" : "s"}).`;
+    if (textEl) textEl.textContent = up.is_lifetime_limit
+      ? `⛔ Límite gratuito alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos). La app está bloqueada. Actualiza a un plan de pago para continuar.`
+      : `⛔ Límite de pedidos alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")}). La app está bloqueada. Cambia de plan o espera al inicio del mes (${daysLeft} día${daysLeft === 1 ? "" : "s"}).`;
   } else if (limit && used >= limit * 0.85) {
     banner.style.cssText = "display:flex;background:#f59e0b;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
     const textEl = document.getElementById("order-limit-banner-text");
-    if (textEl) textEl.textContent =
-      `⚠️ Atención: has usado ${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos este mes (${Math.round(used/limit*100)}%). Quedan ${daysLeft} día${daysLeft===1?"":"s"}.`;
+    if (textEl) textEl.textContent = up.is_lifetime_limit
+      ? `⚠️ Atención: has usado ${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos gratuitos (${Math.round(used/limit*100)}%). Al superarlos deberás pasar a un plan de pago.`
+      : `⚠️ Atención: has usado ${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos este mes (${Math.round(used/limit*100)}%). Quedan ${daysLeft} día${daysLeft===1?"":"s"}.`;
   } else {
     banner.style.display = "none";
   }
@@ -1346,7 +1348,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
     if (box) {
       box.className = "card";
       const planCards = [
-        { key:"starter",  color:"#10b981", name:"Starter",  price:"0",   limit:"120",   free:true },
+        { key:"starter",  color:"#10b981", name:"Starter",  price:"0",   limit:"120",   free:true, lifetime:true },
         { key:"growth",   color:"#3b82f6", name:"Growth",   price:"39",  limit:"420"  },
         { key:"pro",      color:"#8b5cf6", name:"Pro",      price:"89",  limit:"1.000"},
         { key:"business", color:"#f59e0b", name:"Business", price:"149", limit:"3.000"},
@@ -1373,7 +1375,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
               <div style="border:2px solid ${p.color};border-radius:12px;padding:16px 20px;min-width:140px;text-align:left;">
                 <div style="font-size:11px;font-weight:700;color:${p.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${p.name}</div>
                 <div style="font-size:22px;font-weight:800;color:#f9fafb;">${p.free ? "Gratis" : p.price+"€"}<span style="font-size:12px;font-weight:400;color:#6b7280;">${p.free ? "" : "/mes"}</span></div>
-                <div style="font-size:11px;color:#6b7280;margin-top:2px;">hasta ${p.limit} pedidos/mes</div>
+                <div style="font-size:11px;color:#6b7280;margin-top:2px;">hasta ${p.limit} pedidos${p.lifetime ? "" : "/mes"}</div>
               </div>`).join("")}
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
@@ -1406,14 +1408,18 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
         <div>
           <div style="font-size:18px;font-weight:800;color:#f9fafb;margin-bottom:8px;">Has alcanzado el límite de pedidos</div>
           <div style="font-size:14px;color:#6b7280;max-width:420px;">
-            Has usado <strong>${(up.monthly_orders||0).toLocaleString("es-ES")}</strong> pedidos este mes.
-            Tu plan <strong>${up.plan}</strong> permite <strong>${(up.order_limit||0).toLocaleString("es-ES")}</strong>.<br><br>
+            ${up.is_lifetime_limit
+              ? `Has usado <strong>${(up.monthly_orders||0).toLocaleString("es-ES")}</strong> de tus <strong>${(up.order_limit||0).toLocaleString("es-ES")}</strong> pedidos gratuitos del plan <strong>${up.plan}</strong>.`
+              : `Has usado <strong>${(up.monthly_orders||0).toLocaleString("es-ES")}</strong> pedidos este mes. Tu plan <strong>${up.plan}</strong> permite <strong>${(up.order_limit||0).toLocaleString("es-ES")}</strong>.`}
+            <br><br>
             La sincronización en segundo plano sigue activa. Solo la visualización está bloqueada.
           </div>
         </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;">
           <button onclick="setSection('plan')" style="padding:11px 28px;background:#22c55e;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;">Cambiar de plan</button>
-          <span style="font-size:13px;color:#9ca3af;">o espera ${daysLeft} día${daysLeft===1?"":"s"} para que se reinicie</span>
+          ${up.is_lifetime_limit
+            ? `<span style="font-size:13px;color:#9ca3af;">este límite no se reinicia — necesitas actualizar de plan</span>`
+            : `<span style="font-size:13px;color:#9ca3af;">o espera ${daysLeft} día${daysLeft===1?"":"s"} para que se reinicie</span>`}
         </div>`;
       box.appendChild(overlay);
     }
@@ -4017,7 +4023,7 @@ if (id === "plan") {
   const isAdmin = currentUser.role === "Administrador";
 
   const PLAN_DEFS = {
-    starter:  { name:"Starter",  price:"0",   limit:"120",   color:"#10b981", free:true, features:["Tiendas ilimitadas","Hasta 120 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
+    starter:  { name:"Starter",  price:"0",   limit:"120",   color:"#10b981", free:true, features:["Tiendas ilimitadas","Tus primeros 120 pedidos gratis","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
     growth:   { name:"Growth",   price:"39",  limit:"420",   color:"#3b82f6", features:["Tiendas ilimitadas","Hasta 420 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
     pro:      { name:"Pro",      price:"89",  limit:"1.000", color:"#8b5cf6", features:["Tiendas ilimitadas","Hasta 1.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
     business: { name:"Business", price:"149", limit:"3.000", color:"#f59e0b", features:["Tiendas ilimitadas","Hasta 3.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },

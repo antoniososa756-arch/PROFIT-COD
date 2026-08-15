@@ -29,28 +29,33 @@ module.exports = async (req, res, next) => {
     return res.status(402).json({ error: "PLAN_REQUERIDO", message: "Tu plan ha caducado. Renueva para continuar." });
   }
 
-  // Trial: sin límite de pedidos en ningún caso
-  if (status === "trial") return next();
+  // Trial: sin límite de pedidos... salvo en Starter, cuyo tope de 120 pedidos es de
+  // por vida (no un cupo mensual que se regala durante la prueba) y aplica siempre.
+  if (status === "trial" && plan !== "starter") return next();
 
-  // Verificar límite de pedidos del ciclo de facturación actual
-  // (desde que se activó el plan de pago, no desde el día 1 del mes — así no cuenta pedidos del trial)
+  // Verificar límite de pedidos. En planes de pago es el ciclo de facturación actual
+  // (desde que se activó el plan, no desde el día 1 del mes — así no cuenta pedidos
+  // del trial). En Starter es un tope de por vida: se cuentan TODOS sus pedidos, sin
+  // reiniciarse nunca — al superarlo, tiene que pasar a un plan de pago.
   const orderLimit = PLAN_ORDER_LIMITS[plan];
   if (orderLimit) {
     try {
-      const cycleStart = getEffectiveCycleStart(user.billing_cycle_start);
+      const cycleStart = plan === "starter" ? null : getEffectiveCycleStart(user.billing_cycle_start);
       const countRow = await db.get(`
         SELECT COUNT(*) as cnt
         FROM orders o
         LEFT JOIN shops s ON s.id = o.shop_id
         WHERE (s.user_id = $1 OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
-          AND o.created_at >= $2
-      `, [user.id, cycleStart.toISOString()]);
-      const monthlyCount = parseInt(countRow?.cnt || 0);
-      if (monthlyCount > orderLimit) {
+          ${cycleStart ? "AND o.created_at >= $2" : ""}
+      `, cycleStart ? [user.id, cycleStart.toISOString()] : [user.id]);
+      const ordersCount = parseInt(countRow?.cnt || 0);
+      if (ordersCount > orderLimit) {
         return res.status(402).json({
           error: "ORDER_LIMIT_EXCEEDED",
-          message: `Has superado el límite de ${orderLimit.toLocaleString("es-ES")} pedidos/mes de tu plan. Actualiza tu plan para continuar.`,
-          count: monthlyCount,
+          message: plan === "starter"
+            ? `Has superado el límite gratuito de ${orderLimit.toLocaleString("es-ES")} pedidos. Actualiza a un plan de pago para continuar.`
+            : `Has superado el límite de ${orderLimit.toLocaleString("es-ES")} pedidos/mes de tu plan. Actualiza tu plan para continuar.`,
+          count: ordersCount,
           limit: orderLimit,
         });
       }

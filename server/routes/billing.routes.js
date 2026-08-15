@@ -53,14 +53,17 @@ function getPriceId(cfg, plan) {
 }
 
 // Contar pedidos desde que arrancó el ciclo de facturación actual (no desde el día 1 del mes,
-// así los pedidos del período de prueba no cuentan contra el límite del plan de pago)
-async function getMonthlyOrders(userId, billingCycleStart) {
-  const cycleStart = getEffectiveCycleStart(billingCycleStart);
+// así los pedidos del período de prueba no cuentan contra el límite del plan de pago).
+// El plan Starter es la excepción: es un tope de por vida (sus primeros 120 pedidos,
+// nunca), no uno que se reinicie cada mes — así que ahí se cuentan TODOS sus pedidos
+// sin filtrar por fecha.
+async function getMonthlyOrders(userId, billingCycleStart, plan) {
+  const cycleStart = plan === "starter" ? null : getEffectiveCycleStart(billingCycleStart);
   const countRow = await db.get(`
     SELECT COUNT(*) as cnt FROM orders o
     WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
-      AND o.created_at >= $2
-  `, [userId, cycleStart.toISOString()]);
+      ${cycleStart ? "AND o.created_at >= $2" : ""}
+  `, cycleStart ? [userId, cycleStart.toISOString()] : [userId]);
   return parseInt(countRow?.cnt || 0);
 }
 
@@ -76,7 +79,7 @@ router.get("/plan", auth, async (req, res) => {
 
     let monthlyOrders = 0;
     if (planInfo && req.user.role !== "admin") {
-      monthlyOrders = await getMonthlyOrders(req.user.id, user?.billing_cycle_start);
+      monthlyOrders = await getMonthlyOrders(req.user.id, user?.billing_cycle_start, planKey);
     }
 
     // ¿Está en trial? plan_expires_at es la fecha real de fin (se fija a +30 días al
@@ -93,9 +96,11 @@ router.get("/plan", auth, async (req, res) => {
     const trialEndsAt  = (trialStarted && user?.plan_status === "trial") ? user?.plan_expires_at || null : null;
     const trialActive  = trialStarted && trialEndsAt && new Date() < new Date(trialEndsAt);
 
-    // ¿Bloqueado por exceder pedidos? Durante el trial no hay límite de pedidos (igual que en planCheck).
+    // ¿Bloqueado por exceder pedidos? Durante el trial no hay límite de pedidos... salvo en
+    // Starter, cuyo tope de 120 pedidos es de por vida y aplica siempre (igual que en planCheck).
+    const isLifetimeLimit = planKey === "starter";
     const orderLimit = planInfo?.order_limit ?? null;
-    const isBlocked  = !trialActive && orderLimit !== null && monthlyOrders > orderLimit;
+    const isBlocked  = orderLimit !== null && monthlyOrders > orderLimit && (isLifetimeLimit || !trialActive);
 
     // Días para el reinicio del ciclo de facturación (un mes después de la última activación/renovación)
     const now = new Date();
@@ -122,6 +127,7 @@ router.get("/plan", auth, async (req, res) => {
       monthly_orders:   monthlyOrders,
       order_limit:      orderLimit,
       is_blocked:       isBlocked,
+      is_lifetime_limit: isLifetimeLimit,
       days_left_month:  daysLeft,
       base_price:       planInfo?.base_price       ?? null,
       price_per_order:  planInfo?.price_per_order  ?? null,
@@ -167,7 +173,7 @@ router.get("/invoice-preview", auth, async (req, res) => {
     const planInfo = PLANS[planKey];
     if (!planInfo || user?.plan_status === "inactive") return res.json({ available: false });
 
-    const ordersUsed = await getMonthlyOrders(req.user.id, user?.billing_cycle_start);
+    const ordersUsed = await getMonthlyOrders(req.user.id, user?.billing_cycle_start, planKey);
     const variableCost = +(ordersUsed * planInfo.price_per_order).toFixed(2);
     const total = +(planInfo.base_price + variableCost).toFixed(2);
     const now = new Date();
