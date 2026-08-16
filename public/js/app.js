@@ -7029,10 +7029,13 @@ async function loadOrdersChart(period) {
     ]);
     const orders = (Array.isArray(rows) ? rows : (rows.orders||[])).filter(o => o.fulfillment_status !== 'cancelado' && o.created_at);
 
-    // Mapa dominio → nombre asignado por el usuario
+    // Mapa dominio → nombre asignado por el usuario, y dominio → color asignado en
+    // Integraciones para las notificaciones (así la gráfica usa el mismo color por tienda)
     const storeNameMap = {};
+    const storeColorMap = {};
     (Array.isArray(storesRes) ? storesRes : (storesRes.stores||[])).forEach(s => {
       if (s.domain) storeNameMap[s.domain] = s.shop_name || s.domain;
+      if (s.domain && s.notification_color) storeColorMap[s.domain] = s.notification_color;
     });
 
     // Tiendas únicas
@@ -7049,7 +7052,7 @@ async function loadOrdersChart(period) {
       if (data[o.shop_domain][b] !== undefined) data[o.shop_domain][b]++;
     });
 
-    renderBarChart(canvas, data, buckets, stores, bucketLabel);
+    renderBarChart(canvas, data, buckets, stores, bucketLabel, storeColorMap);
 
     // Total global visible en el subtítulo
     if (labelEl) {
@@ -7060,8 +7063,8 @@ async function loadOrdersChart(period) {
       const isDark = document.body.classList.contains('dark');
       const displayName = domain => storeNameMap[domain] || domain.replace(/\.myshopify\.com$/i,'').replace(/\.[^.]+\.[^.]+$/,'').toUpperCase();
       const totalPorTienda = stores.map(s => ({ domain: s, name: displayName(s), total: buckets.reduce((a,b) => a + ((data[s]||{})[b]||0), 0) }));
-      legendEl.innerHTML = totalPorTienda.map(({name,total},i) => {
-        const color = (STORE_PALETTE[i % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
+      legendEl.innerHTML = totalPorTienda.map(({domain,name,total},i) => {
+        const color = storeColorMap[domain] || (STORE_PALETTE[i % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
         return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--input);border-radius:8px;">
           <span style="width:10px;height:10px;border-radius:3px;background:${color};flex-shrink:0;"></span>
           <span style="font-size:13px;font-weight:600;color:var(--text);letter-spacing:.3px;">${escapeHtml(name)}</span>
@@ -7091,7 +7094,7 @@ function hexToRgb(hex) {
   return `${(n>>16)&255},${(n>>8)&255},${n&255}`;
 }
 
-function renderBarChart(canvas, data, buckets, stores, labelFn) {
+function renderBarChart(canvas, data, buckets, stores, labelFn, storeColorMap) {
   const isDark   = document.body.classList.contains('dark');
   const gridCol  = isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
   const axisCol  = isDark ? 'rgba(255,255,255,.1)'  : 'rgba(0,0,0,.08)';
@@ -7108,6 +7111,11 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
 
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
+
+  // Color por tienda: el asignado en Integraciones (notificaciones) si existe,
+  // si no cae en la paleta por índice como respaldo.
+  const colorForStore = (store, idx) =>
+    (storeColorMap && storeColorMap[store]) || (STORE_PALETTE[idx % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
 
   const PL = 10, PR = 10, PT = 30, PB = 28;
   const cW = W - PL - PR;
@@ -7171,7 +7179,7 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
     for (let si = stores.length - 1; si >= 0; si--) {
       if (((data[stores[si]]||{})[bucket]||0) > 0) { topIdx = si; break; }
     }
-    const topColor = (STORE_PALETTE[topIdx % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
+    const topColor = colorForStore(stores[topIdx], topIdx);
     const topRgb   = hexToRgb(topColor);
 
     // Dibujar segmentos apilados — cuerpo oscuro/translúcido
@@ -7183,7 +7191,7 @@ function renderBarChart(canvas, data, buckets, stores, labelFn) {
       const y     = yOffset - segH;
       const isTop = si === topIdx;
       const segR  = isTop ? Math.min(5, bw / 2, segH) : 0;
-      const color = (STORE_PALETTE[si % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
+      const color = colorForStore(store, si);
       const rgb   = hexToRgb(color);
 
       // Cuerpo: muy oscuro con tinte del color
