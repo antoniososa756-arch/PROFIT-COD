@@ -438,6 +438,32 @@ await pool.query(`
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfacturas_user ON pfacturas(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfactura_items_factura ON pfactura_items(pfactura_id)`);
 
+  // Perfiles guardados de emisor (para poder facturar como particular, como
+  // empresa, o con cualquier otro dato, sin reescribirlo cada vez) y de
+  // cliente (para no reescribir los datos de a quién se factura una y otra vez).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pfactura_emisores (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      identificacion TEXT,
+      direccion TEXT,
+      email TEXT,
+      created_at TEXT DEFAULT now()::text
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pfactura_clientes (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      direccion TEXT,
+      created_at TEXT DEFAULT now()::text
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfactura_emisores_user ON pfactura_emisores(user_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfactura_clientes_user ON pfactura_clientes(user_id)`);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 

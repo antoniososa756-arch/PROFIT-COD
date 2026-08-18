@@ -63,6 +63,10 @@ app.use("/api/impuestos",    auth, planCheck, require("./routes/impuestos.routes
 app.use("/api/gastos-varios",auth, planCheck, require("./routes/gastos-varios.routes"));
 app.use("/api/nomina",       auth, planCheck, nominaRoutes);
 app.use("/api/exprod",       auth, planCheck, require("./routes/exprod.routes"));
+// Los sub-routers de perfiles guardados (emisores/clientes) van antes del router
+// general de /api/pfactura para que "/emisores" y "/clientes" no caigan en su ruta /:id
+app.use("/api/pfactura/emisores", auth, planCheck, require("./routes/pfactura-emisores.routes"));
+app.use("/api/pfactura/clientes", auth, planCheck, require("./routes/pfactura-clientes.routes"));
 app.use("/api/pfactura",     auth, planCheck, require("./routes/pfactura.routes"));
 app.use("/api/reclamos-mrw", auth, planCheck, require("./routes/reclamos.routes"));
 // Gmail: /auth y /callback son redirects del navegador, no llevan Auth header

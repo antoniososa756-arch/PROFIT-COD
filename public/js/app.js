@@ -10472,10 +10472,19 @@ window.pfacturaOpenForm = async function(id) {
     } catch { alert("No se pudo cargar la factura"); return; }
   }
 
+  const authHeaders = { Authorization: "Bearer " + getActiveToken() };
+  const [emisoresList, clientesList] = await Promise.all([
+    fetch(`${API_BASE}/api/pfactura/emisores`, { headers: authHeaders }).then(r => r.json()).catch(() => []),
+    fetch(`${API_BASE}/api/pfactura/clientes`, { headers: authHeaders }).then(r => r.json()).catch(() => []),
+  ]);
+  window.__pfacturaEmisores = Array.isArray(emisoresList) ? emisoresList : [];
+  window.__pfacturaClientes = Array.isArray(clientesList) ? clientesList : [];
+
   // Datos del emisor: si la factura ya tiene los suyos propios (edición) se usan
   // tal cual; si no (factura nueva, o una antigua sin emisor guardado) se
   // precargan desde los datos de facturación de la cuenta como punto de partida,
-  // pero son editables — así cada factura puede salir como particular o empresa.
+  // pero son editables — así cada factura puede salir como particular o empresa,
+  // y se pueden guardar varios emisores distintos para reutilizarlos.
   let emisor = { nombre: "", identificacion: "", direccion: "", email: "" };
   if (data?.emisor_nombre) {
     emisor = {
@@ -10486,7 +10495,7 @@ window.pfacturaOpenForm = async function(id) {
     };
   } else {
     try {
-      const me = await fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+      const me = await fetch(`${API_BASE}/api/auth/me`, { headers: authHeaders }).then(r => r.json());
       const u = me?.user || {};
       const addrParts = [u.billing_address, [u.billing_city, u.billing_zip].filter(Boolean).join(" "), u.billing_country].filter(Boolean);
       emisor = {
@@ -10497,10 +10506,14 @@ window.pfacturaOpenForm = async function(id) {
       };
     } catch {}
   }
+  const cliente = { nombre: data?.cliente_nombre || "", direccion: data?.cliente_direccion || "" };
 
   document.getElementById("pfactura-modal")?.remove();
   const labelStyle = "display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:5px;";
   const inputStyle = "width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;";
+  const iconBtnStyle = "padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;flex-shrink:0;line-height:1;";
+  const emisorOptions = e => `<option value="">➕ Nuevo / sin guardar</option>` + e.map(x => `<option value="${x.id}">${escapeHtml(x.nombre)}</option>`).join("");
+  const clienteOptions = c => `<option value="">➕ Nuevo / sin guardar</option>` + c.map(x => `<option value="${x.id}">${escapeHtml(x.nombre)}</option>`).join("");
 
   const overlay = document.createElement("div");
   overlay.id = "pfactura-modal";
@@ -10510,7 +10523,12 @@ window.pfacturaOpenForm = async function(id) {
       <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;">${id ? "Editar factura" : "Nueva factura"}</div>
 
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:16px;">Tus datos (emisor)</div>
-      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Cámbialos si quieres facturar como particular, con otra empresa, u otros datos distintos a los de tu cuenta.</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Guarda varios emisores (ej. tu nombre personal y tu empresa) y elige cuál usar en cada factura.</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <select id="pf-emisor-select" onchange="pfacturaPickEmisor(this.value)" style="${inputStyle}flex:1;">${emisorOptions(window.__pfacturaEmisores)}</select>
+        <button type="button" onclick="pfacturaSaveEmisorProfile()" title="Guardar estos datos para reutilizar" style="${iconBtnStyle}">💾</button>
+        <button type="button" onclick="pfacturaDeleteEmisorProfile()" title="Eliminar el emisor seleccionado" style="${iconBtnStyle}">🗑️</button>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div>
           <label style="${labelStyle}">Nombre / Empresa</label>
@@ -10533,10 +10551,15 @@ window.pfacturaOpenForm = async function(id) {
       </div>
 
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Cliente</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <select id="pf-cliente-select" onchange="pfacturaPickCliente(this.value)" style="${inputStyle}flex:1;">${clienteOptions(window.__pfacturaClientes)}</select>
+        <button type="button" onclick="pfacturaSaveClienteProfile()" title="Guardar este cliente para reutilizar" style="${iconBtnStyle}">💾</button>
+        <button type="button" onclick="pfacturaDeleteClienteProfile()" title="Eliminar el cliente seleccionado" style="${iconBtnStyle}">🗑️</button>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div>
           <label style="${labelStyle}">Cliente *</label>
-          <input id="pf-cliente-nombre" type="text" value="${escapeHtml(data?.cliente_nombre || "")}" style="${inputStyle}" placeholder="Nombre del cliente o empresa">
+          <input id="pf-cliente-nombre" type="text" value="${escapeHtml(cliente.nombre)}" style="${inputStyle}" placeholder="Nombre del cliente o empresa">
         </div>
         <div>
           <label style="${labelStyle}">Términos</label>
@@ -10546,7 +10569,7 @@ window.pfacturaOpenForm = async function(id) {
 
       <div style="margin-bottom:14px;">
         <label style="${labelStyle}">Dirección del cliente</label>
-        <textarea id="pf-cliente-direccion" rows="2" style="${inputStyle}resize:vertical;">${escapeHtml(data?.cliente_direccion || "")}</textarea>
+        <textarea id="pf-cliente-direccion" rows="2" style="${inputStyle}resize:vertical;">${escapeHtml(cliente.direccion)}</textarea>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
@@ -10606,6 +10629,109 @@ window.pfacturaOpenForm = async function(id) {
 window.pfacturaCloseForm = function() {
   document.getElementById("pfactura-modal")?.remove();
   window.__pfacturaEditingId = null;
+};
+
+// ── Perfiles guardados de emisor ────────────────────────────────────────
+window.pfacturaPickEmisor = function(id) {
+  if (!id) return;
+  const e = (window.__pfacturaEmisores || []).find(x => String(x.id) === String(id));
+  if (!e) return;
+  document.getElementById("pf-emisor-nombre").value = e.nombre || "";
+  document.getElementById("pf-emisor-identificacion").value = e.identificacion || "";
+  document.getElementById("pf-emisor-direccion").value = e.direccion || "";
+  document.getElementById("pf-emisor-email").value = e.email || "";
+};
+
+async function pfacturaRefreshEmisorSelect(selectedId) {
+  try {
+    window.__pfacturaEmisores = await fetch(`${API_BASE}/api/pfactura/emisores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+  } catch { window.__pfacturaEmisores = []; }
+  const sel = document.getElementById("pf-emisor-select");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">➕ Nuevo / sin guardar</option>` +
+    window.__pfacturaEmisores.map(e => `<option value="${e.id}">${escapeHtml(e.nombre)}</option>`).join("");
+  sel.value = selectedId || "";
+}
+
+window.pfacturaSaveEmisorProfile = async function() {
+  const nombre = document.getElementById("pf-emisor-nombre").value.trim();
+  if (!nombre) { alert("Escribe primero el nombre o empresa del emisor"); return; }
+  const body = {
+    nombre,
+    identificacion: document.getElementById("pf-emisor-identificacion").value.trim() || null,
+    direccion: document.getElementById("pf-emisor-direccion").value.trim() || null,
+    email: document.getElementById("pf-emisor-email").value.trim() || null,
+  };
+  try {
+    const r = await fetch(`${API_BASE}/api/pfactura/emisores`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error || "Error guardando el emisor"); return; }
+    await pfacturaRefreshEmisorSelect(d.id);
+    showToast("💾 Guardado", "Emisor guardado para reutilizar", "#22c55e");
+  } catch (e) { alert("Error de conexión"); }
+};
+
+window.pfacturaDeleteEmisorProfile = async function() {
+  const sel = document.getElementById("pf-emisor-select");
+  if (!sel?.value) { alert("Selecciona primero un emisor guardado para eliminarlo"); return; }
+  if (!confirm("¿Eliminar este emisor guardado? No afecta a las facturas ya creadas con él.")) return;
+  try {
+    await fetch(`${API_BASE}/api/pfactura/emisores/${sel.value}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    await pfacturaRefreshEmisorSelect("");
+    showToast("🗑️ Eliminado", "Emisor eliminado de tu lista", "#22c55e");
+  } catch (e) { alert("Error eliminando el emisor"); }
+};
+
+// ── Perfiles guardados de cliente ───────────────────────────────────────
+window.pfacturaPickCliente = function(id) {
+  if (!id) return;
+  const c = (window.__pfacturaClientes || []).find(x => String(x.id) === String(id));
+  if (!c) return;
+  document.getElementById("pf-cliente-nombre").value = c.nombre || "";
+  document.getElementById("pf-cliente-direccion").value = c.direccion || "";
+};
+
+async function pfacturaRefreshClienteSelect(selectedId) {
+  try {
+    window.__pfacturaClientes = await fetch(`${API_BASE}/api/pfactura/clientes`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+  } catch { window.__pfacturaClientes = []; }
+  const sel = document.getElementById("pf-cliente-select");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">➕ Nuevo / sin guardar</option>` +
+    window.__pfacturaClientes.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join("");
+  sel.value = selectedId || "";
+}
+
+window.pfacturaSaveClienteProfile = async function() {
+  const nombre = document.getElementById("pf-cliente-nombre").value.trim();
+  if (!nombre) { alert("Escribe primero el nombre del cliente"); return; }
+  const body = { nombre, direccion: document.getElementById("pf-cliente-direccion").value.trim() || null };
+  try {
+    const r = await fetch(`${API_BASE}/api/pfactura/clientes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error || "Error guardando el cliente"); return; }
+    await pfacturaRefreshClienteSelect(d.id);
+    showToast("💾 Guardado", "Cliente guardado para reutilizar", "#22c55e");
+  } catch (e) { alert("Error de conexión"); }
+};
+
+window.pfacturaDeleteClienteProfile = async function() {
+  const sel = document.getElementById("pf-cliente-select");
+  if (!sel?.value) { alert("Selecciona primero un cliente guardado para eliminarlo"); return; }
+  if (!confirm("¿Eliminar este cliente guardado? No afecta a las facturas ya creadas con él.")) return;
+  try {
+    await fetch(`${API_BASE}/api/pfactura/clientes/${sel.value}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    await pfacturaRefreshClienteSelect("");
+    showToast("🗑️ Eliminado", "Cliente eliminado de tu lista", "#22c55e");
+  } catch (e) { alert("Error eliminando el cliente"); }
 };
 
 window.pfacturaAddItemRow = function(item) {
