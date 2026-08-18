@@ -3358,17 +3358,24 @@ if (id === "pfactura") {
   if (s) s.textContent = "Crea facturas para tus clientes y descárgalas en PDF";
   if (c) c.textContent = "PFactura";
   box.className = "card";
+  const pfTabBtn = (key, label) => `<button type="button" class="pf-tab-btn" data-pf-tab="${key}" onclick="pfacturaSwitchTab('${key}')"
+    style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;">${label}</button>`;
   box.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
       <div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;">Tus facturas</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;">PFactura</div>
         <div style="font-size:12px;color:var(--muted);margin-top:3px;">Factura sencilla para tus clientes, con descarga en PDF.</div>
       </div>
-      <button onclick="pfacturaOpenForm()" class="btn-primary" style="white-space:nowrap;">+ Nueva factura</button>
+      <button id="pf-tab-action-btn" class="btn-primary" style="white-space:nowrap;"></button>
     </div>
-    <div id="pfactura-list-wrap"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>
+    <div style="display:flex;gap:8px;margin-bottom:20px;">
+      ${pfTabBtn("facturas", "Facturas")}
+      ${pfTabBtn("emisores", "Emisores")}
+      ${pfTabBtn("clientes", "Clientes")}
+    </div>
+    <div id="pfactura-tab-content"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>
   `;
-  pfacturaLoadList();
+  pfacturaSwitchTab("facturas");
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -10435,15 +10442,28 @@ function pfActionBtn(icon, onclick, title, hoverColor) {
   </button>`;
 }
 
-// Cierra los popovers de "ver guardados" al hacer click fuera (listener único,
-// registrado una vez — pfacturaOpenForm puede abrirse muchas veces por sesión)
-document.addEventListener("click", (e) => {
-  if (e.target.closest("[id$='-list-popover']") || e.target.closest("[data-pf-list-toggle]")) return;
-  document.querySelectorAll("[id$='-list-popover']").forEach(p => { p.style.display = "none"; });
-});
+window.pfacturaSwitchTab = function(tab) {
+  document.querySelectorAll(".pf-tab-btn").forEach(b => {
+    const active = b.dataset.pfTab === tab;
+    b.style.background = active ? "#22c55e" : "var(--input)";
+    b.style.color = active ? "#fff" : "var(--muted)";
+    b.style.borderColor = active ? "#22c55e" : "var(--border)";
+  });
+  const actionBtn = document.getElementById("pf-tab-action-btn");
+  if (actionBtn) {
+    if (tab === "facturas") { actionBtn.textContent = "+ Nueva factura"; actionBtn.onclick = () => pfacturaOpenForm(); }
+    else if (tab === "emisores") { actionBtn.textContent = "+ Nuevo emisor"; actionBtn.onclick = () => pfacturaOpenEmisorModal(); }
+    else { actionBtn.textContent = "+ Nuevo cliente"; actionBtn.onclick = () => pfacturaOpenClienteModal(); }
+  }
+  const content = document.getElementById("pfactura-tab-content");
+  if (content) content.innerHTML = `<div style="color:#6b7280;font-size:13px;">Cargando…</div>`;
+  if (tab === "facturas") pfacturaLoadList();
+  else if (tab === "emisores") pfacturaLoadEmisoresTab();
+  else pfacturaLoadClientesTab();
+};
 
 async function pfacturaLoadList() {
-  const wrap = document.getElementById("pfactura-list-wrap");
+  const wrap = document.getElementById("pfactura-tab-content");
   if (!wrap) return;
   try {
     const rows = await fetch(`${API_BASE}/api/pfactura`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
@@ -10489,6 +10509,219 @@ async function pfacturaLoadList() {
   }
 }
 window.pfacturaLoadList = pfacturaLoadList;
+
+// ── Apartado "Emisores" ──────────────────────────────────────────────────
+async function pfacturaLoadEmisoresTab() {
+  const wrap = document.getElementById("pfactura-tab-content");
+  if (!wrap) return;
+  try {
+    const rows = await fetch(`${API_BASE}/api/pfactura/emisores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    window.__pfacturaEmisoresCache = Array.isArray(rows) ? rows : [];
+    if (!window.__pfacturaEmisoresCache.length) {
+      wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b7280;font-size:13px;">Aún no has guardado ningún emisor.<br>Guarda tu nombre personal, tu empresa, etc. para reutilizarlos al facturar.</div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Nombre / Empresa</th>
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">NIF/CIF</th>
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Email</th>
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Dirección</th>
+              <th style="text-align:right;padding:10px 8px;color:var(--muted);font-weight:600;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${window.__pfacturaEmisoresCache.map(r => `
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:10px 8px;color:var(--text);font-weight:600;">${escapeHtml(r.nombre)}</td>
+                <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(r.identificacion || "—")}</td>
+                <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(r.email || "—")}</td>
+                <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(r.direccion || "—")}</td>
+                <td style="padding:10px 8px;text-align:right;white-space:nowrap;">
+                  ${pfActionBtn("edit", `pfacturaOpenEmisorModal(${r.id})`, "Editar", "#f59e0b")}
+                  ${pfActionBtn("trash", `pfacturaDeleteEmisorRow(${r.id})`, "Eliminar", "#ef4444")}
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    wrap.innerHTML = `<div style="color:#dc2626;font-size:13px;padding:20px;">Error cargando los emisores.</div>`;
+  }
+}
+
+window.pfacturaOpenEmisorModal = function(id) {
+  const data = id ? (window.__pfacturaEmisoresCache || []).find(x => String(x.id) === String(id)) : null;
+  document.getElementById("pfactura-profile-modal")?.remove();
+  const labelStyle = "display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:5px;";
+  const inputStyle = "width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;";
+  const overlay = document.createElement("div");
+  overlay.id = "pfactura-profile-modal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:26px;width:440px;max-width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:18px;">${id ? "Editar emisor" : "Nuevo emisor"}</div>
+      <div style="margin-bottom:14px;">
+        <label style="${labelStyle}">Nombre / Empresa *</label>
+        <input id="pfp-nombre" type="text" value="${escapeHtml(data?.nombre || "")}" style="${inputStyle}" placeholder="Tu nombre o razón social">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="${labelStyle}">NIF / CIF / ID</label>
+        <input id="pfp-identificacion" type="text" value="${escapeHtml(data?.identificacion || "")}" style="${inputStyle}" placeholder="Opcional">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="${labelStyle}">Email</label>
+        <input id="pfp-email" type="email" value="${escapeHtml(data?.email || "")}" style="${inputStyle}" placeholder="tu@email.com">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="${labelStyle}">Dirección</label>
+        <input id="pfp-direccion" type="text" value="${escapeHtml((data?.direccion || "").replace(/\n/g, ", "))}" style="${inputStyle}" placeholder="Dirección, ciudad, país">
+      </div>
+      <div id="pfp-msg" style="font-size:12px;color:#dc2626;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="document.getElementById('pfactura-profile-modal')?.remove()" style="padding:9px 20px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button onclick="pfacturaSubmitEmisorModal(${id || "null"})" class="btn-primary" style="padding:9px 24px;">Guardar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+};
+
+window.pfacturaSubmitEmisorModal = async function(id) {
+  const msgEl = document.getElementById("pfp-msg");
+  const nombre = document.getElementById("pfp-nombre").value.trim();
+  if (!nombre) { if (msgEl) msgEl.textContent = "Falta el nombre"; return; }
+  const body = {
+    nombre,
+    identificacion: document.getElementById("pfp-identificacion").value.trim() || null,
+    email: document.getElementById("pfp-email").value.trim() || null,
+    direccion: document.getElementById("pfp-direccion").value.trim() || null,
+  };
+  try {
+    const r = await fetch(`${API_BASE}/api/pfactura/emisores${id ? "/" + id : ""}`, {
+      method: id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { if (msgEl) msgEl.textContent = d.error || "Error guardando"; return; }
+    document.getElementById("pfactura-profile-modal")?.remove();
+    showToast(id ? "✅ Emisor actualizado" : "✅ Emisor guardado", "", "#22c55e");
+    pfacturaLoadEmisoresTab();
+  } catch (e) { if (msgEl) msgEl.textContent = "Error de conexión"; }
+};
+
+window.pfacturaDeleteEmisorRow = async function(id) {
+  if (!confirm("¿Eliminar este emisor guardado? No afecta a las facturas ya creadas con él.")) return;
+  try {
+    await fetch(`${API_BASE}/api/pfactura/emisores/${id}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    pfacturaLoadEmisoresTab();
+  } catch (e) { alert("Error eliminando el emisor"); }
+};
+
+// ── Apartado "Clientes" ──────────────────────────────────────────────────
+async function pfacturaLoadClientesTab() {
+  const wrap = document.getElementById("pfactura-tab-content");
+  if (!wrap) return;
+  try {
+    const rows = await fetch(`${API_BASE}/api/pfactura/clientes`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    window.__pfacturaClientesCache = Array.isArray(rows) ? rows : [];
+    if (!window.__pfacturaClientesCache.length) {
+      wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b7280;font-size:13px;">Aún no has guardado ningún cliente.<br>Guárdalos aquí para reutilizarlos al facturar, sin reescribir sus datos cada vez.</div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Cliente</th>
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Dirección</th>
+              <th style="text-align:right;padding:10px 8px;color:var(--muted);font-weight:600;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${window.__pfacturaClientesCache.map(r => `
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:10px 8px;color:var(--text);font-weight:600;">${escapeHtml(r.nombre)}</td>
+                <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(r.direccion || "—")}</td>
+                <td style="padding:10px 8px;text-align:right;white-space:nowrap;">
+                  ${pfActionBtn("edit", `pfacturaOpenClienteModal(${r.id})`, "Editar", "#f59e0b")}
+                  ${pfActionBtn("trash", `pfacturaDeleteClienteRow(${r.id})`, "Eliminar", "#ef4444")}
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    wrap.innerHTML = `<div style="color:#dc2626;font-size:13px;padding:20px;">Error cargando los clientes.</div>`;
+  }
+}
+
+window.pfacturaOpenClienteModal = function(id) {
+  const data = id ? (window.__pfacturaClientesCache || []).find(x => String(x.id) === String(id)) : null;
+  document.getElementById("pfactura-profile-modal")?.remove();
+  const labelStyle = "display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:5px;";
+  const inputStyle = "width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;";
+  const overlay = document.createElement("div");
+  overlay.id = "pfactura-profile-modal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:26px;width:440px;max-width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:18px;">${id ? "Editar cliente" : "Nuevo cliente"}</div>
+      <div style="margin-bottom:14px;">
+        <label style="${labelStyle}">Cliente *</label>
+        <input id="pfp-nombre" type="text" value="${escapeHtml(data?.nombre || "")}" style="${inputStyle}" placeholder="Nombre del cliente o empresa">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="${labelStyle}">Dirección</label>
+        <textarea id="pfp-direccion" rows="2" style="${inputStyle}resize:vertical;">${escapeHtml(data?.direccion || "")}</textarea>
+      </div>
+      <div id="pfp-msg" style="font-size:12px;color:#dc2626;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="document.getElementById('pfactura-profile-modal')?.remove()" style="padding:9px 20px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button onclick="pfacturaSubmitClienteModal(${id || "null"})" class="btn-primary" style="padding:9px 24px;">Guardar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+};
+
+window.pfacturaSubmitClienteModal = async function(id) {
+  const msgEl = document.getElementById("pfp-msg");
+  const nombre = document.getElementById("pfp-nombre").value.trim();
+  if (!nombre) { if (msgEl) msgEl.textContent = "Falta el nombre"; return; }
+  const body = { nombre, direccion: document.getElementById("pfp-direccion").value.trim() || null };
+  try {
+    const r = await fetch(`${API_BASE}/api/pfactura/clientes${id ? "/" + id : ""}`, {
+      method: id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { if (msgEl) msgEl.textContent = d.error || "Error guardando"; return; }
+    document.getElementById("pfactura-profile-modal")?.remove();
+    showToast(id ? "✅ Cliente actualizado" : "✅ Cliente guardado", "", "#22c55e");
+    pfacturaLoadClientesTab();
+  } catch (e) { if (msgEl) msgEl.textContent = "Error de conexión"; }
+};
+
+window.pfacturaDeleteClienteRow = async function(id) {
+  if (!confirm("¿Eliminar este cliente guardado? No afecta a las facturas ya creadas con él.")) return;
+  try {
+    await fetch(`${API_BASE}/api/pfactura/clientes/${id}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    pfacturaLoadClientesTab();
+  } catch (e) { alert("Error eliminando el cliente"); }
+};
 
 window.pfacturaOpenForm = async function(id) {
   window.__pfacturaEditingId = id || null;
@@ -10538,7 +10771,6 @@ window.pfacturaOpenForm = async function(id) {
   document.getElementById("pfactura-modal")?.remove();
   const labelStyle = "display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:5px;";
   const inputStyle = "width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;";
-  const iconBtnStyle = "padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;flex-shrink:0;line-height:1;";
   const emisorOptions = e => `<option value="">➕ Nuevo / sin guardar</option>` + e.map(x => `<option value="${x.id}">${escapeHtml(x.nombre)}</option>`).join("");
   const clienteOptions = c => `<option value="">➕ Nuevo / sin guardar</option>` + c.map(x => `<option value="${x.id}">${escapeHtml(x.nombre)}</option>`).join("");
 
@@ -10550,12 +10782,9 @@ window.pfacturaOpenForm = async function(id) {
       <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;">${id ? "Editar factura" : "Nueva factura"}</div>
 
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:16px;">Tus datos (emisor)</div>
-      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Guarda varios emisores (ej. tu nombre personal y tu empresa) y elige cuál usar en cada factura.</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;position:relative;">
-        <select id="pf-emisor-select" onchange="pfacturaPickEmisor(this.value)" style="${inputStyle}flex:1;">${emisorOptions(window.__pfacturaEmisores)}</select>
-        <button type="button" onclick="pfacturaSaveEmisorProfile()" title="Guardar (actualiza el seleccionado, o crea uno nuevo)" style="${iconBtnStyle}">${pfIcon("save")}</button>
-        <button type="button" data-pf-list-toggle onclick="pfacturaToggleList('emisor')" title="Ver, editar o eliminar guardados" style="${iconBtnStyle}">${pfIcon("list")}</button>
-        <div id="pf-emisor-list-popover" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:260px;max-height:220px;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:6px;z-index:50;"></div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Elige un emisor guardado (ej. tu nombre personal o tu empresa) o escribe los datos manualmente. Gestiona tus emisores guardados en la pestaña "Emisores".</div>
+      <div style="margin-bottom:12px;">
+        <select id="pf-emisor-select" onchange="pfacturaPickEmisor(this.value)" style="${inputStyle}">${emisorOptions(window.__pfacturaEmisores)}</select>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div>
@@ -10579,11 +10808,9 @@ window.pfacturaOpenForm = async function(id) {
       </div>
 
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Cliente</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;position:relative;">
-        <select id="pf-cliente-select" onchange="pfacturaPickCliente(this.value)" style="${inputStyle}flex:1;">${clienteOptions(window.__pfacturaClientes)}</select>
-        <button type="button" onclick="pfacturaSaveClienteProfile()" title="Guardar (actualiza el seleccionado, o crea uno nuevo)" style="${iconBtnStyle}">${pfIcon("save")}</button>
-        <button type="button" data-pf-list-toggle onclick="pfacturaToggleList('cliente')" title="Ver, editar o eliminar guardados" style="${iconBtnStyle}">${pfIcon("list")}</button>
-        <div id="pf-cliente-list-popover" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:260px;max-height:220px;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:6px;z-index:50;"></div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Elige un cliente guardado o escribe uno nuevo manualmente. Gestiona tus clientes guardados en la pestaña "Clientes".</div>
+      <div style="margin-bottom:12px;">
+        <select id="pf-cliente-select" onchange="pfacturaPickCliente(this.value)" style="${inputStyle}">${clienteOptions(window.__pfacturaClientes)}</select>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div>
@@ -10660,7 +10887,10 @@ window.pfacturaCloseForm = function() {
   window.__pfacturaEditingId = null;
 };
 
-// ── Perfiles guardados de emisor ────────────────────────────────────────
+// Al elegir un emisor/cliente guardado en el desplegable del formulario de
+// factura, autocompleta los campos (siguen siendo editables solo para esa
+// factura). Guardar, editar o eliminar los perfiles se hace en las pestañas
+// "Emisores" / "Clientes" de la sección PFactura, no aquí.
 window.pfacturaPickEmisor = function(id) {
   if (!id) return;
   const e = (window.__pfacturaEmisores || []).find(x => String(x.id) === String(id));
@@ -10671,128 +10901,12 @@ window.pfacturaPickEmisor = function(id) {
   document.getElementById("pf-emisor-email").value = e.email || "";
 };
 
-async function pfacturaRefreshEmisorSelect(selectedId) {
-  try {
-    window.__pfacturaEmisores = await fetch(`${API_BASE}/api/pfactura/emisores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
-  } catch { window.__pfacturaEmisores = []; }
-  const sel = document.getElementById("pf-emisor-select");
-  if (!sel) return;
-  sel.innerHTML = `<option value="">➕ Nuevo / sin guardar</option>` +
-    window.__pfacturaEmisores.map(e => `<option value="${e.id}">${escapeHtml(e.nombre)}</option>`).join("");
-  sel.value = selectedId || "";
-}
-
-// Guardar es "inteligente": si hay un emisor seleccionado en el desplegable,
-// ACTUALIZA ese mismo perfil con los campos actuales; si está en "Nuevo", crea uno.
-window.pfacturaSaveEmisorProfile = async function() {
-  const nombre = document.getElementById("pf-emisor-nombre").value.trim();
-  if (!nombre) { alert("Escribe primero el nombre o empresa del emisor"); return; }
-  const body = {
-    nombre,
-    identificacion: document.getElementById("pf-emisor-identificacion").value.trim() || null,
-    direccion: document.getElementById("pf-emisor-direccion").value.trim() || null,
-    email: document.getElementById("pf-emisor-email").value.trim() || null,
-  };
-  const selectedId = document.getElementById("pf-emisor-select").value;
-  try {
-    const r = await fetch(`${API_BASE}/api/pfactura/emisores${selectedId ? "/" + selectedId : ""}`, {
-      method: selectedId ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify(body),
-    });
-    const d = await r.json();
-    if (!r.ok) { alert(d.error || "Error guardando el emisor"); return; }
-    await pfacturaRefreshEmisorSelect(selectedId || d.id);
-    showToast(selectedId ? "💾 Actualizado" : "💾 Guardado", selectedId ? "Emisor actualizado" : "Emisor guardado para reutilizar", "#22c55e");
-  } catch (e) { alert("Error de conexión"); }
-};
-
-// ── Perfiles guardados de cliente ───────────────────────────────────────
 window.pfacturaPickCliente = function(id) {
   if (!id) return;
   const c = (window.__pfacturaClientes || []).find(x => String(x.id) === String(id));
   if (!c) return;
   document.getElementById("pf-cliente-nombre").value = c.nombre || "";
   document.getElementById("pf-cliente-direccion").value = c.direccion || "";
-};
-
-async function pfacturaRefreshClienteSelect(selectedId) {
-  try {
-    window.__pfacturaClientes = await fetch(`${API_BASE}/api/pfactura/clientes`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
-  } catch { window.__pfacturaClientes = []; }
-  const sel = document.getElementById("pf-cliente-select");
-  if (!sel) return;
-  sel.innerHTML = `<option value="">➕ Nuevo / sin guardar</option>` +
-    window.__pfacturaClientes.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join("");
-  sel.value = selectedId || "";
-}
-
-// Igual que con el emisor: actualiza el cliente seleccionado o crea uno nuevo.
-window.pfacturaSaveClienteProfile = async function() {
-  const nombre = document.getElementById("pf-cliente-nombre").value.trim();
-  if (!nombre) { alert("Escribe primero el nombre del cliente"); return; }
-  const body = { nombre, direccion: document.getElementById("pf-cliente-direccion").value.trim() || null };
-  const selectedId = document.getElementById("pf-cliente-select").value;
-  try {
-    const r = await fetch(`${API_BASE}/api/pfactura/clientes${selectedId ? "/" + selectedId : ""}`, {
-      method: selectedId ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify(body),
-    });
-    const d = await r.json();
-    if (!r.ok) { alert(d.error || "Error guardando el cliente"); return; }
-    await pfacturaRefreshClienteSelect(selectedId || d.id);
-    showToast(selectedId ? "💾 Actualizado" : "💾 Guardado", selectedId ? "Cliente actualizado" : "Cliente guardado para reutilizar", "#22c55e");
-  } catch (e) { alert("Error de conexión"); }
-};
-
-// ── Popover "ver guardados" (emisor y cliente) ──────────────────────────
-function pfacturaRenderListPopover(type) {
-  const pop = document.getElementById(`pf-${type}-list-popover`);
-  if (!pop) return;
-  const list = type === "emisor" ? (window.__pfacturaEmisores || []) : (window.__pfacturaClientes || []);
-  if (!list.length) {
-    pop.innerHTML = `<div style="padding:14px;text-align:center;font-size:12px;color:var(--muted);">Aún no has guardado ninguno.</div>`;
-    return;
-  }
-  pop.innerHTML = list.map(x => `
-    <div style="display:flex;align-items:center;gap:4px;padding:6px 6px;border-radius:7px;">
-      <span style="flex:1;font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(x.nombre)}</span>
-      <button type="button" onclick="pfacturaEditFromList('${type}',${x.id})" title="Editar"
-        style="width:24px;height:24px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;"
-        onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='var(--muted)'">${pfIcon("edit", 13)}</button>
-      <button type="button" onclick="pfacturaDeleteFromList('${type}',${x.id})" title="Eliminar"
-        style="width:24px;height:24px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;"
-        onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--muted)'">${pfIcon("trash", 13)}</button>
-    </div>
-  `).join("");
-}
-
-window.pfacturaToggleList = function(type) {
-  const pop = document.getElementById(`pf-${type}-list-popover`);
-  if (!pop) return;
-  const willShow = pop.style.display === "none";
-  document.querySelectorAll("[id$='-list-popover']").forEach(p => { p.style.display = "none"; });
-  if (willShow) { pfacturaRenderListPopover(type); pop.style.display = "block"; }
-};
-
-window.pfacturaEditFromList = function(type, id) {
-  const sel = document.getElementById(`pf-${type}-select`);
-  if (sel) sel.value = id;
-  if (type === "emisor") pfacturaPickEmisor(id); else pfacturaPickCliente(id);
-  const pop = document.getElementById(`pf-${type}-list-popover`);
-  if (pop) pop.style.display = "none";
-};
-
-window.pfacturaDeleteFromList = async function(type, id) {
-  if (!confirm("¿Eliminar este guardado? No afecta a las facturas ya creadas con él.")) return;
-  const endpoint = type === "emisor" ? "emisores" : "clientes";
-  try {
-    await fetch(`${API_BASE}/api/pfactura/${endpoint}/${id}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
-    if (type === "emisor") await pfacturaRefreshEmisorSelect(""); else await pfacturaRefreshClienteSelect("");
-    pfacturaRenderListPopover(type);
-    showToast("🗑️ Eliminado", "", "#22c55e");
-  } catch (e) { alert("Error eliminando"); }
 };
 
 window.pfacturaAddItemRow = function(item) {
