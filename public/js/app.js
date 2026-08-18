@@ -10415,6 +10415,21 @@ function pfDate(d) {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
 }
 
+const PF_ICONS = {
+  view:     `<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>`,
+  download: `<path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M5 21h14"/>`,
+  edit:     `<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/>`,
+  trash:    `<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>`,
+};
+function pfActionBtn(icon, onclick, title, hoverColor) {
+  return `<button type="button" onclick="${onclick}" title="${title}"
+    style="width:28px;height:28px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,color .15s;"
+    onmouseover="this.style.background='${hoverColor}22';this.style.color='${hoverColor}';"
+    onmouseout="this.style.background='transparent';this.style.color='var(--muted)';">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${PF_ICONS[icon]}</svg>
+  </button>`;
+}
+
 async function pfacturaLoadList() {
   const wrap = document.getElementById("pfactura-list-wrap");
   if (!wrap) return;
@@ -10446,10 +10461,10 @@ async function pfacturaLoadList() {
                 <td style="padding:10px 8px;color:var(--text);text-align:right;">${pfMoney(r.total)}</td>
                 <td style="padding:10px 8px;text-align:right;font-weight:700;color:${Number(r.saldo) <= 0 ? "#22c55e" : "#f59e0b"};">${pfMoney(r.saldo)}</td>
                 <td style="padding:10px 8px;text-align:right;white-space:nowrap;">
-                  <button onclick="pfacturaViewPDF(${r.id})" title="Ver PDF" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;">👁️</button>
-                  <button onclick="pfacturaDownloadPDF(${r.id},'${r.numero}')" title="Descargar PDF" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;">⬇️</button>
-                  <button onclick="pfacturaOpenForm(${r.id})" title="Editar" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;">✏️</button>
-                  <button onclick="pfacturaDelete(${r.id})" title="Eliminar" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;">🗑️</button>
+                  ${pfActionBtn("view", `pfacturaViewPDF(${r.id})`, "Ver PDF", "#3b82f6")}
+                  ${pfActionBtn("download", `pfacturaDownloadPDF(${r.id},'${r.numero}')`, "Descargar PDF", "#22c55e")}
+                  ${pfActionBtn("edit", `pfacturaOpenForm(${r.id})`, "Editar", "#f59e0b")}
+                  ${pfActionBtn("trash", `pfacturaDelete(${r.id})`, "Eliminar", "#ef4444")}
                 </td>
               </tr>
             `).join("")}
