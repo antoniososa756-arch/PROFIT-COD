@@ -66,13 +66,23 @@ function renderPFacturaPDF(res, { issuer, invoice, items }) {
   doc.font("Helvetica-Bold").fontSize(10).fillColor(GRAY_900)
     .text(invoice.cliente_nombre, ML, blockY + 14, { width: 280 });
   let clientY = blockY + 28;
-  if (invoice.cliente_direccion) {
-    doc.font("Helvetica").fontSize(9).fillColor(GRAY_500);
-    String(invoice.cliente_direccion).split("\n").forEach(line => {
-      doc.text(line, ML, clientY, { width: 280 });
-      clientY += 12;
-    });
-  }
+
+  // Líneas del cliente: NIF/CIF, dirección estructurada, email y teléfono.
+  // Las facturas creadas antes de tener estos campos separados solo tienen
+  // cliente_direccion (una sola cadena con "\n") — se usa como respaldo.
+  const cityLine = [invoice.cliente_ciudad, invoice.cliente_pais].filter(Boolean).join(", ");
+  const structuredLines = [invoice.cliente_direccion1, invoice.cliente_direccion2, cityLine].filter(Boolean);
+  const clientLines = [
+    invoice.cliente_identificacion ? `NIF/CIF: ${invoice.cliente_identificacion}` : null,
+    ...(structuredLines.length ? structuredLines : (invoice.cliente_direccion ? String(invoice.cliente_direccion).split("\n") : [])),
+    invoice.cliente_email || null,
+    invoice.cliente_telefono || null,
+  ].filter(Boolean);
+  doc.font("Helvetica").fontSize(9).fillColor(GRAY_500);
+  clientLines.forEach(line => {
+    doc.text(line, ML, clientY, { width: 280 });
+    clientY += 12;
+  });
 
   const dateRows = [
     ["Fecha de la factura :", fmtDate(invoice.fecha)],

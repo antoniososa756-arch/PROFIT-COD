@@ -10648,12 +10648,16 @@ async function pfacturaLoadClientesTab() {
       wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b7280;font-size:13px;">Aún no has guardado ningún cliente.<br>Guárdalos aquí para reutilizarlos al facturar, sin reescribir sus datos cada vez.</div>`;
       return;
     }
+    const addrCol = r => [r.direccion1, r.direccion2, [r.ciudad, r.pais].filter(Boolean).join(", ")].filter(Boolean).join(", ") || (r.direccion || "—");
     wrap.innerHTML = `
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead>
             <tr style="border-bottom:1px solid var(--border);">
               <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Cliente</th>
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">DNI/NIF</th>
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Email</th>
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Teléfono</th>
               <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Dirección</th>
               <th style="text-align:right;padding:10px 8px;color:var(--muted);font-weight:600;">Acciones</th>
             </tr>
@@ -10662,7 +10666,10 @@ async function pfacturaLoadClientesTab() {
             ${window.__pfacturaClientesCache.map(r => `
               <tr style="border-bottom:1px solid var(--border);">
                 <td style="padding:10px 8px;color:var(--text);font-weight:600;">${escapeHtml(r.nombre)}</td>
-                <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(r.direccion || "—")}</td>
+                <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(r.identificacion || "—")}</td>
+                <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(r.email || "—")}</td>
+                <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(r.telefono || "—")}</td>
+                <td style="padding:10px 8px;color:var(--muted);">${escapeHtml(addrCol(r))}</td>
                 <td style="padding:10px 8px;text-align:right;white-space:nowrap;">
                   ${pfActionBtn("edit", `pfacturaOpenClienteModal(${r.id})`, "Editar", "#f59e0b")}
                   ${pfActionBtn("trash", `pfacturaDeleteClienteRow(${r.id})`, "Eliminar", "#ef4444")}
@@ -10687,15 +10694,47 @@ window.pfacturaOpenClienteModal = function(id) {
   overlay.id = "pfactura-profile-modal";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
   overlay.innerHTML = `
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:26px;width:440px;max-width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:26px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3);">
       <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:18px;">${id ? "Editar cliente" : "Nuevo cliente"}</div>
-      <div style="margin-bottom:14px;">
-        <label style="${labelStyle}">Cliente *</label>
-        <input id="pfp-nombre" type="text" value="${escapeHtml(data?.nombre || "")}" style="${inputStyle}" placeholder="Nombre del cliente o empresa">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="${labelStyle}">Cliente *</label>
+          <input id="pfp-nombre" type="text" value="${escapeHtml(data?.nombre || "")}" style="${inputStyle}" placeholder="Nombre del cliente o empresa">
+        </div>
+        <div>
+          <label style="${labelStyle}">DNI / NIF / CIF</label>
+          <input id="pfp-identificacion" type="text" value="${escapeHtml(data?.identificacion || "")}" style="${inputStyle}" placeholder="Opcional aquí, obligatorio al facturar">
+        </div>
       </div>
-      <div style="margin-bottom:20px;">
-        <label style="${labelStyle}">Dirección</label>
-        <textarea id="pfp-direccion" rows="2" style="${inputStyle}resize:vertical;">${escapeHtml(data?.direccion || "")}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="${labelStyle}">Email</label>
+          <input id="pfp-email" type="email" value="${escapeHtml(data?.email || "")}" style="${inputStyle}" placeholder="Opcional">
+        </div>
+        <div>
+          <label style="${labelStyle}">Teléfono</label>
+          <input id="pfp-telefono" type="text" value="${escapeHtml(data?.telefono || "")}" style="${inputStyle}" placeholder="Opcional">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="${labelStyle}">Dirección 1</label>
+          <input id="pfp-direccion1" type="text" value="${escapeHtml(data?.direccion1 || "")}" style="${inputStyle}" placeholder="Calle y número">
+        </div>
+        <div>
+          <label style="${labelStyle}">Dirección 2</label>
+          <input id="pfp-direccion2" type="text" value="${escapeHtml(data?.direccion2 || "")}" style="${inputStyle}" placeholder="Piso, puerta... (opcional)">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+        <div>
+          <label style="${labelStyle}">Ciudad</label>
+          <input id="pfp-ciudad" type="text" value="${escapeHtml(data?.ciudad || "")}" style="${inputStyle}">
+        </div>
+        <div>
+          <label style="${labelStyle}">País</label>
+          <input id="pfp-pais" type="text" value="${escapeHtml(data?.pais || "")}" style="${inputStyle}">
+        </div>
       </div>
       <div id="pfp-msg" style="font-size:12px;color:#dc2626;margin-bottom:10px;"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -10712,7 +10751,16 @@ window.pfacturaSubmitClienteModal = async function(id) {
   const msgEl = document.getElementById("pfp-msg");
   const nombre = document.getElementById("pfp-nombre").value.trim();
   if (!nombre) { if (msgEl) msgEl.textContent = "Falta el nombre"; return; }
-  const body = { nombre, direccion: document.getElementById("pfp-direccion").value.trim() || null };
+  const body = {
+    nombre,
+    identificacion: document.getElementById("pfp-identificacion").value.trim() || null,
+    email: document.getElementById("pfp-email").value.trim() || null,
+    telefono: document.getElementById("pfp-telefono").value.trim() || null,
+    direccion1: document.getElementById("pfp-direccion1").value.trim() || null,
+    direccion2: document.getElementById("pfp-direccion2").value.trim() || null,
+    ciudad: document.getElementById("pfp-ciudad").value.trim() || null,
+    pais: document.getElementById("pfp-pais").value.trim() || null,
+  };
   try {
     const r = await fetch(`${API_BASE}/api/pfactura/clientes${id ? "/" + id : ""}`, {
       method: id ? "PUT" : "POST",
@@ -10778,7 +10826,16 @@ window.pfacturaOpenForm = async function(id) {
       };
     } catch {}
   }
-  const cliente = { nombre: data?.cliente_nombre || "", direccion: data?.cliente_direccion || "" };
+  const cliente = {
+    nombre: data?.cliente_nombre || "",
+    identificacion: data?.cliente_identificacion || "",
+    email: data?.cliente_email || "",
+    telefono: data?.cliente_telefono || "",
+    direccion1: data?.cliente_direccion1 || "",
+    direccion2: data?.cliente_direccion2 || "",
+    ciudad: data?.cliente_ciudad || "",
+    pais: data?.cliente_pais || "",
+  };
 
   document.getElementById("pfactura-modal")?.remove();
   const labelStyle = "display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:5px;";
@@ -10830,17 +10887,46 @@ window.pfacturaOpenForm = async function(id) {
           <input id="pf-cliente-nombre" type="text" value="${escapeHtml(cliente.nombre)}" style="${inputStyle}" placeholder="Nombre del cliente o empresa">
         </div>
         <div>
-          <label style="${labelStyle}">Términos</label>
-          <input id="pf-terminos" type="text" value="${escapeHtml(data?.terminos || "Personalizada")}" style="${inputStyle}" placeholder="Ej. Personalizada, Neto 15">
+          <label style="${labelStyle}">DNI / NIF / CIF *</label>
+          <input id="pf-cliente-identificacion" type="text" value="${escapeHtml(cliente.identificacion)}" style="${inputStyle}" placeholder="Obligatorio para que la factura tenga validez">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="${labelStyle}">Email</label>
+          <input id="pf-cliente-email" type="email" value="${escapeHtml(cliente.email)}" style="${inputStyle}" placeholder="Opcional">
+        </div>
+        <div>
+          <label style="${labelStyle}">Teléfono</label>
+          <input id="pf-cliente-telefono" type="text" value="${escapeHtml(cliente.telefono)}" style="${inputStyle}" placeholder="Opcional">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="${labelStyle}">Dirección 1</label>
+          <input id="pf-cliente-direccion1" type="text" value="${escapeHtml(cliente.direccion1)}" style="${inputStyle}" placeholder="Calle y número">
+        </div>
+        <div>
+          <label style="${labelStyle}">Dirección 2</label>
+          <input id="pf-cliente-direccion2" type="text" value="${escapeHtml(cliente.direccion2)}" style="${inputStyle}" placeholder="Piso, puerta... (opcional)">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+        <div>
+          <label style="${labelStyle}">Ciudad</label>
+          <input id="pf-cliente-ciudad" type="text" value="${escapeHtml(cliente.ciudad)}" style="${inputStyle}">
+        </div>
+        <div>
+          <label style="${labelStyle}">País</label>
+          <input id="pf-cliente-pais" type="text" value="${escapeHtml(cliente.pais)}" style="${inputStyle}">
         </div>
       </div>
 
-      <div style="margin-bottom:14px;">
-        <label style="${labelStyle}">Dirección del cliente</label>
-        <textarea id="pf-cliente-direccion" rows="2" style="${inputStyle}resize:vertical;">${escapeHtml(cliente.direccion)}</textarea>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;">
+        <div>
+          <label style="${labelStyle}">Términos</label>
+          <input id="pf-terminos" type="text" value="${escapeHtml(data?.terminos || "Personalizada")}" style="${inputStyle}" placeholder="Ej. Personalizada, Neto 15">
+        </div>
         <div>
           <label style="${labelStyle}">Fecha de la factura</label>
           <input id="pf-fecha" type="date" value="${data?.fecha ? String(data.fecha).slice(0, 10) : madridHoy()}" style="${inputStyle}">
@@ -10918,7 +11004,13 @@ window.pfacturaPickCliente = function(id) {
   const c = (window.__pfacturaClientes || []).find(x => String(x.id) === String(id));
   if (!c) return;
   document.getElementById("pf-cliente-nombre").value = c.nombre || "";
-  document.getElementById("pf-cliente-direccion").value = c.direccion || "";
+  document.getElementById("pf-cliente-identificacion").value = c.identificacion || "";
+  document.getElementById("pf-cliente-email").value = c.email || "";
+  document.getElementById("pf-cliente-telefono").value = c.telefono || "";
+  document.getElementById("pf-cliente-direccion1").value = c.direccion1 || "";
+  document.getElementById("pf-cliente-direccion2").value = c.direccion2 || "";
+  document.getElementById("pf-cliente-ciudad").value = c.ciudad || "";
+  document.getElementById("pf-cliente-pais").value = c.pais || "";
 };
 
 window.pfacturaAddItemRow = function(item) {
@@ -10969,6 +11061,8 @@ window.pfacturaSubmit = async function() {
   const msgEl = document.getElementById("pf-form-msg");
   const cliente_nombre = document.getElementById("pf-cliente-nombre").value.trim();
   if (!cliente_nombre) { if (msgEl) msgEl.textContent = "Falta el nombre del cliente"; return; }
+  const cliente_identificacion = document.getElementById("pf-cliente-identificacion").value.trim();
+  if (!cliente_identificacion) { if (msgEl) msgEl.textContent = "Falta el DNI/NIF del cliente — es obligatorio para que la factura tenga validez"; return; }
 
   const items = [...document.querySelectorAll("#pf-items-list .pf-item-row")].map(row => ({
     descripcion: row.querySelector(".pf-item-desc").value.trim(),
@@ -10980,7 +11074,13 @@ window.pfacturaSubmit = async function() {
 
   const body = {
     cliente_nombre,
-    cliente_direccion: document.getElementById("pf-cliente-direccion").value.trim() || null,
+    cliente_identificacion,
+    cliente_email: document.getElementById("pf-cliente-email").value.trim() || null,
+    cliente_telefono: document.getElementById("pf-cliente-telefono").value.trim() || null,
+    cliente_direccion1: document.getElementById("pf-cliente-direccion1").value.trim() || null,
+    cliente_direccion2: document.getElementById("pf-cliente-direccion2").value.trim() || null,
+    cliente_ciudad: document.getElementById("pf-cliente-ciudad").value.trim() || null,
+    cliente_pais: document.getElementById("pf-cliente-pais").value.trim() || null,
     terminos: document.getElementById("pf-terminos").value.trim() || null,
     fecha: document.getElementById("pf-fecha").value || madridHoy(),
     vencimiento: document.getElementById("pf-vencimiento").value || null,

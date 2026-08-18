@@ -69,8 +69,10 @@ router.get("/:id", auth, async (req, res) => {
 });
 
 function validateBody(body) {
-  const { cliente_nombre, items } = body || {};
+  const { cliente_nombre, cliente_identificacion, items } = body || {};
   if (!cliente_nombre || !String(cliente_nombre).trim()) return "Falta el nombre del cliente";
+  // Sin el DNI/NIF del cliente la factura no tiene validez fiscal.
+  if (!cliente_identificacion || !String(cliente_identificacion).trim()) return "Falta el DNI/NIF del cliente — es obligatorio para que la factura tenga validez";
   if (!Array.isArray(items) || items.length === 0) return "Añade al menos un artículo";
   if (items.some(i => !i.descripcion || !String(i.descripcion).trim())) return "Cada artículo necesita una descripción";
   return null;
@@ -81,7 +83,9 @@ router.post("/", auth, async (req, res) => {
   const err = validateBody(req.body);
   if (err) return res.status(400).json({ error: err });
   const {
-    fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado, items,
+    fecha, vencimiento, terminos, cliente_nombre, notas, pagado, items,
+    cliente_identificacion, cliente_email, cliente_telefono,
+    cliente_direccion1, cliente_direccion2, cliente_ciudad, cliente_pais,
     emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
   } = req.body;
 
@@ -94,15 +98,19 @@ router.post("/", auth, async (req, res) => {
     const numero = `INV-${String(seqRow.pfactura_seq).padStart(6, "0")}`;
 
     const result = await db.run(
-      `INSERT INTO pfacturas (user_id, numero, fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado,
-        emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO pfacturas (user_id, numero, fecha, vencimiento, terminos, cliente_nombre, notas, pagado,
+        emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
+        cliente_identificacion, cliente_email, cliente_telefono, cliente_direccion1, cliente_direccion2, cliente_ciudad, cliente_pais)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       [req.user.id, numero, fecha || new Date().toISOString().slice(0, 10), vencimiento || null, terminos || null,
-       cliente_nombre.trim(), cliente_direccion || null, notas || null, parseFloat(pagado) || 0,
+       cliente_nombre.trim(), notas || null, parseFloat(pagado) || 0,
        (emisor_nombre || "").trim() || defaultIssuer.nombre,
        (emisor_identificacion || "").trim() || defaultIssuer.identificacion,
        (emisor_direccion || "").trim() || defaultIssuer.direccion,
-       (emisor_email || "").trim() || defaultIssuer.email]
+       (emisor_email || "").trim() || defaultIssuer.email,
+       cliente_identificacion.trim(), (cliente_email || "").trim() || null, (cliente_telefono || "").trim() || null,
+       (cliente_direccion1 || "").trim() || null, (cliente_direccion2 || "").trim() || null,
+       (cliente_ciudad || "").trim() || null, (cliente_pais || "").trim() || null]
     );
     const invoiceId = result.lastID;
 
@@ -123,7 +131,9 @@ router.put("/:id", auth, async (req, res) => {
   const err = validateBody(req.body);
   if (err) return res.status(400).json({ error: err });
   const {
-    fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado, items,
+    fecha, vencimiento, terminos, cliente_nombre, notas, pagado, items,
+    cliente_identificacion, cliente_email, cliente_telefono,
+    cliente_direccion1, cliente_direccion2, cliente_ciudad, cliente_pais,
     emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
   } = req.body;
 
@@ -132,13 +142,18 @@ router.put("/:id", auth, async (req, res) => {
     if (!existing) return res.status(404).json({ error: "No encontrada" });
 
     await db.run(
-      `UPDATE pfacturas SET fecha = ?, vencimiento = ?, terminos = ?, cliente_nombre = ?, cliente_direccion = ?, notas = ?, pagado = ?,
-        emisor_nombre = ?, emisor_identificacion = ?, emisor_direccion = ?, emisor_email = ?
+      `UPDATE pfacturas SET fecha = ?, vencimiento = ?, terminos = ?, cliente_nombre = ?, notas = ?, pagado = ?,
+        emisor_nombre = ?, emisor_identificacion = ?, emisor_direccion = ?, emisor_email = ?,
+        cliente_identificacion = ?, cliente_email = ?, cliente_telefono = ?,
+        cliente_direccion1 = ?, cliente_direccion2 = ?, cliente_ciudad = ?, cliente_pais = ?
        WHERE id = ? AND user_id = ?`,
-      [fecha, vencimiento || null, terminos || null, cliente_nombre.trim(), cliente_direccion || null,
+      [fecha, vencimiento || null, terminos || null, cliente_nombre.trim(),
        notas || null, parseFloat(pagado) || 0,
        (emisor_nombre || "").trim() || null, (emisor_identificacion || "").trim() || null,
        (emisor_direccion || "").trim() || null, (emisor_email || "").trim() || null,
+       cliente_identificacion.trim(), (cliente_email || "").trim() || null, (cliente_telefono || "").trim() || null,
+       (cliente_direccion1 || "").trim() || null, (cliente_direccion2 || "").trim() || null,
+       (cliente_ciudad || "").trim() || null, (cliente_pais || "").trim() || null,
        req.params.id, req.user.id]
     );
 

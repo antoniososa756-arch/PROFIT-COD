@@ -416,6 +416,13 @@ await pool.query(`
       emisor_identificacion TEXT,
       emisor_direccion TEXT,
       emisor_email TEXT,
+      cliente_identificacion TEXT,
+      cliente_email TEXT,
+      cliente_telefono TEXT,
+      cliente_direccion1 TEXT,
+      cliente_direccion2 TEXT,
+      cliente_ciudad TEXT,
+      cliente_pais TEXT,
       created_at TEXT DEFAULT now()::text
     )
   `);
@@ -425,6 +432,15 @@ await pool.query(`
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_identificacion TEXT`);
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_direccion TEXT`);
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_email TEXT`);
+  // DNI/NIF del cliente: imprescindible para que la factura tenga validez fiscal —
+  // se guarda por factura (no solo en el perfil) porque puede variar entre facturas.
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS cliente_identificacion TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS cliente_email TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS cliente_telefono TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS cliente_direccion1 TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS cliente_direccion2 TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS cliente_ciudad TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS cliente_pais TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS pfactura_items (
       id SERIAL PRIMARY KEY,
@@ -461,6 +477,15 @@ await pool.query(`
       created_at TEXT DEFAULT now()::text
     )
   `);
+  // direccion (columna original, de una sola línea) se mantiene por compatibilidad
+  // con clientes ya guardados; los nuevos usan los campos separados de abajo.
+  await pool.query(`ALTER TABLE pfactura_clientes ADD COLUMN IF NOT EXISTS identificacion TEXT`);
+  await pool.query(`ALTER TABLE pfactura_clientes ADD COLUMN IF NOT EXISTS email TEXT`);
+  await pool.query(`ALTER TABLE pfactura_clientes ADD COLUMN IF NOT EXISTS telefono TEXT`);
+  await pool.query(`ALTER TABLE pfactura_clientes ADD COLUMN IF NOT EXISTS direccion1 TEXT`);
+  await pool.query(`ALTER TABLE pfactura_clientes ADD COLUMN IF NOT EXISTS direccion2 TEXT`);
+  await pool.query(`ALTER TABLE pfactura_clientes ADD COLUMN IF NOT EXISTS ciudad TEXT`);
+  await pool.query(`ALTER TABLE pfactura_clientes ADD COLUMN IF NOT EXISTS pais TEXT`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfactura_emisores_user ON pfactura_emisores(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfactura_clientes_user ON pfactura_clientes(user_id)`);
 
