@@ -10420,15 +10420,27 @@ const PF_ICONS = {
   download: `<path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M5 21h14"/>`,
   edit:     `<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/>`,
   trash:    `<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>`,
+  save:     `<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>`,
+  list:     `<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>`,
 };
+function pfIcon(icon, size) {
+  return `<svg viewBox="0 0 24 24" width="${size || 15}" height="${size || 15}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${PF_ICONS[icon]}</svg>`;
+}
 function pfActionBtn(icon, onclick, title, hoverColor) {
   return `<button type="button" onclick="${onclick}" title="${title}"
     style="width:28px;height:28px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,color .15s;"
     onmouseover="this.style.background='${hoverColor}22';this.style.color='${hoverColor}';"
     onmouseout="this.style.background='transparent';this.style.color='var(--muted)';">
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${PF_ICONS[icon]}</svg>
+    ${pfIcon(icon)}
   </button>`;
 }
+
+// Cierra los popovers de "ver guardados" al hacer click fuera (listener único,
+// registrado una vez — pfacturaOpenForm puede abrirse muchas veces por sesión)
+document.addEventListener("click", (e) => {
+  if (e.target.closest("[id$='-list-popover']") || e.target.closest("[data-pf-list-toggle]")) return;
+  document.querySelectorAll("[id$='-list-popover']").forEach(p => { p.style.display = "none"; });
+});
 
 async function pfacturaLoadList() {
   const wrap = document.getElementById("pfactura-list-wrap");
@@ -10539,10 +10551,11 @@ window.pfacturaOpenForm = async function(id) {
 
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:16px;">Tus datos (emisor)</div>
       <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Guarda varios emisores (ej. tu nombre personal y tu empresa) y elige cuál usar en cada factura.</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <div style="display:flex;gap:8px;margin-bottom:12px;position:relative;">
         <select id="pf-emisor-select" onchange="pfacturaPickEmisor(this.value)" style="${inputStyle}flex:1;">${emisorOptions(window.__pfacturaEmisores)}</select>
-        <button type="button" onclick="pfacturaSaveEmisorProfile()" title="Guardar estos datos para reutilizar" style="${iconBtnStyle}">💾</button>
-        <button type="button" onclick="pfacturaDeleteEmisorProfile()" title="Eliminar el emisor seleccionado" style="${iconBtnStyle}">🗑️</button>
+        <button type="button" onclick="pfacturaSaveEmisorProfile()" title="Guardar (actualiza el seleccionado, o crea uno nuevo)" style="${iconBtnStyle}">${pfIcon("save")}</button>
+        <button type="button" data-pf-list-toggle onclick="pfacturaToggleList('emisor')" title="Ver, editar o eliminar guardados" style="${iconBtnStyle}">${pfIcon("list")}</button>
+        <div id="pf-emisor-list-popover" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:260px;max-height:220px;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:6px;z-index:50;"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div>
@@ -10566,10 +10579,11 @@ window.pfacturaOpenForm = async function(id) {
       </div>
 
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Cliente</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <div style="display:flex;gap:8px;margin-bottom:12px;position:relative;">
         <select id="pf-cliente-select" onchange="pfacturaPickCliente(this.value)" style="${inputStyle}flex:1;">${clienteOptions(window.__pfacturaClientes)}</select>
-        <button type="button" onclick="pfacturaSaveClienteProfile()" title="Guardar este cliente para reutilizar" style="${iconBtnStyle}">💾</button>
-        <button type="button" onclick="pfacturaDeleteClienteProfile()" title="Eliminar el cliente seleccionado" style="${iconBtnStyle}">🗑️</button>
+        <button type="button" onclick="pfacturaSaveClienteProfile()" title="Guardar (actualiza el seleccionado, o crea uno nuevo)" style="${iconBtnStyle}">${pfIcon("save")}</button>
+        <button type="button" data-pf-list-toggle onclick="pfacturaToggleList('cliente')" title="Ver, editar o eliminar guardados" style="${iconBtnStyle}">${pfIcon("list")}</button>
+        <div id="pf-cliente-list-popover" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:260px;max-height:220px;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:6px;z-index:50;"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div>
@@ -10668,6 +10682,8 @@ async function pfacturaRefreshEmisorSelect(selectedId) {
   sel.value = selectedId || "";
 }
 
+// Guardar es "inteligente": si hay un emisor seleccionado en el desplegable,
+// ACTUALIZA ese mismo perfil con los campos actuales; si está en "Nuevo", crea uno.
 window.pfacturaSaveEmisorProfile = async function() {
   const nombre = document.getElementById("pf-emisor-nombre").value.trim();
   if (!nombre) { alert("Escribe primero el nombre o empresa del emisor"); return; }
@@ -10677,28 +10693,18 @@ window.pfacturaSaveEmisorProfile = async function() {
     direccion: document.getElementById("pf-emisor-direccion").value.trim() || null,
     email: document.getElementById("pf-emisor-email").value.trim() || null,
   };
+  const selectedId = document.getElementById("pf-emisor-select").value;
   try {
-    const r = await fetch(`${API_BASE}/api/pfactura/emisores`, {
-      method: "POST",
+    const r = await fetch(`${API_BASE}/api/pfactura/emisores${selectedId ? "/" + selectedId : ""}`, {
+      method: selectedId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify(body),
     });
     const d = await r.json();
     if (!r.ok) { alert(d.error || "Error guardando el emisor"); return; }
-    await pfacturaRefreshEmisorSelect(d.id);
-    showToast("💾 Guardado", "Emisor guardado para reutilizar", "#22c55e");
+    await pfacturaRefreshEmisorSelect(selectedId || d.id);
+    showToast(selectedId ? "💾 Actualizado" : "💾 Guardado", selectedId ? "Emisor actualizado" : "Emisor guardado para reutilizar", "#22c55e");
   } catch (e) { alert("Error de conexión"); }
-};
-
-window.pfacturaDeleteEmisorProfile = async function() {
-  const sel = document.getElementById("pf-emisor-select");
-  if (!sel?.value) { alert("Selecciona primero un emisor guardado para eliminarlo"); return; }
-  if (!confirm("¿Eliminar este emisor guardado? No afecta a las facturas ya creadas con él.")) return;
-  try {
-    await fetch(`${API_BASE}/api/pfactura/emisores/${sel.value}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
-    await pfacturaRefreshEmisorSelect("");
-    showToast("🗑️ Eliminado", "Emisor eliminado de tu lista", "#22c55e");
-  } catch (e) { alert("Error eliminando el emisor"); }
 };
 
 // ── Perfiles guardados de cliente ───────────────────────────────────────
@@ -10721,32 +10727,72 @@ async function pfacturaRefreshClienteSelect(selectedId) {
   sel.value = selectedId || "";
 }
 
+// Igual que con el emisor: actualiza el cliente seleccionado o crea uno nuevo.
 window.pfacturaSaveClienteProfile = async function() {
   const nombre = document.getElementById("pf-cliente-nombre").value.trim();
   if (!nombre) { alert("Escribe primero el nombre del cliente"); return; }
   const body = { nombre, direccion: document.getElementById("pf-cliente-direccion").value.trim() || null };
+  const selectedId = document.getElementById("pf-cliente-select").value;
   try {
-    const r = await fetch(`${API_BASE}/api/pfactura/clientes`, {
-      method: "POST",
+    const r = await fetch(`${API_BASE}/api/pfactura/clientes${selectedId ? "/" + selectedId : ""}`, {
+      method: selectedId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify(body),
     });
     const d = await r.json();
     if (!r.ok) { alert(d.error || "Error guardando el cliente"); return; }
-    await pfacturaRefreshClienteSelect(d.id);
-    showToast("💾 Guardado", "Cliente guardado para reutilizar", "#22c55e");
+    await pfacturaRefreshClienteSelect(selectedId || d.id);
+    showToast(selectedId ? "💾 Actualizado" : "💾 Guardado", selectedId ? "Cliente actualizado" : "Cliente guardado para reutilizar", "#22c55e");
   } catch (e) { alert("Error de conexión"); }
 };
 
-window.pfacturaDeleteClienteProfile = async function() {
-  const sel = document.getElementById("pf-cliente-select");
-  if (!sel?.value) { alert("Selecciona primero un cliente guardado para eliminarlo"); return; }
-  if (!confirm("¿Eliminar este cliente guardado? No afecta a las facturas ya creadas con él.")) return;
+// ── Popover "ver guardados" (emisor y cliente) ──────────────────────────
+function pfacturaRenderListPopover(type) {
+  const pop = document.getElementById(`pf-${type}-list-popover`);
+  if (!pop) return;
+  const list = type === "emisor" ? (window.__pfacturaEmisores || []) : (window.__pfacturaClientes || []);
+  if (!list.length) {
+    pop.innerHTML = `<div style="padding:14px;text-align:center;font-size:12px;color:var(--muted);">Aún no has guardado ninguno.</div>`;
+    return;
+  }
+  pop.innerHTML = list.map(x => `
+    <div style="display:flex;align-items:center;gap:4px;padding:6px 6px;border-radius:7px;">
+      <span style="flex:1;font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(x.nombre)}</span>
+      <button type="button" onclick="pfacturaEditFromList('${type}',${x.id})" title="Editar"
+        style="width:24px;height:24px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;"
+        onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='var(--muted)'">${pfIcon("edit", 13)}</button>
+      <button type="button" onclick="pfacturaDeleteFromList('${type}',${x.id})" title="Eliminar"
+        style="width:24px;height:24px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;"
+        onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--muted)'">${pfIcon("trash", 13)}</button>
+    </div>
+  `).join("");
+}
+
+window.pfacturaToggleList = function(type) {
+  const pop = document.getElementById(`pf-${type}-list-popover`);
+  if (!pop) return;
+  const willShow = pop.style.display === "none";
+  document.querySelectorAll("[id$='-list-popover']").forEach(p => { p.style.display = "none"; });
+  if (willShow) { pfacturaRenderListPopover(type); pop.style.display = "block"; }
+};
+
+window.pfacturaEditFromList = function(type, id) {
+  const sel = document.getElementById(`pf-${type}-select`);
+  if (sel) sel.value = id;
+  if (type === "emisor") pfacturaPickEmisor(id); else pfacturaPickCliente(id);
+  const pop = document.getElementById(`pf-${type}-list-popover`);
+  if (pop) pop.style.display = "none";
+};
+
+window.pfacturaDeleteFromList = async function(type, id) {
+  if (!confirm("¿Eliminar este guardado? No afecta a las facturas ya creadas con él.")) return;
+  const endpoint = type === "emisor" ? "emisores" : "clientes";
   try {
-    await fetch(`${API_BASE}/api/pfactura/clientes/${sel.value}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
-    await pfacturaRefreshClienteSelect("");
-    showToast("🗑️ Eliminado", "Cliente eliminado de tu lista", "#22c55e");
-  } catch (e) { alert("Error eliminando el cliente"); }
+    await fetch(`${API_BASE}/api/pfactura/${endpoint}/${id}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    if (type === "emisor") await pfacturaRefreshEmisorSelect(""); else await pfacturaRefreshClienteSelect("");
+    pfacturaRenderListPopover(type);
+    showToast("🗑️ Eliminado", "", "#22c55e");
+  } catch (e) { alert("Error eliminando"); }
 };
 
 window.pfacturaAddItemRow = function(item) {
