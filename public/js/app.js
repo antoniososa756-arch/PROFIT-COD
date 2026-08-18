@@ -504,6 +504,14 @@ const icons = {
       <line x1="12" y1="17" x2="12" y2="21" stroke-linecap="round"/>
     </svg>
   `,
+  pfactura: `
+    <svg viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="8" y1="13" x2="16" y2="13" stroke-linecap="round"/>
+      <line x1="8" y1="17" x2="13" y2="17" stroke-linecap="round"/>
+    </svg>
+  `,
   ayuda: `
     <svg viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9"/>
@@ -537,6 +545,7 @@ const I18N = {
       facturas: "Gastos",
       informes: "Ingresos",
       exprod: "Exprod",
+      pfactura: "PFactura",
       ayuda: "Centro de ayuda",
       plan: "Plan de facturación",
     },
@@ -580,6 +589,7 @@ const I18N = {
       facturas: "Expenses",
       informes: "Income",
       exprod: "Exprod",
+      pfactura: "PFactura",
       ayuda: "Help center",
       plan: "Billing plan",
     },
@@ -826,7 +836,7 @@ function escapeAttr(str) {
 // F5 o compartir el link no pierda dónde estabas. __skipPush evita generar una
 // entrada nueva en el historial cuando estamos restaurando desde popstate/carga inicial.
 // =========================
-const VALID_ROUTE_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
+const VALID_ROUTE_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
 let __skipPush = false;
 
 function _syncUrlForRoute(path) {
@@ -932,7 +942,7 @@ function loadApp(section) {
         </div>
       </div>
 
-      ${(["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda"]).map(sec => {
+      ${(["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda"]).map(sec => {
         const isApoyo = currentUser.role === "Apoyo";
         const perms   = currentUser.permissions;
         const allowed = !isApoyo || !perms || perms.includes(sec);
@@ -1252,11 +1262,11 @@ window.startTrialAndReload = async function() {
 function setSection(id) {
   // Cuentas apoyo nunca pueden ver el plan de facturación
   if (currentUser?.role === "Apoyo" && id === "plan") {
-    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda"];
+    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda"];
     id = (currentUser.permissions ? PERM_SECTIONS.find(s => currentUser.permissions.includes(s)) : null) || "metricas";
   }
   // Bloquear acceso a secciones sin permiso para cuentas apoyo
-  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda"];
+  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda"];
   if (currentUser?.role === "Apoyo" && currentUser.permissions && PERM_SECTIONS.includes(id)) {
     if (!currentUser.permissions.includes(id)) {
       // Redirigir a la primera sección permitida
@@ -2166,6 +2176,7 @@ if (id === "gestion-clientes") {
     facturas:          "🧾 Gastos",
     informes:          "📈 Ingresos",
     exprod:            "🖥️ Exprod",
+    pfactura:          "🧾 PFactura",
     ayuda:             "❓ Centro de ayuda",
     reembolsos_widget: "💳 Widget Pendiente MRW",
   };
@@ -2245,6 +2256,7 @@ if (id === "mi-equipo") {
     facturas:          "🧾 Gastos",
     informes:          "📈 Ingresos",
     exprod:            "🖥️ Exprod",
+    pfactura:          "🧾 PFactura",
     ayuda:             "❓ Centro de ayuda",
     reembolsos_widget: "💳 Widget Pendiente MRW",
   };
@@ -3336,6 +3348,27 @@ if (id === "exprod") {
     <div id="exprod-status" style="margin-top:16px;display:none;"></div>
   </div>`;
   exprodInitList();
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
+if (id === "pfactura") {
+  if (t) t.textContent = "PFactura";
+  if (s) s.textContent = "Crea facturas para tus clientes y descárgalas en PDF";
+  if (c) c.textContent = "PFactura";
+  box.className = "card";
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;">Tus facturas</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Factura sencilla para tus clientes, con descarga en PDF.</div>
+      </div>
+      <button onclick="pfacturaOpenForm()" class="btn-primary" style="white-space:nowrap;">+ Nueva factura</button>
+    </div>
+    <div id="pfactura-list-wrap"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>
+  `;
+  pfacturaLoadList();
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -10371,6 +10404,274 @@ function exprodDescargar(csvContent, filename) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// =========================
+// PFACTURA — facturación sencilla a terceros, con descarga en PDF
+// =========================
+function pfMoney(n) { return `${Number(n || 0).toFixed(2).replace(".", ",")}€`; }
+function pfDate(d) {
+  if (!d) return "—";
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
+}
+
+async function pfacturaLoadList() {
+  const wrap = document.getElementById("pfactura-list-wrap");
+  if (!wrap) return;
+  try {
+    const rows = await fetch(`${API_BASE}/api/pfactura`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    if (!Array.isArray(rows) || !rows.length) {
+      wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b7280;font-size:13px;">Aún no has creado ninguna factura.</div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Número</th>
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Cliente</th>
+              <th style="text-align:left;padding:10px 8px;color:var(--muted);font-weight:600;">Fecha</th>
+              <th style="text-align:right;padding:10px 8px;color:var(--muted);font-weight:600;">Total</th>
+              <th style="text-align:right;padding:10px 8px;color:var(--muted);font-weight:600;">Saldo</th>
+              <th style="text-align:right;padding:10px 8px;color:var(--muted);font-weight:600;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:10px 8px;color:var(--text);font-weight:600;">${escapeHtml(r.numero)}</td>
+                <td style="padding:10px 8px;color:var(--text);">${escapeHtml(r.cliente_nombre)}</td>
+                <td style="padding:10px 8px;color:var(--muted);">${pfDate(r.fecha)}</td>
+                <td style="padding:10px 8px;color:var(--text);text-align:right;">${pfMoney(r.total)}</td>
+                <td style="padding:10px 8px;text-align:right;font-weight:700;color:${Number(r.saldo) <= 0 ? "#22c55e" : "#f59e0b"};">${pfMoney(r.saldo)}</td>
+                <td style="padding:10px 8px;text-align:right;white-space:nowrap;">
+                  <button onclick="pfacturaViewPDF(${r.id})" title="Ver PDF" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;">👁️</button>
+                  <button onclick="pfacturaDownloadPDF(${r.id},'${r.numero}')" title="Descargar PDF" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;">⬇️</button>
+                  <button onclick="pfacturaOpenForm(${r.id})" title="Editar" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;">✏️</button>
+                  <button onclick="pfacturaDelete(${r.id})" title="Eliminar" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;">🗑️</button>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    wrap.innerHTML = `<div style="color:#dc2626;font-size:13px;padding:20px;">Error cargando las facturas.</div>`;
+  }
+}
+window.pfacturaLoadList = pfacturaLoadList;
+
+window.pfacturaOpenForm = async function(id) {
+  window.__pfacturaEditingId = id || null;
+  let data = null;
+  if (id) {
+    try {
+      data = await fetch(`${API_BASE}/api/pfactura/${id}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    } catch { alert("No se pudo cargar la factura"); return; }
+  }
+
+  document.getElementById("pfactura-modal")?.remove();
+  const labelStyle = "display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:5px;";
+  const inputStyle = "width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;";
+
+  const overlay = document.createElement("div");
+  overlay.id = "pfactura-modal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;width:640px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:18px;">${id ? "Editar factura" : "Nueva factura"}</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="${labelStyle}">Cliente *</label>
+          <input id="pf-cliente-nombre" type="text" value="${escapeHtml(data?.cliente_nombre || "")}" style="${inputStyle}" placeholder="Nombre del cliente o empresa">
+        </div>
+        <div>
+          <label style="${labelStyle}">Términos</label>
+          <input id="pf-terminos" type="text" value="${escapeHtml(data?.terminos || "Personalizada")}" style="${inputStyle}" placeholder="Ej. Personalizada, Neto 15">
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="${labelStyle}">Dirección del cliente</label>
+        <textarea id="pf-cliente-direccion" rows="2" style="${inputStyle}resize:vertical;">${escapeHtml(data?.cliente_direccion || "")}</textarea>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+        <div>
+          <label style="${labelStyle}">Fecha de la factura</label>
+          <input id="pf-fecha" type="date" value="${data?.fecha ? String(data.fecha).slice(0, 10) : madridHoy()}" style="${inputStyle}">
+        </div>
+        <div>
+          <label style="${labelStyle}">Fecha de vencimiento</label>
+          <input id="pf-vencimiento" type="date" value="${data?.vencimiento ? String(data.vencimiento).slice(0, 10) : ""}" style="${inputStyle}">
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Artículos</div>
+      <div id="pf-items-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
+      <button type="button" onclick="pfacturaAddItemRow()" style="background:none;border:1px dashed var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;margin-bottom:18px;font-family:inherit;">+ Añadir artículo</button>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <div style="width:230px;display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);">
+            <span>Subtotal</span><span id="pf-subtotal">0,00€</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--text);">
+            <span>Total</span><span id="pf-total">0,00€</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <label style="font-size:12px;color:var(--muted);">Pago realizado</label>
+            <input id="pf-pagado" type="number" step="0.01" min="0" value="${data?.pagado ?? 0}" oninput="pfacturaRecalcTotals()" style="width:100px;text-align:right;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;">
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#f59e0b;border-top:1px solid var(--border);padding-top:6px;">
+            <span>Saldo</span><span id="pf-saldo">0,00€</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label style="${labelStyle}">Notas</label>
+        <textarea id="pf-notas" rows="2" style="${inputStyle}resize:vertical;" placeholder="Ej. Gracias por su confianza.">${escapeHtml(data?.notas || "")}</textarea>
+      </div>
+
+      <div id="pf-form-msg" style="font-size:12px;color:#dc2626;margin-bottom:10px;"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="pfacturaCloseForm()" style="padding:9px 20px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button onclick="pfacturaSubmit()" class="btn-primary" style="padding:9px 24px;">Guardar factura</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", e => { if (e.target === overlay) pfacturaCloseForm(); });
+
+  const items = data?.items?.length ? data.items : [{ descripcion: "", cantidad: 1, precio: 0 }];
+  items.forEach(it => pfacturaAddItemRow(it));
+  pfacturaRecalcTotals();
+};
+
+window.pfacturaCloseForm = function() {
+  document.getElementById("pfactura-modal")?.remove();
+  window.__pfacturaEditingId = null;
+};
+
+window.pfacturaAddItemRow = function(item) {
+  const list = document.getElementById("pf-items-list");
+  if (!list) return;
+  const row = document.createElement("div");
+  row.className = "pf-item-row";
+  row.style.cssText = "display:grid;grid-template-columns:1fr 70px 90px 90px 24px;gap:8px;align-items:center;";
+  row.innerHTML = `
+    <input type="text" class="pf-item-desc" placeholder="Descripción" value="${escapeHtml(item?.descripcion || "")}" oninput="pfacturaRecalcTotals()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12.5px;font-family:inherit;">
+    <input type="number" class="pf-item-qty" min="0" step="0.01" value="${item?.cantidad ?? 1}" oninput="pfacturaRecalcTotals()" style="padding:6px 6px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12.5px;text-align:right;font-family:inherit;">
+    <input type="number" class="pf-item-rate" min="0" step="0.01" value="${item?.precio ?? 0}" oninput="pfacturaRecalcTotals()" style="padding:6px 6px;border-radius:6px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12.5px;text-align:right;font-family:inherit;">
+    <span class="pf-item-amount" style="font-size:12.5px;font-weight:600;color:var(--text);text-align:right;">0,00€</span>
+    <button type="button" onclick="pfacturaRemoveItemRow(this)" title="Eliminar" style="background:none;border:none;color:#ef4444;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+  `;
+  list.appendChild(row);
+  pfacturaRecalcTotals();
+};
+
+window.pfacturaRemoveItemRow = function(btn) {
+  const list = document.getElementById("pf-items-list");
+  if (!list) return;
+  if (list.children.length <= 1) return;
+  btn.closest(".pf-item-row")?.remove();
+  pfacturaRecalcTotals();
+};
+
+window.pfacturaRecalcTotals = function() {
+  const list = document.getElementById("pf-items-list");
+  if (!list) return;
+  let subtotal = 0;
+  list.querySelectorAll(".pf-item-row").forEach(row => {
+    const qty = parseFloat(row.querySelector(".pf-item-qty").value) || 0;
+    const rate = parseFloat(row.querySelector(".pf-item-rate").value) || 0;
+    const amount = qty * rate;
+    subtotal += amount;
+    row.querySelector(".pf-item-amount").textContent = pfMoney(amount);
+  });
+  const pagado = parseFloat(document.getElementById("pf-pagado")?.value) || 0;
+  const saldo = subtotal - pagado;
+  const subEl = document.getElementById("pf-subtotal"); if (subEl) subEl.textContent = pfMoney(subtotal);
+  const totEl = document.getElementById("pf-total");    if (totEl) totEl.textContent = pfMoney(subtotal);
+  const salEl = document.getElementById("pf-saldo");
+  if (salEl) { salEl.textContent = pfMoney(saldo); salEl.style.color = saldo <= 0 ? "#22c55e" : "#f59e0b"; }
+};
+
+window.pfacturaSubmit = async function() {
+  const msgEl = document.getElementById("pf-form-msg");
+  const cliente_nombre = document.getElementById("pf-cliente-nombre").value.trim();
+  if (!cliente_nombre) { if (msgEl) msgEl.textContent = "Falta el nombre del cliente"; return; }
+
+  const items = [...document.querySelectorAll("#pf-items-list .pf-item-row")].map(row => ({
+    descripcion: row.querySelector(".pf-item-desc").value.trim(),
+    cantidad: parseFloat(row.querySelector(".pf-item-qty").value) || 0,
+    precio: parseFloat(row.querySelector(".pf-item-rate").value) || 0,
+  })).filter(it => it.descripcion);
+
+  if (!items.length) { if (msgEl) msgEl.textContent = "Añade al menos un artículo con descripción"; return; }
+
+  const body = {
+    cliente_nombre,
+    cliente_direccion: document.getElementById("pf-cliente-direccion").value.trim() || null,
+    terminos: document.getElementById("pf-terminos").value.trim() || null,
+    fecha: document.getElementById("pf-fecha").value || madridHoy(),
+    vencimiento: document.getElementById("pf-vencimiento").value || null,
+    notas: document.getElementById("pf-notas").value.trim() || null,
+    pagado: parseFloat(document.getElementById("pf-pagado").value) || 0,
+    items,
+  };
+
+  const id = window.__pfacturaEditingId;
+  try {
+    const r = await fetch(`${API_BASE}/api/pfactura${id ? "/" + id : ""}`, {
+      method: id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) { if (msgEl) msgEl.textContent = d.error || "Error guardando la factura"; return; }
+    pfacturaCloseForm();
+    showToast(id ? "✅ Factura actualizada" : "✅ Factura creada", d.numero || "", "#22c55e");
+    pfacturaLoadList();
+  } catch (e) { if (msgEl) msgEl.textContent = "Error de conexión"; }
+};
+
+window.pfacturaDelete = async function(id) {
+  if (!confirm("¿Eliminar esta factura? Esta acción no se puede deshacer.")) return;
+  try {
+    await fetch(`${API_BASE}/api/pfactura/${id}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    pfacturaLoadList();
+  } catch (e) { alert("Error eliminando la factura"); }
+};
+
+async function pfacturaFetchPDFBlob(id) {
+  const r = await fetch(`${API_BASE}/api/pfactura/${id}/pdf`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+  if (!r.ok) throw new Error("No se pudo generar el PDF");
+  return r.blob();
+}
+
+window.pfacturaViewPDF = async function(id) {
+  try {
+    const blob = await pfacturaFetchPDFBlob(id);
+    window.open(URL.createObjectURL(blob), "_blank");
+  } catch (e) { alert(e.message || "Error al abrir el PDF"); }
+};
+
+window.pfacturaDownloadPDF = async function(id, numero) {
+  try {
+    const blob = await pfacturaFetchPDFBlob(id);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${numero || "factura"}.pdf`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) { alert(e.message || "Error al descargar el PDF"); }
+};
 
 // ===== ACTUALIZACIÓN EN SEGUNDO PLANO =====
 async function refreshCacheBackground() {

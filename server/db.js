@@ -341,7 +341,7 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_cycle_start
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_cache INTEGER DEFAULT 0`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_month TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL`);
-await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","ayuda","reembolsos_widget"]'`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda","reembolsos_widget"]'`);
 await pool.query(`
   CREATE TABLE IF NOT EXISTS billing_invoices (
     id SERIAL PRIMARY KEY,
@@ -396,6 +396,37 @@ await pool.query(`
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_status       ON orders(fulfillment_status)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_cancelled_at ON orders(cancelled_at)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_shop_domain  ON orders(shop_domain)`);
+
+  // PFactura — facturación sencilla de cada cliente hacia terceros suyos
+  // (independiente de billing_invoices, que es lo que ProfitCod cobra a sus clientes)
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pfactura_seq INTEGER NOT NULL DEFAULT 0`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pfacturas (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      numero TEXT NOT NULL,
+      fecha TEXT NOT NULL,
+      vencimiento TEXT,
+      terminos TEXT,
+      cliente_nombre TEXT NOT NULL,
+      cliente_direccion TEXT,
+      notas TEXT,
+      pagado NUMERIC(10,2) NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT now()::text
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pfactura_items (
+      id SERIAL PRIMARY KEY,
+      pfactura_id INTEGER NOT NULL REFERENCES pfacturas(id) ON DELETE CASCADE,
+      descripcion TEXT NOT NULL,
+      cantidad NUMERIC(10,2) NOT NULL DEFAULT 1,
+      precio NUMERIC(10,2) NOT NULL DEFAULT 0,
+      orden INTEGER DEFAULT 0
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfacturas_user ON pfacturas(user_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfactura_items_factura ON pfactura_items(pfactura_id)`);
 
   console.log("✅ PostgreSQL tablas inicializadas");
 }
