@@ -752,6 +752,18 @@ function escapeAttr(str) {
     .replace(/'/g, "&#039;");
 }
 
+// Cierra un modal al hacer click en su fondo (backdrop) — pero solo si el
+// click EMPIEZA ahí. Un "click" simple no basta: si seleccionas texto dentro
+// del modal arrastrando el ratón y sueltas fuera, el navegador dispara un
+// click cuyo target es el backdrop aunque nunca se hiciera click en él, y el
+// modal se cerraba de golpe perdiendo lo escrito. Con esto solo cierra si el
+// mousedown también empezó en el backdrop (un click real fuera del modal).
+function closeOnBackdropClick(el, closeFn) {
+  let downOnBackdrop = false;
+  el.addEventListener("mousedown", e => { downOnBackdrop = (e.target === el); });
+  el.addEventListener("click", e => { if (downOnBackdrop && e.target === el) closeFn(); });
+}
+
  /* =========================
      NOTIFICATIONS (LA CLAVE)
      - Se eliminan UNA A UNA al abrir
@@ -2216,7 +2228,7 @@ if (id === "gestion-clientes") {
       </div>`;
     document.body.appendChild(overlay);
     overlay.querySelector("#perms-cancel").onclick = () => overlay.remove();
-    overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+    closeOnBackdropClick(overlay, () => overlay.remove());
     overlay.querySelector("#perms-save").onclick = async () => {
       const checked = [...overlay.querySelectorAll("input[type='checkbox']:checked")].map(c => c.value);
       const msgEl = overlay.querySelector("#perms-msg");
@@ -2318,7 +2330,7 @@ if (id === "mi-equipo") {
       </div>`;
     document.body.appendChild(overlay);
     overlay.querySelector("#eq-cancel").onclick = () => overlay.remove();
-    overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+    closeOnBackdropClick(overlay, () => overlay.remove());
     overlay.querySelector("#eq-save").onclick = async () => {
       const checked = [...overlay.querySelectorAll("input[type='checkbox']:checked")].map(c => c.value);
       const msgEl = overlay.querySelector("#eq-msg");
@@ -7759,7 +7771,7 @@ function verDesgloseRentTienda(domain) {
   </div>`;
   document.body.appendChild(overlay);
   document.getElementById('__desglose-tienda-close').onclick = () => overlay.remove();
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  closeOnBackdropClick(overlay, () => overlay.remove());
 }
 window.verDesgloseRentTienda = verDesgloseRentTienda;
 
@@ -7851,7 +7863,7 @@ function verDetalleProductosRent(domain) {
     + '</div>';
   document.body.appendChild(overlay);
   document.getElementById('__prod-detail-close').onclick = () => overlay.remove();
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  closeOnBackdropClick(overlay, () => overlay.remove());
 }
 window.verDetalleProductosRent = verDetalleProductosRent;
 
@@ -10590,7 +10602,7 @@ window.pfacturaOpenEmisorModal = function(id) {
     </div>
   `;
   document.body.appendChild(overlay);
-  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+  closeOnBackdropClick(overlay, () => overlay.remove());
 };
 
 window.pfacturaSubmitEmisorModal = async function(id) {
@@ -10693,7 +10705,7 @@ window.pfacturaOpenClienteModal = function(id) {
     </div>
   `;
   document.body.appendChild(overlay);
-  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+  closeOnBackdropClick(overlay, () => overlay.remove());
 };
 
 window.pfacturaSubmitClienteModal = async function(id) {
@@ -10875,7 +10887,7 @@ window.pfacturaOpenForm = async function(id) {
     </div>
   `;
   document.body.appendChild(overlay);
-  overlay.addEventListener("click", e => { if (e.target === overlay) pfacturaCloseForm(); });
+  closeOnBackdropClick(overlay, pfacturaCloseForm);
 
   const items = data?.items?.length ? data.items : [{ descripcion: "", cantidad: 1, precio: 0 }];
   items.forEach(it => pfacturaAddItemRow(it));
@@ -13596,7 +13608,7 @@ async function abrirHistoricoStock(productId, productName, currentStock, groupId
       </div>
     </div>`;
   document.body.appendChild(modal);
-  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  closeOnBackdropClick(modal, () => modal.remove());
 
   try {
     const historyUrl = groupId
@@ -13684,7 +13696,7 @@ async function abrirVincularStock() {
       </div>
     </div>`;
   document.body.appendChild(modal);
-  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  closeOnBackdropClick(modal, () => modal.remove());
 
   const [stockData, groups] = await Promise.all([
     fetch(`${API_BASE}/api/shopify/stock`, { headers: h }).then(r => r.json()).catch(() => []),
