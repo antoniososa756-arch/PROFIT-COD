@@ -12,7 +12,12 @@ async function getInvoiceWithItems(id, userId) {
   return { ...invoice, items, subtotal, total: subtotal, saldo: subtotal - Number(invoice.pagado || 0) };
 }
 
-async function getIssuer(userId) {
+// Emisor por defecto a partir de los datos de facturación de la cuenta (Perfil).
+// Se usa solo para RELLENAR huecos que el usuario no especificó en la factura —
+// cada factura guarda su propio emisor como una foto fija en el momento de
+// crearla, así que si luego cambia sus datos de cuenta las facturas ya
+// emitidas no se alteran retroactivamente.
+async function getDefaultIssuer(userId) {
   const u = await db.get(
     "SELECT email, display_name, billing_name, billing_nif, billing_address, billing_city, billing_zip, billing_country FROM users WHERE id = ?",
     [userId]
@@ -23,10 +28,19 @@ async function getIssuer(userId) {
   if (cityLine) addressLines.push(cityLine);
   if (u.billing_country) addressLines.push(u.billing_country);
   return {
-    name: u.billing_name || u.display_name || u.email,
-    taxIdLine: u.billing_nif ? `NIF/CIF: ${u.billing_nif}` : "",
-    addressLines,
+    nombre: u.billing_name || u.display_name || u.email,
+    identificacion: u.billing_nif || "",
+    direccion: addressLines.join("\n"),
     email: u.email,
+  };
+}
+
+function issuerToPdfFormat(invoice) {
+  return {
+    name: invoice.emisor_nombre || "",
+    taxIdLine: invoice.emisor_identificacion ? `NIF/CIF: ${invoice.emisor_identificacion}` : "",
+    addressLines: invoice.emisor_direccion ? String(invoice.emisor_direccion).split("\n") : [],
+    email: invoice.emisor_email || "",
   };
 }
 
@@ -66,9 +80,13 @@ function validateBody(body) {
 router.post("/", auth, async (req, res) => {
   const err = validateBody(req.body);
   if (err) return res.status(400).json({ error: err });
-  const { fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado, items } = req.body;
+  const {
+    fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado, items,
+    emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
+  } = req.body;
 
   try {
+    const defaultIssuer = await getDefaultIssuer(req.user.id);
     const seqRow = await db.get(
       "UPDATE users SET pfactura_seq = pfactura_seq + 1 WHERE id = ? RETURNING pfactura_seq",
       [req.user.id]
@@ -76,10 +94,15 @@ router.post("/", auth, async (req, res) => {
     const numero = `INV-${String(seqRow.pfactura_seq).padStart(6, "0")}`;
 
     const result = await db.run(
-      `INSERT INTO pfacturas (user_id, numero, fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO pfacturas (user_id, numero, fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado,
+        emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       [req.user.id, numero, fecha || new Date().toISOString().slice(0, 10), vencimiento || null, terminos || null,
-       cliente_nombre.trim(), cliente_direccion || null, notas || null, parseFloat(pagado) || 0]
+       cliente_nombre.trim(), cliente_direccion || null, notas || null, parseFloat(pagado) || 0,
+       (emisor_nombre || "").trim() || defaultIssuer.nombre,
+       (emisor_identificacion || "").trim() || defaultIssuer.identificacion,
+       (emisor_direccion || "").trim() || defaultIssuer.direccion,
+       (emisor_email || "").trim() || defaultIssuer.email]
     );
     const invoiceId = result.lastID;
 
@@ -99,17 +122,24 @@ router.post("/", auth, async (req, res) => {
 router.put("/:id", auth, async (req, res) => {
   const err = validateBody(req.body);
   if (err) return res.status(400).json({ error: err });
-  const { fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado, items } = req.body;
+  const {
+    fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado, items,
+    emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
+  } = req.body;
 
   try {
     const existing = await db.get("SELECT id FROM pfacturas WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
     if (!existing) return res.status(404).json({ error: "No encontrada" });
 
     await db.run(
-      `UPDATE pfacturas SET fecha = ?, vencimiento = ?, terminos = ?, cliente_nombre = ?, cliente_direccion = ?, notas = ?, pagado = ?
+      `UPDATE pfacturas SET fecha = ?, vencimiento = ?, terminos = ?, cliente_nombre = ?, cliente_direccion = ?, notas = ?, pagado = ?,
+        emisor_nombre = ?, emisor_identificacion = ?, emisor_direccion = ?, emisor_email = ?
        WHERE id = ? AND user_id = ?`,
       [fecha, vencimiento || null, terminos || null, cliente_nombre.trim(), cliente_direccion || null,
-       notas || null, parseFloat(pagado) || 0, req.params.id, req.user.id]
+       notas || null, parseFloat(pagado) || 0,
+       (emisor_nombre || "").trim() || null, (emisor_identificacion || "").trim() || null,
+       (emisor_direccion || "").trim() || null, (emisor_email || "").trim() || null,
+       req.params.id, req.user.id]
     );
 
     await db.run("DELETE FROM pfactura_items WHERE pfactura_id = ?", [req.params.id]);
@@ -138,8 +168,16 @@ router.get("/:id/pdf", auth, async (req, res) => {
   try {
     const invoice = await getInvoiceWithItems(req.params.id, req.user.id);
     if (!invoice) return res.status(404).json({ error: "No encontrada" });
-    const issuer = await getIssuer(req.user.id);
-    renderPFacturaPDF(res, { issuer, invoice, items: invoice.items });
+    // Facturas anteriores a añadir estos campos no tienen emisor_* guardado —
+    // se rellenan con los datos de cuenta actuales solo en ese caso.
+    if (!invoice.emisor_nombre) {
+      const d = await getDefaultIssuer(req.user.id);
+      invoice.emisor_nombre = d.nombre;
+      invoice.emisor_identificacion = invoice.emisor_identificacion || d.identificacion;
+      invoice.emisor_direccion = invoice.emisor_direccion || d.direccion;
+      invoice.emisor_email = invoice.emisor_email || d.email;
+    }
+    renderPFacturaPDF(res, { issuer: issuerToPdfFormat(invoice), invoice, items: invoice.items });
   } catch (e) { console.error(e); res.status(500).json({ error: "Error generando el PDF" }); }
 });
 

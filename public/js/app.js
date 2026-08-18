@@ -10472,6 +10472,32 @@ window.pfacturaOpenForm = async function(id) {
     } catch { alert("No se pudo cargar la factura"); return; }
   }
 
+  // Datos del emisor: si la factura ya tiene los suyos propios (edición) se usan
+  // tal cual; si no (factura nueva, o una antigua sin emisor guardado) se
+  // precargan desde los datos de facturación de la cuenta como punto de partida,
+  // pero son editables — así cada factura puede salir como particular o empresa.
+  let emisor = { nombre: "", identificacion: "", direccion: "", email: "" };
+  if (data?.emisor_nombre) {
+    emisor = {
+      nombre: data.emisor_nombre || "",
+      identificacion: data.emisor_identificacion || "",
+      direccion: data.emisor_direccion || "",
+      email: data.emisor_email || "",
+    };
+  } else {
+    try {
+      const me = await fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+      const u = me?.user || {};
+      const addrParts = [u.billing_address, [u.billing_city, u.billing_zip].filter(Boolean).join(" "), u.billing_country].filter(Boolean);
+      emisor = {
+        nombre: u.billing_name || u.display_name || u.email || "",
+        identificacion: u.billing_nif || "",
+        direccion: addrParts.join("\n"),
+        email: u.email || "",
+      };
+    } catch {}
+  }
+
   document.getElementById("pfactura-modal")?.remove();
   const labelStyle = "display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:5px;";
   const inputStyle = "width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;";
@@ -10481,8 +10507,32 @@ window.pfacturaOpenForm = async function(id) {
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
   overlay.innerHTML = `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;width:640px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3);">
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:18px;">${id ? "Editar factura" : "Nueva factura"}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;">${id ? "Editar factura" : "Nueva factura"}</div>
 
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:16px;">Tus datos (emisor)</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Cámbialos si quieres facturar como particular, con otra empresa, u otros datos distintos a los de tu cuenta.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="${labelStyle}">Nombre / Empresa</label>
+          <input id="pf-emisor-nombre" type="text" value="${escapeHtml(emisor.nombre)}" style="${inputStyle}" placeholder="Tu nombre o razón social">
+        </div>
+        <div>
+          <label style="${labelStyle}">NIF / CIF / ID</label>
+          <input id="pf-emisor-identificacion" type="text" value="${escapeHtml(emisor.identificacion)}" style="${inputStyle}" placeholder="Opcional">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+        <div>
+          <label style="${labelStyle}">Email</label>
+          <input id="pf-emisor-email" type="email" value="${escapeHtml(emisor.email)}" style="${inputStyle}" placeholder="tu@email.com">
+        </div>
+        <div>
+          <label style="${labelStyle}">Dirección</label>
+          <input id="pf-emisor-direccion" type="text" value="${escapeHtml(emisor.direccion.replace(/\n/g, ", "))}" style="${inputStyle}" placeholder="Dirección, ciudad, país">
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Cliente</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div>
           <label style="${labelStyle}">Cliente *</label>
@@ -10623,6 +10673,10 @@ window.pfacturaSubmit = async function() {
     vencimiento: document.getElementById("pf-vencimiento").value || null,
     notas: document.getElementById("pf-notas").value.trim() || null,
     pagado: parseFloat(document.getElementById("pf-pagado").value) || 0,
+    emisor_nombre: document.getElementById("pf-emisor-nombre").value.trim() || null,
+    emisor_identificacion: document.getElementById("pf-emisor-identificacion").value.trim() || null,
+    emisor_direccion: document.getElementById("pf-emisor-direccion").value.trim() || null,
+    emisor_email: document.getElementById("pf-emisor-email").value.trim() || null,
     items,
   };
 

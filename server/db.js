@@ -412,9 +412,19 @@ await pool.query(`
       cliente_direccion TEXT,
       notas TEXT,
       pagado NUMERIC(10,2) NOT NULL DEFAULT 0,
+      emisor_nombre TEXT,
+      emisor_identificacion TEXT,
+      emisor_direccion TEXT,
+      emisor_email TEXT,
       created_at TEXT DEFAULT now()::text
     )
   `);
+  // Facturas creadas antes de añadir estos campos: por compatibilidad se
+  // rellenan al vuelo en el momento del PDF si vienen vacíos (ver pfactura.routes.js)
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_nombre TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_identificacion TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_direccion TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_email TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS pfactura_items (
       id SERIAL PRIMARY KEY,
