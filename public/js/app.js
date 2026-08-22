@@ -8394,7 +8394,7 @@ async function loadAdsTable() {
     let selStart = null, selEnd = null, isDragging = false;
 
     function cellAt(el) {
-      const td = el.closest("td[data-row]");
+      const td = el?.closest?.("td[data-row]");
       return td ? { row: +td.dataset.row, col: +td.dataset.col } : null;
     }
     function applySelection() {
@@ -8435,7 +8435,10 @@ async function loadAdsTable() {
     document.addEventListener("mouseup",   wrap._adsMouseup);
 
     wrap._adsKeydown = function(e) {
-      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+      // .toLowerCase(): con Bloq Mayús activado (u otros layouts) e.key llega como
+      // "C" en vez de "c" y la comparación exacta fallaba en silencio — Ctrl+C no
+      // hacía nada, sin ningún aviso de error.
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
         const selected = [...table.querySelectorAll("td.ads-sel")];
         if (!selected.length) return;
         e.preventDefault();
@@ -8467,6 +8470,7 @@ async function loadAdsTable() {
           td.style.outline = "2px solid #22c55e";
           setTimeout(() => { td.style.outline = ""; td.classList.remove("ads-sel"); }, 600);
         });
+        showToast?.("📋 Copiado", `${selected.length} celda${selected.length === 1 ? "" : "s"} lista${selected.length === 1 ? "" : "s"} para pegar en Excel`, "#22c55e");
       }
       if (e.key === "Escape") clearAdsSelection(table);
     };
