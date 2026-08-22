@@ -33,6 +33,19 @@ module.exports = async (req, res, next) => {
   // por vida (no un cupo mensual que se regala durante la prueba) y aplica siempre.
   if (status === "trial" && plan !== "starter") return next();
 
+  // Ya superó el límite de su plan alguna vez: se queda bloqueado aunque llegue la
+  // renovación y el conteo del ciclo actual vuelva a 0 — si no, un cliente podría
+  // superar su límite cada mes y desbloquearse gratis en cuanto empieza el ciclo
+  // siguiente, sin pagar nunca el plan superior que le corresponde. Solo se
+  // limpia al subir de plan (webhook de Stripe) o manualmente por un admin.
+  if (user.plan_overage_locked) {
+    return res.status(402).json({
+      error: "ORDER_LIMIT_EXCEEDED",
+      message: `Superaste el límite de pedidos de tu plan ${plan}. Actualiza a un plan superior para continuar.`,
+      locked: true,
+    });
+  }
+
   // Verificar límite de pedidos. En planes de pago es el ciclo de facturación actual
   // (desde que se activó el plan, no desde el día 1 del mes — así no cuenta pedidos
   // del trial). En Starter es un tope de por vida: se cuentan TODOS sus pedidos, sin
@@ -50,6 +63,9 @@ module.exports = async (req, res, next) => {
       `, cycleStart ? [user.id, cycleStart.toISOString()] : [user.id]);
       const ordersCount = parseInt(countRow?.cnt || 0);
       if (ordersCount > orderLimit) {
+        // Se persiste: a partir de ahora queda bloqueado hasta que suba de plan o
+        // un admin lo libere, no solo hasta que renueve el ciclo actual.
+        db.run("UPDATE users SET plan_overage_locked = true WHERE id = ?", [user.id]).catch(() => {});
         return res.status(402).json({
           error: "ORDER_LIMIT_EXCEEDED",
           message: plan === "starter"

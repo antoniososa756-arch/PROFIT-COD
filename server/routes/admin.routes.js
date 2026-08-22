@@ -84,6 +84,17 @@ router.post("/users/:id/grant-free-days", auth, admin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error servidor" }); }
 });
 
+// POST /api/admin/users/:id/unlock-overage — levanta a mano el bloqueo persistente
+// por superar el límite de pedidos de su plan (ver plan_overage_locked en planCheck.js).
+// Excepción manual: normalmente solo se levanta al subir de plan.
+router.post("/users/:id/unlock-overage", auth, admin, async (req, res) => {
+  try {
+    const result = await db.run("UPDATE users SET plan_overage_locked = false WHERE id = ?", [req.params.id]);
+    if (!result.changes) return res.status(404).json({ error: "Usuario no encontrado" });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error servidor" }); }
+});
+
 router.patch("/users/:id/status", auth, admin, async (req, res) => {
   try {
     const user = await db.get("SELECT id, role, active FROM users WHERE id = ?", [req.params.id]);

@@ -341,6 +341,13 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_cycle_start
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_cache INTEGER DEFAULT 0`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_orders_month TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL`);
+// Se marca cuando el cliente supera el límite de pedidos de su plan. A diferencia
+// del bloqueo normal (que se basa en el conteo del ciclo actual y se levanta solo
+// al renovar), este flag PERSISTE aunque llegue la renovación — si no, un cliente
+// podría superar su límite cada mes y quedar desbloqueado gratis en cuanto empieza
+// el ciclo siguiente, sin haber pagado nunca el plan superior que le corresponde.
+// Solo se limpia al subir de plan (webhook de Stripe) o manualmente por un admin.
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_overage_locked BOOLEAN NOT NULL DEFAULT false`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda","reembolsos_widget"]'`);
 await pool.query(`
   CREATE TABLE IF NOT EXISTS billing_invoices (

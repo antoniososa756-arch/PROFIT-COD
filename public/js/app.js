@@ -2139,9 +2139,13 @@ if (id === "gestion-clientes") {
               </button>
             </div>
 
-            <div style="display:flex;align-items:center;gap:6px;">
-              ${u.role === "admin" ? "Administrador" : u.role === "apoyo" ? "Apoyo" : "Cliente"}
-              ${u.role === "apoyo" ? `<button onclick="openPermisosModal(${u.id},'${escapeHtml(u.email)}')" title="Editar permisos" style="padding:2px 8px;font-size:11px;border-radius:5px;border:1px solid #374151;background:var(--card);color:#6b7280;cursor:pointer;font-family:inherit;">Permisos</button>` : ""}
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                ${u.role === "admin" ? "Administrador" : u.role === "apoyo" ? "Apoyo" : "Cliente"}
+                ${u.role === "apoyo" ? `<button onclick="openPermisosModal(${u.id},'${escapeHtml(u.email)}')" title="Editar permisos" style="padding:2px 8px;font-size:11px;border-radius:5px;border:1px solid #374151;background:var(--card);color:#6b7280;cursor:pointer;font-family:inherit;">Permisos</button>` : ""}
+              </div>
+              ${u.plan_overage_locked ? `<button onclick="unlockOverage(${u.id},'${escapeAttr(u.email)}')" title="Superó el límite de pedidos de su plan (${escapeAttr(u.plan||'')}) y quedó bloqueado incluso tras renovar. Desbloquéalo solo si vas a hacer una excepción — lo normal es que suba de plan."
+                style="align-self:flex-start;padding:2px 8px;font-size:10.5px;font-weight:700;border-radius:5px;border:1px solid #ef4444;background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-family:inherit;white-space:nowrap;">⚠ Bloqueo por exceso — Desbloquear</button>` : ""}
             </div>
 
             <div class="view-eye" onclick="viewClient('${u.id}')">
@@ -6035,11 +6039,25 @@ async function confirmarDiasGratis(userId) {
   }
 }
 
+async function unlockOverage(userId, email) {
+  if (!confirm(`${email}\n\nEsta cuenta quedó bloqueada por superar el límite de pedidos de su plan, incluso tras renovar. Lo normal es que suba de plan — ¿seguro que quieres desbloquearla igualmente como excepción?`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users/${userId}/unlock-overage`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getActiveToken() },
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error al desbloquear"); return; }
+    showToast("🔓 Desbloqueada", email, "#22c55e");
+    setSection("gestion-clientes");
+  } catch (e) { alert("Error de conexión"); }
+}
+
 // exponer funciones al HTML
 window.resetPassword = resetPassword;
 window.confirmReset = confirmReset;
 window.abrirModalDiasGratis = abrirModalDiasGratis;
 window.confirmarDiasGratis = confirmarDiasGratis;
+window.unlockOverage = unlockOverage;
 
 async function viewClient(userId) {
   try {

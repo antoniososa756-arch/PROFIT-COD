@@ -71,7 +71,7 @@ async function getMonthlyOrders(userId, billingCycleStart, plan) {
 router.get("/plan", auth, async (req, res) => {
   try {
     const user = await db.get(
-      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start, subscription_cancel_at FROM users WHERE id = $1",
+      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start, subscription_cancel_at, plan_overage_locked FROM users WHERE id = $1",
       [req.user.id]
     );
     const planKey = user?.plan || "free";
@@ -100,7 +100,14 @@ router.get("/plan", auth, async (req, res) => {
     // Starter, cuyo tope de 120 pedidos es de por vida y aplica siempre (igual que en planCheck).
     const isLifetimeLimit = planKey === "starter";
     const orderLimit = planInfo?.order_limit ?? null;
-    const isBlocked  = orderLimit !== null && monthlyOrders > orderLimit && (isLifetimeLimit || !trialActive);
+    const overLimitNow = orderLimit !== null && monthlyOrders > orderLimit && (isLifetimeLimit || !trialActive);
+    // plan_overage_locked persiste el bloqueo aunque el ciclo actual ya haya
+    // reseteado el conteo (ver planCheck.js) — si no, renovar el mismo plan cada
+    // mes desbloquearía gratis a quien lo supera una y otra vez.
+    if (overLimitNow && !user?.plan_overage_locked) {
+      db.run("UPDATE users SET plan_overage_locked = true WHERE id = $1", [req.user.id]).catch(() => {});
+    }
+    const isBlocked = !!user?.plan_overage_locked || overLimitNow;
 
     // Días para el reinicio del ciclo de facturación (un mes después de la última activación/renovación)
     const now = new Date();
@@ -298,7 +305,7 @@ router.post("/stripe/webhook", async (req, res) => {
         await db.run(
           `UPDATE users SET plan = $1, plan_status = 'active',
            plan_expires_at = $2, billing_cycle_start = $3,
-           stripe_subscription_id = $4 WHERE id = $5`,
+           stripe_subscription_id = $4, plan_overage_locked = false WHERE id = $5`,
           [plan,
            new Date(now.getTime() + 35 * 24 * 60 * 60 * 1000).toISOString(), // +35 días de margen
            cycleStart, subId, parseInt(userId)]
@@ -338,7 +345,7 @@ router.post("/stripe/webhook", async (req, res) => {
 
     } else if (event.type === "customer.subscription.updated") {
       const sub = event.data.object;
-      const user = await db.get("SELECT id FROM users WHERE stripe_subscription_id = $1", [sub.id]);
+      const user = await db.get("SELECT id, plan FROM users WHERE stripe_subscription_id = $1", [sub.id]);
       if (user) {
         if (sub.cancel_at_period_end) {
           // Guardar fecha de cancelación para mostrarla en la app
@@ -350,6 +357,31 @@ router.post("/stripe/webhook", async (req, res) => {
         } else {
           // Reactivó la suscripción (deshizo la cancelación)
           await db.run(`UPDATE users SET subscription_cancel_at = NULL WHERE id = $1`, [user.id]);
+        }
+
+        // Cambio de plan hecho desde el Portal de cliente de Stripe (no pasa por
+        // checkout.session.completed). Si el precio de la suscripción corresponde
+        // a otro plan, lo actualizamos — y si es un plan con más pedidos/mes que el
+        // anterior, se levanta el bloqueo por exceso (plan_overage_locked): el
+        // cliente ya cumplió la condición de "subir de plan" que pedía el bloqueo.
+        const priceId = sub.items?.data?.[0]?.price?.id;
+        if (priceId) {
+          const cfg = await getPaymentConfig();
+          const priceToPlan = {
+            [cfg.stripePriceStarter]:  "starter",
+            [cfg.stripePriceGrowth]:   "growth",
+            [cfg.stripePricePro]:      "pro",
+            [cfg.stripePriceBusiness]: "business",
+          };
+          const newPlan = priceToPlan[priceId];
+          if (newPlan && newPlan !== user.plan) {
+            const upgraded = (PLANS[newPlan]?.order_limit ?? 0) > (PLANS[user.plan]?.order_limit ?? 0);
+            await db.run(
+              `UPDATE users SET plan = $1${upgraded ? ", plan_overage_locked = false" : ""} WHERE id = $2`,
+              [newPlan, user.id]
+            );
+            console.log(`[STRIPE] Cambio de plan vía portal: user ${user.id} → ${newPlan}${upgraded ? " (bloqueo por exceso levantado)" : ""}`);
+          }
         }
       }
 
