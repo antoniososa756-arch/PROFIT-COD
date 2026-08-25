@@ -5,10 +5,13 @@ const router = express.Router();
 
 // Clientes guardados por el usuario (a quién factura), reutilizables al
 // crear una factura sin tener que reescribir sus datos cada vez.
+// Estrictamente personales: se usa el id propio del login (own_id para
+// apoyo, que si no apuntaría a los del cliente padre), no compartidos.
+const ownerId = req => req.user.own_id || req.user.id;
 
 router.get("/", auth, async (req, res) => {
   try {
-    const rows = await db.all("SELECT * FROM pfactura_clientes WHERE user_id = ? ORDER BY id DESC", [req.user.id]);
+    const rows = await db.all("SELECT * FROM pfactura_clientes WHERE user_id = ? ORDER BY id DESC", [ownerId(req)]);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: "Error BD" }); }
 });
@@ -20,7 +23,7 @@ router.post("/", auth, async (req, res) => {
     const result = await db.run(
       `INSERT INTO pfactura_clientes (user_id, nombre, identificacion, email, telefono, direccion1, direccion2, ciudad, pais)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-      [req.user.id, nombre.trim(), (identificacion || "").trim() || null, (email || "").trim() || null,
+      [ownerId(req), nombre.trim(), (identificacion || "").trim() || null, (email || "").trim() || null,
        (telefono || "").trim() || null, (direccion1 || "").trim() || null, (direccion2 || "").trim() || null,
        (ciudad || "").trim() || null, (pais || "").trim() || null]
     );
@@ -37,7 +40,7 @@ router.put("/:id", auth, async (req, res) => {
         direccion1 = ?, direccion2 = ?, ciudad = ?, pais = ? WHERE id = ? AND user_id = ?`,
       [nombre.trim(), (identificacion || "").trim() || null, (email || "").trim() || null,
        (telefono || "").trim() || null, (direccion1 || "").trim() || null, (direccion2 || "").trim() || null,
-       (ciudad || "").trim() || null, (pais || "").trim() || null, req.params.id, req.user.id]
+       (ciudad || "").trim() || null, (pais || "").trim() || null, req.params.id, ownerId(req)]
     );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: "Error actualizando" }); }
@@ -45,7 +48,7 @@ router.put("/:id", auth, async (req, res) => {
 
 router.delete("/:id", auth, async (req, res) => {
   try {
-    await db.run("DELETE FROM pfactura_clientes WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+    await db.run("DELETE FROM pfactura_clientes WHERE id = ? AND user_id = ?", [req.params.id, ownerId(req)]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: "Error eliminando" }); }
 });

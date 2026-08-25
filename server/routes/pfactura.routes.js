@@ -4,6 +4,13 @@ const db = require("../db");
 const { renderPFacturaPDF } = require("../utils/pfacturaPdf");
 const router = express.Router();
 
+// PFactura es estrictamente personal: cada login (admin, cliente o apoyo) ve
+// solo sus propias facturas/emisores/clientes guardados, nunca los de su
+// padre ni los de otra cuenta — a diferencia de pedidos/tiendas/gastos, que
+// sí se comparten entre un cliente y sus cuentas de apoyo. Por eso aquí NO
+// se usa req.user.id (que para apoyo apunta al padre) sino su propio id.
+const ownerId = req => req.user.own_id || req.user.id;
+
 async function getInvoiceWithItems(id, userId) {
   const invoice = await db.get("SELECT * FROM pfacturas WHERE id = ? AND user_id = ?", [id, userId]);
   if (!invoice) return null;
@@ -54,7 +61,7 @@ router.get("/", auth, async (req, res) => {
       WHERE f.user_id = ?
       GROUP BY f.id
       ORDER BY f.id DESC
-    `, [req.user.id]);
+    `, [ownerId(req)]);
     res.json(rows.map(r => ({ ...r, total: Number(r.total), saldo: Number(r.total) - Number(r.pagado || 0) })));
   } catch (e) { console.error(e); res.status(500).json({ error: "Error BD" }); }
 });
@@ -62,7 +69,7 @@ router.get("/", auth, async (req, res) => {
 // GET /api/pfactura/:id — detalle con items
 router.get("/:id", auth, async (req, res) => {
   try {
-    const invoice = await getInvoiceWithItems(req.params.id, req.user.id);
+    const invoice = await getInvoiceWithItems(req.params.id, ownerId(req));
     if (!invoice) return res.status(404).json({ error: "No encontrada" });
     res.json(invoice);
   } catch (e) { console.error(e); res.status(500).json({ error: "Error BD" }); }
@@ -90,10 +97,11 @@ router.post("/", auth, async (req, res) => {
   } = req.body;
 
   try {
-    const defaultIssuer = await getDefaultIssuer(req.user.id);
+    const uid = ownerId(req);
+    const defaultIssuer = await getDefaultIssuer(uid);
     const seqRow = await db.get(
       "UPDATE users SET pfactura_seq = pfactura_seq + 1 WHERE id = ? RETURNING pfactura_seq",
-      [req.user.id]
+      [uid]
     );
     const numero = `INV-${String(seqRow.pfactura_seq).padStart(6, "0")}`;
 
@@ -102,7 +110,7 @@ router.post("/", auth, async (req, res) => {
         emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
         cliente_identificacion, cliente_email, cliente_telefono, cliente_direccion1, cliente_direccion2, cliente_ciudad, cliente_pais)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-      [req.user.id, numero, fecha || new Date().toISOString().slice(0, 10), vencimiento || null, terminos || null,
+      [uid, numero, fecha || new Date().toISOString().slice(0, 10), vencimiento || null, terminos || null,
        cliente_nombre.trim(), notas || null, parseFloat(pagado) || 0,
        (emisor_nombre || "").trim() || defaultIssuer.nombre,
        (emisor_identificacion || "").trim() || defaultIssuer.identificacion,
@@ -138,7 +146,8 @@ router.put("/:id", auth, async (req, res) => {
   } = req.body;
 
   try {
-    const existing = await db.get("SELECT id FROM pfacturas WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+    const uid = ownerId(req);
+    const existing = await db.get("SELECT id FROM pfacturas WHERE id = ? AND user_id = ?", [req.params.id, uid]);
     if (!existing) return res.status(404).json({ error: "No encontrada" });
 
     await db.run(
@@ -154,7 +163,7 @@ router.put("/:id", auth, async (req, res) => {
        cliente_identificacion.trim(), (cliente_email || "").trim() || null, (cliente_telefono || "").trim() || null,
        (cliente_direccion1 || "").trim() || null, (cliente_direccion2 || "").trim() || null,
        (cliente_ciudad || "").trim() || null, (cliente_pais || "").trim() || null,
-       req.params.id, req.user.id]
+       req.params.id, uid]
     );
 
     await db.run("DELETE FROM pfactura_items WHERE pfactura_id = ?", [req.params.id]);
@@ -173,7 +182,7 @@ router.put("/:id", auth, async (req, res) => {
 // DELETE /api/pfactura/:id
 router.delete("/:id", auth, async (req, res) => {
   try {
-    await db.run("DELETE FROM pfacturas WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+    await db.run("DELETE FROM pfacturas WHERE id = ? AND user_id = ?", [req.params.id, ownerId(req)]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: "Error eliminando" }); }
 });
@@ -181,12 +190,13 @@ router.delete("/:id", auth, async (req, res) => {
 // GET /api/pfactura/:id/pdf — descarga en PDF
 router.get("/:id/pdf", auth, async (req, res) => {
   try {
-    const invoice = await getInvoiceWithItems(req.params.id, req.user.id);
+    const uid = ownerId(req);
+    const invoice = await getInvoiceWithItems(req.params.id, uid);
     if (!invoice) return res.status(404).json({ error: "No encontrada" });
     // Facturas anteriores a añadir estos campos no tienen emisor_* guardado —
     // se rellenan con los datos de cuenta actuales solo en ese caso.
     if (!invoice.emisor_nombre) {
-      const d = await getDefaultIssuer(req.user.id);
+      const d = await getDefaultIssuer(uid);
       invoice.emisor_nombre = d.nombre;
       invoice.emisor_identificacion = invoice.emisor_identificacion || d.identificacion;
       invoice.emisor_direccion = invoice.emisor_direccion || d.direccion;
