@@ -84,14 +84,18 @@ router.post("/users/:id/grant-free-days", auth, admin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error servidor" }); }
 });
 
-// POST /api/admin/users/:id/unlock-overage — levanta a mano el bloqueo persistente
-// por superar el límite de pedidos de su plan (ver plan_overage_locked en planCheck.js).
-// Excepción manual: normalmente solo se levanta al subir de plan.
+// POST /api/admin/users/:id/unlock-overage — concede 15 días de acceso completo
+// (sin importar cuántos pedidos tenga) a quien está bloqueado por superar el
+// límite de su plan. Es una gracia TEMPORAL, no un desbloqueo permanente:
+// plan_overage_locked no se toca, así que al vencer la ventana, si sigue
+// excedido, vuelve a bloquearse solo (ver planCheck.js). Cada clic reinicia
+// la ventana a 15 días desde ahora, sin acumular.
 router.post("/users/:id/unlock-overage", auth, admin, async (req, res) => {
   try {
-    const result = await db.run("UPDATE users SET plan_overage_locked = false WHERE id = ?", [req.params.id]);
+    const graceUntil = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+    const result = await db.run("UPDATE users SET plan_overage_grace_until = ? WHERE id = ?", [graceUntil, req.params.id]);
     if (!result.changes) return res.status(404).json({ error: "Usuario no encontrado" });
-    res.json({ ok: true });
+    res.json({ ok: true, grace_until: graceUntil });
   } catch (e) { res.status(500).json({ error: "Error servidor" }); }
 });
 

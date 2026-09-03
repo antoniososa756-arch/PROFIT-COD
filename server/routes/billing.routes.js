@@ -71,7 +71,7 @@ async function getMonthlyOrders(userId, billingCycleStart, plan) {
 router.get("/plan", auth, async (req, res) => {
   try {
     const user = await db.get(
-      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start, subscription_cancel_at, plan_overage_locked FROM users WHERE id = $1",
+      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start, subscription_cancel_at, plan_overage_locked, plan_overage_grace_until FROM users WHERE id = $1",
       [req.user.id]
     );
     const planKey = user?.plan || "free";
@@ -107,7 +107,12 @@ router.get("/plan", auth, async (req, res) => {
     if (overLimitNow && !user?.plan_overage_locked) {
       db.run("UPDATE users SET plan_overage_locked = true WHERE id = $1", [req.user.id]).catch(() => {});
     }
-    const isBlocked = !!user?.plan_overage_locked || overLimitNow;
+    // Gracia manual de 15 días concedida por un admin: anula el bloqueo por exceso
+    // mientras dure, sin importar cuántos pedidos tenga. Al vencer, si sigue
+    // excedido, vuelve a bloquearse solo (plan_overage_locked no se toca).
+    const overageGraceUntil = user?.plan_overage_grace_until || null;
+    const inOverageGrace = !!(overageGraceUntil && new Date(overageGraceUntil) > new Date());
+    const isBlocked = !inOverageGrace && (!!user?.plan_overage_locked || overLimitNow);
 
     // Días para el reinicio del ciclo de facturación (un mes después de la última activación/renovación)
     const now = new Date();
@@ -135,6 +140,8 @@ router.get("/plan", auth, async (req, res) => {
       order_limit:      orderLimit,
       is_blocked:       isBlocked,
       is_lifetime_limit: isLifetimeLimit,
+      overage_grace_active: inOverageGrace,
+      overage_grace_until:  inOverageGrace ? overageGraceUntil : null,
       days_left_month:  daysLeft,
       base_price:       planInfo?.base_price       ?? null,
       price_per_order:  planInfo?.price_per_order  ?? null,

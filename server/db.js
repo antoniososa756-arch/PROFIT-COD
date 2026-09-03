@@ -348,6 +348,11 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id INTE
 // el ciclo siguiente, sin haber pagado nunca el plan superior que le corresponde.
 // Solo se limpia al subir de plan (webhook de Stripe) o manualmente por un admin.
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_overage_locked BOOLEAN NOT NULL DEFAULT false`);
+// Ventana de gracia manual: un admin puede dar 15 días de acceso completo
+// (sin importar cuántos pedidos tenga) sin necesidad de subir de plan. Es
+// temporal a propósito — al vencer, si sigue por encima del límite, vuelve a
+// bloquearse solo (plan_overage_locked no se toca al conceder la gracia).
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_overage_grace_until TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda","reembolsos_widget"]'`);
 await pool.query(`
   CREATE TABLE IF NOT EXISTS billing_invoices (

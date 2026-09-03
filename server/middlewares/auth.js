@@ -15,7 +15,7 @@ module.exports = async (req, res, next) => {
     // si no, el admin impersonando ve la cuenta como si no tuviera plan y todo se bloquea en silencio)
     {
       const row = await db.get(
-        "SELECT active, role, plan, plan_status, plan_expires_at, billing_cycle_start, plan_overage_locked, parent_user_id, permissions FROM users WHERE id = ?",
+        "SELECT active, role, plan, plan_status, plan_expires_at, billing_cycle_start, plan_overage_locked, plan_overage_grace_until, parent_user_id, permissions FROM users WHERE id = ?",
         [decoded.id]
       );
       if (!row || row.active === 0) {
@@ -27,11 +27,12 @@ module.exports = async (req, res, next) => {
       decoded.plan_expires_at    = row.plan_expires_at || null;
       decoded.billing_cycle_start = row.billing_cycle_start || null;
       decoded.plan_overage_locked = !!row.plan_overage_locked;
+      decoded.plan_overage_grace_until = row.plan_overage_grace_until || null;
 
       // Cuentas de apoyo: redirigir al usuario padre para todas las consultas
       if (row.role === "apoyo" && row.parent_user_id) {
         const parent = await db.get(
-          "SELECT active, role, plan, plan_status, plan_expires_at, billing_cycle_start, plan_overage_locked FROM users WHERE id = ?",
+          "SELECT active, role, plan, plan_status, plan_expires_at, billing_cycle_start, plan_overage_locked, plan_overage_grace_until FROM users WHERE id = ?",
           [row.parent_user_id]
         );
         if (!parent || parent.active === 0) {
@@ -47,12 +48,14 @@ module.exports = async (req, res, next) => {
           decoded.plan_expires_at = "2099-12-31T23:59:59.000Z";
           decoded.billing_cycle_start = null;
           decoded.plan_overage_locked = false;
+          decoded.plan_overage_grace_until = null;
         } else {
           decoded.plan            = parent.plan || "free";
           decoded.plan_status     = parent.plan_status || "inactive";
           decoded.plan_expires_at = parent.plan_expires_at || null;
           decoded.billing_cycle_start = parent.billing_cycle_start || null;
           decoded.plan_overage_locked = !!parent.plan_overage_locked;
+          decoded.plan_overage_grace_until = parent.plan_overage_grace_until || null;
         }
         try {
           const permsRaw = row.permissions;

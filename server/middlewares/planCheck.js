@@ -33,6 +33,14 @@ module.exports = async (req, res, next) => {
   // por vida (no un cupo mensual que se regala durante la prueba) y aplica siempre.
   if (status === "trial" && plan !== "starter") return next();
 
+  // Gracia manual de 15 días concedida por un admin (botón "Desbloquear" en Gestión
+  // de clientes): acceso completo sin importar cuántos pedidos tenga, mientras dure.
+  // Al vencer, si sigue por encima del límite, se vuelve a bloquear solo — no es un
+  // desbloqueo permanente ni toca plan_overage_locked.
+  if (user.plan_overage_grace_until && new Date(user.plan_overage_grace_until) > new Date()) {
+    return next();
+  }
+
   // Ya superó el límite de su plan alguna vez: se queda bloqueado aunque llegue la
   // renovación y el conteo del ciclo actual vuelva a 0 — si no, un cliente podría
   // superar su límite cada mes y desbloquearse gratis en cuanto empieza el ciclo

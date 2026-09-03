@@ -7,7 +7,7 @@ const router = express.Router();
 router.get("/", auth, async (req, res) => {
   if (req.user.role !== "admin") return res.status(403).json({ error: "No autorizado" });
   try {
-    const rows = await db.all("SELECT id, email, role, active, created_at, plan, plan_overage_locked FROM users ORDER BY created_at DESC");
+    const rows = await db.all("SELECT id, email, role, active, created_at, plan, plan_overage_locked, plan_overage_grace_until FROM users ORDER BY created_at DESC");
     res.json(rows);
   } catch (e) { res.status(500).json({ error: "Error al obtener usuarios" }); }
 });

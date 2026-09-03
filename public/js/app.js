@@ -1235,6 +1235,13 @@ function updateOrderLimitBanner() {
   if (!banner) return;
   if (up.trial_active) {
     banner.style.display = "none";
+  } else if (up.overage_grace_active) {
+    const graceDate = up.overage_grace_until ? new Date(up.overage_grace_until) : null;
+    const daysGrace = graceDate ? Math.max(0, Math.ceil((graceDate - now) / (1000 * 60 * 60 * 24))) : null;
+    banner.style.cssText = "display:flex;background:#f59e0b;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
+    const textEl = document.getElementById("order-limit-banner-text");
+    if (textEl) textEl.textContent =
+      `🕒 Acceso temporal: superaste el límite de pedidos de tu plan, pero tienes acceso completo ${daysGrace != null ? `${daysGrace} día${daysGrace === 1 ? "" : "s"} más` : "unos días más"}. Cambia de plan antes de que termine para no perder el acceso.`;
   } else if (up.is_blocked) {
     banner.style.cssText = "display:flex;background:#dc2626;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
     const textEl = document.getElementById("order-limit-banner-text");
@@ -2144,8 +2151,17 @@ if (id === "gestion-clientes") {
                 ${u.role === "admin" ? "Administrador" : u.role === "apoyo" ? "Apoyo" : "Cliente"}
                 ${u.role === "apoyo" ? `<button onclick="openPermisosModal(${u.id},'${escapeHtml(u.email)}')" title="Editar permisos" style="padding:2px 8px;font-size:11px;border-radius:5px;border:1px solid #374151;background:var(--card);color:#6b7280;cursor:pointer;font-family:inherit;">Permisos</button>` : ""}
               </div>
-              ${u.plan_overage_locked ? `<button onclick="unlockOverage(${u.id},'${escapeAttr(u.email)}')" title="Superó el límite de pedidos de su plan (${escapeAttr(u.plan||'')}) y quedó bloqueado incluso tras renovar. Desbloquéalo solo si vas a hacer una excepción — lo normal es que suba de plan."
-                style="align-self:flex-start;padding:2px 8px;font-size:10.5px;font-weight:700;border-radius:5px;border:1px solid #ef4444;background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-family:inherit;white-space:nowrap;">⚠ Bloqueo por exceso — Desbloquear</button>` : ""}
+              ${(() => {
+                if (!u.plan_overage_locked) return "";
+                const graceActive = u.plan_overage_grace_until && new Date(u.plan_overage_grace_until) > new Date();
+                if (graceActive) {
+                  const untilStr = new Date(u.plan_overage_grace_until).toLocaleDateString("es-ES");
+                  return `<button onclick="unlockOverage(${u.id},'${escapeAttr(u.email)}')" title="Sigue por encima del límite de su plan (${escapeAttr(u.plan||'')}), pero tiene 15 días de gracia activos hasta el ${untilStr}. Al vencer, si sigue excedido, se bloquea solo. Puedes volver a dar 15 días desde aquí."
+                    style="align-self:flex-start;padding:2px 8px;font-size:10.5px;font-weight:700;border-radius:5px;border:1px solid #f59e0b;background:rgba(245,158,11,.08);color:#f59e0b;cursor:pointer;font-family:inherit;white-space:nowrap;">🕒 Gracia hasta ${untilStr}</button>`;
+                }
+                return `<button onclick="unlockOverage(${u.id},'${escapeAttr(u.email)}')" title="Superó el límite de pedidos de su plan (${escapeAttr(u.plan||'')}) y quedó bloqueado incluso tras renovar. Este botón da 15 días de acceso completo sin importar los pedidos que tenga — no es un desbloqueo permanente, lo normal es que suba de plan."
+                  style="align-self:flex-start;padding:2px 8px;font-size:10.5px;font-weight:700;border-radius:5px;border:1px solid #ef4444;background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-family:inherit;white-space:nowrap;">⚠ Bloqueo por exceso — Dar 15 días gratis</button>`;
+              })()}
             </div>
 
             <div class="view-eye" onclick="viewClient('${u.id}')">
@@ -6040,14 +6056,16 @@ async function confirmarDiasGratis(userId) {
 }
 
 async function unlockOverage(userId, email) {
-  if (!confirm(`${email}\n\nEsta cuenta quedó bloqueada por superar el límite de pedidos de su plan, incluso tras renovar. Lo normal es que suba de plan — ¿seguro que quieres desbloquearla igualmente como excepción?`)) return;
+  if (!confirm(`${email}\n\nEsta cuenta está bloqueada por superar el límite de pedidos de su plan. Esto le da 15 días de acceso completo sin importar cuántos pedidos tenga — no es un desbloqueo permanente: al vencer, si sigue excedido, se bloquea solo otra vez. ¿Dar los 15 días?`)) return;
   try {
     const res = await fetch(`${API_BASE}/api/admin/users/${userId}/unlock-overage`, {
       method: "POST",
       headers: { Authorization: "Bearer " + getActiveToken() },
     });
-    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "Error al desbloquear"); return; }
-    showToast("🔓 Desbloqueada", email, "#22c55e");
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(d.error || "Error al conceder los días"); return; }
+    const untilStr = d.grace_until ? new Date(d.grace_until).toLocaleDateString("es-ES") : "";
+    showToast("🕒 15 días concedidos", `${email}${untilStr ? " — hasta " + untilStr : ""}`, "#22c55e");
     setSection("gestion-clientes");
   } catch (e) { alert("Error de conexión"); }
 }
