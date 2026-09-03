@@ -8916,36 +8916,30 @@ async function saveAdsSpend(input) {
 }
 
 function parsearNumero(raw) {
-  const s = String(raw).trim();
-  const hasPunto  = s.includes(".");
-  const hasComa   = s.includes(",");
-  let normalizado;
-  if (hasPunto && hasComa) {
-    // Determinar cuál es separador decimal: el que aparece más a la derecha
-    const lastPunto = s.lastIndexOf(".");
-    const lastComa  = s.lastIndexOf(",");
-    if (lastComa > lastPunto) {
-      // Formato europeo: 1.252,00 → quitar puntos, coma → punto
-      normalizado = s.replace(/\./g, "").replace(",", ".");
-    } else {
-      // Formato anglosajón: 1,252.00 → quitar comas
-      normalizado = s.replace(/,/g, "");
-    }
-  } else if (hasComa && !hasPunto) {
-    // Solo coma: puede ser decimal europeo (1252,00) o miles (1,252)
-    // Si hay exactamente una coma y exactamente 2-3 dígitos tras ella → decimal
-    const partes = s.split(",");
-    if (partes.length === 2 && partes[1].length <= 2) {
-      normalizado = s.replace(",", ".");
-    } else {
-      // Coma como separador de miles → quitar
-      normalizado = s.replace(/,/g, "");
-    }
+  // No adivina "formato europeo vs. anglosajón" por posición del símbolo (eso es
+  // lo que hacía que "1.234" (mil doscientos treinta y cuatro, miles con punto)
+  // se leyera como 1,234 — un decimal — inflando/desfigurando centenas y decenas).
+  // En su lugar: el separador decimal es el que tiene 1 o 2 dígitos DETRÁS al
+  // final de todo el número (céntimos); cualquier otro punto/coma —incluido un
+  // espacio como separador de miles— es agrupador y se descarta. Una moneda
+  // nunca tiene 3 decimales, así que "trailing de 3 dígitos" siempre es miles.
+  let s = String(raw).trim().replace(/[€$\s ]/g, "");
+  if (!s) return NaN;
+  const negativo = s.startsWith("-");
+  if (negativo) s = s.slice(1);
+
+  const m = s.match(/[.,](\d{1,2})$/);
+  let parteEntera, parteDecimal;
+  if (m) {
+    parteDecimal = m[1];
+    parteEntera  = s.slice(0, s.length - m[0].length);
   } else {
-    // Solo punto o sin separadores: parseFloat lo maneja bien
-    normalizado = s.replace(/,/g, "");
+    parteEntera  = s;
+    parteDecimal = "";
   }
-  return parseFloat(normalizado);
+  parteEntera = parteEntera.replace(/[.,]/g, "");
+  const num = parseFloat(parteEntera + (parteDecimal ? "." + parteDecimal : ""));
+  return negativo ? -num : num;
 }
 
 async function pegarDesdeExcel(e, inputOrigen) {
