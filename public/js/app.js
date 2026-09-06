@@ -1687,10 +1687,11 @@ const now = new Date();
               <div style="font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;">Pedidos por tienda</div>
               <div style="font-size:12px;color:var(--muted);margin-top:3px;" id="chart-period-label">—</div>
             </div>
-            <div style="display:flex;gap:5px;">
-              <button id="chart-btn-day"   onclick="setChartPeriod('day')"   class="chart-period-btn active">Día</button>
-              <button id="chart-btn-month" onclick="setChartPeriod('month')" class="chart-period-btn">Mes</button>
-              <button id="chart-btn-year"  onclick="setChartPeriod('year')"  class="chart-period-btn">Año</button>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;">
+              <button id="chart-btn-day"     onclick="setChartPeriod('day')"     class="chart-period-btn active">Día</button>
+              <button id="chart-btn-yesterday" onclick="setChartPeriod('yesterday')" class="chart-period-btn">Día anterior</button>
+              <button id="chart-btn-month"   onclick="setChartPeriod('month')"   class="chart-period-btn">Mes</button>
+              <button id="chart-btn-year"    onclick="setChartPeriod('year')"    class="chart-period-btn">Año</button>
             </div>
           </div>
           <canvas id="orders-bar-chart" style="width:100%;display:block;"></canvas>
@@ -7090,6 +7091,18 @@ async function loadOrdersChart(period) {
     bucketFn   = o => toMadridPart(new Date(o.created_at), 'hour');
     bucketLabel = h => `${String(h).padStart(2,'0')}h`;
     periodText  = `Hoy — ${d}/${m}/${y}`;
+  } else if (period === 'yesterday') {
+    // Resta 1 sobre los propios componentes Y/M/D de "hoy" (el objeto Date
+    // normaliza solo el cambio de mes/año) — evita líos de zona horaria al
+    // reconstruir una fecha a partir de un string YYYY-MM-DD.
+    const ty = toMadridPart(now,'year'), tm = toMadridPart(now,'month'), td = toMadridPart(now,'day');
+    const ayer = new Date(ty, tm - 1, td - 1);
+    const y = ayer.getFullYear(), m = String(ayer.getMonth()+1).padStart(2,'0'), d = String(ayer.getDate()).padStart(2,'0');
+    from = to = `${y}-${m}-${d}`;
+    buckets    = Array.from({length:24}, (_,i) => i);
+    bucketFn   = o => toMadridPart(new Date(o.created_at), 'hour');
+    bucketLabel = h => `${String(h).padStart(2,'0')}h`;
+    periodText  = `Ayer — ${d}/${m}/${y}`;
   } else if (period === 'month') {
     const y = toMadridPart(now,'year'), mo = toMadridPart(now,'month') - 1;
     const dim = new Date(y, mo+1, 0).getDate();
@@ -7336,7 +7349,7 @@ function renderBarChart(canvas, data, buckets, stores, labelFn, storeColorMap) {
 
 window.setChartPeriod = function(period) {
   window.__chartPeriod = period;
-  ['day','month','year'].forEach(p => {
+  ['day','yesterday','month','year'].forEach(p => {
     const btn = document.getElementById(`chart-btn-${p}`);
     if (btn) btn.classList.toggle('active', p === period);
   });
