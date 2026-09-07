@@ -55,10 +55,13 @@ function getPriceId(cfg, plan) {
 // Contar pedidos desde que arrancó el ciclo de facturación actual (no desde el día 1 del mes,
 // así los pedidos del período de prueba no cuentan contra el límite del plan de pago).
 // El plan Starter es la excepción: es un tope de por vida (sus primeros 120 pedidos,
-// nunca), no uno que se reinicie cada mes — así que ahí se cuentan TODOS sus pedidos
-// sin filtrar por fecha.
-async function getMonthlyOrders(userId, billingCycleStart, plan) {
-  const cycleStart = plan === "starter" ? null : getEffectiveCycleStart(billingCycleStart);
+// nunca), no uno que se reinicie cada mes — pero se cuenta DESDE trial_started_at, no
+// desde siempre: si no, un cliente con historial ya sincronizado desde Shopify antes
+// de unirse a la app agotaría el mes gratis el mismo día que se registra.
+async function getMonthlyOrders(userId, billingCycleStart, plan, trialStartedAt) {
+  const cycleStart = plan === "starter"
+    ? (trialStartedAt ? new Date(trialStartedAt) : null)
+    : getEffectiveCycleStart(billingCycleStart);
   const countRow = await db.get(`
     SELECT COUNT(*) as cnt FROM orders o
     WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
@@ -79,7 +82,7 @@ router.get("/plan", auth, async (req, res) => {
 
     let monthlyOrders = 0;
     if (planInfo && req.user.role !== "admin") {
-      monthlyOrders = await getMonthlyOrders(req.user.id, user?.billing_cycle_start, planKey);
+      monthlyOrders = await getMonthlyOrders(req.user.id, user?.billing_cycle_start, planKey, user?.trial_started_at);
     }
 
     // ¿Está en trial? plan_expires_at es la fecha real de fin (se fija a +30 días al
@@ -181,13 +184,13 @@ router.post("/start-trial", auth, async (req, res) => {
 router.get("/invoice-preview", auth, async (req, res) => {
   try {
     const user = await db.get(
-      "SELECT plan, plan_status, billing_cycle_start FROM users WHERE id = $1", [req.user.id]
+      "SELECT plan, plan_status, billing_cycle_start, trial_started_at FROM users WHERE id = $1", [req.user.id]
     );
     const planKey  = user?.plan || "free";
     const planInfo = PLANS[planKey];
     if (!planInfo || user?.plan_status === "inactive") return res.json({ available: false });
 
-    const ordersUsed = await getMonthlyOrders(req.user.id, user?.billing_cycle_start, planKey);
+    const ordersUsed = await getMonthlyOrders(req.user.id, user?.billing_cycle_start, planKey, user?.trial_started_at);
     const variableCost = +(ordersUsed * planInfo.price_per_order).toFixed(2);
     const total = +(planInfo.base_price + variableCost).toFixed(2);
     const now = new Date();

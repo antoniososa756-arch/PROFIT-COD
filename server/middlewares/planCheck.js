@@ -56,12 +56,17 @@ module.exports = async (req, res, next) => {
 
   // Verificar límite de pedidos. En planes de pago es el ciclo de facturación actual
   // (desde que se activó el plan, no desde el día 1 del mes — así no cuenta pedidos
-  // del trial). En Starter es un tope de por vida: se cuentan TODOS sus pedidos, sin
-  // reiniciarse nunca — al superarlo, tiene que pasar a un plan de pago.
+  // del trial). En Starter es un tope de por vida DESDE QUE EMPEZÓ SU PRUEBA
+  // (trial_started_at), nunca se reinicia — pero tampoco cuenta pedidos de ANTES
+  // de unirse a la app: si no, un cliente con historial ya sincronizado desde
+  // Shopify agotaría el mes gratis el mismo día que se registra, sin haber
+  // usado ni un solo día del beneficio.
   const orderLimit = PLAN_ORDER_LIMITS[plan];
   if (orderLimit) {
     try {
-      const cycleStart = plan === "starter" ? null : getEffectiveCycleStart(user.billing_cycle_start);
+      const cycleStart = plan === "starter"
+        ? (user.trial_started_at ? new Date(user.trial_started_at) : null)
+        : getEffectiveCycleStart(user.billing_cycle_start);
       const countRow = await db.get(`
         SELECT COUNT(*) as cnt
         FROM orders o

@@ -1217,11 +1217,15 @@ function updateOrderLimitBanner() {
     if (up.trial_active && up.trial_ends_at && up.status !== "active") {
       const msLeft = new Date(up.trial_ends_at) - now;
       const daysTrialLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+      // El mes gratis termina por lo que ocurra primero: los días o los 120 pedidos.
+      const cupoTxt = (up.order_limit && up.is_lifetime_limit)
+        ? ` o hasta ${up.order_limit.toLocaleString("es-ES")} pedidos (llevas ${(up.monthly_orders||0).toLocaleString("es-ES")}/${up.order_limit.toLocaleString("es-ES")})`
+        : "";
       const textEl = document.getElementById("trial-countdown-text");
       if (textEl) textEl.textContent =
         daysTrialLeft <= 1
-          ? `Período de prueba: ¡último día! Activa un plan para no perder el acceso.`
-          : `Período de prueba: ${daysTrialLeft} día${daysTrialLeft === 1 ? "" : "s"} restantes`;
+          ? `Período de prueba: ¡último día!${cupoTxt} Activa un plan para no perder el acceso.`
+          : `Período de prueba: ${daysTrialLeft} día${daysTrialLeft === 1 ? "" : "s"} restantes${cupoTxt}`;
       // Verde si ≥3 días, naranja si ≤2
       const bg = daysTrialLeft <= 2 ? "#f59e0b" : "#22c55e";
       trialBanner.style.cssText = `display:flex;background:${bg};color:#fff;padding:9px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;`;
