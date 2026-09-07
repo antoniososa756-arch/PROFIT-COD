@@ -1688,8 +1688,8 @@ const now = new Date();
               <div style="font-size:12px;color:var(--muted);margin-top:3px;" id="chart-period-label">—</div>
             </div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;">
-              <button id="chart-btn-day"     onclick="setChartPeriod('day')"     class="chart-period-btn active">Día</button>
               <button id="chart-btn-yesterday" onclick="setChartPeriod('yesterday')" class="chart-period-btn">Día anterior</button>
+              <button id="chart-btn-day"     onclick="setChartPeriod('day')"     class="chart-period-btn active">Día</button>
               <button id="chart-btn-month"   onclick="setChartPeriod('month')"   class="chart-period-btn">Mes</button>
               <button id="chart-btn-year"    onclick="setChartPeriod('year')"    class="chart-period-btn">Año</button>
             </div>
