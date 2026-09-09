@@ -2976,6 +2976,13 @@ if (id === "pedidos") {
 
             <!-- DERECHA: Sincronizar -->
             <div style="display:flex;align-items:center;gap:8px;">
+              <input type="file" id="mrw-filter-input" accept=".xlsx,.xls" style="display:none;" onchange="filterMrwExcel(this)">
+              <button onclick="document.getElementById('mrw-filter-input').click()"
+                title="Sube un Excel de envíos de tu cuenta MRW y descarga solo las filas cuyo número de envío coincide con un pedido de esta cuenta ProfitCod"
+                style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:rgba(16,185,129,.08);color:#059669;border:1.5px solid rgba(16,185,129,.3);border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Cotejar Excel MRW
+              </button>
               <button class="btn-sync" onclick="syncAndRefreshOrders()" title="Sincronizar Shopify y MRW" style="min-width:unset;padding:7px 12px;">
                 <svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
@@ -12966,7 +12973,47 @@ async function syncExcelMRW(input) {
     alert("❌ Error de conexión");
   }
 }
-window.syncExcelMRW = syncExcelMRW; 
+window.syncExcelMRW = syncExcelMRW;
+
+// Sube un Excel de envíos de la cuenta MRW (compartida/prestada) y descarga el
+// mismo archivo con solo las filas cuyo número de envío pertenece a un pedido
+// de ESTA cuenta ProfitCod — así se sabe qué envíos de la cuenta MRW son
+// realmente de este cliente y cuáles se hicieron con la cuenta propia de él.
+async function filterMrwExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  input.value = "";
+
+  window.__showLoadingBar?.("Cotejando envíos MRW...");
+  try {
+    const res = await fetch(`${API_BASE}/api/tracking/filter-excel`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getActiveToken() },
+      body: formData,
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert("❌ " + (d.error || "Error procesando el archivo"));
+      return;
+    }
+    const total   = res.headers.get("X-Total-Rows");
+    const matched = res.headers.get("X-Matched-Rows");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "mrw-filtrado.xlsx";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("✅ Excel filtrado", `${matched ?? "?"} de ${total ?? "?"} envíos son de esta cuenta`, "#22c55e");
+  } catch (e) {
+    alert("❌ Error de conexión");
+  } finally {
+    window.__hideLoadingBar?.();
+  }
+}
+window.filterMrwExcel = filterMrwExcel;
 
 async function updateGastoExtraValor(input) {
   const id  = input.dataset.id;

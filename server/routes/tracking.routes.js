@@ -525,6 +525,59 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
   }
 });
 
+// ── POST filtrar Excel MRW por cuenta ─────────────────────────
+// Para cuando la cuenta MRW se presta/comparte: se sube el Excel de envíos de
+// ESA cuenta MRW (que puede incluir envíos de varios usos/clientes distintos)
+// y se devuelve el mismo archivo dejando solo las filas cuyo número de envío
+// pertenece a un pedido de ESTA cuenta ProfitCod — así se distingue qué
+// envíos de la cuenta MRW son de este cliente y cuáles de otro uso de la cuenta.
+router.post("/filter-excel", auth, upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No se recibió archivo" });
+
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    if (!rows.length) return res.status(400).json({ error: "El archivo no tiene filas" });
+
+    const trackingCol = Object.keys(rows[0]).find(k => {
+      const kk = k.trim().toLowerCase();
+      return kk.includes("número envío") || kk.includes("numero envio") || kk === "nº envío";
+    }) || "Número Envío";
+
+    const trackingNumbers = [...new Set(
+      rows.map(r => String(r[trackingCol] || "").trim()).filter(Boolean)
+    )];
+    if (!trackingNumbers.length) {
+      return res.status(400).json({ error: `No se encontraron números de envío (columna "${trackingCol}") en el archivo` });
+    }
+
+    const matches = await req.db.all(
+      `SELECT DISTINCT o.tracking_number FROM orders o
+       WHERE o.tracking_number = ANY(?::text[])
+         AND (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ?)`,
+      [trackingNumbers, req.user.id]
+    );
+    const matchedSet = new Set(matches.map(m => m.tracking_number));
+    const filteredRows = rows.filter(r => matchedSet.has(String(r[trackingCol] || "").trim()));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(filteredRows);
+    XLSX.utils.book_append_sheet(wb, ws, "MRW filtrado");
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="mrw-filtrado.xlsx"`);
+    res.setHeader("X-Total-Rows", String(rows.length));
+    res.setHeader("X-Matched-Rows", String(filteredRows.length));
+    res.setHeader("Access-Control-Expose-Headers", "X-Total-Rows, X-Matched-Rows");
+    res.send(buffer);
+  } catch (err) {
+    console.error("MRW filter-excel error:", err);
+    res.status(500).json({ error: "Error procesando el archivo" });
+  }
+});
+
 // ── DEBUG temporal: ver XML de MRW ───────────────────────────
 router.get("/mrw-debug-xml", async (req, res) => {
   res.json(global.__mrwDebugXml || { msg: "Aún no hay datos, sincroniza primero" });
