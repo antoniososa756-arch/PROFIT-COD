@@ -83,6 +83,22 @@ function resolveStatusFromHistory(allEstados) {
   return mapMRWStatus(allEstados[allEstados.length - 1]);
 }
 
+// Extrae los EstadoDescripcion de cada evento dentro de <SeguimientoAbonado> —
+// el mismo tag "Seguimiento" también envuelve toda la respuesta SOAP, así que
+// buscar <EstadoDescripcion> en todo el XML sin acotar el ámbito primero puede
+// capturar nodos fuera del historial real. Misma lógica que usa /mrw-history
+// en tracking.routes.js para el panel "Seguimiento MRW" del detalle.
+function extractEstadosFromXml(xml) {
+  const scope = xml.match(/<\w*:?SeguimientoAbonado[^>]*>([\s\S]*?)<\/\w*:?SeguimientoAbonado>/);
+  if (!scope) return [];
+  const eventBlocks = [...scope[1].matchAll(/<\w*:?Seguimiento>([\s\S]*?)<\/\w*:?Seguimiento>/g)].map(m => m[1]);
+  return eventBlocks
+    .map(block => block.match(/<\w*:?EstadoDescripcion[^>]*>([^<]+)<\/\w*:?EstadoDescripcion>/))
+    .filter(Boolean)
+    .map(m => m[1].trim())
+    .filter(Boolean);
+}
+
 async function syncAllMRW() {
   if (global.__cronMRWRunning) { console.log("[CRON] MRW ya en curso, saltando"); return; }
   global.__cronMRWRunning = true;
@@ -144,10 +160,9 @@ async function syncAllMRW() {
             const xml = await res.text();
             await db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [pedido.id]);
 
-            // tipoInformacion=1: histórico completo, primer EstadoDescripcion no-nil = más reciente
-            const allEstados = [...xml.matchAll(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/g)]
-              .map(m => m[1].trim()).filter(Boolean);
-            const horaEntregaMatch = xml.match(/<[^:]*:?HoraEntrega[^>]*>([^<]+)<\/[^:]*:?HoraEntrega>/);
+            // tipoInformacion=1: histórico completo, acotado a los eventos reales
+            const allEstados = extractEstadosFromXml(xml);
+            const horaEntregaMatch = xml.match(/<\w*:?HoraEntrega[^>]*>([^<]+)<\/\w*:?HoraEntrega>/);
             let estadoTexto;
             if (!allEstados.length && horaEntregaMatch) {
               estadoTexto = "entregado";

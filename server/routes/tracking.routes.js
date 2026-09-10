@@ -18,7 +18,7 @@ function mapMRWStatus(texto) {
 // Extrae el mensaje de error/rechazo que MRW devuelve en <MensajeSeguimiento>
 // cuando el envío consultado no pertenece a la cuenta/franquicia autenticada.
 function extractMrwFault(xml) {
-  const m = xml.match(/<[^:]*:?MensajeSeguimiento[^>]*>([^<]+)<\/[^:]*:?MensajeSeguimiento>/);
+  const m = xml.match(/<\w*:?MensajeSeguimiento[^>]*>([^<]+)<\/\w*:?MensajeSeguimiento>/);
   return m && m[1].trim() ? m[1].trim() : null;
 }
 
@@ -59,7 +59,7 @@ async function validateMrwCredentials(login, pass, sampleTracking) {
 
     // Si la respuesta no es el XML/SOAP esperado (p.ej. una página de error del
     // proxy/firewall de MRW), no podemos concluir nada — no lo demos por válido a ciegas.
-    if (!response.ok || !/<[^:]*:?Envelope/i.test(xml)) {
+    if (!response.ok || !/<\w*:?Envelope/i.test(xml)) {
       return { valid: true, warning: "No se pudo verificar con MRW en este momento (respuesta inesperada). Se guardó igualmente — revisa que la sincronización funcione." };
     }
 
@@ -83,6 +83,24 @@ function resolveStatusFromHistory(allEstados) {
     if (FINAL.includes(s)) return s;
   }
   return mapMRWStatus(allEstados[allEstados.length - 1]);
+}
+
+// Extrae los EstadoDescripcion de cada evento dentro de <SeguimientoAbonado> —
+// el mismo tag "Seguimiento" envuelve también toda la respuesta SOAP, así que
+// buscar <EstadoDescripcion> en todo el XML (sin acotar el ámbito primero)
+// puede capturar nodos fuera del historial real y desordenar cuál es "el más
+// reciente". Esta es la misma lógica que ya usa /mrw-history para pintar el
+// panel "Seguimiento MRW" — antes mrw-sync-one/mrw-sync usaban la versión sin
+// acotar, así que el estado guardado podía no coincidir con lo que se ve ahí.
+function extractEstadosFromXml(xml) {
+  const scope = xml.match(/<\w*:?SeguimientoAbonado[^>]*>([\s\S]*?)<\/\w*:?SeguimientoAbonado>/);
+  if (!scope) return [];
+  const eventBlocks = [...scope[1].matchAll(/<\w*:?Seguimiento>([\s\S]*?)<\/\w*:?Seguimiento>/g)].map(m => m[1]);
+  return eventBlocks
+    .map(block => block.match(/<\w*:?EstadoDescripcion[^>]*>([^<]+)<\/\w*:?EstadoDescripcion>/))
+    .filter(Boolean)
+    .map(m => m[1].trim())
+    .filter(Boolean);
 }
 
 // ── Crear tabla credenciales MRW ──────────────────────────────
@@ -224,12 +242,11 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
     console.log(`[MRW-ONE] XML para ${order.tracking_number}:`, xml.slice(0, 1200));
     await req.db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [order.id]);
 
-    // tipoInformacion=1 devuelve histórico completo — coger el primer EstadoDescripcion no-nil (más reciente)
-    const allEstados = [...xml.matchAll(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/g)]
-      .map(m => m[1].trim()).filter(Boolean);
+    // tipoInformacion=1 devuelve histórico completo, acotado a los eventos reales
+    const allEstados = extractEstadosFromXml(xml);
 
     // Fallback: si HoraEntrega tiene valor real → fue entregado
-    const horaEntregaMatch = xml.match(/<[^:]*:?HoraEntrega[^>]*>([^<]+)<\/[^:]*:?HoraEntrega>/);
+    const horaEntregaMatch = xml.match(/<\w*:?HoraEntrega[^>]*>([^<]+)<\/\w*:?HoraEntrega>/);
     if (!allEstados.length && horaEntregaMatch) {
       const nuevoStatus = "entregado";
       if (nuevoStatus !== order.fulfillment_status) {
@@ -315,18 +332,18 @@ router.get("/mrw-history/:orderId", auth, async (req, res) => {
     // Los eventos individuales viven dentro de <SeguimientoAbonado>; fuera de ahí
     // el mismo tag "Seguimiento" también envuelve toda la respuesta, así que hay
     // que acotar el ámbito primero para no capturar ese nodo exterior.
-    const scope = xml.match(/<[^:]*:?SeguimientoAbonado[^>]*>([\s\S]*?)<\/[^:]*:?SeguimientoAbonado>/);
+    const scope = xml.match(/<\w*:?SeguimientoAbonado[^>]*>([\s\S]*?)<\/\w*:?SeguimientoAbonado>/);
     if (!scope) {
       const mrwFault = extractMrwFault(xml);
       if (cachedHistory.length) return res.json({ history: cachedHistory, stale: true, mrwError: mrwFault || null });
       return res.json({ history: [], mrwError: mrwFault || null });
     }
 
-    const eventBlocks = [...scope[1].matchAll(/<[^:]*:?Seguimiento>([\s\S]*?)<\/[^:]*:?Seguimiento>/g)].map(m => m[1]);
+    const eventBlocks = [...scope[1].matchAll(/<\w*:?Seguimiento>([\s\S]*?)<\/\w*:?Seguimiento>/g)].map(m => m[1]);
     const history = eventBlocks.map(block => {
-      const descripcion = block.match(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/);
-      const publicado = block.match(/<[^:]*:?Publicado[^>]*>([^<]+)<\/[^:]*:?Publicado>/);
-      const personaEntrega = block.match(/<[^:]*:?PersonaEntrega[^>]*>([^<]+)<\/[^:]*:?PersonaEntrega>/);
+      const descripcion = block.match(/<\w*:?EstadoDescripcion[^>]*>([^<]+)<\/\w*:?EstadoDescripcion>/);
+      const publicado = block.match(/<\w*:?Publicado[^>]*>([^<]+)<\/\w*:?Publicado>/);
+      const personaEntrega = block.match(/<\w*:?PersonaEntrega[^>]*>([^<]+)<\/\w*:?PersonaEntrega>/);
       if (!descripcion || !publicado) return null;
 
       const fh = publicado[1].match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
@@ -419,12 +436,11 @@ router.post("/mrw-sync", auth, async (req, res) => {
 
         const xml = await response.text();
 
-        // tipoInformacion=1 → histórico completo, coger el primer EstadoDescripcion no-nil (más reciente)
-        const allEstados = [...xml.matchAll(/<[^:]*:?EstadoDescripcion[^>]*>([^<]+)<\/[^:]*:?EstadoDescripcion>/g)]
-          .map(m => m[1].trim()).filter(Boolean);
+        // tipoInformacion=1 → histórico completo, acotado a los eventos reales
+        const allEstados = extractEstadosFromXml(xml);
 
         // Fallback: HoraEntrega con valor real → entregado
-        const horaEntregaMatch = xml.match(/<[^:]*:?HoraEntrega[^>]*>([^<]+)<\/[^:]*:?HoraEntrega>/);
+        const horaEntregaMatch = xml.match(/<\w*:?HoraEntrega[^>]*>([^<]+)<\/\w*:?HoraEntrega>/);
         let estadoTexto;
         if (!allEstados.length && horaEntregaMatch) {
           estadoTexto = "entregado";
