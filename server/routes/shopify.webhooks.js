@@ -60,8 +60,16 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          ON CONFLICT(order_id) DO UPDATE SET
            financial_status = EXCLUDED.financial_status,
+           -- Con número de seguimiento ya asignado, el estado logístico pasa a ser
+           -- propiedad de la sincronización MRW — este webhook (que puede llegar por
+           -- CUALQUIER cambio en el pedido, no solo de envío) no debe pisarlo con el
+           -- genérico "enviado" que da Shopify por tener el pedido fulfilled.
            fulfillment_status = CASE
              WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','cancelado')
+             THEN orders.fulfillment_status
+             WHEN EXCLUDED.fulfillment_status = 'cancelado'
+             THEN EXCLUDED.fulfillment_status
+             WHEN orders.tracking_number IS NOT NULL AND orders.tracking_number != ''
              THEN orders.fulfillment_status
              ELSE EXCLUDED.fulfillment_status
            END,
@@ -105,8 +113,15 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
       const tracking = o.fulfillments?.[0]?.tracking_number || null;
       await db.run(
         `UPDATE orders SET
+           -- orders/updated llega por CUALQUIER cambio en el pedido (etiquetas, notas,
+           -- pago...), no solo de envío — una vez con seguimiento, el estado logístico
+           -- lo decide MRW, no este webhook.
            fulfillment_status = CASE
              WHEN fulfillment_status IN ('entregado','devuelto','destruido','cancelado')
+             THEN fulfillment_status
+             WHEN $1 = 'cancelado'
+             THEN $1
+             WHEN tracking_number IS NOT NULL AND tracking_number != ''
              THEN fulfillment_status
              ELSE $1
            END,
@@ -128,8 +143,15 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
       else if (o.status === "cancelled") status = "cancelado";
       await db.run(
         `UPDATE orders SET
+           -- Deja pasar el primer "enviado" (cuando aún no hay seguimiento guardado),
+           -- pero a partir de ahí el estado logístico lo decide MRW, no reintentos de
+           -- este webhook de fulfillment.
            fulfillment_status = CASE
              WHEN fulfillment_status IN ('entregado','devuelto','destruido','cancelado')
+             THEN fulfillment_status
+             WHEN $1 = 'cancelado'
+             THEN $1
+             WHEN tracking_number IS NOT NULL AND tracking_number != ''
              THEN fulfillment_status
              ELSE $1
            END,

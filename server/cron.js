@@ -24,12 +24,22 @@ async function syncAllShopifyOrders() {
               `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
                               ON CONFLICT(order_id) DO UPDATE SET
+                 -- Una vez que el pedido tiene número de seguimiento, el estado logístico
+                 -- pasa a ser propiedad exclusiva de la sincronización MRW (cron syncAllMRW /
+                 -- botones de sync) — este sync de Shopify (cada 1 min) NO debe volver a
+                 -- tocarlo, o pisa un estado real de MRW (ej. "pendiente" = pendiente de
+                 -- recoger) con el genérico "enviado" que da Shopify por tener el pedido
+                 -- marcado como fulfilled, aunque MRW aún no lo haya recogido.
+                 -- ANTES la condición decía "AND orders.fulfillment_status != 'pendiente'",
+                 -- lo que dejaba SIN protección justo el estado "pendiente" — por eso no se
+                 -- quedaba fijo: MRW lo ponía en "pendiente" y el siguiente sync de Shopify
+                 -- (1 min después) lo devolvía a "enviado".
                  fulfillment_status = CASE
                    WHEN orders.fulfillment_status IN ('entregado','devuelto','destruido','cancelado')
                    THEN orders.fulfillment_status
-                   WHEN EXCLUDED.fulfillment_status = 'pendiente' AND orders.fulfillment_status != 'pendiente'
-                   THEN orders.fulfillment_status
-                   WHEN orders.tracking_number IS NOT NULL AND orders.tracking_number != '' AND orders.fulfillment_status != 'pendiente'
+                   WHEN EXCLUDED.fulfillment_status = 'cancelado'
+                   THEN EXCLUDED.fulfillment_status
+                   WHEN orders.tracking_number IS NOT NULL AND orders.tracking_number != ''
                    THEN orders.fulfillment_status
                    ELSE EXCLUDED.fulfillment_status
                  END,
