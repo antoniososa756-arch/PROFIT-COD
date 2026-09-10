@@ -93,11 +93,17 @@ async function syncAllMRW() {
 
     for (const creds of credsList) {
       try {
+        // OJO: el filtro de tienda tiene que ser el mismo "por shop_id O por dominio"
+        // que usan mrw-sync/mrw-sync-one/mrw-history en tracking.routes.js. Antes
+        // este cron filtraba solo por shop_id (JOIN estricto) — cualquier pedido cuyo
+        // shop_id apuntara a una tienda duplicada/reconectada (mismo dominio, otro id)
+        // nunca entraba en esta consulta y se quedaba con el estado de Shopify
+        // ("enviado") para siempre, aunque el resto de la app sí lo encontrara.
         const pedidos = await db.all(
           `SELECT o.id, o.tracking_number, o.fulfillment_status
            FROM orders o
-           JOIN shops s ON s.id = o.shop_id
-           WHERE s.user_id = $1
+           WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+             OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
              AND o.tracking_number IS NOT NULL
              AND o.tracking_number != ''
              AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
@@ -283,11 +289,14 @@ async function syncAllGmailPDF() {
               for (const { nEnvio } of registros) {
                 if (!nEnvio) continue;
                 // Buscar el pedido por tracking_number dentro de las tiendas del usuario
+                // (por shop_id O por dominio — igual que en tracking.routes.js, para no
+                // perder pedidos cuya tienda se reconectó con un shop_id distinto)
                 const order = await db.get(
                   `SELECT o.id FROM orders o
-                   JOIN shops s ON s.id = o.shop_id
-                   WHERE o.tracking_number = ? AND s.user_id = ?`,
-                  [nEnvio, user_id]
+                   WHERE o.tracking_number = ?
+                     AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = ?)
+                       OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ?))`,
+                  [nEnvio, user_id, user_id]
                 );
                 if (!order) continue;
                 await db.run(
