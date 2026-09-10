@@ -272,7 +272,9 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
       await req.db.run("UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2", [nuevoStatus, order.id]);
     }
     await req.db.run("UPDATE orders SET mrw_rejected = false WHERE id = $1", [order.id]).catch(() => {});
-    res.json({ ok: true, updated: nuevoStatus !== order.fulfillment_status, status: nuevoStatus });
+    // Se incluye el histórico bruto extraído para diagnóstico visible desde el
+    // botón de sincronizar del pedido, sin depender de mirar logs del servidor.
+    res.json({ ok: true, updated: nuevoStatus !== order.fulfillment_status, status: nuevoStatus, estados: allEstados });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }

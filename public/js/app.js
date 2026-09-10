@@ -13675,8 +13675,12 @@ async function syncEnvioMRW(btn, orderId) {
       showToast("❌ Error", data.error || "No se pudo sincronizar", "#dc2626");
       return;
     }
+    // Histórico bruto que MRW devolvió para este envío, más reciente al final —
+    // se muestra siempre que venga, para poder ver a simple vista qué leyó realmente
+    // el servidor sin tener que mirar logs.
+    const estadosTxt = Array.isArray(data.estados) && data.estados.length ? ` · MRW: ${data.estados.join(" → ")}` : "";
     if (data.updated) {
-      showToast("✅ Estado actualizado", `Nuevo estado: ${statusLabel(data.status)}`, "#22c55e");
+      showToast("✅ Estado actualizado", `Nuevo estado: ${statusLabel(data.status)}${estadosTxt}`, "#22c55e");
       invalidateCache("orders");
       allOrders = [];
       await fetchOrdersFiltered();
@@ -13688,7 +13692,7 @@ async function syncEnvioMRW(btn, orderId) {
       const info = data.debug.length ? data.debug.join(" | ") : "Respuesta vacía";
       showToast("⚠️ MRW sin estado", info, "#f59e0b");
     } else {
-      showToast("ℹ️ Sin cambios", `Estado actual: ${statusLabel(data.status)}`, "#6b7280");
+      showToast("ℹ️ Sin cambios", `Estado actual: ${statusLabel(data.status)}${estadosTxt}`, "#6b7280");
     }
   } catch(e) {
     showToast("❌ Error", "No se pudo conectar con MRW", "#dc2626");
