@@ -1213,8 +1213,12 @@ function updateOrderLimitBanner() {
   }
 
   // ── Barra de trial ──────────────────────────────────────────
+  // Si ya está bloqueada por exceso de pedidos (is_blocked), no se muestra este
+  // aviso "verde" de días de prueba restantes a la vez que el banner rojo de
+  // bloqueo — decir "período de prueba: quedan 9 días" cuando la cuenta ya está
+  // bloqueada es contradictorio; el rojo ya explica la situación real.
   if (trialBanner) {
-    if (up.trial_active && up.trial_ends_at && up.status !== "active") {
+    if (up.trial_active && up.trial_ends_at && up.status !== "active" && !up.is_blocked) {
       const msLeft = new Date(up.trial_ends_at) - now;
       const daysTrialLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
       // El mes gratis termina por lo que ocurra primero: los días o los 120 pedidos.
