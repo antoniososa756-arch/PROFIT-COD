@@ -13742,7 +13742,12 @@ async function importarPagadosPDF(input) {
     }
 
     // Extraer todos los números de seguimiento que empiezan por 04700
-    const matches = [...new Set(fullText.match(/04700[A-Z0-9]{6,12}/g) || [])];
+    // Formato exacto MRW: 04700 + 1 letra + 6 dígitos (ej: 04700F685885).
+    // Con un rango {6,12} genérico, en PDFs de liquidación (tabla sin espacio
+    // entre Nº Envío y Destinatario, ej "04700F685885EVA FICA HIDALGO") la
+    // regex se comía parte del nombre y el tracking nunca coincidía con el
+    // guardado en el pedido, así que no se marcaba nada como pagado.
+    const matches = [...new Set(fullText.match(/04700[A-Z]\d{6}/g) || [])];
 
     if (matches.length === 0) {
       alert("❌ No se encontraron números de seguimiento 04700 en el PDF");
