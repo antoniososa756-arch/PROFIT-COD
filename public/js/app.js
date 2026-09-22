@@ -1235,9 +1235,12 @@ function updateOrderLimitBanner() {
   }
 
   // ── Barra de límite de pedidos ───────────────────────────────
-  // Durante el trial no hay límite real de pedidos (ver planCheck.js), así que no se muestra este aviso.
+  // Durante el trial no hay límite real de pedidos (ver planCheck.js) EXCEPTO en
+  // Starter, cuyo tope de 120 pedidos es de por vida y aplica siempre — si el
+  // backend ya bloqueó el acceso (is_blocked), hay que avisarlo aquí también o
+  // el usuario solo ve datos en 0 sin ninguna explicación.
   if (!banner) return;
-  if (up.trial_active) {
+  if (up.trial_active && !up.is_blocked) {
     banner.style.display = "none";
   } else if (up.overage_grace_active) {
     const graceDate = up.overage_grace_until ? new Date(up.overage_grace_until) : null;
