@@ -13727,6 +13727,7 @@ async function importarPagadosPDF(input) {
   let totalActualizados = 0;
   let totalSeguimientos = 0;
   let errores = 0;
+  const noEncontrados = [];
 
   for (let fi = 0; fi < files.length; fi++) {
     const file = files[fi];
@@ -13754,16 +13755,28 @@ async function importarPagadosPDF(input) {
       return;
     }
 
-    // Cargar todos los reembolsos para cruzar con los tracking del PDF
+    // Cargar TODOS los reembolsos (paginando) para cruzar con los tracking del PDF.
+    // Antes solo se pedía page=1&limit=500: si había más de 500 pedidos COD
+    // "entregados", los más antiguos quedaban fuera y nunca se comparaban.
     const reeH = { Authorization: "Bearer " + getActiveToken() };
-    const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=500&page=1`, { headers: reeH }).then(r => r.json()).catch(() => ({ orders: [] }));
-    const todosReembolsos = reeData.orders || [];
+    const todosReembolsos = [];
+    let reePage = 1;
+    while (true) {
+      const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=500&page=${reePage}`, { headers: reeH }).then(r => r.json()).catch(() => ({ orders: [] }));
+      const pageOrders = reeData.orders || [];
+      todosReembolsos.push(...pageOrders);
+      if (pageOrders.length < 500 || reePage >= (reeData.pages || 1)) break;
+      reePage++;
+    }
 
     // Marcar como cobrados los pedidos que coincidan
     let actualizados = 0;
+    const encontrados = new Set();
     for (const o of todosReembolsos) {
       const tracking = (o.tracking_number || "").trim().toUpperCase();
-      if (matches.some(m => m.toUpperCase() === tracking)) {
+      const match = matches.find(m => m.toUpperCase() === tracking);
+      if (match) {
+        encontrados.add(match.toUpperCase());
         await fetch(`${API_BASE}/api/orders/reembolso-estado`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
@@ -13775,6 +13788,9 @@ async function importarPagadosPDF(input) {
       }
     }
 
+    const sinCoincidencia = matches.filter(m => !encontrados.has(m.toUpperCase()));
+    if (sinCoincidencia.length) noEncontrados.push(...sinCoincidencia);
+
     totalActualizados += actualizados;
       totalSeguimientos += matches.length;
 
@@ -13785,6 +13801,9 @@ async function importarPagadosPDF(input) {
   } // fin bucle archivos
 
   let msg = `✅ ${totalActualizados} reembolsos marcados como Pagados\n(${totalSeguimientos} seguimientos encontrados en ${files.length} PDF${files.length > 1 ? "s" : ""})`;
+  if (noEncontrados.length) {
+    msg += `\n\n⚠️ ${noEncontrados.length} seguimiento(s) del PDF no coinciden con ningún pedido "entregado" en tu cuenta:\n${noEncontrados.join(", ")}\n\nRevisa que ese pedido exista, tenga ese mismo Nº de seguimiento guardado y esté marcado como Entregado.`;
+  }
   if (errores > 0) msg += `\n⚠️ ${errores} archivo${errores > 1 ? "s" : ""} no se pudieron leer`;
   alert(msg);
   renderReembolsos();
