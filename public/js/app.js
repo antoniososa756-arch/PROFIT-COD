@@ -1415,7 +1415,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
               <div style="border:2px solid ${p.color};border-radius:12px;padding:16px 20px;min-width:140px;text-align:left;">
                 <div style="font-size:11px;font-weight:700;color:${p.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${p.name}</div>
                 <div style="font-size:22px;font-weight:800;color:#f9fafb;">${p.free ? "Gratis" : p.price+"€"}<span style="font-size:12px;font-weight:400;color:#6b7280;">${p.free ? "" : "/mes"}</span></div>
-                <div style="font-size:11px;color:#6b7280;margin-top:2px;">hasta ${p.limit} pedidos${p.lifetime ? "" : "/mes"}</div>
+                <div style="font-size:11px;color:#6b7280;margin-top:2px;">hasta ${p.limit} pedidos${p.lifetime ? " (de por vida)" : "/mes"}</div>
               </div>`).join("")}
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
@@ -4114,7 +4114,7 @@ if (id === "plan") {
   const isAdmin = currentUser.role === "Administrador";
 
   const PLAN_DEFS = {
-    starter:  { name:"Starter",  price:"0",   limit:"120",   color:"#10b981", free:true, features:["Tiendas ilimitadas","Tus primeros 120 pedidos gratis","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
+    starter:  { name:"Starter",  price:"0",   limit:"120",   color:"#10b981", free:true, lifetime:true, features:["Tiendas ilimitadas","Tus primeros 120 pedidos gratis","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
     growth:   { name:"Growth",   price:"39",  limit:"420",   color:"#3b82f6", features:["Tiendas ilimitadas","Hasta 420 pedidos/mes","Sincronización automática","Seguimiento MRW","Métricas e informes"] },
     pro:      { name:"Pro",      price:"89",  limit:"1.000", color:"#8b5cf6", features:["Tiendas ilimitadas","Hasta 1.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
     business: { name:"Business", price:"149", limit:"3.000", color:"#f59e0b", features:["Tiendas ilimitadas","Hasta 3.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
@@ -4139,7 +4139,7 @@ if (id === "plan") {
             <span style="font-size:26px;font-weight:800;color:#f9fafb;">${info.free ? "Gratis" : info.price+"€"}</span>
             <span style="font-size:12px;color:#6b7280;">${info.free ? "" : "/mes"}</span>
           </div>
-          <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">hasta ${info.limit} pedidos/mes</div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">hasta ${info.limit} pedidos${info.lifetime ? " (de por vida)" : "/mes"}</div>
           <ul style="list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;flex:1;">
             ${info.features.map(f => `<li style="display:flex;align-items:center;gap:6px;font-size:11px;color:#e5e7eb;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
           </ul>
