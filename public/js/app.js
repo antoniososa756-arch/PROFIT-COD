@@ -338,6 +338,9 @@ if (location.pathname.includes("login")) {
         role: data.user.role === "admin" ? "Administrador" : data.user.role === "apoyo" ? "Apoyo" : "Cliente",
         avatar_url: data.user.avatar_url || null,
         permissions: _perms,
+        // Apoyo cuyo padre es el admin (no un cliente): puede recibir permisos de
+        // secciones exclusivas del admin, como Contabilidad.
+        apoyoDeAdmin: data.user.role === "apoyo" && data.user.parent_role === "admin",
       };
 
       // 🎨 CLASE DE ROL EN EL BODY (ADMIN / CLIENTE)
@@ -512,6 +515,19 @@ const icons = {
       <line x1="8" y1="17" x2="13" y2="17" stroke-linecap="round"/>
     </svg>
   `,
+  contabilidad: `
+    <svg viewBox="0 0 24 24">
+      <rect x="4" y="2" width="16" height="20" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="8" y1="6" x2="16" y2="6" stroke-linecap="round"/>
+      <line x1="8" y1="10" x2="10" y2="10" stroke-linecap="round"/>
+      <line x1="12" y1="10" x2="14" y2="10" stroke-linecap="round"/>
+      <line x1="16" y1="10" x2="16" y2="10" stroke-linecap="round"/>
+      <line x1="8" y1="14" x2="10" y2="14" stroke-linecap="round"/>
+      <line x1="12" y1="14" x2="14" y2="14" stroke-linecap="round"/>
+      <line x1="8" y1="18" x2="10" y2="18" stroke-linecap="round"/>
+      <line x1="12" y1="18" x2="14" y2="18" stroke-linecap="round"/>
+    </svg>
+  `,
   ayuda: `
     <svg viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9"/>
@@ -546,6 +562,7 @@ const I18N = {
       informes: "Ingresos",
       exprod: "Exprod",
       pfactura: "PFactura",
+      contabilidad: "Contabilidad",
       ayuda: "Centro de ayuda",
       plan: "Plan de facturación",
     },
@@ -590,6 +607,7 @@ const I18N = {
       informes: "Income",
       exprod: "Exprod",
       pfactura: "PFactura",
+      contabilidad: "Accounting",
       ayuda: "Help center",
       plan: "Billing plan",
     },
@@ -848,7 +866,7 @@ function closeOnBackdropClick(el, closeFn) {
 // F5 o compartir el link no pierda dónde estabas. __skipPush evita generar una
 // entrada nueva en el historial cuando estamos restaurando desde popstate/carga inicial.
 // =========================
-const VALID_ROUTE_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
+const VALID_ROUTE_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
 let __skipPush = false;
 
 function _syncUrlForRoute(path) {
@@ -954,7 +972,14 @@ function loadApp(section) {
         </div>
       </div>
 
-      ${(["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda"]).map(sec => {
+      ${(() => {
+        // "Contabilidad" es exclusiva del admin: solo se ofrece en el menú al
+        // propio admin, o a sus cuentas de apoyo (nunca a las de un Cliente).
+        const sections = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
+        if (currentUser.role === "Administrador" || currentUser.apoyoDeAdmin) sections.push("contabilidad");
+        sections.push("ayuda");
+        return sections;
+      })().map(sec => {
         const isApoyo = currentUser.role === "Apoyo";
         const perms   = currentUser.permissions;
         const allowed = !isApoyo || !perms || perms.includes(sec);
@@ -1292,11 +1317,11 @@ window.startTrialAndReload = async function() {
 function setSection(id) {
   // Cuentas apoyo nunca pueden ver el plan de facturación
   if (currentUser?.role === "Apoyo" && id === "plan") {
-    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda"];
+    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda"];
     id = (currentUser.permissions ? PERM_SECTIONS.find(s => currentUser.permissions.includes(s)) : null) || "metricas";
   }
   // Bloquear acceso a secciones sin permiso para cuentas apoyo
-  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda"];
+  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda"];
   if (currentUser?.role === "Apoyo" && currentUser.permissions && PERM_SECTIONS.includes(id)) {
     if (!currentUser.permissions.includes(id)) {
       // Redirigir a la primera sección permitida
@@ -2221,19 +2246,23 @@ if (id === "gestion-clientes") {
     informes:          "📈 Ingresos",
     exprod:            "🖥️ Exprod",
     pfactura:          "🧾 PFactura",
+    contabilidad:      "📚 Contabilidad",
     ayuda:             "❓ Centro de ayuda",
     reembolsos_widget: "💳 Widget Pendiente MRW",
   };
   const ALL_PERMS = Object.keys(PERMS_LABELS);
 
   window.openPermisosModal = async function(userId, email) {
-    // Obtener permisos actuales
-    let currentPerms = [...ALL_PERMS];
+    // Obtener permisos actuales. "contabilidad" nunca entra en el default de
+    // "todo marcado" para cuentas sin permisos guardados aún — es exclusivo del
+    // admin y debe concederse explícitamente, nunca heredarlo por accidente.
+    const DEFAULT_PERMS = ALL_PERMS.filter(p => p !== "contabilidad");
+    let currentPerms = [...DEFAULT_PERMS];
     try {
       const users = await fetch(`${API_BASE}/api/admin/users`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
       const u = Array.isArray(users) ? users.find(x => x.id == userId) : null;
       if (u?.permissions) {
-        try { currentPerms = JSON.parse(u.permissions); } catch { currentPerms = [...ALL_PERMS]; }
+        try { currentPerms = JSON.parse(u.permissions); } catch { currentPerms = [...DEFAULT_PERMS]; }
       }
     } catch {}
 
@@ -3427,6 +3456,34 @@ if (id === "pfactura") {
     <div id="pfactura-tab-content"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>
   `;
   pfacturaSwitchTab("facturas");
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
+if (id === "contabilidad") {
+  // Solo el admin y sus propias cuentas de apoyo (con el permiso concedido)
+  // pueden entrar aquí — nunca un Cliente ni el apoyo de un Cliente, aunque
+  // fuercen la URL directamente.
+  const puedeVer = currentUser.role === "Administrador"
+    || (currentUser.apoyoDeAdmin && currentUser.permissions?.includes("contabilidad"));
+  if (!puedeVer) { setSection("metricas"); return; }
+
+  if (t) t.textContent = "Contabilidad";
+  if (s) s.textContent = "Contabilidad interna de PROFITCOD";
+  if (c) c.textContent = "Contabilidad";
+  box.className = "card";
+  box.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;text-align:center;gap:14px;">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#9ca3af" stroke-width="1.5">
+        <rect x="4" y="2" width="16" height="20" rx="2"/>
+        <line x1="8" y1="6" x2="16" y2="6"/>
+        <line x1="8" y1="10" x2="16" y2="10"/>
+        <line x1="8" y1="14" x2="16" y2="14"/>
+      </svg>
+      <div style="font-size:16px;font-weight:700;color:var(--text);">Contabilidad</div>
+      <div style="font-size:13px;color:var(--muted);max-width:360px;">Próximamente. Esta sección aún no tiene contenido.</div>
+    </div>`;
   closeAllDrops();
   closeSearchDrop();
   return;
