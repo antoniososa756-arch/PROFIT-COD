@@ -3473,17 +3473,8 @@ if (id === "contabilidad") {
   if (s) s.textContent = "Contabilidad interna de PROFITCOD";
   if (c) c.textContent = "Contabilidad";
   box.className = "card";
-  box.innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;text-align:center;gap:14px;">
-      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#9ca3af" stroke-width="1.5">
-        <rect x="4" y="2" width="16" height="20" rx="2"/>
-        <line x1="8" y1="6" x2="16" y2="6"/>
-        <line x1="8" y1="10" x2="16" y2="10"/>
-        <line x1="8" y1="14" x2="16" y2="14"/>
-      </svg>
-      <div style="font-size:16px;font-weight:700;color:var(--text);">Contabilidad</div>
-      <div style="font-size:13px;color:var(--muted);max-width:360px;">Próximamente. Esta sección aún no tiene contenido.</div>
-    </div>`;
+  box.innerHTML = `<div style="color:#6b7280;font-size:13px;">Cargando…</div>`;
+  contaInit();
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -11260,6 +11251,339 @@ window.pfacturaDownloadPDF = async function(id, numero) {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch (e) { alert(e.message || "Error al descargar el PDF"); }
+};
+
+// =========================
+// CONTABILIDAD — libro diario interno de PROFITCOD (admin y su apoyo delegado):
+// meses arriba, año debajo, cuentas bancarias debajo del año, y por cada día del
+// mes el registro de gastos/ingresos (con su factura adjunta) y el saldo de la
+// cuenta al cierre de ese día.
+// =========================
+function contaFmtMoney(n) {
+  const v = Number(n) || 0;
+  return `${v < 0 ? "-" : ""}${Math.abs(v).toFixed(2).replace(".", ",")} €`;
+}
+
+async function contaInit() {
+  if (!window.contaState) {
+    const now = new Date();
+    window.contaState = { year: now.getFullYear(), month: now.getMonth() + 1, cuentaId: null, cuentas: [] };
+  }
+  await contaLoadCuentas();
+}
+
+async function contaLoadCuentas() {
+  try {
+    const rows = await fetch(`${API_BASE}/api/contabilidad/cuentas`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    window.contaState.cuentas = Array.isArray(rows) ? rows : [];
+  } catch { window.contaState.cuentas = []; }
+  const st = window.contaState;
+  // Si la cuenta seleccionada ya no existe (se eliminó) o no hay ninguna, cae a la primera disponible.
+  if (!st.cuentas.some(c => c.id === st.cuentaId)) {
+    st.cuentaId = st.cuentas.length ? st.cuentas[0].id : null;
+  }
+  contaRender();
+}
+
+window.contaSetMonth = function (m) { window.contaState.month = m; contaRender(); };
+window.contaSetYear = function (y) { window.contaState.year = parseInt(y); contaRender(); };
+window.contaSetCuenta = function (id) { window.contaState.cuentaId = id; contaRender(); };
+
+function contaRender() {
+  const box = document.getElementById("cardBox");
+  if (!box) return;
+  const st = window.contaState;
+  const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const thisYear = new Date().getFullYear();
+  const years = [];
+  for (let y = thisYear + 1; y >= thisYear - 6; y--) years.push(y);
+
+  const mesesHtml = MESES.map((m, i) => {
+    const mm = i + 1;
+    const active = mm === st.month;
+    return `<button onclick="contaSetMonth(${mm})"
+      style="padding:6px 12px;border-radius:8px;border:1px solid ${active ? "#22c55e" : "var(--border)"};background:${active ? "#22c55e" : "var(--input)"};color:${active ? "#fff" : "var(--text)"};font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">${m}</button>`;
+  }).join("");
+
+  const cuentasHtml = st.cuentas.length
+    ? st.cuentas.map(c => {
+        const active = c.id === st.cuentaId;
+        return `<button onclick="contaSetCuenta(${c.id})"
+          style="padding:6px 14px;border-radius:20px;border:1px solid ${active ? "#3b82f6" : "var(--border)"};background:${active ? "#3b82f6" : "var(--input)"};color:${active ? "#fff" : "var(--text)"};font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">🏦 ${escapeHtml(c.nombre)}</button>`;
+      }).join("")
+    : `<span style="font-size:12.5px;color:var(--muted);">Aún no hay cuentas bancarias.</span>`;
+
+  box.className = "card";
+  box.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">${mesesHtml}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <label style="font-size:12.5px;font-weight:600;color:var(--muted);">Año</label>
+      <select onchange="contaSetYear(this.value)" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12.5px;font-family:inherit;cursor:pointer;">
+        ${years.map(y => `<option value="${y}" ${y === st.year ? "selected" : ""}>${y}</option>`).join("")}
+      </select>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+      ${cuentasHtml}
+      <button onclick="contaOpenCuentasModal()" style="padding:6px 14px;border-radius:20px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">⚙️ Cuentas bancarias</button>
+    </div>
+    <div id="conta-resumen" style="margin-bottom:16px;"></div>
+    <div id="conta-dias"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>
+  `;
+
+  if (st.cuentaId) {
+    contaLoadMes();
+  } else {
+    document.getElementById("conta-dias").innerHTML =
+      `<div style="color:var(--muted);font-size:13px;padding:20px 0;">Crea una cuenta bancaria (⚙️ Cuentas bancarias) para empezar a registrar movimientos.</div>`;
+  }
+}
+
+async function contaLoadMes() {
+  const st = window.contaState;
+  const cont = document.getElementById("conta-dias");
+  const resumen = document.getElementById("conta-resumen");
+  if (!cont) return;
+  cont.innerHTML = `<div style="color:#6b7280;font-size:13px;">Cargando…</div>`;
+  try {
+    const params = new URLSearchParams({ cuenta_id: st.cuentaId, year: st.year, month: st.month });
+    const data = await fetch(`${API_BASE}/api/contabilidad/mes?${params}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    if (data.error) { cont.innerHTML = `<div style="color:#dc2626;font-size:13px;">${escapeHtml(data.error)}</div>`; return; }
+
+    const diasEnMes = new Date(st.year, st.month, 0).getDate();
+    const porDia = {};
+    for (let d = 1; d <= diasEnMes; d++) porDia[d] = { gastos: [], ingresos: [] };
+    (data.movimientos || []).forEach(m => {
+      const d = parseInt(String(m.fecha).slice(8, 10), 10);
+      if (!porDia[d]) return;
+      (m.tipo === "gasto" ? porDia[d].gastos : porDia[d].ingresos).push(m);
+    });
+
+    const totalGastosMes = (data.movimientos || []).filter(m => m.tipo === "gasto").reduce((a, m) => a + Number(m.monto), 0);
+    const totalIngresosMes = (data.movimientos || []).filter(m => m.tipo === "ingreso").reduce((a, m) => a + Number(m.monto), 0);
+    const saldoInicioMes = Number(data.saldo_antes) || 0;
+
+    if (resumen) resumen.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;">
+        <div style="color:var(--muted);">Saldo inicial del mes: <strong style="color:var(--text);">${contaFmtMoney(saldoInicioMes)}</strong></div>
+        <div style="color:#dc2626;">Gastos del mes: <strong>${contaFmtMoney(totalGastosMes)}</strong></div>
+        <div style="color:#16a34a;">Ingresos del mes: <strong>${contaFmtMoney(totalIngresosMes)}</strong></div>
+        <div style="color:var(--text);">Saldo final del mes: <strong>${contaFmtMoney(saldoInicioMes + totalIngresosMes - totalGastosMes)}</strong></div>
+      </div>`;
+
+    const MESES_MIN = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    let saldo = saldoInicioMes;
+    let html = "";
+    for (let d = 1; d <= diasEnMes; d++) {
+      const dia = porDia[d];
+      const fechaISO = `${st.year}-${String(st.month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const gastosDia = dia.gastos.reduce((a, m) => a + Number(m.monto), 0);
+      const ingresosDia = dia.ingresos.reduce((a, m) => a + Number(m.monto), 0);
+      saldo += ingresosDia - gastosDia;
+      const weekday = new Date(st.year, st.month - 1, d).toLocaleDateString("es-ES", { weekday: "long" });
+
+      html += `
+        <div style="border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            <div style="font-weight:700;color:var(--text);font-size:13.5px;">${d} de ${MESES_MIN[st.month - 1]} <span style="font-weight:400;color:var(--muted);text-transform:capitalize;">· ${weekday}</span></div>
+            <div style="font-size:12.5px;font-weight:700;color:${saldo < 0 ? "#dc2626" : "var(--text)"};">Saldo al finalizar el día: ${contaFmtMoney(saldo)}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Gastos</div>
+              ${dia.gastos.map(m => contaMovRowHtml(m)).join("") || `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Sin gastos</div>`}
+              <button onclick="contaOpenMovModal('${fechaISO}','gasto')" style="margin-top:4px;padding:5px 12px;border-radius:7px;border:1px dashed #dc2626;background:transparent;color:#dc2626;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">+ Gasto</button>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Ingresos</div>
+              ${dia.ingresos.map(m => contaMovRowHtml(m)).join("") || `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Sin ingresos</div>`}
+              <button onclick="contaOpenMovModal('${fechaISO}','ingreso')" style="margin-top:4px;padding:5px 12px;border-radius:7px;border:1px dashed #16a34a;background:transparent;color:#16a34a;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">+ Ingreso</button>
+            </div>
+          </div>
+        </div>`;
+    }
+    cont.innerHTML = html;
+  } catch (e) {
+    cont.innerHTML = `<div style="color:#dc2626;font-size:13px;">Error cargando movimientos</div>`;
+  }
+}
+
+function contaMovRowHtml(m) {
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;">
+      <div style="min-width:0;">
+        <div style="font-weight:600;color:var(--text);">${contaFmtMoney(m.monto)}</div>
+        ${m.descripcion ? `<div style="color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">${escapeHtml(m.descripcion)}</div>` : ""}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        ${m.tiene_archivo ? `<button onclick="contaViewArchivo(${m.id})" title="Ver factura" style="background:none;border:none;color:#3b82f6;cursor:pointer;font-size:14px;padding:0;">📎</button>` : ""}
+        <button onclick="contaDeleteMov(${m.id})" title="Eliminar" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0;">✕</button>
+      </div>
+    </div>`;
+}
+
+window.contaOpenMovModal = function (fecha, tipo) {
+  document.getElementById("conta-mov-modal")?.remove();
+  const esGasto = tipo === "gasto";
+  const color = esGasto ? "#dc2626" : "#16a34a";
+  const overlay = document.createElement("div");
+  overlay.id = "conta-mov-modal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;";
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;width:360px;max-width:95vw;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;">${esGasto ? "Nuevo gasto" : "Nuevo ingreso"}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${fecha}</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--text);">Importe (€)</label>
+          <input id="conta-mov-monto" type="number" step="0.01" min="0" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--text);">Descripción</label>
+          <input id="conta-mov-desc" type="text" placeholder="Opcional" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--text);">${esGasto ? "Factura" : "Factura de venta"}</label>
+          <input id="conta-mov-file" type="file" accept="application/pdf,image/*" style="width:100%;margin-top:4px;font-size:12px;color:var(--text);">
+        </div>
+      </div>
+      <div id="conta-mov-msg" style="margin-top:10px;font-size:12px;color:#dc2626;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button onclick="document.getElementById('conta-mov-modal')?.remove()" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button onclick="contaSubmitMov('${fecha}','${tipo}')" style="padding:8px 20px;border-radius:8px;border:none;background:${color};color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  closeOnBackdropClick(overlay, () => overlay.remove());
+  document.getElementById("conta-mov-monto")?.focus();
+};
+
+window.contaSubmitMov = async function (fecha, tipo) {
+  const monto = parseFloat(document.getElementById("conta-mov-monto").value);
+  const descripcion = document.getElementById("conta-mov-desc").value.trim();
+  const fileInput = document.getElementById("conta-mov-file");
+  const msg = document.getElementById("conta-mov-msg");
+  if (!(monto > 0)) { msg.textContent = "Introduce un importe válido"; return; }
+
+  const MAX_BYTES = 8 * 1024 * 1024;
+  const file = fileInput.files[0];
+  if (file && file.size > MAX_BYTES) { msg.textContent = "El archivo no puede superar 8MB"; return; }
+
+  let archivo_data = null, archivo_nombre = null;
+  try {
+    if (file) {
+      archivo_data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      archivo_nombre = file.name;
+    }
+    const res = await fetch(`${API_BASE}/api/contabilidad/movimientos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ cuenta_id: window.contaState.cuentaId, fecha, tipo, monto, descripcion, archivo_nombre, archivo_data }),
+    });
+    const d = await res.json();
+    if (!res.ok) { msg.textContent = d.error || "Error al guardar"; return; }
+    document.getElementById("conta-mov-modal")?.remove();
+    contaLoadMes();
+  } catch (e) {
+    msg.textContent = "Error de conexión";
+  }
+};
+
+window.contaDeleteMov = async function (id) {
+  if (!confirm("¿Eliminar este movimiento?")) return;
+  try {
+    await fetch(`${API_BASE}/api/contabilidad/movimientos/${id}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    contaLoadMes();
+  } catch { alert("Error al eliminar"); }
+};
+
+window.contaViewArchivo = async function (id) {
+  try {
+    const d = await fetch(`${API_BASE}/api/contabilidad/movimientos/${id}/archivo`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    if (!d.data) { alert("No se pudo cargar el archivo"); return; }
+    const w = window.open("about:blank");
+    if (!w) { alert("El navegador bloqueó la ventana emergente"); return; }
+    w.document.write(`<title>${(d.nombre || "Archivo").replace(/</g, "")}</title><body style="margin:0;background:#111;"><embed src="${d.data}" type="${d.data.split(";")[0].replace("data:", "")}" style="width:100%;height:100vh;"></body>`);
+  } catch { alert("Error al cargar el archivo"); }
+};
+
+// ── Gestión de cuentas bancarias ────────────────────────────────
+window.contaOpenCuentasModal = function () {
+  document.getElementById("conta-cuentas-modal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "conta-cuentas-modal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;";
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;width:380px;max-width:95vw;max-height:80vh;overflow:auto;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;">Cuentas bancarias</div>
+      <div id="conta-cuentas-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;">
+        <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px;">Añadir cuenta</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input id="conta-nueva-nombre" type="text" placeholder="Nombre de la cuenta" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+          <input id="conta-nueva-saldo" type="number" step="0.01" placeholder="Saldo inicial (€)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+          <button onclick="contaCrearCuenta()" class="btn-primary" style="padding:8px 16px;">+ Añadir cuenta</button>
+        </div>
+      </div>
+      <div id="conta-cuentas-msg" style="margin-top:10px;font-size:12px;color:#dc2626;"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+        <button onclick="document.getElementById('conta-cuentas-modal')?.remove()" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cerrar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  closeOnBackdropClick(overlay, () => overlay.remove());
+  contaRenderCuentasList();
+};
+
+function contaRenderCuentasList() {
+  const list = document.getElementById("conta-cuentas-list");
+  if (!list) return;
+  const cuentas = window.contaState.cuentas || [];
+  list.innerHTML = cuentas.length
+    ? cuentas.map(c => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
+          <div style="min-width:0;">
+            <div style="font-weight:600;font-size:13px;color:var(--text);">${escapeHtml(c.nombre)}</div>
+            <div style="font-size:11.5px;color:var(--muted);">Saldo inicial: ${contaFmtMoney(c.saldo_inicial)}</div>
+          </div>
+          <button onclick="contaEliminarCuenta(${c.id})" title="Eliminar cuenta" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;flex-shrink:0;">🗑</button>
+        </div>`).join("")
+    : `<div style="font-size:12.5px;color:var(--muted);">Aún no hay cuentas bancarias.</div>`;
+}
+
+window.contaCrearCuenta = async function () {
+  const nombre = document.getElementById("conta-nueva-nombre").value.trim();
+  const saldo_inicial = parseFloat(document.getElementById("conta-nueva-saldo").value) || 0;
+  const msg = document.getElementById("conta-cuentas-msg");
+  if (!nombre) { msg.textContent = "El nombre es obligatorio"; return; }
+  try {
+    const res = await fetch(`${API_BASE}/api/contabilidad/cuentas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ nombre, saldo_inicial }),
+    });
+    const d = await res.json();
+    if (!res.ok) { msg.textContent = d.error || "Error"; return; }
+    document.getElementById("conta-nueva-nombre").value = "";
+    document.getElementById("conta-nueva-saldo").value = "";
+    msg.textContent = "";
+    if (!window.contaState.cuentaId) window.contaState.cuentaId = d.id;
+    await contaLoadCuentas();
+    contaRenderCuentasList();
+  } catch { msg.textContent = "Error de conexión"; }
+};
+
+window.contaEliminarCuenta = async function (id) {
+  if (!confirm("¿Eliminar esta cuenta bancaria? Sus movimientos dejarán de estar visibles.")) return;
+  try {
+    await fetch(`${API_BASE}/api/contabilidad/cuentas/${id}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    await contaLoadCuentas();
+    contaRenderCuentasList();
+  } catch { alert("Error al eliminar la cuenta"); }
 };
 
 // ===== ACTUALIZACIÓN EN SEGUNDO PLANO =====

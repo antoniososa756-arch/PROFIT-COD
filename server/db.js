@@ -501,6 +501,38 @@ await pool.query(`
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfactura_emisores_user ON pfactura_emisores(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_pfactura_clientes_user ON pfactura_clientes(user_id)`);
 
+  // Contabilidad interna (solo admin y su apoyo delegado): cuentas bancarias
+  // propias y movimientos diarios de gasto/ingreso con su factura adjunta.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS contabilidad_cuentas (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      saldo_inicial NUMERIC(12,2) NOT NULL DEFAULT 0,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TEXT DEFAULT now()::text
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS contabilidad_movimientos (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      cuenta_id INTEGER NOT NULL REFERENCES contabilidad_cuentas(id) ON DELETE CASCADE,
+      -- TEXT y no DATE a propósito (igual que pfacturas.fecha): así "YYYY-MM-DD"
+      -- se guarda y se lee tal cual, sin que node-postgres lo reconvierta a un
+      -- Date en UTC y desplace el día al formatearlo en la zona del servidor.
+      fecha TEXT NOT NULL,
+      tipo TEXT NOT NULL CHECK (tipo IN ('gasto','ingreso')),
+      monto NUMERIC(12,2) NOT NULL,
+      descripcion TEXT,
+      archivo_nombre TEXT,
+      archivo_data TEXT,
+      created_at TEXT DEFAULT now()::text
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_contabilidad_cuentas_user ON contabilidad_cuentas(user_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_contabilidad_movs_cuenta_fecha ON contabilidad_movimientos(cuenta_id, fecha)`);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 

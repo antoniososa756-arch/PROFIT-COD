@@ -29,7 +29,9 @@ app.use("/api/billing/stripe/webhook", express.raw({ type: "application/json" })
 
 // Middlewares normales
 app.use(cors());
-app.use(express.json({ limit: "5mb" }));
+// 12mb para admitir facturas/comprobantes subidos como base64 en Contabilidad
+// (un PDF de ~8MB en bruto pesa ~33% más ya codificado).
+app.use(express.json({ limit: "12mb" }));
 
 // Inyección global de DB
 app.use((req, res, next) => {
@@ -69,6 +71,9 @@ app.use("/api/pfactura/emisores", auth, planCheck, require("./routes/pfactura-em
 app.use("/api/pfactura/clientes", auth, planCheck, require("./routes/pfactura-clientes.routes"));
 app.use("/api/pfactura",     auth, planCheck, require("./routes/pfactura.routes"));
 app.use("/api/reclamos-mrw", auth, planCheck, require("./routes/reclamos.routes"));
+// Contabilidad es exclusiva del admin (y su apoyo delegado) — no lleva planCheck
+// porque no depende del plan de ningún cliente, la propia ruta filtra el acceso.
+app.use("/api/contabilidad", auth, require("./routes/contabilidad.routes"));
 // Gmail: /auth y /callback son redirects del navegador, no llevan Auth header
 // El resto sí requiere auth — lo gestionamos con un middleware condicional
 const gmailRoutes = require("./routes/gmail.routes");
