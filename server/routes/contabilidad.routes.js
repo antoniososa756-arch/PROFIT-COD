@@ -103,12 +103,21 @@ router.get("/mes", async (req, res) => {
     );
     const saldoAntes = Number(cuenta.saldo_inicial) + Number(prevRow?.neto || 0);
 
+    // archivos va como array [{id,nombre}] por movimiento (sin el contenido,
+    // que se pide aparte bajo demanda) para poder listar/descargar/eliminar
+    // cada adjunto por separado sin inflar esta respuesta.
     const movimientos = await db.all(
-      `SELECT id, fecha, tipo, monto, descripcion, archivo_nombre,
-              (archivo_data IS NOT NULL) AS tiene_archivo
-       FROM contabilidad_movimientos
-       WHERE cuenta_id = $1 AND fecha >= $2 AND fecha < $3
-       ORDER BY fecha ASC, id ASC`,
+      `SELECT m.id, m.fecha, m.tipo, m.monto, m.descripcion,
+              COALESCE(
+                json_agg(json_build_object('id', a.id, 'nombre', a.nombre) ORDER BY a.id)
+                  FILTER (WHERE a.id IS NOT NULL),
+                '[]'
+              ) AS archivos
+       FROM contabilidad_movimientos m
+       LEFT JOIN contabilidad_movimiento_archivos a ON a.movimiento_id = m.id
+       WHERE m.cuenta_id = $1 AND m.fecha >= $2 AND m.fecha < $3
+       GROUP BY m.id
+       ORDER BY m.fecha ASC, m.id ASC`,
       [cuentaId, inicioMes, finMesExclusivo]
     );
 
@@ -116,15 +125,39 @@ router.get("/mes", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+const MAX_ARCHIVOS_POR_MOVIMIENTO = 10;
+
+function validarArchivos(archivos) {
+  if (!Array.isArray(archivos)) return "Formato de archivos inválido";
+  if (archivos.length > MAX_ARCHIVOS_POR_MOVIMIENTO) return `Máximo ${MAX_ARCHIVOS_POR_MOVIMIENTO} archivos por movimiento`;
+  for (const a of archivos) {
+    if (!a?.data) return "Falta el contenido de un archivo";
+    if (a.data.length > MAX_ARCHIVO_BYTES * 1.4) return "Un archivo es demasiado grande (máx ~8MB)";
+  }
+  return null;
+}
+
+async function insertarArchivos(userId, movimientoId, archivos) {
+  if (!archivos || !archivos.length) return [];
+  const nombres = archivos.map(a => (a.nombre ? String(a.nombre).slice(0, 300) : null));
+  const datas   = archivos.map(a => a.data);
+  return db.all(
+    `INSERT INTO contabilidad_movimiento_archivos (movimiento_id, user_id, nombre, data)
+     SELECT $1, $2, n, d FROM UNNEST($3::text[], $4::text[]) AS u(n, d)
+     RETURNING id, nombre`,
+    [movimientoId, userId, nombres, datas]
+  );
+}
+
 // ── Crear / eliminar movimiento ─────────────────────────────────
+// archivos: [{nombre, data}] — opcional, 0 o varios de una vez al crear.
 router.post("/movimientos", async (req, res) => {
-  const { cuenta_id, fecha, tipo, monto, descripcion, archivo_nombre, archivo_data } = req.body || {};
+  const { cuenta_id, fecha, tipo, monto, descripcion, archivos } = req.body || {};
   if (!cuenta_id || !/^\d{4}-\d{2}-\d{2}$/.test(fecha || "") || !["gasto", "ingreso"].includes(tipo) || !(Number(monto) > 0)) {
     return res.status(400).json({ error: "Datos inválidos" });
   }
-  if (archivo_data && archivo_data.length > MAX_ARCHIVO_BYTES * 1.4) {
-    return res.status(400).json({ error: "El archivo es demasiado grande (máx ~8MB)" });
-  }
+  const errArchivos = archivos ? validarArchivos(archivos) : null;
+  if (errArchivos) return res.status(400).json({ error: errArchivos });
   try {
     const cuenta = await db.get(
       "SELECT id FROM contabilidad_cuentas WHERE id = $1 AND user_id = $2 AND active = true",
@@ -132,13 +165,14 @@ router.post("/movimientos", async (req, res) => {
     );
     if (!cuenta) return res.status(404).json({ error: "Cuenta no encontrada" });
 
-    const row = await db.get(
-      `INSERT INTO contabilidad_movimientos (user_id, cuenta_id, fecha, tipo, monto, descripcion, archivo_nombre, archivo_data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, fecha, tipo, monto, descripcion, archivo_nombre, (archivo_data IS NOT NULL) AS tiene_archivo`,
-      [req.user.id, cuenta_id, fecha, tipo, Number(monto), descripcion || null, archivo_nombre || null, archivo_data || null]
+    const mov = await db.get(
+      `INSERT INTO contabilidad_movimientos (user_id, cuenta_id, fecha, tipo, monto, descripcion)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, fecha, tipo, monto, descripcion`,
+      [req.user.id, cuenta_id, fecha, tipo, Number(monto), descripcion || null]
     );
-    res.json(row);
+    const archivosCreados = await insertarArchivos(req.user.id, mov.id, archivos);
+    res.json({ ...mov, archivos: archivosCreados });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -214,38 +248,59 @@ router.delete("/movimientos/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/contabilidad/movimientos/:id/archivo — descarga/visualización bajo demanda
-// (no se manda con el listado del mes para no inflar esa respuesta).
-router.get("/movimientos/:id/archivo", async (req, res) => {
+// POST /api/contabilidad/movimientos/:id/archivos — añade uno o varios
+// archivos a un movimiento que ya existe, sin tocar fecha/tipo/monto/los
+// archivos que ya tuviera. Sirve tanto para adjuntar más comprobantes a mano
+// como para los movimientos que llegan sin factura desde una importación
+// masiva (CSV).
+router.post("/movimientos/:id/archivos", async (req, res) => {
+  const { archivos } = req.body || {};
+  const errArchivos = validarArchivos(archivos || []);
+  if (errArchivos) return res.status(400).json({ error: errArchivos });
+  if (!archivos || !archivos.length) return res.status(400).json({ error: "No se recibió ningún archivo" });
   try {
-    const row = await db.get(
-      "SELECT archivo_nombre, archivo_data FROM contabilidad_movimientos WHERE id = $1 AND user_id = $2",
+    const mov = await db.get(
+      "SELECT id FROM contabilidad_movimientos WHERE id = $1 AND user_id = $2",
       [req.params.id, req.user.id]
     );
-    if (!row || !row.archivo_data) return res.status(404).json({ error: "Sin archivo" });
-    res.json({ nombre: row.archivo_nombre, data: row.archivo_data });
+    if (!mov) return res.status(404).json({ error: "Movimiento no encontrado" });
+
+    const { count } = await db.get(
+      "SELECT COUNT(*)::int AS count FROM contabilidad_movimiento_archivos WHERE movimiento_id = $1",
+      [req.params.id]
+    );
+    if (count + archivos.length > MAX_ARCHIVOS_POR_MOVIMIENTO) {
+      return res.status(400).json({ error: `Máximo ${MAX_ARCHIVOS_POR_MOVIMIENTO} archivos por movimiento` });
+    }
+
+    const archivosCreados = await insertarArchivos(req.user.id, req.params.id, archivos);
+    res.json({ archivos: archivosCreados });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// PUT /api/contabilidad/movimientos/:id/archivo — adjunta (o reemplaza) la
-// factura de un movimiento que ya existe, sin tocar fecha/tipo/monto. Sirve
-// sobre todo para los movimientos que llegan sin archivo desde una
-// importación masiva (CSV) y a los que luego se les carga el comprobante.
-router.put("/movimientos/:id/archivo", async (req, res) => {
-  const { archivo_nombre, archivo_data } = req.body || {};
-  if (!archivo_data) return res.status(400).json({ error: "Falta el archivo" });
-  if (archivo_data.length > MAX_ARCHIVO_BYTES * 1.4) {
-    return res.status(400).json({ error: "El archivo es demasiado grande (máx ~8MB)" });
-  }
+// GET /api/contabilidad/movimientos/archivos/:archivoId — descarga/visualización
+// bajo demanda de un archivo concreto (no se manda con el listado del mes).
+router.get("/movimientos/archivos/:archivoId", async (req, res) => {
   try {
     const row = await db.get(
-      `UPDATE contabilidad_movimientos SET archivo_nombre = $1, archivo_data = $2
-       WHERE id = $3 AND user_id = $4
-       RETURNING id, fecha, tipo, monto, descripcion, archivo_nombre, (archivo_data IS NOT NULL) AS tiene_archivo`,
-      [archivo_nombre || null, archivo_data, req.params.id, req.user.id]
+      "SELECT nombre, data FROM contabilidad_movimiento_archivos WHERE id = $1 AND user_id = $2",
+      [req.params.archivoId, req.user.id]
     );
-    if (!row) return res.status(404).json({ error: "Movimiento no encontrado" });
-    res.json(row);
+    if (!row) return res.status(404).json({ error: "Archivo no encontrado" });
+    res.json({ nombre: row.nombre, data: row.data });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/contabilidad/movimientos/archivos/:archivoId — elimina un solo
+// archivo sin tocar el resto de adjuntos ni el movimiento en sí.
+router.delete("/movimientos/archivos/:archivoId", async (req, res) => {
+  try {
+    const row = await db.get(
+      "DELETE FROM contabilidad_movimiento_archivos WHERE id = $1 AND user_id = $2 RETURNING id",
+      [req.params.archivoId, req.user.id]
+    );
+    if (!row) return res.status(404).json({ error: "Archivo no encontrado" });
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

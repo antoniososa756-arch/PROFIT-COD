@@ -538,6 +538,39 @@ await pool.query(`
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_contabilidad_cuentas_user ON contabilidad_cuentas(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_contabilidad_movs_cuenta_fecha ON contabilidad_movimientos(cuenta_id, fecha)`);
 
+  // Un movimiento puede llevar varios archivos adjuntos (antes era uno solo en
+  // archivo_nombre/archivo_data de contabilidad_movimientos), cada uno
+  // eliminable por separado sin tocar el resto del movimiento.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS contabilidad_movimiento_archivos (
+      id SERIAL PRIMARY KEY,
+      movimiento_id INTEGER NOT NULL REFERENCES contabilidad_movimientos(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      nombre TEXT,
+      data TEXT NOT NULL,
+      created_at TEXT DEFAULT now()::text
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_contabilidad_archivos_mov ON contabilidad_movimiento_archivos(movimiento_id)`);
+  // Migración única del archivo legado (una sola vez: si las columnas ya no
+  // existen, este bloque no hace nada en los siguientes arranques).
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'contabilidad_movimientos' AND column_name = 'archivo_data'
+      ) THEN
+        INSERT INTO contabilidad_movimiento_archivos (movimiento_id, user_id, nombre, data)
+        SELECT id, user_id, archivo_nombre, archivo_data
+        FROM contabilidad_movimientos WHERE archivo_data IS NOT NULL;
+
+        ALTER TABLE contabilidad_movimientos DROP COLUMN archivo_nombre;
+        ALTER TABLE contabilidad_movimientos DROP COLUMN archivo_data;
+      END IF;
+    END $$;
+  `);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 

@@ -11430,17 +11430,25 @@ async function contaLoadMes() {
 }
 
 function contaMovRowHtml(m) {
+  const archivos = m.archivos || [];
   return `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);">
-      <div style="min-width:0;">
-        <div style="font-weight:700;color:var(--text);font-size:13px;">${contaFmtMoney(m.monto)}</div>
-        ${m.descripcion ? `<div style="color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;margin-top:1px;">${escapeHtml(m.descripcion)}</div>` : ""}
-        ${m.tiene_archivo ? `<div title="${escapeHtml(m.archivo_nombre || "")}" style="color:#3b82f6;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;margin-top:2px;">📎 ${escapeHtml(m.archivo_nombre || "archivo")}</div>` : ""}
+    <div style="padding:7px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <div style="min-width:0;">
+          <div style="font-weight:700;color:var(--text);font-size:13px;">${contaFmtMoney(m.monto)}</div>
+          ${m.descripcion ? `<div style="color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;margin-top:1px;">${escapeHtml(m.descripcion)}</div>` : ""}
+        </div>
+        ${pfActionBtn("trash", `contaDeleteMov(${m.id})`, "Eliminar movimiento", "#ef4444")}
       </div>
-      <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
-        ${m.tiene_archivo ? pfActionBtn("download", `contaDescargarArchivo(${m.id})`, "Descargar factura", "#3b82f6") : contaAttachBtn(`contaAdjuntarArchivo(${m.id})`)}
-        ${pfActionBtn("trash", `contaDeleteMov(${m.id})`, "Eliminar", "#ef4444")}
-      </div>
+      ${archivos.map(a => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:2px;">
+          <div title="${escapeHtml(a.nombre || "")}" style="color:#3b82f6;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">📎 ${escapeHtml(a.nombre || "archivo")}</div>
+          <div style="display:flex;align-items:center;flex-shrink:0;">
+            ${pfActionBtn("download", `contaDescargarArchivo(${a.id})`, "Descargar", "#3b82f6")}
+            ${pfActionBtn("trash", `contaEliminarArchivo(${a.id})`, "Eliminar solo este archivo", "#ef4444")}
+          </div>
+        </div>`).join("")}
+      <button onclick="contaAdjuntarArchivo(${m.id})" style="margin-top:4px;background:none;border:none;color:#3b82f6;font-size:11px;font-weight:700;cursor:pointer;padding:0;font-family:inherit;">+ archivo</button>
     </div>`;
 }
 
@@ -11482,13 +11490,13 @@ window.contaOpenMovModal = function (fecha, tipo) {
         <input id="conta-mov-desc" type="text" placeholder="Opcional — proveedor, concepto…"
           style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;margin-bottom:16px;">
 
-        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${esGasto ? "Factura" : "Factura de venta"}</label>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${esGasto ? "Factura(s)" : "Factura(s) de venta"}</label>
         <div id="conta-mov-drop" onclick="document.getElementById('conta-mov-file').click()"
           style="border:1.5px dashed var(--border);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:border-color .15s;">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <div id="conta-mov-drop-text" style="font-size:12px;color:var(--muted);line-height:1.5;">Haz clic para subir un PDF o imagen<br><span style="font-size:10.5px;">máx. 8MB</span></div>
+          <div id="conta-mov-drop-text" style="font-size:12px;color:var(--muted);line-height:1.5;">Haz clic para subir uno o varios PDF/imagen<br><span style="font-size:10.5px;">máx. 8MB cada uno</span></div>
         </div>
-        <input id="conta-mov-file" type="file" accept="application/pdf,image/*" style="display:none;" onchange="contaMovFileSelected(this)">
+        <input id="conta-mov-file" type="file" accept="application/pdf,image/*" multiple style="display:none;" onchange="contaMovFileSelected(this)">
 
         <div id="conta-mov-msg" style="margin-top:12px;font-size:12px;color:#dc2626;"></div>
 
@@ -11507,13 +11515,16 @@ window.contaMovFileSelected = function (input) {
   const txt = document.getElementById("conta-mov-drop-text");
   const drop = document.getElementById("conta-mov-drop");
   if (!txt) return;
-  const file = input.files[0];
-  if (file) {
-    const kb = Math.max(1, Math.round(file.size / 1024));
-    txt.innerHTML = `<strong style="color:var(--text);">${escapeHtml(file.name)}</strong><br><span style="font-size:10.5px;">${kb} KB · clic para cambiar</span>`;
+  const files = input.files;
+  if (files.length === 1) {
+    const kb = Math.max(1, Math.round(files[0].size / 1024));
+    txt.innerHTML = `<strong style="color:var(--text);">${escapeHtml(files[0].name)}</strong><br><span style="font-size:10.5px;">${kb} KB · clic para cambiar</span>`;
+    if (drop) drop.style.borderColor = "#3b82f6";
+  } else if (files.length > 1) {
+    txt.innerHTML = `<strong style="color:var(--text);">${files.length} archivos seleccionados</strong><br><span style="font-size:10.5px;">clic para cambiar</span>`;
     if (drop) drop.style.borderColor = "#3b82f6";
   } else {
-    txt.innerHTML = `Haz clic para subir un PDF o imagen<br><span style="font-size:10.5px;">máx. 8MB</span>`;
+    txt.innerHTML = `Haz clic para subir uno o varios PDF/imagen<br><span style="font-size:10.5px;">máx. 8MB cada uno</span>`;
     if (drop) drop.style.borderColor = "var(--border)";
   }
 };
@@ -11525,32 +11536,19 @@ window.contaSubmitMov = async function (fecha, tipo) {
   const msg = document.getElementById("conta-mov-msg");
   if (!(monto > 0)) { msg.textContent = "Introduce un importe válido"; return; }
 
-  const MAX_BYTES = 8 * 1024 * 1024;
-  const file = fileInput.files[0];
-  if (file && file.size > MAX_BYTES) { msg.textContent = "El archivo no puede superar 8MB"; return; }
-
-  let archivo_data = null, archivo_nombre = null;
   try {
-    if (file) {
-      archivo_data = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      archivo_nombre = file.name;
-    }
+    const archivos = await contaLeerArchivosComoBase64(fileInput.files);
     const res = await fetch(`${API_BASE}/api/contabilidad/movimientos`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify({ cuenta_id: window.contaState.cuentaId, fecha, tipo, monto, descripcion, archivo_nombre, archivo_data }),
+      body: JSON.stringify({ cuenta_id: window.contaState.cuentaId, fecha, tipo, monto, descripcion, archivos }),
     });
     const d = await res.json();
     if (!res.ok) { msg.textContent = d.error || "Error al guardar"; return; }
     document.getElementById("conta-mov-modal")?.remove();
     contaLoadMes();
   } catch (e) {
-    msg.textContent = "Error de conexión";
+    msg.textContent = e.message || "Error de conexión";
   }
 };
 
@@ -11565,9 +11563,9 @@ window.contaDeleteMov = async function (id) {
 // Descarga el archivo tal cual se subió: el data-URL guardado en BD conserva
 // los bytes originales exactos, así que al reconstruirlo en un blob el
 // formato y el tamaño del archivo descargado son idénticos al subido.
-window.contaDescargarArchivo = async function (id) {
+window.contaDescargarArchivo = async function (archivoId) {
   try {
-    const d = await fetch(`${API_BASE}/api/contabilidad/movimientos/${id}/archivo`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    const d = await fetch(`${API_BASE}/api/contabilidad/movimientos/archivos/${archivoId}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
     if (!d.data) { alert("No se pudo cargar el archivo"); return; }
     const blob = await fetch(d.data).then(r => r.blob());
     const url = URL.createObjectURL(blob);
@@ -11581,44 +11579,54 @@ window.contaDescargarArchivo = async function (id) {
   } catch { alert("Error al descargar el archivo"); }
 };
 
-// Botón "adjuntar" (mismo look que pfActionBtn) para movimientos sin factura
-// todavía — típicamente los que llegan desde una importación CSV.
-function contaAttachBtn(onclick) {
-  return `<button type="button" onclick="${onclick}" title="Adjuntar factura"
-    style="width:28px;height:28px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,color .15s;"
-    onmouseover="this.style.background='#3b82f622';this.style.color='#3b82f6';"
-    onmouseout="this.style.background='transparent';this.style.color='var(--muted)';">
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-  </button>`;
+window.contaEliminarArchivo = async function (archivoId) {
+  if (!confirm("¿Eliminar este archivo? El resto del movimiento no se toca.")) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/contabilidad/movimientos/archivos/${archivoId}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    if (!res.ok) { alert("Error al eliminar el archivo"); return; }
+    contaLoadMes();
+  } catch { alert("Error al eliminar el archivo"); }
+};
+
+// Lee uno o varios File como data-URL base64, validando el tamaño de cada uno.
+// Lanza si algún archivo supera el límite; el llamador decide cómo avisarlo.
+const CONTA_MAX_ARCHIVO_BYTES = 8 * 1024 * 1024;
+async function contaLeerArchivosComoBase64(fileList) {
+  const archivos = [];
+  for (const file of fileList) {
+    if (file.size > CONTA_MAX_ARCHIVO_BYTES) throw new Error(`"${file.name}" supera 8MB`);
+    const data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    archivos.push({ nombre: file.name, data });
+  }
+  return archivos;
 }
 
-// Adjunta el archivo a un movimiento ya creado (por ejemplo uno importado por
-// CSV, que llega sin factura) sin abrir un modal — solo el selector de archivo.
+// Añade uno o varios archivos a un movimiento ya creado (por ejemplo uno
+// importado por CSV, que llega sin factura, o para sumar más comprobantes a
+// uno que ya tiene) sin abrir un modal — solo el selector de archivo.
 window.contaAdjuntarArchivo = function (id) {
   const input = document.createElement("input");
   input.type = "file";
+  input.multiple = true;
   input.accept = "application/pdf,image/*";
   input.onchange = async () => {
-    const file = input.files[0];
-    if (!file) return;
-    const MAX_BYTES = 8 * 1024 * 1024;
-    if (file.size > MAX_BYTES) { alert("El archivo no puede superar 8MB"); return; }
+    if (!input.files.length) return;
     try {
-      const archivo_data = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      const res = await fetch(`${API_BASE}/api/contabilidad/movimientos/${id}/archivo`, {
-        method: "PUT",
+      const archivos = await contaLeerArchivosComoBase64(input.files);
+      const res = await fetch(`${API_BASE}/api/contabilidad/movimientos/${id}/archivos`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-        body: JSON.stringify({ archivo_nombre: file.name, archivo_data }),
+        body: JSON.stringify({ archivos }),
       });
       const d = await res.json();
       if (!res.ok) { alert(d.error || "Error al adjuntar el archivo"); return; }
       contaLoadMes();
-    } catch (e) { alert("Error al adjuntar el archivo"); }
+    } catch (e) { alert(e.message || "Error al adjuntar el archivo"); }
   };
   input.click();
 };
