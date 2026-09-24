@@ -11447,36 +11447,74 @@ window.contaOpenMovModal = function (fecha, tipo) {
   document.getElementById("conta-mov-modal")?.remove();
   const esGasto = tipo === "gasto";
   const color = esGasto ? "#dc2626" : "#16a34a";
+  const flechaIcon = esGasto
+    ? `<line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>`
+    : `<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>`;
+  const fechaLegible = new Date(fecha + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+
   const overlay = document.createElement("div");
   overlay.id = "conta-mov-modal";
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
   overlay.innerHTML = `
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;width:360px;max-width:95vw;">
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;">${esGasto ? "Nuevo gasto" : "Nuevo ingreso"}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${fecha}</div>
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div>
-          <label style="font-size:12px;font-weight:600;color:var(--text);">Importe (€)</label>
-          <input id="conta-mov-monto" type="number" step="0.01" min="0" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;width:380px;max-width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);overflow:hidden;">
+      <div style="height:4px;background:${color};"></div>
+      <div style="padding:22px 24px 24px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:40px;height:40px;border-radius:11px;background:${color}1f;color:${color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${flechaIcon}</svg>
+          </div>
+          <div style="min-width:0;">
+            <div style="font-size:15.5px;font-weight:700;color:var(--text);">${esGasto ? "Nuevo gasto" : "Nuevo ingreso"}</div>
+            <div style="font-size:12px;color:var(--muted);text-transform:capitalize;">${fechaLegible}</div>
+          </div>
         </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;color:var(--text);">Descripción</label>
-          <input id="conta-mov-desc" type="text" placeholder="Opcional" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Importe</label>
+        <div style="position:relative;margin-bottom:16px;">
+          <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:19px;font-weight:800;color:${color};pointer-events:none;">€</span>
+          <input id="conta-mov-monto" type="number" step="0.01" min="0" placeholder="0,00"
+            style="width:100%;box-sizing:border-box;padding:12px 14px 12px 36px;border-radius:10px;border:1.5px solid var(--border);background:var(--input);color:var(--text);font-size:22px;font-weight:800;font-family:inherit;outline:none;transition:border-color .15s;"
+            onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='var(--border)'">
         </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;color:var(--text);">${esGasto ? "Factura" : "Factura de venta"}</label>
-          <input id="conta-mov-file" type="file" accept="application/pdf,image/*" style="width:100%;margin-top:4px;font-size:12px;color:var(--text);">
+
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Descripción</label>
+        <input id="conta-mov-desc" type="text" placeholder="Opcional — proveedor, concepto…"
+          style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;margin-bottom:16px;">
+
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${esGasto ? "Factura" : "Factura de venta"}</label>
+        <div id="conta-mov-drop" onclick="document.getElementById('conta-mov-file').click()"
+          style="border:1.5px dashed var(--border);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:border-color .15s;">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div id="conta-mov-drop-text" style="font-size:12px;color:var(--muted);line-height:1.5;">Haz clic para subir un PDF o imagen<br><span style="font-size:10.5px;">máx. 8MB</span></div>
         </div>
-      </div>
-      <div id="conta-mov-msg" style="margin-top:10px;font-size:12px;color:#dc2626;"></div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
-        <button onclick="document.getElementById('conta-mov-modal')?.remove()" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
-        <button onclick="contaSubmitMov('${fecha}','${tipo}')" style="padding:8px 20px;border-radius:8px;border:none;background:${color};color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Guardar</button>
+        <input id="conta-mov-file" type="file" accept="application/pdf,image/*" style="display:none;" onchange="contaMovFileSelected(this)">
+
+        <div id="conta-mov-msg" style="margin-top:12px;font-size:12px;color:#dc2626;"></div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
+          <button onclick="document.getElementById('conta-mov-modal')?.remove()" style="padding:9px 18px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+          <button onclick="contaSubmitMov('${fecha}','${tipo}')" style="padding:9px 22px;border-radius:9px;border:none;background:${color};color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 10px ${color}55;">Guardar</button>
+        </div>
       </div>
     </div>`;
   document.body.appendChild(overlay);
   closeOnBackdropClick(overlay, () => overlay.remove());
   document.getElementById("conta-mov-monto")?.focus();
+};
+
+window.contaMovFileSelected = function (input) {
+  const txt = document.getElementById("conta-mov-drop-text");
+  const drop = document.getElementById("conta-mov-drop");
+  if (!txt) return;
+  const file = input.files[0];
+  if (file) {
+    const kb = Math.max(1, Math.round(file.size / 1024));
+    txt.innerHTML = `<strong style="color:var(--text);">${escapeHtml(file.name)}</strong><br><span style="font-size:10.5px;">${kb} KB · clic para cambiar</span>`;
+    if (drop) drop.style.borderColor = "#3b82f6";
+  } else {
+    txt.innerHTML = `Haz clic para subir un PDF o imagen<br><span style="font-size:10.5px;">máx. 8MB</span>`;
+    if (drop) drop.style.borderColor = "var(--border)";
+  }
 };
 
 window.contaSubmitMov = async function (fecha, tipo) {
