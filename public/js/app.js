@@ -11382,22 +11382,25 @@ async function contaLoadMes() {
       const weekday = new Date(st.year, st.month - 1, d).toLocaleDateString("es-ES", { weekday: "long" });
 
       html += `
-        <div style="border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-            <div style="font-weight:700;color:var(--text);font-size:13.5px;">${d} de ${MESES_MIN[st.month - 1]} <span style="font-weight:400;color:var(--muted);text-transform:capitalize;">· ${weekday}</span></div>
-            <div style="font-size:12.5px;font-weight:700;color:${saldo < 0 ? "#dc2626" : "var(--text)"};">Saldo al finalizar el día: ${contaFmtMoney(saldo)}</div>
+        <div style="border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:16px;">
+          <div style="flex:1 1 320px;max-width:100%;min-width:0;">
+            <div style="font-weight:700;color:var(--text);font-size:13.5px;margin-bottom:10px;">${d} de ${MESES_MIN[st.month - 1]} <span style="font-weight:400;color:var(--muted);text-transform:capitalize;">· ${weekday}</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Gastos</div>
+                ${dia.gastos.map(m => contaMovRowHtml(m)).join("") || `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Sin gastos</div>`}
+                <button onclick="contaOpenMovModal('${fechaISO}','gasto')" style="margin-top:4px;padding:5px 12px;border-radius:7px;border:1px dashed #dc2626;background:transparent;color:#dc2626;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">+ Gasto</button>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Ingresos</div>
+                ${dia.ingresos.map(m => contaMovRowHtml(m)).join("") || `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Sin ingresos</div>`}
+                <button onclick="contaOpenMovModal('${fechaISO}','ingreso')" style="margin-top:4px;padding:5px 12px;border-radius:7px;border:1px dashed #16a34a;background:transparent;color:#16a34a;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">+ Ingreso</button>
+              </div>
+            </div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-            <div>
-              <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Gastos</div>
-              ${dia.gastos.map(m => contaMovRowHtml(m)).join("") || `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Sin gastos</div>`}
-              <button onclick="contaOpenMovModal('${fechaISO}','gasto')" style="margin-top:4px;padding:5px 12px;border-radius:7px;border:1px dashed #dc2626;background:transparent;color:#dc2626;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">+ Gasto</button>
-            </div>
-            <div>
-              <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Ingresos</div>
-              ${dia.ingresos.map(m => contaMovRowHtml(m)).join("") || `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Sin ingresos</div>`}
-              <button onclick="contaOpenMovModal('${fechaISO}','ingreso')" style="margin-top:4px;padding:5px 12px;border-radius:7px;border:1px dashed #16a34a;background:transparent;color:#16a34a;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">+ Ingreso</button>
-            </div>
+          <div style="flex:1 1 160px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border);padding:6px 12px;min-width:150px;">
+            <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;">Saldo al cerrar el día</div>
+            <div style="font-size:26px;font-weight:800;color:${saldo < 0 ? "#dc2626" : "#16a34a"};margin-top:4px;white-space:nowrap;">${contaFmtMoney(saldo)}</div>
           </div>
         </div>`;
     }
@@ -11413,9 +11416,10 @@ function contaMovRowHtml(m) {
       <div style="min-width:0;">
         <div style="font-weight:600;color:var(--text);">${contaFmtMoney(m.monto)}</div>
         ${m.descripcion ? `<div style="color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">${escapeHtml(m.descripcion)}</div>` : ""}
+        ${m.tiene_archivo ? `<div title="${escapeHtml(m.archivo_nombre || "")}" style="color:#3b82f6;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">📎 ${escapeHtml(m.archivo_nombre || "archivo")}</div>` : ""}
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-        ${m.tiene_archivo ? `<button onclick="contaViewArchivo(${m.id})" title="Ver factura" style="background:none;border:none;color:#3b82f6;cursor:pointer;font-size:14px;padding:0;">📎</button>` : ""}
+        ${m.tiene_archivo ? `<button onclick="contaDescargarArchivo(${m.id})" title="Descargar factura" style="background:none;border:none;color:#3b82f6;cursor:pointer;font-size:15px;padding:0;">⬇️</button>` : ""}
         <button onclick="contaDeleteMov(${m.id})" title="Eliminar" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0;">✕</button>
       </div>
     </div>`;
@@ -11501,14 +11505,23 @@ window.contaDeleteMov = async function (id) {
   } catch { alert("Error al eliminar"); }
 };
 
-window.contaViewArchivo = async function (id) {
+// Descarga el archivo tal cual se subió: el data-URL guardado en BD conserva
+// los bytes originales exactos, así que al reconstruirlo en un blob el
+// formato y el tamaño del archivo descargado son idénticos al subido.
+window.contaDescargarArchivo = async function (id) {
   try {
     const d = await fetch(`${API_BASE}/api/contabilidad/movimientos/${id}/archivo`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
     if (!d.data) { alert("No se pudo cargar el archivo"); return; }
-    const w = window.open("about:blank");
-    if (!w) { alert("El navegador bloqueó la ventana emergente"); return; }
-    w.document.write(`<title>${(d.nombre || "Archivo").replace(/</g, "")}</title><body style="margin:0;background:#111;"><embed src="${d.data}" type="${d.data.split(";")[0].replace("data:", "")}" style="width:100%;height:100vh;"></body>`);
-  } catch { alert("Error al cargar el archivo"); }
+    const blob = await fetch(d.data).then(r => r.blob());
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = d.nombre || "factura";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch { alert("Error al descargar el archivo"); }
 };
 
 // ── Gestión de cuentas bancarias ────────────────────────────────
