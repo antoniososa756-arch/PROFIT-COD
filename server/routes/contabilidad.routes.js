@@ -144,9 +144,14 @@ router.post("/movimientos", async (req, res) => {
 
 // ── Importación masiva desde extracto bancario (CSV) ────────────
 // El parseo del CSV se hace en el navegador (distintos bancos = distintas
-// columnas); aquí solo se validan e insertan movimientos ya normalizados.
-// external_id es el id de transacción del banco: permite reimportar el mismo
-// extracto (o uno que solape fechas) sin duplicar movimientos.
+// columnas); aquí solo se validan e insertan/corrigen movimientos ya
+// normalizados. external_id es el id de transacción del banco: permite
+// reimportar el mismo extracto (o uno que solape fechas, o uno corregido
+// tras un ajuste en la logica de mapeo) sin duplicar — y en vez de ignorar
+// silenciosamente lo que ya existía, lo CORRIGE (fecha/tipo/monto/descripción)
+// por si el mapeo cambió y el importe cargado antes ya no era el correcto.
+// archivo_nombre/archivo_data se dejan fuera del UPDATE a propósito: si el
+// usuario ya adjuntó una factura a mano, reimportar no debe borrarla.
 const MAX_BULK_ROWS = 5000;
 router.post("/movimientos/bulk", async (req, res) => {
   const { cuenta_id, movimientos } = req.body || {};
@@ -167,7 +172,7 @@ router.post("/movimientos/bulk", async (req, res) => {
       /^\d{4}-\d{2}-\d{2}$/.test(m?.fecha || "") && ["gasto", "ingreso"].includes(m?.tipo) && Number(m?.monto) > 0
     );
     const invalidos = movimientos.length - validas.length;
-    if (!validas.length) return res.json({ ok: true, insertados: 0, duplicados: 0, invalidos, total: movimientos.length });
+    if (!validas.length) return res.json({ ok: true, insertados: 0, actualizados: 0, invalidos, total: movimientos.length });
 
     const fechas   = validas.map(m => m.fecha);
     const tipos    = validas.map(m => m.tipo);
@@ -175,19 +180,23 @@ router.post("/movimientos/bulk", async (req, res) => {
     const descs    = validas.map(m => (m.descripcion ? String(m.descripcion).slice(0, 500) : null));
     const externos = validas.map(m => (m.external_id ? String(m.external_id).slice(0, 200) : null));
 
-    const insertados = await db.all(
+    // (xmax = 0) distingue insert de update en el propio RETURNING: en una fila
+    // recien insertada xmax es 0; si el ON CONFLICT hizo un UPDATE, no lo es.
+    const resultado = await db.all(
       `INSERT INTO contabilidad_movimientos (user_id, cuenta_id, fecha, tipo, monto, descripcion, external_id)
        SELECT $1, $2, f, t, mo, d, e
        FROM UNNEST($3::text[], $4::text[], $5::numeric[], $6::text[], $7::text[]) AS u(f, t, mo, d, e)
-       ON CONFLICT (cuenta_id, external_id) WHERE external_id IS NOT NULL DO NOTHING
-       RETURNING id`,
+       ON CONFLICT (cuenta_id, external_id) WHERE external_id IS NOT NULL
+       DO UPDATE SET fecha = EXCLUDED.fecha, tipo = EXCLUDED.tipo, monto = EXCLUDED.monto, descripcion = EXCLUDED.descripcion
+       RETURNING id, (xmax = 0) AS inserted`,
       [req.user.id, cuenta_id, fechas, tipos, montos, descs, externos]
     );
 
+    const insertados = resultado.filter(r => r.inserted).length;
     res.json({
       ok: true,
-      insertados: insertados.length,
-      duplicados: validas.length - insertados.length,
+      insertados,
+      actualizados: resultado.length - insertados,
       invalidos,
       total: movimientos.length,
     });

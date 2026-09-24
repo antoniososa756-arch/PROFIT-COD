@@ -11736,7 +11736,7 @@ function contaMapearFilasNarvi(rows) {
   const header = rows[0].map(h => h.trim());
   const idx = (name) => header.indexOf(name);
   const iId = idx("Transaction Id"), iDate = idx("Transaction date"), iType = idx("Transaction type"),
-        iAmount = idx("Transaction amount"), iNetCred = idx("Net credited amount"), iNetDeb = idx("Net debited amount"),
+        iAmount = idx("Transaction amount"), iFee = idx("Fee Amount"),
         iDesc = idx("Transaction description"), iSender = idx("Sender name"), iRecipient = idx("Recipient name");
   if (iDate < 0 || iType < 0 || iAmount < 0) return { movimientos: null, sinFecha: 0 };
 
@@ -11750,15 +11750,12 @@ function contaMapearFilasNarvi(rows) {
 
     const esIngreso = (r[iType] || "").trim().toLowerCase() === "credit";
     const tipo = esIngreso ? "ingreso" : "gasto";
-    const netCred = parseFloat(r[iNetCred]);
-    const netDeb = parseFloat(r[iNetDeb]);
-    const montoAbs = Math.abs(parseFloat(r[iAmount]) || 0);
-    // El importe/fee bruto no es lo que realmente mueve el saldo — se usa el
-    // neto acreditado/debitado del banco (ya descuenta o incluye la comisión).
-    const monto = esIngreso
-      ? (Number.isFinite(netCred) && netCred > 0 ? netCred : montoAbs)
-      : (Number.isFinite(netDeb) && netDeb > 0 ? netDeb : montoAbs);
+    // Importe BRUTO (el que figura en la factura/liquidación de origen), no el
+    // neto acreditado/debitado — si se usa el neto, la cifra ya no coincide con
+    // ningún comprobante real porque lleva la comisión mezclada.
+    const monto = Math.abs(parseFloat(r[iAmount]) || 0);
     if (!(monto > 0)) continue;
+    const fee = iFee >= 0 ? Math.abs(parseFloat(r[iFee]) || 0) : 0;
 
     const desc = (iDesc >= 0 ? r[iDesc] : "").trim();
     const sender = (iSender >= 0 ? r[iSender] : "").trim();
@@ -11768,7 +11765,20 @@ function contaMapearFilasNarvi(rows) {
       ? (sender ? `${desc} — ${sender}` : desc)
       : (recipient ? (!desc || desc === "Sent from Narvi" ? recipient : `${desc} — ${recipient}`) : desc);
 
-    movimientos.push({ fecha, tipo, monto, descripcion: descripcion || null, external_id: iId >= 0 ? r[iId] : null });
+    const idBase = iId >= 0 ? r[iId] : null;
+    movimientos.push({ fecha, tipo, monto, descripcion: descripcion || null, external_id: idBase });
+
+    // La comisión se registra como un gasto propio y separado (siempre gasto,
+    // sea la transacción de origen un ingreso o un gasto) — así el importe
+    // principal queda "desplegado" tal como aparece en la factura, y la
+    // comisión bancaria no se pierde ni queda mezclada dentro de otra cifra.
+    if (fee > 0) {
+      movimientos.push({
+        fecha, tipo: "gasto", monto: fee,
+        descripcion: `Comisión bancaria${desc ? ` — ${desc}` : ""}`,
+        external_id: idBase ? `${idBase}-fee` : null,
+      });
+    }
   }
   return { movimientos, sinFecha };
 }
@@ -11805,7 +11815,7 @@ async function contaProcesarCSV(file) {
     });
     const d = await res.json();
     if (!res.ok) { alert(d.error || "Error al importar"); return; }
-    let msg = `✅ Importación completa\n${d.insertados} nuevo(s) movimiento(s)\n${d.duplicados} ya existían (omitidos)`;
+    let msg = `✅ Importación completa\n${d.insertados} nuevo(s) movimiento(s)\n${d.actualizados} ya existían y se corrigieron (fecha/tipo/importe/descripción)`;
     if (d.invalidos) msg += `\n${d.invalidos} fila(s) no reconocida(s)`;
     if (sinFecha) msg += `\n${sinFecha} fila(s) sin fecha válida`;
     alert(msg);
