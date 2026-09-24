@@ -142,6 +142,58 @@ router.post("/movimientos", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Importación masiva desde extracto bancario (CSV) ────────────
+// El parseo del CSV se hace en el navegador (distintos bancos = distintas
+// columnas); aquí solo se validan e insertan movimientos ya normalizados.
+// external_id es el id de transacción del banco: permite reimportar el mismo
+// extracto (o uno que solape fechas) sin duplicar movimientos.
+const MAX_BULK_ROWS = 5000;
+router.post("/movimientos/bulk", async (req, res) => {
+  const { cuenta_id, movimientos } = req.body || {};
+  if (!cuenta_id || !Array.isArray(movimientos) || !movimientos.length) {
+    return res.status(400).json({ error: "Datos inválidos" });
+  }
+  if (movimientos.length > MAX_BULK_ROWS) {
+    return res.status(400).json({ error: `Demasiadas filas (máx ${MAX_BULK_ROWS} por importación)` });
+  }
+  try {
+    const cuenta = await db.get(
+      "SELECT id FROM contabilidad_cuentas WHERE id = $1 AND user_id = $2 AND active = true",
+      [cuenta_id, req.user.id]
+    );
+    if (!cuenta) return res.status(404).json({ error: "Cuenta no encontrada" });
+
+    const validas = movimientos.filter(m =>
+      /^\d{4}-\d{2}-\d{2}$/.test(m?.fecha || "") && ["gasto", "ingreso"].includes(m?.tipo) && Number(m?.monto) > 0
+    );
+    const invalidos = movimientos.length - validas.length;
+    if (!validas.length) return res.json({ ok: true, insertados: 0, duplicados: 0, invalidos, total: movimientos.length });
+
+    const fechas   = validas.map(m => m.fecha);
+    const tipos    = validas.map(m => m.tipo);
+    const montos   = validas.map(m => Number(m.monto));
+    const descs    = validas.map(m => (m.descripcion ? String(m.descripcion).slice(0, 500) : null));
+    const externos = validas.map(m => (m.external_id ? String(m.external_id).slice(0, 200) : null));
+
+    const insertados = await db.all(
+      `INSERT INTO contabilidad_movimientos (user_id, cuenta_id, fecha, tipo, monto, descripcion, external_id)
+       SELECT $1, $2, f, t, mo, d, e
+       FROM UNNEST($3::text[], $4::text[], $5::numeric[], $6::text[], $7::text[]) AS u(f, t, mo, d, e)
+       ON CONFLICT (cuenta_id, external_id) WHERE external_id IS NOT NULL DO NOTHING
+       RETURNING id`,
+      [req.user.id, cuenta_id, fechas, tipos, montos, descs, externos]
+    );
+
+    res.json({
+      ok: true,
+      insertados: insertados.length,
+      duplicados: validas.length - insertados.length,
+      invalidos,
+      total: movimientos.length,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.delete("/movimientos/:id", async (req, res) => {
   try {
     const row = await db.get(

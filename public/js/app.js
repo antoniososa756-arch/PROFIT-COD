@@ -11325,6 +11325,7 @@ function contaRender() {
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">
       ${cuentasHtml}
       <button onclick="contaOpenCuentasModal()" style="padding:6px 14px;border-radius:20px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">⚙️ Cuentas bancarias</button>
+      ${st.cuentaId ? `<button onclick="contaImportarCSV()" style="padding:6px 14px;border-radius:20px;border:1px dashed #3b82f6;background:transparent;color:#3b82f6;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">📄 Importar extracto (CSV)</button>` : ""}
     </div>
     <div id="conta-resumen" style="margin-bottom:16px;"></div>
     <div id="conta-dias"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>
@@ -11654,6 +11655,124 @@ window.contaEliminarCuenta = async function (id) {
     contaRenderCuentasList();
   } catch { alert("Error al eliminar la cuenta"); }
 };
+
+// ── Importar extracto bancario (CSV) ────────────────────────────
+// Parser CSV genérico (respeta comillas y comas dentro de campos entrecomillados,
+// como "7345 W SAND LAKE RD OFFICE 1796, 32819 ORLANDO"), reutilizable para los
+// distintos formatos de banco que se vayan añadiendo más adelante.
+function contaParseCSV(text) {
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+      else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\r") { /* ignorar */ }
+    else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+    else field += c;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(v => v !== ""));
+}
+
+const CONTA_MESES_EN = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 };
+// Formato Narvi: "23 Sep 2026"
+function contaParseFechaNarvi(s) {
+  const m = String(s || "").trim().match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if (!m) return null;
+  const mes = CONTA_MESES_EN[m[2]];
+  if (!mes) return null;
+  return `${m[3]}-${String(mes).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+}
+
+// Convierte las filas de un extracto Narvi a movimientos {fecha,tipo,monto,descripcion,external_id}.
+// Devuelve también cuántas filas se descartaron por no tener fecha reconocible.
+function contaMapearFilasNarvi(rows) {
+  const header = rows[0].map(h => h.trim());
+  const idx = (name) => header.indexOf(name);
+  const iId = idx("Transaction Id"), iDate = idx("Transaction date"), iType = idx("Transaction type"),
+        iAmount = idx("Transaction amount"), iNetCred = idx("Net credited amount"), iNetDeb = idx("Net debited amount"),
+        iDesc = idx("Transaction description"), iSender = idx("Sender name"), iRecipient = idx("Recipient name");
+  if (iDate < 0 || iType < 0 || iAmount < 0) return { movimientos: null, sinFecha: 0 };
+
+  const movimientos = [];
+  let sinFecha = 0;
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.length < 2) continue;
+    const fecha = contaParseFechaNarvi(r[iDate]);
+    if (!fecha) { sinFecha++; continue; }
+
+    const esIngreso = (r[iType] || "").trim().toLowerCase() === "credit";
+    const tipo = esIngreso ? "ingreso" : "gasto";
+    const netCred = parseFloat(r[iNetCred]);
+    const netDeb = parseFloat(r[iNetDeb]);
+    const montoAbs = Math.abs(parseFloat(r[iAmount]) || 0);
+    // El importe/fee bruto no es lo que realmente mueve el saldo — se usa el
+    // neto acreditado/debitado del banco (ya descuenta o incluye la comisión).
+    const monto = esIngreso
+      ? (Number.isFinite(netCred) && netCred > 0 ? netCred : montoAbs)
+      : (Number.isFinite(netDeb) && netDeb > 0 ? netDeb : montoAbs);
+    if (!(monto > 0)) continue;
+
+    const desc = (iDesc >= 0 ? r[iDesc] : "").trim();
+    const sender = (iSender >= 0 ? r[iSender] : "").trim();
+    const recipient = (iRecipient >= 0 ? r[iRecipient] : "").trim();
+    // "Sent from Narvi" no dice nada por sí solo — el destinatario es lo útil.
+    const descripcion = esIngreso
+      ? (sender ? `${desc} — ${sender}` : desc)
+      : (recipient ? (!desc || desc === "Sent from Narvi" ? recipient : `${desc} — ${recipient}`) : desc);
+
+    movimientos.push({ fecha, tipo, monto, descripcion: descripcion || null, external_id: iId >= 0 ? r[iId] : null });
+  }
+  return { movimientos, sinFecha };
+}
+
+window.contaImportarCSV = function () {
+  if (!window.contaState.cuentaId) { alert("Primero crea o selecciona una cuenta bancaria."); return; }
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".csv,text/csv";
+  input.onchange = () => contaProcesarCSV(input.files[0]);
+  input.click();
+};
+
+async function contaProcesarCSV(file) {
+  if (!file) return;
+  const cuenta = (window.contaState.cuentas || []).find(c => c.id === window.contaState.cuentaId);
+  try {
+    const text = await file.text();
+    const rows = contaParseCSV(text);
+    if (rows.length < 2) { alert("El archivo no tiene datos"); return; }
+
+    const { movimientos, sinFecha } = contaMapearFilasNarvi(rows);
+    if (movimientos === null) { alert("No se reconoce el formato de este CSV todavía."); return; }
+    if (!movimientos.length) { alert("No se encontraron movimientos válidos en el archivo."); return; }
+
+    const fechas = movimientos.map(m => m.fecha).sort();
+    const confirmMsg = `Se detectaron ${movimientos.length} movimiento(s) entre ${fechas[0]} y ${fechas[fechas.length - 1]}.\n\n¿Importarlos a la cuenta "${cuenta?.nombre || ""}"?`;
+    if (!confirm(confirmMsg)) return;
+
+    const res = await fetch(`${API_BASE}/api/contabilidad/movimientos/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ cuenta_id: window.contaState.cuentaId, movimientos }),
+    });
+    const d = await res.json();
+    if (!res.ok) { alert(d.error || "Error al importar"); return; }
+    let msg = `✅ Importación completa\n${d.insertados} nuevo(s) movimiento(s)\n${d.duplicados} ya existían (omitidos)`;
+    if (d.invalidos) msg += `\n${d.invalidos} fila(s) no reconocida(s)`;
+    if (sinFecha) msg += `\n${sinFecha} fila(s) sin fecha válida`;
+    alert(msg);
+    contaLoadMes();
+  } catch (e) {
+    console.error(e);
+    alert("Error al leer o importar el archivo CSV");
+  }
+}
 
 // ===== ACTUALIZACIÓN EN SEGUNDO PLANO =====
 async function refreshCacheBackground() {

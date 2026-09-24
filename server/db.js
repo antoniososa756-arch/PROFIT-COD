@@ -530,6 +530,11 @@ await pool.query(`
       created_at TEXT DEFAULT now()::text
     )
   `);
+  // Id de la transacción en el extracto bancario original (ej. Narvi): permite
+  // reimportar el mismo CSV (o uno que solape fechas con uno ya importado) sin
+  // duplicar movimientos — el INSERT masivo usa ON CONFLICT sobre este campo.
+  await pool.query(`ALTER TABLE contabilidad_movimientos ADD COLUMN IF NOT EXISTS external_id TEXT`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_contabilidad_movs_external ON contabilidad_movimientos(cuenta_id, external_id) WHERE external_id IS NOT NULL`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_contabilidad_cuentas_user ON contabilidad_cuentas(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_contabilidad_movs_cuenta_fecha ON contabilidad_movimientos(cuenta_id, fecha)`);
 
