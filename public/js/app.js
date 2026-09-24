@@ -11362,15 +11362,34 @@ async function contaLoadMes() {
     const totalIngresosMes = (data.movimientos || []).filter(m => m.tipo === "ingreso").reduce((a, m) => a + Number(m.monto), 0);
     const saldoInicioMes = Number(data.saldo_antes) || 0;
 
+    const contaStatCard = (label, valor, color) => `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);">
+        <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">${label}</div>
+        <div style="font-size:17px;font-weight:800;color:${color};">${contaFmtMoney(valor)}</div>
+      </div>`;
     if (resumen) resumen.innerHTML = `
-      <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;">
-        <div style="color:var(--muted);">Saldo inicial del mes: <strong style="color:var(--text);">${contaFmtMoney(saldoInicioMes)}</strong></div>
-        <div style="color:#dc2626;">Gastos del mes: <strong>${contaFmtMoney(totalGastosMes)}</strong></div>
-        <div style="color:#16a34a;">Ingresos del mes: <strong>${contaFmtMoney(totalIngresosMes)}</strong></div>
-        <div style="color:var(--text);">Saldo final del mes: <strong>${contaFmtMoney(saldoInicioMes + totalIngresosMes - totalGastosMes)}</strong></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+        ${contaStatCard("Saldo inicial del mes", saldoInicioMes, "var(--text)")}
+        ${contaStatCard("Gastos del mes", totalGastosMes, "#dc2626")}
+        ${contaStatCard("Ingresos del mes", totalIngresosMes, "#16a34a")}
+        ${contaStatCard("Saldo final del mes", saldoInicioMes + totalIngresosMes - totalGastosMes, "#22c55e")}
       </div>`;
 
     const MESES_MIN = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    const contaAddBtn = (label, color, onclick) => `
+      <button onclick="${onclick}"
+        style="margin-top:8px;width:100%;padding:7px 10px;border-radius:8px;border:none;background:${color}1f;color:${color};font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;"
+        onmouseover="this.style.background='${color}33'" onmouseout="this.style.background='${color}1f'">${label}</button>`;
+    const contaGrupoHtml = (titulo, color, movs, sinTexto, fechaISO, tipo) => `
+      <div style="background:${color}0d;border:1px solid ${color}26;border-radius:11px;padding:11px 12px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+          <span style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.5px;">${titulo}</span>
+        </div>
+        ${movs.map(m => contaMovRowHtml(m)).join("") || `<div style="font-size:12px;color:var(--muted);padding:4px 0;">${sinTexto}</div>`}
+        ${contaAddBtn(`+ Añadir ${titulo.toLowerCase().replace(/s$/, "")}`, color, `contaOpenMovModal('${fechaISO}','${tipo}')`)}
+      </div>`;
+
     let saldo = saldoInicioMes;
     let html = "";
     for (let d = 1; d <= diasEnMes; d++) {
@@ -11380,27 +11399,26 @@ async function contaLoadMes() {
       const ingresosDia = dia.ingresos.reduce((a, m) => a + Number(m.monto), 0);
       saldo += ingresosDia - gastosDia;
       const weekday = new Date(st.year, st.month - 1, d).toLocaleDateString("es-ES", { weekday: "long" });
+      const saldoColor = saldo < 0 ? "#dc2626" : "#16a34a";
 
       html += `
-        <div style="border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:16px;">
-          <div style="flex:1 1 320px;max-width:100%;min-width:0;">
-            <div style="font-weight:700;color:var(--text);font-size:13.5px;margin-bottom:10px;">${d} de ${MESES_MIN[st.month - 1]} <span style="font-weight:400;color:var(--muted);text-transform:capitalize;">· ${weekday}</span></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-              <div>
-                <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Gastos</div>
-                ${dia.gastos.map(m => contaMovRowHtml(m)).join("") || `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Sin gastos</div>`}
-                <button onclick="contaOpenMovModal('${fechaISO}','gasto')" style="margin-top:4px;padding:5px 12px;border-radius:7px;border:1px dashed #dc2626;background:transparent;color:#dc2626;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">+ Gasto</button>
-              </div>
-              <div>
-                <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Ingresos</div>
-                ${dia.ingresos.map(m => contaMovRowHtml(m)).join("") || `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Sin ingresos</div>`}
-                <button onclick="contaOpenMovModal('${fechaISO}','ingreso')" style="margin-top:4px;padding:5px 12px;border-radius:7px;border:1px dashed #16a34a;background:transparent;color:#16a34a;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">+ Ingreso</button>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:18px;">
+          <div style="flex:1 1 340px;max-width:100%;min-width:0;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+              <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,.12);color:#16a34a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14.5px;flex-shrink:0;">${d}</div>
+              <div style="min-width:0;">
+                <div style="font-weight:700;color:var(--text);font-size:13.5px;text-transform:capitalize;">${MESES_MIN[st.month - 1]}</div>
+                <div style="font-size:11.5px;color:var(--muted);text-transform:capitalize;">${weekday}</div>
               </div>
             </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              ${contaGrupoHtml("Gastos", "#dc2626", dia.gastos, "Sin gastos", fechaISO, "gasto")}
+              ${contaGrupoHtml("Ingresos", "#16a34a", dia.ingresos, "Sin ingresos", fechaISO, "ingreso")}
+            </div>
           </div>
-          <div style="flex:1 1 160px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border);padding:6px 12px;min-width:150px;">
-            <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;">Saldo al cerrar el día</div>
-            <div style="font-size:26px;font-weight:800;color:${saldo < 0 ? "#dc2626" : "#16a34a"};margin-top:4px;white-space:nowrap;">${contaFmtMoney(saldo)}</div>
+          <div style="flex:1 1 150px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border);padding:6px 16px;min-width:150px;">
+            <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;text-align:center;">Saldo al cerrar el día</div>
+            <div style="font-size:27px;font-weight:800;color:${saldoColor};margin-top:6px;white-space:nowrap;">${contaFmtMoney(saldo)}</div>
           </div>
         </div>`;
     }
@@ -11412,15 +11430,15 @@ async function contaLoadMes() {
 
 function contaMovRowHtml(m) {
   return `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);">
       <div style="min-width:0;">
-        <div style="font-weight:600;color:var(--text);">${contaFmtMoney(m.monto)}</div>
-        ${m.descripcion ? `<div style="color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">${escapeHtml(m.descripcion)}</div>` : ""}
-        ${m.tiene_archivo ? `<div title="${escapeHtml(m.archivo_nombre || "")}" style="color:#3b82f6;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">📎 ${escapeHtml(m.archivo_nombre || "archivo")}</div>` : ""}
+        <div style="font-weight:700;color:var(--text);font-size:13px;">${contaFmtMoney(m.monto)}</div>
+        ${m.descripcion ? `<div style="color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;margin-top:1px;">${escapeHtml(m.descripcion)}</div>` : ""}
+        ${m.tiene_archivo ? `<div title="${escapeHtml(m.archivo_nombre || "")}" style="color:#3b82f6;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;margin-top:2px;">📎 ${escapeHtml(m.archivo_nombre || "archivo")}</div>` : ""}
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-        ${m.tiene_archivo ? `<button onclick="contaDescargarArchivo(${m.id})" title="Descargar factura" style="background:none;border:none;color:#3b82f6;cursor:pointer;font-size:15px;padding:0;">⬇️</button>` : ""}
-        <button onclick="contaDeleteMov(${m.id})" title="Eliminar" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0;">✕</button>
+      <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
+        ${m.tiene_archivo ? pfActionBtn("download", `contaDescargarArchivo(${m.id})`, "Descargar factura", "#3b82f6") : ""}
+        ${pfActionBtn("trash", `contaDeleteMov(${m.id})`, "Eliminar", "#ef4444")}
       </div>
     </div>`;
 }
