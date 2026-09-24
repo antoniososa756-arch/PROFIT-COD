@@ -11438,7 +11438,7 @@ function contaMovRowHtml(m) {
         ${m.tiene_archivo ? `<div title="${escapeHtml(m.archivo_nombre || "")}" style="color:#3b82f6;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;margin-top:2px;">📎 ${escapeHtml(m.archivo_nombre || "archivo")}</div>` : ""}
       </div>
       <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
-        ${m.tiene_archivo ? pfActionBtn("download", `contaDescargarArchivo(${m.id})`, "Descargar factura", "#3b82f6") : ""}
+        ${m.tiene_archivo ? pfActionBtn("download", `contaDescargarArchivo(${m.id})`, "Descargar factura", "#3b82f6") : contaAttachBtn(`contaAdjuntarArchivo(${m.id})`)}
         ${pfActionBtn("trash", `contaDeleteMov(${m.id})`, "Eliminar", "#ef4444")}
       </div>
     </div>`;
@@ -11579,6 +11579,48 @@ window.contaDescargarArchivo = async function (id) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch { alert("Error al descargar el archivo"); }
+};
+
+// Botón "adjuntar" (mismo look que pfActionBtn) para movimientos sin factura
+// todavía — típicamente los que llegan desde una importación CSV.
+function contaAttachBtn(onclick) {
+  return `<button type="button" onclick="${onclick}" title="Adjuntar factura"
+    style="width:28px;height:28px;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,color .15s;"
+    onmouseover="this.style.background='#3b82f622';this.style.color='#3b82f6';"
+    onmouseout="this.style.background='transparent';this.style.color='var(--muted)';">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+  </button>`;
+}
+
+// Adjunta el archivo a un movimiento ya creado (por ejemplo uno importado por
+// CSV, que llega sin factura) sin abrir un modal — solo el selector de archivo.
+window.contaAdjuntarArchivo = function (id) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/pdf,image/*";
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const MAX_BYTES = 8 * 1024 * 1024;
+    if (file.size > MAX_BYTES) { alert("El archivo no puede superar 8MB"); return; }
+    try {
+      const archivo_data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch(`${API_BASE}/api/contabilidad/movimientos/${id}/archivo`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({ archivo_nombre: file.name, archivo_data }),
+      });
+      const d = await res.json();
+      if (!res.ok) { alert(d.error || "Error al adjuntar el archivo"); return; }
+      contaLoadMes();
+    } catch (e) { alert("Error al adjuntar el archivo"); }
+  };
+  input.click();
 };
 
 // ── Gestión de cuentas bancarias ────────────────────────────────

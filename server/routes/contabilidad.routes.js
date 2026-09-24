@@ -218,4 +218,26 @@ router.get("/movimientos/:id/archivo", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// PUT /api/contabilidad/movimientos/:id/archivo — adjunta (o reemplaza) la
+// factura de un movimiento que ya existe, sin tocar fecha/tipo/monto. Sirve
+// sobre todo para los movimientos que llegan sin archivo desde una
+// importación masiva (CSV) y a los que luego se les carga el comprobante.
+router.put("/movimientos/:id/archivo", async (req, res) => {
+  const { archivo_nombre, archivo_data } = req.body || {};
+  if (!archivo_data) return res.status(400).json({ error: "Falta el archivo" });
+  if (archivo_data.length > MAX_ARCHIVO_BYTES * 1.4) {
+    return res.status(400).json({ error: "El archivo es demasiado grande (máx ~8MB)" });
+  }
+  try {
+    const row = await db.get(
+      `UPDATE contabilidad_movimientos SET archivo_nombre = $1, archivo_data = $2
+       WHERE id = $3 AND user_id = $4
+       RETURNING id, fecha, tipo, monto, descripcion, archivo_nombre, (archivo_data IS NOT NULL) AS tiene_archivo`,
+      [archivo_nombre || null, archivo_data, req.params.id, req.user.id]
+    );
+    if (!row) return res.status(404).json({ error: "Movimiento no encontrado" });
+    res.json(row);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;
