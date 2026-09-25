@@ -50,11 +50,50 @@ router.post("/login", async (req, res) => {
   if (typeof password !== "string") return res.status(400).json({ error: "Contraseña inválida" });
 
   try {
-    const row = await db.get("SELECT id, email, password_hash, role, active, parent_user_id, permissions FROM users WHERE email = ?", [email]);
+    const row = await db.get(
+      "SELECT id, email, password_hash, role, active, parent_user_id, permissions, failed_login_attempts, locked_until FROM users WHERE email = ?",
+      [email]
+    );
     if (!row) return res.status(401).json({ error: "Credenciales inválidas" });
 
+    // Bloqueo por intentos fallidos: 3 intentos -> 24h sin poder volver a
+    // intentar (no exige cambiar la contraseña, solo espera a que expire).
+    const MAX_INTENTOS = 3;
+    const BLOQUEO_MS = 24 * 60 * 60 * 1000;
+    if (row.locked_until && new Date(row.locked_until) > new Date()) {
+      const horasRestantes = Math.ceil((new Date(row.locked_until) - new Date()) / (60 * 60 * 1000));
+      return res.status(403).json({
+        error: `Cuenta bloqueada por demasiados intentos fallidos. Vuelve a intentar en ${horasRestantes} hora${horasRestantes === 1 ? "" : "s"}.`,
+        locked: true,
+        locked_until: row.locked_until,
+      });
+    }
+
     const ok = await bcrypt.compare(password, row.password_hash);
-    if (!ok) return res.status(401).json({ error: "Credenciales inválidas" });
+    if (!ok) {
+      const intentos = (row.failed_login_attempts || 0) + 1;
+      if (intentos >= MAX_INTENTOS) {
+        const lockedUntil = new Date(Date.now() + BLOQUEO_MS);
+        await db.run("UPDATE users SET failed_login_attempts = 0, locked_until = ? WHERE id = ?", [lockedUntil.toISOString(), row.id]);
+        return res.status(403).json({
+          error: "Cuenta bloqueada 24 horas por demasiados intentos fallidos.",
+          locked: true,
+          locked_until: lockedUntil.toISOString(),
+        });
+      }
+      await db.run("UPDATE users SET failed_login_attempts = ? WHERE id = ?", [intentos, row.id]);
+      const restantes = MAX_INTENTOS - intentos;
+      return res.status(401).json({
+        error: `Credenciales inválidas. Te queda${restantes === 1 ? "" : "n"} ${restantes} intento${restantes === 1 ? "" : "s"} antes de un bloqueo de 24 horas.`,
+      });
+    }
+
+    // Login correcto: si venía con intentos fallidos previos (sin llegar a
+    // bloquear) o con un bloqueo ya expirado, se limpia todo.
+    if (row.failed_login_attempts || row.locked_until) {
+      await db.run("UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?", [row.id]);
+    }
+
     if (row.active === 0) return res.status(403).json({ error: "Cuenta desactivada. Contacta al administrador." });
 
     let permissions = null;

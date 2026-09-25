@@ -309,6 +309,13 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_address TEX
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_city TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_zip TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_country TEXT`);
+// Bloqueo por intentos de login fallidos: 3 intentos -> 24h bloqueado (ver
+// POST /api/auth/login). TIMESTAMPTZ y no TEXT porque aquí sí es un instante
+// concreto en el tiempo, no una fecha de calendario — node-postgres lo
+// reconstruye correctamente sin el desfase de zona horaria que sí afecta a
+// columnas DATE.
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER NOT NULL DEFAULT 0`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ`);
 await pool.query(`
     CREATE TABLE IF NOT EXISTS payment_config (
       id SERIAL PRIMARY KEY,

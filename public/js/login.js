@@ -28,11 +28,11 @@ async function doLogin() {
     if (!res.ok) {
       if (errorMsg) {
         errorMsg.style.display = "block";
-        if (res.status === 403) {
-          errorMsg.textContent = "Cuenta desactivada. Contacta al administrador.";
-        } else {
-          errorMsg.textContent = "Usuario o contraseña incorrectos";
-        }
+        // El backend ya manda el mensaje específico (intentos restantes,
+        // bloqueo de 24h, cuenta desactivada...) — antes se ignoraba y
+        // siempre se mostraba un texto genérico fijo según el status.
+        errorMsg.textContent = data?.error
+          || (res.status === 403 ? "Cuenta desactivada. Contacta al administrador." : "Usuario o contraseña incorrectos");
       }
       return;
     }
