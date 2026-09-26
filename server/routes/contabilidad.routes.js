@@ -400,7 +400,10 @@ router.post("/remitentes/generar-facturas", async (req, res) => {
 
     const cliente = await getPropioComoCliente(req.user.id);
     if (!cliente.identificacion) {
-      return res.status(400).json({ error: "Completa tu NIF/CIF en Perfil antes de generar facturas (es obligatorio para que la factura sea válida)" });
+      return res.status(400).json({
+        error: "Completa tu NIF/CIF en Ajustes → Datos de facturación antes de generar facturas (es obligatorio para que la factura sea válida)",
+        necesita_perfil: true,
+      });
     }
 
     const pendientes = await db.all(

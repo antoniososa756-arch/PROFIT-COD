@@ -11987,7 +11987,14 @@ window.contaGenerarFacturas = async function (i) {
       body: JSON.stringify({ nombre: r.nombre }),
     });
     const d = await res.json();
-    if (!res.ok) { alert(d.error || "Error al generar las facturas"); return; }
+    if (!res.ok) {
+      if (d.necesita_perfil) {
+        if (confirm(`${d.error}\n\n¿Ir a Ajustes ahora para completarlo?`)) openUserSection("settings");
+      } else {
+        alert(d.error || "Error al generar las facturas");
+      }
+      return;
+    }
     alert(`✅ ${d.creadas} factura(s) creada(s) en PFactura.\n\nEntra a PFactura → Facturas para editar las observaciones y descargar el PDF cuando quieras.`);
     contaRenderRemitentesTab();
   } catch { alert("Error al generar las facturas"); }
