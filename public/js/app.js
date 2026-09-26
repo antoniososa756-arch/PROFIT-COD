@@ -11936,8 +11936,22 @@ window.contaAbrirEditarRemitente = function (i) {
           <input id="conta-rem-nif" type="text" value="${escapeHtml(r.identificacion || "")}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
         </div>
         <div>
-          <label style="font-size:11.5px;font-weight:600;color:var(--muted);">Dirección</label>
+          <label style="font-size:11.5px;font-weight:600;color:var(--muted);">Dirección 1</label>
           <input id="conta-rem-dir" type="text" value="${escapeHtml(r.direccion || "")}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11.5px;font-weight:600;color:var(--muted);">Dirección 2</label>
+          <input id="conta-rem-dir2" type="text" value="${escapeHtml(r.direccion2 || "")}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11.5px;font-weight:600;color:var(--muted);">Ciudad</label>
+            <input id="conta-rem-ciudad" type="text" value="${escapeHtml(r.ciudad || "")}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11.5px;font-weight:600;color:var(--muted);">País</label>
+            <input id="conta-rem-pais" type="text" value="${escapeHtml(r.pais || "")}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+          </div>
         </div>
         <div>
           <label style="font-size:11.5px;font-weight:600;color:var(--muted);">Email</label>
@@ -11963,6 +11977,9 @@ window.contaGuardarRemitente = async function (i) {
   if (!r) return;
   const identificacion = document.getElementById("conta-rem-nif").value.trim();
   const direccion = document.getElementById("conta-rem-dir").value.trim();
+  const direccion2 = document.getElementById("conta-rem-dir2").value.trim();
+  const ciudad = document.getElementById("conta-rem-ciudad").value.trim();
+  const pais = document.getElementById("conta-rem-pais").value.trim();
   const email = document.getElementById("conta-rem-email").value.trim();
   const telefono = document.getElementById("conta-rem-tel").value.trim();
   const msg = document.getElementById("conta-rem-msg");
@@ -11970,7 +11987,7 @@ window.contaGuardarRemitente = async function (i) {
     const res = await fetch(`${API_BASE}/api/contabilidad/remitentes`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify({ nombre: r.nombre, identificacion, direccion, email, telefono }),
+      body: JSON.stringify({ nombre: r.nombre, identificacion, direccion, direccion2, ciudad, pais, email, telefono }),
     });
     const d = await res.json();
     if (!res.ok) { msg.textContent = d.error || "Error al guardar"; return; }
@@ -12026,7 +12043,7 @@ window.contaAbrirFacturaMov = async function (movId) {
     if (f.error) { body.innerHTML = `<div style="color:#dc2626;font-size:13px;">${escapeHtml(f.error)}</div>`; return; }
     body.innerHTML = `
       <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;">Factura ${escapeHtml(f.numero)}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${escapeHtml(f.emisor_nombre || "")} → ${escapeHtml(f.cliente_nombre || "")} · ${escapeHtml(f.fecha || "")} · ${contaFmtMoney(f.item?.precio)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${escapeHtml(f.emisor_nombre || "")} → ${escapeHtml(f.cliente_nombre || "")} · ${escapeHtml(f.fecha || "")} (vence ${escapeHtml(f.vencimiento || "—")}) · ${contaFmtMoney(f.item?.precio)}</div>
 
       <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Descripción del servicio</label>
       <input id="conta-fac-desc" type="text" value="${escapeHtml(f.item?.descripcion || "")}"

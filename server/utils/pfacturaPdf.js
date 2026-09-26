@@ -47,7 +47,7 @@ function drawPFacturaDoc(doc, { issuer, invoice, items }) {
 
   // ── Datos del emisor (izq) / Saldo adeudado (dcha) ────────────────
   let y = 118;
-  const issuerLines = [issuer.taxIdLine, ...(issuer.addressLines || []), issuer.email].filter(Boolean);
+  const issuerLines = [issuer.taxIdLine, ...(issuer.addressLines || []), issuer.email, issuer.telefono].filter(Boolean);
   doc.font("Helvetica").fontSize(9).fillColor(GRAY_500);
   issuerLines.forEach(line => {
     doc.text(line, ML, y, { width: 280 });
@@ -174,6 +174,8 @@ function drawPFacturaDoc(doc, { issuer, invoice, items }) {
 
   // ── Pie de página ───────────────────────────────────────────────────
   const footerY = 760;
+  doc.font("Helvetica-Bold").fontSize(10).fillColor(ACCENT)
+    .text("¡Muchas gracias por su confianza!", ML, footerY - 22, { width: CW, align: "center", lineBreak: false });
   doc.font("Helvetica").fontSize(8).fillColor(GRAY_400)
     .text("Creado con ProfitCod", ML, footerY, { width: 200, lineBreak: false });
   doc.font("Helvetica").fontSize(8).fillColor(GRAY_400)

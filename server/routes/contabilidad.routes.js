@@ -318,14 +318,14 @@ router.get("/remitentes", async (req, res) => {
               COUNT(*) FILTER (WHERE m.pfactura_id IS NULL)::int AS pendientes,
               COALESCE(SUM(m.monto), 0) AS total_monto,
               MAX(m.fecha) AS ultimo_pago,
-              r.id AS remitente_id, r.identificacion, r.direccion, r.email, r.telefono
+              r.id AS remitente_id, r.identificacion, r.direccion, r.direccion2, r.ciudad, r.pais, r.email, r.telefono
        FROM contabilidad_movimientos m
        LEFT JOIN contabilidad_remitentes r
          ON r.user_id = m.user_id AND LOWER(TRIM(r.nombre)) = LOWER(TRIM(m.descripcion))
        WHERE m.user_id = $1 AND m.tipo = 'gasto'
          AND m.descripcion IS NOT NULL AND TRIM(m.descripcion) <> ''
          AND m.descripcion NOT ILIKE 'Comisión bancaria%'
-       GROUP BY m.descripcion, r.id, r.identificacion, r.direccion, r.email, r.telefono
+       GROUP BY m.descripcion, r.id, r.identificacion, r.direccion, r.direccion2, r.ciudad, r.pais, r.email, r.telefono
        ORDER BY total_pagos DESC, m.descripcion ASC`,
       [req.user.id]
     );
@@ -337,17 +337,19 @@ router.get("/remitentes", async (req, res) => {
 // facturación de un remitente (upsert por nombre exacto, para poder guardarlo
 // tal cual aparece en las descripciones de gasto y así poder cruzarlo).
 router.post("/remitentes", async (req, res) => {
-  const { nombre, identificacion, direccion, email, telefono } = req.body || {};
+  const { nombre, identificacion, direccion, direccion2, ciudad, pais, email, telefono } = req.body || {};
   if (!nombre || !String(nombre).trim()) return res.status(400).json({ error: "Falta el nombre" });
   try {
     const row = await db.get(
-      `INSERT INTO contabilidad_remitentes (user_id, nombre, identificacion, direccion, email, telefono)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO contabilidad_remitentes (user_id, nombre, identificacion, direccion, direccion2, ciudad, pais, email, telefono)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (user_id, nombre) DO UPDATE SET
          identificacion = EXCLUDED.identificacion, direccion = EXCLUDED.direccion,
+         direccion2 = EXCLUDED.direccion2, ciudad = EXCLUDED.ciudad, pais = EXCLUDED.pais,
          email = EXCLUDED.email, telefono = EXCLUDED.telefono
-       RETURNING id, nombre, identificacion, direccion, email, telefono`,
-      [req.user.id, String(nombre).trim(), identificacion || null, direccion || null, email || null, telefono || null]
+       RETURNING id, nombre, identificacion, direccion, direccion2, ciudad, pais, email, telefono`,
+      [req.user.id, String(nombre).trim(), identificacion || null, direccion || null, direccion2 || null,
+       ciudad || null, pais || null, email || null, telefono || null]
     );
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -382,12 +384,23 @@ async function getPropioComoCliente(userId) {
   };
 }
 
+// Vencimiento fijo de 15 días desde la fecha de la factura. Aritmética en
+// UTC sobre las partes de la fecha (no new Date("YYYY-MM-DD") ni suma de
+// milisegundos en hora local) para que no se corra un día según la zona
+// horaria del servidor.
+function fechaMas15Dias(fechaISO) {
+  const [y, m, d] = fechaISO.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + 15));
+  return dt.toISOString().slice(0, 10);
+}
+
 // POST /api/contabilidad/remitentes/generar-facturas — crea en PFactura una
 // factura por cada gasto de este remitente que todavía no tenga una (fecha =
 // fecha del gasto, importe = su monto, pagado = importe completo porque el
-// gasto ya refleja un pago hecho). Se crean como registro normal de PFactura,
-// NUNCA se genera/descarga el PDF aquí — quedan listas para que el admin las
-// abra y edite las observaciones antes de generar el PDF cuando quiera.
+// gasto ya refleja un pago hecho, vencimiento = fecha + 15 días). Se crean
+// como registro normal de PFactura, NUNCA se genera/descarga el PDF aquí —
+// quedan listas para que el admin las abra y edite las observaciones antes
+// de generar el PDF cuando quiera.
 router.post("/remitentes/generar-facturas", async (req, res) => {
   const { nombre } = req.body || {};
   if (!nombre || !String(nombre).trim()) return res.status(400).json({ error: "Falta el nombre del remitente" });
@@ -416,6 +429,27 @@ router.post("/remitentes/generar-facturas", async (req, res) => {
     );
     if (!pendientes.length) return res.json({ creadas: 0, facturas: [] });
 
+    // Dirección del emisor igual de estructurada que la del cliente: cada
+    // parte (dirección 1, dirección 2, ciudad+país) en su propia línea del
+    // PDF en vez de un único bloque de texto (emisor_direccion se separa por
+    // "\n" al dibujar la factura — ver pfacturaPdf.js).
+    const cityLineEmisor = [remitente.ciudad, remitente.pais].filter(Boolean).join(", ");
+    const emisorDireccion = [remitente.direccion, remitente.direccion2, cityLineEmisor].filter(Boolean).join("\n") || null;
+
+    // La descripción del servicio de la última factura generada para este
+    // mismo remitente se reutiliza como punto de partida (ej. "ATENCIÓN AL
+    // CLIENTE MES DE AGOSTO" -> solo hay que cambiar el mes), en vez de
+    // partir siempre de un genérico "Servicio".
+    const ultimaDescripcion = await db.get(
+      `SELECT pi.descripcion FROM contabilidad_movimientos m
+       JOIN pfacturas pf ON pf.id = m.pfactura_id
+       JOIN pfactura_items pi ON pi.pfactura_id = pf.id
+       WHERE m.user_id = $1 AND m.pfactura_id IS NOT NULL AND LOWER(TRIM(m.descripcion)) = LOWER($2)
+       ORDER BY m.fecha DESC, m.id DESC, pi.orden ASC LIMIT 1`,
+      [req.user.id, nombreTrim]
+    );
+    const descripcionItem = ultimaDescripcion?.descripcion || "Servicio";
+
     const facturas = [];
     for (const mov of pendientes) {
       const seqRow = await db.get(
@@ -426,20 +460,20 @@ router.post("/remitentes/generar-facturas", async (req, res) => {
 
       const factura = await db.get(
         `INSERT INTO pfacturas (
-           user_id, numero, fecha, cliente_nombre, pagado,
-           emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
+           user_id, numero, fecha, vencimiento, cliente_nombre, pagado,
+           emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email, emisor_telefono,
            cliente_identificacion, cliente_email, cliente_direccion1, cliente_ciudad, cliente_pais
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
          RETURNING id, numero`,
         [
-          req.user.id, numero, mov.fecha, cliente.nombre, Number(mov.monto),
-          remitente.nombre, remitente.identificacion || null, remitente.direccion || null, remitente.email || null,
+          req.user.id, numero, mov.fecha, fechaMas15Dias(mov.fecha), cliente.nombre, Number(mov.monto),
+          remitente.nombre, remitente.identificacion || null, emisorDireccion, remitente.email || null, remitente.telefono || null,
           cliente.identificacion, cliente.email, cliente.direccion1, cliente.ciudad, cliente.pais,
         ]
       );
       await db.run(
         "INSERT INTO pfactura_items (pfactura_id, descripcion, cantidad, precio, orden) VALUES ($1, $2, 1, $3, 0)",
-        [factura.id, "Servicio", Number(mov.monto)]
+        [factura.id, descripcionItem, Number(mov.monto)]
       );
       await db.run("UPDATE contabilidad_movimientos SET pfactura_id = $1 WHERE id = $2", [factura.id, mov.id]);
 
@@ -466,7 +500,7 @@ router.get("/movimientos/:id/factura", async (req, res) => {
     if (!mov.pfactura_id) return res.status(404).json({ error: "Este movimiento no tiene factura generada" });
 
     const factura = await db.get(
-      "SELECT id, numero, fecha, emisor_nombre, cliente_nombre, notas, pagado FROM pfacturas WHERE id = $1 AND user_id = $2",
+      "SELECT id, numero, fecha, vencimiento, emisor_nombre, cliente_nombre, notas, pagado FROM pfacturas WHERE id = $1 AND user_id = $2",
       [mov.pfactura_id, req.user.id]
     );
     if (!factura) return res.status(404).json({ error: "Factura no encontrada" });
@@ -530,6 +564,7 @@ router.post("/movimientos/:id/factura/pdf", async (req, res) => {
       taxIdLine: factura.emisor_identificacion ? `NIF/CIF: ${factura.emisor_identificacion}` : "",
       addressLines: factura.emisor_direccion ? String(factura.emisor_direccion).split("\n") : [],
       email: factura.emisor_email || "",
+      telefono: factura.emisor_telefono || "",
     };
 
     const buffer = await renderPFacturaPDFBuffer({ issuer, invoice: invoiceData, items });

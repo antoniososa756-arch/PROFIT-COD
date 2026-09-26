@@ -451,6 +451,7 @@ await pool.query(`
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_identificacion TEXT`);
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_direccion TEXT`);
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_email TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_telefono TEXT`);
   // DNI/NIF del cliente: imprescindible para que la factura tenga validez fiscal —
   // se guarda por factura (no solo en el perfil) porque puede variar entre facturas.
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS cliente_identificacion TEXT`);
@@ -596,6 +597,13 @@ await pool.query(`
       UNIQUE(user_id, nombre)
     )
   `);
+  // direccion = línea 1. Se separan en columnas propias (igual que
+  // cliente_direccion1/2/ciudad/pais en pfacturas) para que la factura
+  // generada muestre la dirección del trabajador igual de bien estructurada
+  // que la del cliente, en vez de una sola línea larga.
+  await pool.query(`ALTER TABLE contabilidad_remitentes ADD COLUMN IF NOT EXISTS direccion2 TEXT`);
+  await pool.query(`ALTER TABLE contabilidad_remitentes ADD COLUMN IF NOT EXISTS ciudad TEXT`);
+  await pool.query(`ALTER TABLE contabilidad_remitentes ADD COLUMN IF NOT EXISTS pais TEXT`);
   // Qué factura de PFactura se generó (si alguna) a partir de cada gasto —
   // evita generar una factura duplicada del mismo pago si se repite la
   // acción de "generar facturas" para el mismo remitente.
