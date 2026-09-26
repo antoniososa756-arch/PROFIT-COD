@@ -31,12 +31,11 @@ function fmtDate(d) {
 // issuer:  { name, taxIdLine, addressLines[], email }
 // invoice: { numero, fecha, vencimiento, terminos, cliente_nombre, cliente_direccion, notas, pagado, subtotal, total, saldo }
 // items:   [{ descripcion, cantidad, precio }]
-function renderPFacturaPDF(res, { issuer, invoice, items }) {
-  const doc = new PDFDocument({ size: "A4", margin: 50 });
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="${invoice.numero}.pdf"`);
-  doc.pipe(res);
-
+// Dibuja la factura sobre un PDFDocument ya creado y lo cierra (doc.end()).
+// Separado de renderPFacturaPDF/renderPFacturaPDFBuffer para poder generar el
+// mismo PDF tanto para descarga directa (streaming a la respuesta HTTP) como
+// para guardarlo como archivo adjunto (en memoria, sin pasar por una request).
+function drawPFacturaDoc(doc, { issuer, invoice, items }) {
   // ── Cabecera: emisor (izq) / FACTURA + número (dcha) ──────────────
   doc.font("Helvetica-Bold").fontSize(16).fillColor(GRAY_900)
     .text(issuer.name || "—", ML, 50, { width: 280 });
@@ -183,4 +182,25 @@ function renderPFacturaPDF(res, { issuer, invoice, items }) {
   doc.end();
 }
 
-module.exports = { renderPFacturaPDF };
+function renderPFacturaPDF(res, data) {
+  const doc = new PDFDocument({ size: "A4", margin: 50 });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${data.invoice.numero}.pdf"`);
+  doc.pipe(res);
+  drawPFacturaDoc(doc, data);
+}
+
+// Genera el mismo PDF pero como Buffer en memoria (para guardarlo como
+// archivo adjunto de un movimiento, por ejemplo), sin necesitar una request HTTP.
+function renderPFacturaPDFBuffer(data) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+    drawPFacturaDoc(doc, data);
+  });
+}
+
+module.exports = { renderPFacturaPDF, renderPFacturaPDFBuffer };

@@ -11476,7 +11476,10 @@ function contaMovRowHtml(m) {
             ${pfActionBtn("trash", `contaEliminarArchivo(${a.id})`, "Eliminar solo este archivo", "#ef4444")}
           </div>
         </div>`).join("")}
-      <button onclick="contaAdjuntarArchivo(${m.id})" style="margin-top:4px;background:none;border:none;color:#3b82f6;font-size:11px;font-weight:700;cursor:pointer;padding:0;font-family:inherit;">+ archivo</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+        <button onclick="contaAdjuntarArchivo(${m.id})" style="background:none;border:none;color:#3b82f6;font-size:11px;font-weight:700;cursor:pointer;padding:0;font-family:inherit;">+ archivo</button>
+        ${m.pfactura_id ? `<button onclick="contaAbrirFacturaMov(${m.id})" style="background:none;border:none;color:#8b5cf6;font-size:11px;font-weight:700;cursor:pointer;padding:0;font-family:inherit;">🧾 factura</button>` : ""}
+      </div>
     </div>`;
 }
 
@@ -11995,9 +11998,81 @@ window.contaGenerarFacturas = async function (i) {
       }
       return;
     }
-    alert(`✅ ${d.creadas} factura(s) creada(s) en PFactura.\n\nEntra a PFactura → Facturas para editar las observaciones y descargar el PDF cuando quieras.`);
+    alert(`✅ ${d.creadas} factura(s) creada(s).\n\nEntra a Movimientos y abre "🧾 factura" en cada pago para editar la descripción/observaciones y adjuntar el PDF.`);
     contaRenderRemitentesTab();
   } catch { alert("Error al generar las facturas"); }
+};
+
+// ── Editar/generar la factura ligada a un movimiento concreto ───────────
+// Vista condensada (solo descripción del servicio + observaciones): el resto
+// de la factura viene fijo del movimiento y del remitente. Un solo botón
+// guarda los cambios, genera el PDF y lo adjunta al movimiento como un
+// archivo más — sin pasar por PFactura ni descargar/subir nada a mano.
+window.contaAbrirFacturaMov = async function (movId) {
+  document.getElementById("conta-factura-modal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "conta-factura-modal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;width:420px;max-width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+      <div id="conta-factura-body" style="color:#6b7280;font-size:13px;">Cargando…</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  closeOnBackdropClick(overlay, () => overlay.remove());
+
+  const body = document.getElementById("conta-factura-body");
+  try {
+    const f = await fetch(`${API_BASE}/api/contabilidad/movimientos/${movId}/factura`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    if (f.error) { body.innerHTML = `<div style="color:#dc2626;font-size:13px;">${escapeHtml(f.error)}</div>`; return; }
+    body.innerHTML = `
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;">Factura ${escapeHtml(f.numero)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${escapeHtml(f.emisor_nombre || "")} → ${escapeHtml(f.cliente_nombre || "")} · ${escapeHtml(f.fecha || "")} · ${contaFmtMoney(f.item?.precio)}</div>
+
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Descripción del servicio</label>
+      <input id="conta-fac-desc" type="text" value="${escapeHtml(f.item?.descripcion || "")}"
+        style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;margin-bottom:14px;">
+
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Observaciones</label>
+      <textarea id="conta-fac-notas" rows="3" placeholder="Lo que el trabajador realmente ofreció, condiciones, etc."
+        style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;">${escapeHtml(f.notas || "")}</textarea>
+
+      <div id="conta-fac-msg" style="margin-top:10px;font-size:12px;color:#dc2626;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button onclick="document.getElementById('conta-factura-modal')?.remove()" style="padding:9px 18px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cerrar</button>
+        <button onclick="contaGuardarYGenerarFacturaPdf(${movId}, this)" class="btn-primary" style="padding:9px 20px;">Guardar y adjuntar PDF</button>
+      </div>`;
+  } catch {
+    body.innerHTML = `<div style="color:#dc2626;font-size:13px;">Error cargando la factura</div>`;
+  }
+};
+
+window.contaGuardarYGenerarFacturaPdf = async function (movId, btn) {
+  const descripcion = document.getElementById("conta-fac-desc").value.trim();
+  const notas = document.getElementById("conta-fac-notas").value.trim();
+  const msg = document.getElementById("conta-fac-msg");
+  if (btn) { btn.disabled = true; btn.textContent = "Generando…"; }
+  try {
+    const putRes = await fetch(`${API_BASE}/api/contabilidad/movimientos/${movId}/factura`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ descripcion, notas }),
+    });
+    const putData = await putRes.json();
+    if (!putRes.ok) { msg.textContent = putData.error || "Error al guardar"; if (btn) { btn.disabled = false; btn.textContent = "Guardar y adjuntar PDF"; } return; }
+
+    const pdfRes = await fetch(`${API_BASE}/api/contabilidad/movimientos/${movId}/factura/pdf`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getActiveToken() },
+    });
+    const pdfData = await pdfRes.json();
+    if (!pdfRes.ok) { msg.textContent = pdfData.error || "Se guardó, pero no se pudo generar el PDF"; if (btn) { btn.disabled = false; btn.textContent = "Guardar y adjuntar PDF"; } return; }
+
+    document.getElementById("conta-factura-modal")?.remove();
+    contaLoadMes();
+  } catch {
+    msg.textContent = "Error de conexión";
+    if (btn) { btn.disabled = false; btn.textContent = "Guardar y adjuntar PDF"; }
+  }
 };
 
 // ===== ACTUALIZACIÓN EN SEGUNDO PLANO =====

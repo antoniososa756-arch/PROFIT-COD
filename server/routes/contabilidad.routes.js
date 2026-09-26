@@ -1,5 +1,6 @@
 const express = require("express");
 const db = require("../db");
+const { renderPFacturaPDFBuffer } = require("../utils/pfacturaPdf");
 const router = express.Router();
 
 // Contabilidad es exclusiva del admin. Su apoyo delegado (parent_role === "admin")
@@ -107,7 +108,7 @@ router.get("/mes", async (req, res) => {
     // que se pide aparte bajo demanda) para poder listar/descargar/eliminar
     // cada adjunto por separado sin inflar esta respuesta.
     const movimientos = await db.all(
-      `SELECT m.id, m.fecha, m.tipo, m.monto, m.descripcion,
+      `SELECT m.id, m.fecha, m.tipo, m.monto, m.descripcion, m.pfactura_id,
               COALESCE(
                 json_agg(json_build_object('id', a.id, 'nombre', a.nombre) ORDER BY a.id)
                   FILTER (WHERE a.id IS NOT NULL),
@@ -446,6 +447,95 @@ router.post("/remitentes/generar-facturas", async (req, res) => {
     }
 
     res.json({ creadas: facturas.length, facturas });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Factura ligada a un movimiento ────────────────────────────────────
+// Vista condensada para editar, sin salir de Contabilidad, la descripción
+// del servicio y las observaciones de la factura que "Generar facturas" creó
+// para ese pago concreto — y para generar su PDF y adjuntarlo al movimiento
+// en un solo paso, en vez de tener que ir a PFactura, descargarlo y volver a
+// subirlo a mano.
+router.get("/movimientos/:id/factura", async (req, res) => {
+  try {
+    const mov = await db.get(
+      "SELECT id, pfactura_id FROM contabilidad_movimientos WHERE id = $1 AND user_id = $2",
+      [req.params.id, req.user.id]
+    );
+    if (!mov) return res.status(404).json({ error: "Movimiento no encontrado" });
+    if (!mov.pfactura_id) return res.status(404).json({ error: "Este movimiento no tiene factura generada" });
+
+    const factura = await db.get(
+      "SELECT id, numero, fecha, emisor_nombre, cliente_nombre, notas, pagado FROM pfacturas WHERE id = $1 AND user_id = $2",
+      [mov.pfactura_id, req.user.id]
+    );
+    if (!factura) return res.status(404).json({ error: "Factura no encontrada" });
+    const item = await db.get(
+      "SELECT id, descripcion, cantidad, precio FROM pfactura_items WHERE pfactura_id = $1 ORDER BY orden ASC, id ASC LIMIT 1",
+      [factura.id]
+    );
+    res.json({ ...factura, item });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT — solo toca descripción del servicio y observaciones (el resto de la
+// factura —fecha, importe, emisor, cliente— refleja el movimiento y no se
+// edita aquí; para eso está la edición completa en PFactura).
+router.put("/movimientos/:id/factura", async (req, res) => {
+  const { descripcion, notas } = req.body || {};
+  try {
+    const mov = await db.get(
+      "SELECT id, pfactura_id FROM contabilidad_movimientos WHERE id = $1 AND user_id = $2",
+      [req.params.id, req.user.id]
+    );
+    if (!mov || !mov.pfactura_id) return res.status(404).json({ error: "Este movimiento no tiene factura generada" });
+
+    await db.run(
+      "UPDATE pfacturas SET notas = $1 WHERE id = $2 AND user_id = $3",
+      [notas || null, mov.pfactura_id, req.user.id]
+    );
+    if (descripcion !== undefined) {
+      await db.run(
+        `UPDATE pfactura_items SET descripcion = $1
+         WHERE id = (SELECT id FROM pfactura_items WHERE pfactura_id = $2 ORDER BY orden ASC, id ASC LIMIT 1)`,
+        [String(descripcion).trim() || "Servicio", mov.pfactura_id]
+      );
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /movimientos/:id/factura/pdf — genera el PDF de la factura ligada (ya
+// con la descripción/observaciones editadas) y lo adjunta como un archivo más
+// del movimiento, igual que si se hubiera subido a mano.
+router.post("/movimientos/:id/factura/pdf", async (req, res) => {
+  try {
+    const mov = await db.get(
+      "SELECT id, pfactura_id FROM contabilidad_movimientos WHERE id = $1 AND user_id = $2",
+      [req.params.id, req.user.id]
+    );
+    if (!mov || !mov.pfactura_id) return res.status(404).json({ error: "Este movimiento no tiene factura generada" });
+
+    const factura = await db.get("SELECT * FROM pfacturas WHERE id = $1 AND user_id = $2", [mov.pfactura_id, req.user.id]);
+    if (!factura) return res.status(404).json({ error: "Factura no encontrada" });
+    const items = await db.all(
+      "SELECT descripcion, cantidad, precio FROM pfactura_items WHERE pfactura_id = $1 ORDER BY orden ASC, id ASC",
+      [factura.id]
+    );
+
+    const subtotal = items.reduce((a, it) => a + Number(it.cantidad) * Number(it.precio), 0);
+    const invoiceData = { ...factura, subtotal, total: subtotal, saldo: subtotal - Number(factura.pagado || 0) };
+    const issuer = {
+      name: factura.emisor_nombre || "",
+      taxIdLine: factura.emisor_identificacion ? `NIF/CIF: ${factura.emisor_identificacion}` : "",
+      addressLines: factura.emisor_direccion ? String(factura.emisor_direccion).split("\n") : [],
+      email: factura.emisor_email || "",
+    };
+
+    const buffer = await renderPFacturaPDFBuffer({ issuer, invoice: invoiceData, items });
+    const archivo_data = `data:application/pdf;base64,${buffer.toString("base64")}`;
+    const archivosCreados = await insertarArchivos(req.user.id, req.params.id, [{ nombre: `${factura.numero}.pdf`, data: archivo_data }]);
+    res.json({ ok: true, archivo: archivosCreados[0] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
