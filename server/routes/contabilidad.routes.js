@@ -304,4 +304,146 @@ router.delete("/movimientos/archivos/:archivoId", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Remitentes (trabajadores/proveedores a los que se les paga) ─────────
+// "Trabajadores" = las descripciones de gasto que ya existen en Contabilidad
+// (el nombre del destinatario del pago), cruzadas con el perfil de
+// facturación guardado para cada uno (si ya se rellenó). Así la lista sale
+// sola de lo que ya se ha estado pagando, sin tener que darlos de alta a mano.
+router.get("/remitentes", async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT m.descripcion AS nombre,
+              COUNT(*)::int AS total_pagos,
+              COUNT(*) FILTER (WHERE m.pfactura_id IS NULL)::int AS pendientes,
+              COALESCE(SUM(m.monto), 0) AS total_monto,
+              MAX(m.fecha) AS ultimo_pago,
+              r.id AS remitente_id, r.identificacion, r.direccion, r.email, r.telefono
+       FROM contabilidad_movimientos m
+       LEFT JOIN contabilidad_remitentes r
+         ON r.user_id = m.user_id AND LOWER(TRIM(r.nombre)) = LOWER(TRIM(m.descripcion))
+       WHERE m.user_id = $1 AND m.tipo = 'gasto'
+         AND m.descripcion IS NOT NULL AND TRIM(m.descripcion) <> ''
+         AND m.descripcion NOT ILIKE 'Comisión bancaria%'
+       GROUP BY m.descripcion, r.id, r.identificacion, r.direccion, r.email, r.telefono
+       ORDER BY total_pagos DESC, m.descripcion ASC`,
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/contabilidad/remitentes — crear o actualizar el perfil de
+// facturación de un remitente (upsert por nombre exacto, para poder guardarlo
+// tal cual aparece en las descripciones de gasto y así poder cruzarlo).
+router.post("/remitentes", async (req, res) => {
+  const { nombre, identificacion, direccion, email, telefono } = req.body || {};
+  if (!nombre || !String(nombre).trim()) return res.status(400).json({ error: "Falta el nombre" });
+  try {
+    const row = await db.get(
+      `INSERT INTO contabilidad_remitentes (user_id, nombre, identificacion, direccion, email, telefono)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (user_id, nombre) DO UPDATE SET
+         identificacion = EXCLUDED.identificacion, direccion = EXCLUDED.direccion,
+         email = EXCLUDED.email, telefono = EXCLUDED.telefono
+       RETURNING id, nombre, identificacion, direccion, email, telefono`,
+      [req.user.id, String(nombre).trim(), identificacion || null, direccion || null, email || null, telefono || null]
+    );
+    res.json(row);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete("/remitentes/:id", async (req, res) => {
+  try {
+    const row = await db.get(
+      "DELETE FROM contabilidad_remitentes WHERE id = $1 AND user_id = $2 RETURNING id",
+      [req.params.id, req.user.id]
+    );
+    if (!row) return res.status(404).json({ error: "Remitente no encontrado" });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Datos propios (los de la cuenta) para usarlos como "cliente" de la factura:
+// quien le paga al remitente es este negocio, no al revés. cliente_identificacion
+// es obligatorio para que PFactura acepte la factura (validez fiscal).
+async function getPropioComoCliente(userId) {
+  const u = await db.get(
+    "SELECT email, display_name, billing_name, billing_nif, billing_address, billing_city, billing_country FROM users WHERE id = $1",
+    [userId]
+  );
+  return {
+    nombre: u?.billing_name || u?.display_name || u?.email || "",
+    identificacion: u?.billing_nif || "",
+    direccion1: u?.billing_address || null,
+    ciudad: u?.billing_city || null,
+    pais: u?.billing_country || null,
+    email: u?.email || null,
+  };
+}
+
+// POST /api/contabilidad/remitentes/generar-facturas — crea en PFactura una
+// factura por cada gasto de este remitente que todavía no tenga una (fecha =
+// fecha del gasto, importe = su monto, pagado = importe completo porque el
+// gasto ya refleja un pago hecho). Se crean como registro normal de PFactura,
+// NUNCA se genera/descarga el PDF aquí — quedan listas para que el admin las
+// abra y edite las observaciones antes de generar el PDF cuando quiera.
+router.post("/remitentes/generar-facturas", async (req, res) => {
+  const { nombre } = req.body || {};
+  if (!nombre || !String(nombre).trim()) return res.status(400).json({ error: "Falta el nombre del remitente" });
+  const nombreTrim = String(nombre).trim();
+  try {
+    const remitente = await db.get(
+      "SELECT * FROM contabilidad_remitentes WHERE user_id = $1 AND LOWER(TRIM(nombre)) = LOWER($2)",
+      [req.user.id, nombreTrim]
+    );
+    if (!remitente) return res.status(400).json({ error: "Primero guarda los datos de facturación de este trabajador" });
+
+    const cliente = await getPropioComoCliente(req.user.id);
+    if (!cliente.identificacion) {
+      return res.status(400).json({ error: "Completa tu NIF/CIF en Perfil antes de generar facturas (es obligatorio para que la factura sea válida)" });
+    }
+
+    const pendientes = await db.all(
+      `SELECT id, fecha, monto FROM contabilidad_movimientos
+       WHERE user_id = $1 AND tipo = 'gasto' AND pfactura_id IS NULL
+         AND LOWER(TRIM(descripcion)) = LOWER($2)
+       ORDER BY fecha ASC, id ASC`,
+      [req.user.id, nombreTrim]
+    );
+    if (!pendientes.length) return res.json({ creadas: 0, facturas: [] });
+
+    const facturas = [];
+    for (const mov of pendientes) {
+      const seqRow = await db.get(
+        "UPDATE users SET pfactura_seq = pfactura_seq + 1 WHERE id = $1 RETURNING pfactura_seq",
+        [req.user.id]
+      );
+      const numero = `INV-${String(seqRow.pfactura_seq).padStart(6, "0")}`;
+
+      const factura = await db.get(
+        `INSERT INTO pfacturas (
+           user_id, numero, fecha, cliente_nombre, pagado,
+           emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
+           cliente_identificacion, cliente_email, cliente_direccion1, cliente_ciudad, cliente_pais
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         RETURNING id, numero`,
+        [
+          req.user.id, numero, mov.fecha, cliente.nombre, Number(mov.monto),
+          remitente.nombre, remitente.identificacion || null, remitente.direccion || null, remitente.email || null,
+          cliente.identificacion, cliente.email, cliente.direccion1, cliente.ciudad, cliente.pais,
+        ]
+      );
+      await db.run(
+        "INSERT INTO pfactura_items (pfactura_id, descripcion, cantidad, precio, orden) VALUES ($1, $2, 1, $3, 0)",
+        [factura.id, "Servicio", Number(mov.monto)]
+      );
+      await db.run("UPDATE contabilidad_movimientos SET pfactura_id = $1 WHERE id = $2", [factura.id, mov.id]);
+
+      facturas.push({ id: factura.id, numero: factura.numero, movimiento_id: mov.id, fecha: mov.fecha, monto: Number(mov.monto) });
+    }
+
+    res.json({ creadas: facturas.length, facturas });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

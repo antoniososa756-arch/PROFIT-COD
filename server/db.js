@@ -578,6 +578,29 @@ await pool.query(`
     END $$;
   `);
 
+  // Remitentes: perfil de facturación de cada trabajador/proveedor al que se
+  // le paga, para poder auto-generar sus facturas en PFactura a partir de sus
+  // gastos en Contabilidad (ver /api/contabilidad/remitentes). nombre debe
+  // coincidir tal cual con contabilidad_movimientos.descripcion para poder
+  // cruzarlos, así que es único por usuario (crear/editar es un upsert).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS contabilidad_remitentes (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      identificacion TEXT,
+      direccion TEXT,
+      email TEXT,
+      telefono TEXT,
+      created_at TEXT DEFAULT now()::text,
+      UNIQUE(user_id, nombre)
+    )
+  `);
+  // Qué factura de PFactura se generó (si alguna) a partir de cada gasto —
+  // evita generar una factura duplicada del mismo pago si se repite la
+  // acción de "generar facturas" para el mismo remitente.
+  await pool.query(`ALTER TABLE contabilidad_movimientos ADD COLUMN IF NOT EXISTS pfactura_id INTEGER REFERENCES pfacturas(id) ON DELETE SET NULL`);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 

@@ -11285,13 +11285,42 @@ async function contaLoadCuentas() {
   contaRender();
 }
 
-window.contaSetMonth = function (m) { window.contaState.month = m; contaRender(); };
-window.contaSetYear = function (y) { window.contaState.year = parseInt(y); contaRender(); };
-window.contaSetCuenta = function (id) { window.contaState.cuentaId = id; contaRender(); };
+window.contaSetMonth = function (m) { window.contaState.month = m; contaRenderMovimientosTab(); };
+window.contaSetYear = function (y) { window.contaState.year = parseInt(y); contaRenderMovimientosTab(); };
+window.contaSetCuenta = function (id) { window.contaState.cuentaId = id; contaRenderMovimientosTab(); };
+window.contaSetTab = function (tab) { window.contaState.tab = tab; contaRender(); };
 
+// Contabilidad tiene dos pestañas: el libro diario de Movimientos (meses,
+// año, cuentas, días) y Remitentes (trabajadores/proveedores a los que se
+// les paga, para auto-generar sus facturas en PFactura).
 function contaRender() {
   const box = document.getElementById("cardBox");
   if (!box) return;
+  const st = window.contaState;
+  if (!st.tab) st.tab = "movimientos";
+
+  const tabBtn = (key, label) => {
+    const active = st.tab === key;
+    return `<button onclick="contaSetTab('${key}')"
+      style="padding:7px 16px;border-radius:8px;border:1px solid ${active ? "#22c55e" : "var(--border)"};background:${active ? "#22c55e" : "var(--input)"};color:${active ? "#fff" : "var(--text)"};font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">${label}</button>`;
+  };
+
+  box.className = "card";
+  box.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+      ${tabBtn("movimientos", "📅 Movimientos")}
+      ${tabBtn("remitentes", "👷 Remitentes")}
+    </div>
+    <div id="conta-tab-content"></div>
+  `;
+
+  if (st.tab === "remitentes") contaRenderRemitentesTab();
+  else contaRenderMovimientosTab();
+}
+
+function contaRenderMovimientosTab() {
+  const cont = document.getElementById("conta-tab-content");
+  if (!cont) return;
   const st = window.contaState;
   const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   const thisYear = new Date().getFullYear();
@@ -11313,8 +11342,7 @@ function contaRender() {
       }).join("")
     : `<span style="font-size:12.5px;color:var(--muted);">Aún no hay cuentas bancarias.</span>`;
 
-  box.className = "card";
-  box.innerHTML = `
+  cont.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">${mesesHtml}</div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
       <label style="font-size:12.5px;font-weight:600;color:var(--muted);">Año</label>
@@ -11833,6 +11861,137 @@ async function contaProcesarCSV(file) {
     alert("Error al leer o importar el archivo CSV");
   }
 }
+
+// ── Remitentes: trabajadores/proveedores a los que se les paga ──────────
+// Salen solos de las descripciones de gasto ya registradas en Movimientos;
+// aquí solo se completan sus datos de facturación y se generan sus facturas
+// en PFactura (una por cada pago pendiente), con la fecha de cada pago.
+async function contaRenderRemitentesTab() {
+  const cont = document.getElementById("conta-tab-content");
+  if (!cont) return;
+  cont.innerHTML = `<div style="color:#6b7280;font-size:13px;">Cargando…</div>`;
+  try {
+    const rows = await fetch(`${API_BASE}/api/contabilidad/remitentes`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    window.__contaRemitentes = Array.isArray(rows) ? rows : [];
+  } catch {
+    window.__contaRemitentes = [];
+    cont.innerHTML = `<div style="color:#dc2626;font-size:13px;">Error cargando remitentes</div>`;
+    return;
+  }
+  contaPintarRemitentes();
+}
+
+function contaPintarRemitentes() {
+  const cont = document.getElementById("conta-tab-content");
+  if (!cont) return;
+  const rows = window.__contaRemitentes || [];
+  if (!rows.length) {
+    cont.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:20px 0;">Aún no hay gastos con un destinatario identificable en Movimientos.</div>`;
+    return;
+  }
+  cont.innerHTML = `
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px;">Se detectan solos a partir de los gastos ya registrados en Movimientos. Completa los datos de facturación de cada uno para poder generar sus facturas en PFactura.</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${rows.map((r, i) => contaRemitenteRowHtml(r, i)).join("")}
+    </div>`;
+}
+
+function contaRemitenteRowHtml(r, i) {
+  const completo = !!(r.remitente_id && r.identificacion);
+  const puedeGenerar = completo && r.pendientes > 0;
+  return `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center;">
+      <div style="min-width:0;">
+        <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(r.nombre)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${r.total_pagos} pago(s) · ${contaFmtMoney(r.total_monto)} en total · último pago: ${r.ultimo_pago}</div>
+        <div style="font-size:11.5px;margin-top:4px;color:${completo ? "#16a34a" : "#f59e0b"};font-weight:600;">${completo ? "✓ Datos de facturación guardados" : "⚠ Falta completar datos de facturación"}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <button onclick="contaAbrirEditarRemitente(${i})" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">Editar datos</button>
+        <button ${puedeGenerar ? "" : "disabled"} onclick="contaGenerarFacturas(${i})" title="${completo ? "" : "Completa primero sus datos de facturación"}"
+          style="padding:7px 14px;border-radius:8px;border:none;background:${puedeGenerar ? "#22c55e" : "var(--input)"};color:${puedeGenerar ? "#fff" : "var(--muted)"};font-size:12px;font-weight:700;cursor:${puedeGenerar ? "pointer" : "not-allowed"};font-family:inherit;white-space:nowrap;">
+          Generar facturas${r.pendientes > 0 ? ` (${r.pendientes})` : ""}
+        </button>
+      </div>
+    </div>`;
+}
+
+window.contaAbrirEditarRemitente = function (i) {
+  const r = (window.__contaRemitentes || [])[i];
+  if (!r) return;
+  document.getElementById("conta-remitente-modal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "conta-remitente-modal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;width:400px;max-width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;">Datos de facturación</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${escapeHtml(r.nombre)}</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <label style="font-size:11.5px;font-weight:600;color:var(--muted);">NIF/CIF</label>
+          <input id="conta-rem-nif" type="text" value="${escapeHtml(r.identificacion || "")}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11.5px;font-weight:600;color:var(--muted);">Dirección</label>
+          <input id="conta-rem-dir" type="text" value="${escapeHtml(r.direccion || "")}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11.5px;font-weight:600;color:var(--muted);">Email</label>
+          <input id="conta-rem-email" type="email" value="${escapeHtml(r.email || "")}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11.5px;font-weight:600;color:var(--muted);">Teléfono</label>
+          <input id="conta-rem-tel" type="text" value="${escapeHtml(r.telefono || "")}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+        </div>
+      </div>
+      <div id="conta-rem-msg" style="margin-top:10px;font-size:12px;color:#dc2626;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button onclick="document.getElementById('conta-remitente-modal')?.remove()" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button onclick="contaGuardarRemitente(${i})" class="btn-primary" style="padding:8px 20px;">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  closeOnBackdropClick(overlay, () => overlay.remove());
+};
+
+window.contaGuardarRemitente = async function (i) {
+  const r = (window.__contaRemitentes || [])[i];
+  if (!r) return;
+  const identificacion = document.getElementById("conta-rem-nif").value.trim();
+  const direccion = document.getElementById("conta-rem-dir").value.trim();
+  const email = document.getElementById("conta-rem-email").value.trim();
+  const telefono = document.getElementById("conta-rem-tel").value.trim();
+  const msg = document.getElementById("conta-rem-msg");
+  try {
+    const res = await fetch(`${API_BASE}/api/contabilidad/remitentes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ nombre: r.nombre, identificacion, direccion, email, telefono }),
+    });
+    const d = await res.json();
+    if (!res.ok) { msg.textContent = d.error || "Error al guardar"; return; }
+    document.getElementById("conta-remitente-modal")?.remove();
+    contaRenderRemitentesTab();
+  } catch { msg.textContent = "Error de conexión"; }
+};
+
+window.contaGenerarFacturas = async function (i) {
+  const r = (window.__contaRemitentes || [])[i];
+  if (!r) return;
+  if (!confirm(`¿Generar ${r.pendientes} factura(s) para "${r.nombre}"?\n\nSe crean en PFactura con la fecha de cada pago y el importe ya cargado, listas para que edites las observaciones antes de descargar el PDF — no se genera ningún PDF automáticamente.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/contabilidad/remitentes/generar-facturas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ nombre: r.nombre }),
+    });
+    const d = await res.json();
+    if (!res.ok) { alert(d.error || "Error al generar las facturas"); return; }
+    alert(`✅ ${d.creadas} factura(s) creada(s) en PFactura.\n\nEntra a PFactura → Facturas para editar las observaciones y descargar el PDF cuando quieras.`);
+    contaRenderRemitentesTab();
+  } catch { alert("Error al generar las facturas"); }
+};
 
 // ===== ACTUALIZACIÓN EN SEGUNDO PLANO =====
 async function refreshCacheBackground() {
