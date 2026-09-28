@@ -11,6 +11,10 @@ const router = express.Router();
 // se usa req.user.id (que para apoyo apunta al padre) sino su propio id.
 const ownerId = req => req.user.own_id || req.user.id;
 
+// Coincide con MONEDAS en public/js/app.js.
+const MONEDAS_VALIDAS = ["EUR", "USD", "GBP", "MXN", "COP", "ARS", "CLP", "PEN", "VES", "BRL", "CAD", "CHF", "JPY", "CNY"];
+function monedaValida(m) { return MONEDAS_VALIDAS.includes(String(m || "").toUpperCase()) ? String(m).toUpperCase() : "EUR"; }
+
 async function getInvoiceWithItems(id, userId) {
   const invoice = await db.get("SELECT * FROM pfacturas WHERE id = ? AND user_id = ?", [id, userId]);
   if (!invoice) return null;
@@ -90,7 +94,7 @@ router.post("/", auth, async (req, res) => {
   const err = validateBody(req.body);
   if (err) return res.status(400).json({ error: err });
   const {
-    fecha, vencimiento, terminos, cliente_nombre, notas, pagado, items,
+    fecha, vencimiento, terminos, cliente_nombre, notas, pagado, items, moneda,
     cliente_identificacion, cliente_email, cliente_telefono,
     cliente_direccion1, cliente_direccion2, cliente_ciudad, cliente_pais,
     emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
@@ -106,12 +110,12 @@ router.post("/", auth, async (req, res) => {
     const numero = `INV-${String(seqRow.pfactura_seq).padStart(6, "0")}`;
 
     const result = await db.run(
-      `INSERT INTO pfacturas (user_id, numero, fecha, vencimiento, terminos, cliente_nombre, notas, pagado,
+      `INSERT INTO pfacturas (user_id, numero, fecha, vencimiento, terminos, cliente_nombre, notas, pagado, moneda,
         emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
         cliente_identificacion, cliente_email, cliente_telefono, cliente_direccion1, cliente_direccion2, cliente_ciudad, cliente_pais)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       [uid, numero, fecha || new Date().toISOString().slice(0, 10), vencimiento || null, terminos || null,
-       cliente_nombre.trim(), notas || null, parseFloat(pagado) || 0,
+       cliente_nombre.trim(), notas || null, parseFloat(pagado) || 0, monedaValida(moneda),
        (emisor_nombre || "").trim() || defaultIssuer.nombre,
        (emisor_identificacion || "").trim() || defaultIssuer.identificacion,
        (emisor_direccion || "").trim() || defaultIssuer.direccion,
@@ -139,7 +143,7 @@ router.put("/:id", auth, async (req, res) => {
   const err = validateBody(req.body);
   if (err) return res.status(400).json({ error: err });
   const {
-    fecha, vencimiento, terminos, cliente_nombre, notas, pagado, items,
+    fecha, vencimiento, terminos, cliente_nombre, notas, pagado, items, moneda,
     cliente_identificacion, cliente_email, cliente_telefono,
     cliente_direccion1, cliente_direccion2, cliente_ciudad, cliente_pais,
     emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email,
@@ -151,13 +155,13 @@ router.put("/:id", auth, async (req, res) => {
     if (!existing) return res.status(404).json({ error: "No encontrada" });
 
     await db.run(
-      `UPDATE pfacturas SET fecha = ?, vencimiento = ?, terminos = ?, cliente_nombre = ?, notas = ?, pagado = ?,
+      `UPDATE pfacturas SET fecha = ?, vencimiento = ?, terminos = ?, cliente_nombre = ?, notas = ?, pagado = ?, moneda = ?,
         emisor_nombre = ?, emisor_identificacion = ?, emisor_direccion = ?, emisor_email = ?,
         cliente_identificacion = ?, cliente_email = ?, cliente_telefono = ?,
         cliente_direccion1 = ?, cliente_direccion2 = ?, cliente_ciudad = ?, cliente_pais = ?
        WHERE id = ? AND user_id = ?`,
       [fecha, vencimiento || null, terminos || null, cliente_nombre.trim(),
-       notas || null, parseFloat(pagado) || 0,
+       notas || null, parseFloat(pagado) || 0, monedaValida(moneda),
        (emisor_nombre || "").trim() || null, (emisor_identificacion || "").trim() || null,
        (emisor_direccion || "").trim() || null, (emisor_email || "").trim() || null,
        cliente_identificacion.trim(), (cliente_email || "").trim() || null, (cliente_telefono || "").trim() || null,

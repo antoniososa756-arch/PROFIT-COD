@@ -19,11 +19,17 @@ router.use(requireContabilidad);
 
 const MAX_ARCHIVO_BYTES = 8 * 1024 * 1024; // ~8MB en bruto (el base64 pesa ~33% más)
 
+// Monedas reconocidas (coincide con MONEDAS en public/js/app.js). Se valida
+// aquí también por si acaso, pero la lista completa de símbolos/etiquetas
+// vive solo en el frontend.
+const MONEDAS_VALIDAS = ["EUR", "USD", "GBP", "MXN", "COP", "ARS", "CLP", "PEN", "VES", "BRL", "CAD", "CHF", "JPY", "CNY"];
+function monedaValida(m) { return MONEDAS_VALIDAS.includes(String(m || "").toUpperCase()) ? String(m).toUpperCase() : "EUR"; }
+
 // ── Cuentas bancarias ──────────────────────────────────────────
 router.get("/cuentas", async (req, res) => {
   try {
     const rows = await db.all(
-      "SELECT id, nombre, saldo_inicial, created_at FROM contabilidad_cuentas WHERE user_id = $1 AND active = true ORDER BY nombre ASC",
+      "SELECT id, nombre, saldo_inicial, moneda, created_at FROM contabilidad_cuentas WHERE user_id = $1 AND active = true ORDER BY nombre ASC",
       [req.user.id]
     );
     res.json(rows);
@@ -31,27 +37,27 @@ router.get("/cuentas", async (req, res) => {
 });
 
 router.post("/cuentas", async (req, res) => {
-  const { nombre, saldo_inicial } = req.body || {};
+  const { nombre, saldo_inicial, moneda } = req.body || {};
   if (!nombre || !String(nombre).trim()) return res.status(400).json({ error: "El nombre de la cuenta es obligatorio" });
   try {
     const row = await db.get(
-      `INSERT INTO contabilidad_cuentas (user_id, nombre, saldo_inicial) VALUES ($1, $2, $3)
-       RETURNING id, nombre, saldo_inicial, created_at`,
-      [req.user.id, String(nombre).trim(), Number(saldo_inicial) || 0]
+      `INSERT INTO contabilidad_cuentas (user_id, nombre, saldo_inicial, moneda) VALUES ($1, $2, $3, $4)
+       RETURNING id, nombre, saldo_inicial, moneda, created_at`,
+      [req.user.id, String(nombre).trim(), Number(saldo_inicial) || 0, monedaValida(moneda)]
     );
     res.json(row);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.put("/cuentas/:id", async (req, res) => {
-  const { nombre, saldo_inicial } = req.body || {};
+  const { nombre, saldo_inicial, moneda } = req.body || {};
   if (!nombre || !String(nombre).trim()) return res.status(400).json({ error: "El nombre de la cuenta es obligatorio" });
   try {
     const row = await db.get(
-      `UPDATE contabilidad_cuentas SET nombre = $1, saldo_inicial = $2
-       WHERE id = $3 AND user_id = $4
-       RETURNING id, nombre, saldo_inicial, created_at`,
-      [String(nombre).trim(), Number(saldo_inicial) || 0, req.params.id, req.user.id]
+      `UPDATE contabilidad_cuentas SET nombre = $1, saldo_inicial = $2, moneda = $3
+       WHERE id = $4 AND user_id = $5
+       RETURNING id, nombre, saldo_inicial, moneda, created_at`,
+      [String(nombre).trim(), Number(saldo_inicial) || 0, monedaValida(moneda), req.params.id, req.user.id]
     );
     if (!row) return res.status(404).json({ error: "Cuenta no encontrada" });
     res.json(row);
@@ -82,7 +88,7 @@ router.get("/mes", async (req, res) => {
   }
   try {
     const cuenta = await db.get(
-      "SELECT id, nombre, saldo_inicial FROM contabilidad_cuentas WHERE id = $1 AND user_id = $2 AND active = true",
+      "SELECT id, nombre, saldo_inicial, moneda FROM contabilidad_cuentas WHERE id = $1 AND user_id = $2 AND active = true",
       [cuentaId, req.user.id]
     );
     if (!cuenta) return res.status(404).json({ error: "Cuenta no encontrada" });
@@ -420,11 +426,16 @@ router.post("/remitentes/generar-facturas", async (req, res) => {
       });
     }
 
+    // Un mismo remitente puede haber cobrado de cuentas bancarias distintas
+    // (y por lo tanto en monedas distintas) — cada factura hereda la moneda
+    // de la cuenta desde la que se pagó ese gasto en concreto.
     const pendientes = await db.all(
-      `SELECT id, fecha, monto FROM contabilidad_movimientos
-       WHERE user_id = $1 AND tipo = 'gasto' AND pfactura_id IS NULL
-         AND LOWER(TRIM(descripcion)) = LOWER($2)
-       ORDER BY fecha ASC, id ASC`,
+      `SELECT m.id, m.fecha, m.monto, c.moneda
+       FROM contabilidad_movimientos m
+       JOIN contabilidad_cuentas c ON c.id = m.cuenta_id
+       WHERE m.user_id = $1 AND m.tipo = 'gasto' AND m.pfactura_id IS NULL
+         AND LOWER(TRIM(m.descripcion)) = LOWER($2)
+       ORDER BY m.fecha ASC, m.id ASC`,
       [req.user.id, nombreTrim]
     );
     if (!pendientes.length) return res.json({ creadas: 0, facturas: [] });
@@ -460,13 +471,13 @@ router.post("/remitentes/generar-facturas", async (req, res) => {
 
       const factura = await db.get(
         `INSERT INTO pfacturas (
-           user_id, numero, fecha, vencimiento, cliente_nombre, pagado,
+           user_id, numero, fecha, vencimiento, cliente_nombre, pagado, moneda,
            emisor_nombre, emisor_identificacion, emisor_direccion, emisor_email, emisor_telefono,
            cliente_identificacion, cliente_email, cliente_direccion1, cliente_ciudad, cliente_pais
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
          RETURNING id, numero`,
         [
-          req.user.id, numero, mov.fecha, fechaMas15Dias(mov.fecha), cliente.nombre, Number(mov.monto),
+          req.user.id, numero, mov.fecha, fechaMas15Dias(mov.fecha), cliente.nombre, Number(mov.monto), monedaValida(mov.moneda),
           remitente.nombre, remitente.identificacion || null, emisorDireccion, remitente.email || null, remitente.telefono || null,
           cliente.identificacion, cliente.email, cliente.direccion1, cliente.ciudad, cliente.pais,
         ]
@@ -500,7 +511,7 @@ router.get("/movimientos/:id/factura", async (req, res) => {
     if (!mov.pfactura_id) return res.status(404).json({ error: "Este movimiento no tiene factura generada" });
 
     const factura = await db.get(
-      "SELECT id, numero, fecha, vencimiento, emisor_nombre, cliente_nombre, notas, pagado FROM pfacturas WHERE id = $1 AND user_id = $2",
+      "SELECT id, numero, fecha, vencimiento, moneda, emisor_nombre, cliente_nombre, notas, pagado FROM pfacturas WHERE id = $1 AND user_id = $2",
       [mov.pfactura_id, req.user.id]
     );
     if (!factura) return res.status(404).json({ error: "Factura no encontrada" });

@@ -452,6 +452,7 @@ await pool.query(`
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_direccion TEXT`);
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_email TEXT`);
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS emisor_telefono TEXT`);
+  await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS moneda TEXT NOT NULL DEFAULT 'EUR'`);
   // DNI/NIF del cliente: imprescindible para que la factura tenga validez fiscal —
   // se guarda por factura (no solo en el perfil) porque puede variar entre facturas.
   await pool.query(`ALTER TABLE pfacturas ADD COLUMN IF NOT EXISTS cliente_identificacion TEXT`);
@@ -521,6 +522,7 @@ await pool.query(`
       created_at TEXT DEFAULT now()::text
     )
   `);
+  await pool.query(`ALTER TABLE contabilidad_cuentas ADD COLUMN IF NOT EXISTS moneda TEXT NOT NULL DEFAULT 'EUR'`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS contabilidad_movimientos (
       id SERIAL PRIMARY KEY,

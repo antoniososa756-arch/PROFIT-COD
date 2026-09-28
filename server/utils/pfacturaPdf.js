@@ -12,8 +12,14 @@ const GRAY_200 = "#e5e7eb";
 const HEADER_BG = "#1f2937";
 const ACCENT = "#10b981";
 
-function money(n) {
-  return `${Number(n || 0).toFixed(2).replace(".", ",")}€`;
+// Coincide con MONEDA_SYMBOLS en public/js/app.js.
+const MONEDA_SYMBOLS = {
+  EUR: "€", USD: "$", GBP: "£", MXN: "$", COP: "$", ARS: "$", CLP: "$",
+  PEN: "S/", VES: "Bs", BRL: "R$", CAD: "$", CHF: "Fr", JPY: "¥", CNY: "¥",
+};
+
+function money(n, symbol) {
+  return `${Number(n || 0).toFixed(2).replace(".", ",")}${symbol || "€"}`;
 }
 function num(n) {
   return Number(n || 0).toFixed(2).replace(".", ",");
@@ -36,6 +42,12 @@ function fmtDate(d) {
 // mismo PDF tanto para descarga directa (streaming a la respuesta HTTP) como
 // para guardarlo como archivo adjunto (en memoria, sin pasar por una request).
 function drawPFacturaDoc(doc, { issuer, invoice, items }) {
+  // Sombrea el money() de módulo con uno atado al símbolo de esta factura —
+  // así todas las llamadas money(...) de aquí abajo usan la moneda correcta
+  // sin tener que tocar cada una.
+  const symbol = MONEDA_SYMBOLS[String(invoice.moneda || "EUR").toUpperCase()] || "€";
+  const money = (n) => `${Number(n || 0).toFixed(2).replace(".", ",")}${symbol}`;
+
   // ── Cabecera: emisor (izq) / FACTURA + número (dcha) ──────────────
   doc.font("Helvetica-Bold").fontSize(16).fillColor(GRAY_900)
     .text(issuer.name || "—", ML, 50, { width: 280 });

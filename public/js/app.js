@@ -434,6 +434,30 @@ if (!appEl) {
 }
 
 /* =========================
+   MONEDAS — usado por Contabilidad (cuentas bancarias) y PFactura
+   ========================= */
+const MONEDAS = [
+  { code: "EUR", symbol: "€",  label: "Euro (€)" },
+  { code: "USD", symbol: "$",  label: "Dólar estadounidense ($)" },
+  { code: "GBP", symbol: "£",  label: "Libra esterlina (£)" },
+  { code: "MXN", symbol: "$",  label: "Peso mexicano ($)" },
+  { code: "COP", symbol: "$",  label: "Peso colombiano ($)" },
+  { code: "ARS", symbol: "$",  label: "Peso argentino ($)" },
+  { code: "CLP", symbol: "$",  label: "Peso chileno ($)" },
+  { code: "PEN", symbol: "S/", label: "Sol peruano (S/)" },
+  { code: "VES", symbol: "Bs", label: "Bolívar venezolano (Bs)" },
+  { code: "BRL", symbol: "R$", label: "Real brasileño (R$)" },
+  { code: "CAD", symbol: "$",  label: "Dólar canadiense ($)" },
+  { code: "CHF", symbol: "Fr", label: "Franco suizo (Fr)" },
+  { code: "JPY", symbol: "¥",  label: "Yen japonés (¥)" },
+  { code: "CNY", symbol: "¥",  label: "Yuan chino (¥)" },
+];
+const MONEDA_SYMBOLS = Object.fromEntries(MONEDAS.map(m => [m.code, m.symbol]));
+function monedaOptionsHtml(selected) {
+  return MONEDAS.map(m => `<option value="${m.code}" ${m.code === (selected || "EUR") ? "selected" : ""}>${m.label}</option>`).join("");
+}
+
+/* =========================
    ICONS
    ========================= */
 
@@ -10540,7 +10564,15 @@ function exprodDescargar(csvContent, filename) {
 // =========================
 // PFACTURA — facturación sencilla a terceros, con descarga en PDF
 // =========================
-function pfMoney(n) { return `${Number(n || 0).toFixed(2).replace(".", ",")}€`; }
+// moneda opcional: si no se pasa, usa la moneda que esté activa en el
+// formulario de factura abierto (window.__pfCurrentMoneda), o EUR por defecto.
+// Así el listado (que mezcla facturas de distintas monedas) pasa la moneda de
+// cada fila explícitamente, y el formulario (una sola factura a la vez) no
+// necesita pasarla en cada llamada.
+function pfMoney(n, moneda) {
+  const symbol = MONEDA_SYMBOLS[moneda || window.__pfCurrentMoneda || "EUR"] || "€";
+  return `${Number(n || 0).toFixed(2).replace(".", ",")}${symbol}`;
+}
 function pfDate(d) {
   if (!d) return "—";
   const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -10615,8 +10647,8 @@ async function pfacturaLoadList() {
                 <td style="padding:10px 8px;color:var(--text);font-weight:600;">${escapeHtml(r.numero)}</td>
                 <td style="padding:10px 8px;color:var(--text);">${escapeHtml(r.cliente_nombre)}</td>
                 <td style="padding:10px 8px;color:var(--muted);">${pfDate(r.fecha)}</td>
-                <td style="padding:10px 8px;color:var(--text);text-align:right;">${pfMoney(r.total)}</td>
-                <td style="padding:10px 8px;text-align:right;font-weight:700;color:${Number(r.saldo) <= 0 ? "#22c55e" : "#f59e0b"};">${pfMoney(r.saldo)}</td>
+                <td style="padding:10px 8px;color:var(--text);text-align:right;">${pfMoney(r.total, r.moneda)}</td>
+                <td style="padding:10px 8px;text-align:right;font-weight:700;color:${Number(r.saldo) <= 0 ? "#22c55e" : "#f59e0b"};">${pfMoney(r.saldo, r.moneda)}</td>
                 <td style="padding:10px 8px;text-align:right;white-space:nowrap;">
                   ${pfActionBtn("view", `pfacturaViewPDF(${r.id})`, "Ver PDF", "#3b82f6")}
                   ${pfActionBtn("download", `pfacturaDownloadPDF(${r.id},'${r.numero}')`, "Descargar PDF", "#22c55e")}
@@ -11035,7 +11067,11 @@ window.pfacturaOpenForm = async function(id) {
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-bottom:20px;">
+        <div>
+          <label style="${labelStyle}">Moneda</label>
+          <select id="pf-moneda" onchange="window.__pfCurrentMoneda=this.value;pfacturaRecalcTotals();" style="${inputStyle}cursor:pointer;">${monedaOptionsHtml(data?.moneda || "EUR")}</select>
+        </div>
         <div>
           <label style="${labelStyle}">Términos</label>
           <input id="pf-terminos" type="text" value="${escapeHtml(data?.terminos || "Personalizada")}" style="${inputStyle}" placeholder="Ej. Personalizada, Neto 15">
@@ -11087,6 +11123,11 @@ window.pfacturaOpenForm = async function(id) {
   `;
   document.body.appendChild(overlay);
   closeOnBackdropClick(overlay, pfacturaCloseForm);
+
+  // pfMoney() usa esto cuando no se le pasa moneda explícita — así las
+  // previsualizaciones de subtotal/total/saldo del formulario salen con el
+  // símbolo correcto desde el primer render.
+  window.__pfCurrentMoneda = data?.moneda || "EUR";
 
   const items = data?.items?.length ? data.items : [{ descripcion: "", cantidad: 1, precio: 0 }];
   items.forEach(it => pfacturaAddItemRow(it));
@@ -11194,6 +11235,7 @@ window.pfacturaSubmit = async function() {
     cliente_direccion2: document.getElementById("pf-cliente-direccion2").value.trim() || null,
     cliente_ciudad: document.getElementById("pf-cliente-ciudad").value.trim() || null,
     cliente_pais: document.getElementById("pf-cliente-pais").value.trim() || null,
+    moneda: document.getElementById("pf-moneda").value,
     terminos: document.getElementById("pf-terminos").value.trim() || null,
     fecha: document.getElementById("pf-fecha").value || madridHoy(),
     vencimiento: document.getElementById("pf-vencimiento").value || null,
@@ -11259,9 +11301,18 @@ window.pfacturaDownloadPDF = async function(id, numero) {
 // mes el registro de gastos/ingresos (con su factura adjunta) y el saldo de la
 // cuenta al cierre de ese día.
 // =========================
-function contaFmtMoney(n) {
+// Formatea con la moneda indicada explícitamente (para listas que mezclan
+// varias cuentas/monedas, como el modal de Cuentas bancarias).
+function contaFmtMoneyEn(n, monedaCode) {
+  const symbol = MONEDA_SYMBOLS[monedaCode] || "€";
   const v = Number(n) || 0;
-  return `${v < 0 ? "-" : ""}${Math.abs(v).toFixed(2).replace(".", ",")} €`;
+  return `${v < 0 ? "-" : ""}${Math.abs(v).toFixed(2).replace(".", ",")} ${symbol}`;
+}
+// Formatea con la moneda de la cuenta actualmente seleccionada en Movimientos
+// (contaState.monedaActual, fijada en contaLoadMes) — usado en todo el libro
+// diario, donde todos los importes visibles pertenecen a esa misma cuenta.
+function contaFmtMoney(n) {
+  return contaFmtMoneyEn(n, window.contaState?.monedaActual || "EUR");
 }
 
 async function contaInit() {
@@ -11338,7 +11389,7 @@ function contaRenderMovimientosTab() {
     ? st.cuentas.map(c => {
         const active = c.id === st.cuentaId;
         return `<button onclick="contaSetCuenta(${c.id})"
-          style="padding:6px 14px;border-radius:20px;border:1px solid ${active ? "#3b82f6" : "var(--border)"};background:${active ? "#3b82f6" : "var(--input)"};color:${active ? "#fff" : "var(--text)"};font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">🏦 ${escapeHtml(c.nombre)}</button>`;
+          style="padding:6px 14px;border-radius:20px;border:1px solid ${active ? "#3b82f6" : "var(--border)"};background:${active ? "#3b82f6" : "var(--input)"};color:${active ? "#fff" : "var(--text)"};font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">🏦 ${escapeHtml(c.nombre)} <span style="opacity:.75;font-weight:400;">${escapeHtml(c.moneda || "EUR")}</span></button>`;
       }).join("")
     : `<span style="font-size:12.5px;color:var(--muted);">Aún no hay cuentas bancarias.</span>`;
 
@@ -11377,6 +11428,7 @@ async function contaLoadMes() {
     const params = new URLSearchParams({ cuenta_id: st.cuentaId, year: st.year, month: st.month });
     const data = await fetch(`${API_BASE}/api/contabilidad/mes?${params}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
     if (data.error) { cont.innerHTML = `<div style="color:#dc2626;font-size:13px;">${escapeHtml(data.error)}</div>`; return; }
+    st.monedaActual = data.cuenta?.moneda || "EUR";
 
     const diasEnMes = new Date(st.year, st.month, 0).getDate();
     const porDia = {};
@@ -11665,6 +11717,7 @@ window.contaAdjuntarArchivo = function (id) {
 // ── Gestión de cuentas bancarias ────────────────────────────────
 window.contaOpenCuentasModal = function () {
   document.getElementById("conta-cuentas-modal")?.remove();
+  window.__contaEditandoCuentaId = null;
   const overlay = document.createElement("div");
   overlay.id = "conta-cuentas-modal";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;";
@@ -11673,11 +11726,17 @@ window.contaOpenCuentasModal = function () {
       <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;">Cuentas bancarias</div>
       <div id="conta-cuentas-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
       <div style="border-top:1px solid var(--border);padding-top:14px;">
-        <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px;">Añadir cuenta</div>
+        <div id="conta-cuenta-form-title" style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px;">Añadir cuenta</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <input id="conta-nueva-nombre" type="text" placeholder="Nombre de la cuenta" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
-          <input id="conta-nueva-saldo" type="number" step="0.01" placeholder="Saldo inicial (€)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
-          <button onclick="contaCrearCuenta()" class="btn-primary" style="padding:8px 16px;">+ Añadir cuenta</button>
+          <input id="conta-nueva-saldo" type="number" step="0.01" placeholder="Saldo inicial" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;">
+          <select id="conta-nueva-moneda" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;">
+            ${monedaOptionsHtml("EUR")}
+          </select>
+          <div style="display:flex;gap:8px;">
+            <button id="conta-cuenta-form-btn" onclick="contaCrearCuenta()" class="btn-primary" style="padding:8px 16px;flex:1;">+ Añadir cuenta</button>
+            <button id="conta-cuenta-form-cancel" onclick="contaCancelarEdicionCuenta()" style="display:none;padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+          </div>
         </div>
       </div>
       <div id="conta-cuentas-msg" style="margin-top:10px;font-size:12px;color:#dc2626;"></div>
@@ -11698,31 +11757,58 @@ function contaRenderCuentasList() {
     ? cuentas.map(c => `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
           <div style="min-width:0;">
-            <div style="font-weight:600;font-size:13px;color:var(--text);">${escapeHtml(c.nombre)}</div>
-            <div style="font-size:11.5px;color:var(--muted);">Saldo inicial: ${contaFmtMoney(c.saldo_inicial)}</div>
+            <div style="font-weight:600;font-size:13px;color:var(--text);">${escapeHtml(c.nombre)} <span style="font-size:10.5px;color:var(--muted);font-weight:400;">${escapeHtml(c.moneda || "EUR")}</span></div>
+            <div style="font-size:11.5px;color:var(--muted);">Saldo inicial: ${contaFmtMoneyEn(c.saldo_inicial, c.moneda)}</div>
           </div>
-          <button onclick="contaEliminarCuenta(${c.id})" title="Eliminar cuenta" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;flex-shrink:0;">🗑</button>
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+            <button onclick="contaEditarCuenta(${c.id})" title="Editar cuenta" style="background:none;border:none;color:#3b82f6;cursor:pointer;font-size:13px;">✎</button>
+            <button onclick="contaEliminarCuenta(${c.id})" title="Eliminar cuenta" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">🗑</button>
+          </div>
         </div>`).join("")
     : `<div style="font-size:12.5px;color:var(--muted);">Aún no hay cuentas bancarias.</div>`;
 }
 
+window.contaEditarCuenta = function (id) {
+  const c = (window.contaState.cuentas || []).find(x => x.id === id);
+  if (!c) return;
+  window.__contaEditandoCuentaId = id;
+  document.getElementById("conta-nueva-nombre").value = c.nombre;
+  document.getElementById("conta-nueva-saldo").value = c.saldo_inicial;
+  document.getElementById("conta-nueva-moneda").value = c.moneda || "EUR";
+  document.getElementById("conta-cuenta-form-title").textContent = `Editar cuenta — ${c.nombre}`;
+  document.getElementById("conta-cuenta-form-btn").textContent = "Guardar cambios";
+  document.getElementById("conta-cuenta-form-cancel").style.display = "block";
+  document.getElementById("conta-cuentas-msg").textContent = "";
+};
+
+window.contaCancelarEdicionCuenta = function () {
+  window.__contaEditandoCuentaId = null;
+  document.getElementById("conta-nueva-nombre").value = "";
+  document.getElementById("conta-nueva-saldo").value = "";
+  document.getElementById("conta-nueva-moneda").value = "EUR";
+  document.getElementById("conta-cuenta-form-title").textContent = "Añadir cuenta";
+  document.getElementById("conta-cuenta-form-btn").textContent = "+ Añadir cuenta";
+  document.getElementById("conta-cuenta-form-cancel").style.display = "none";
+};
+
 window.contaCrearCuenta = async function () {
   const nombre = document.getElementById("conta-nueva-nombre").value.trim();
   const saldo_inicial = parseFloat(document.getElementById("conta-nueva-saldo").value) || 0;
+  const moneda = document.getElementById("conta-nueva-moneda").value;
   const msg = document.getElementById("conta-cuentas-msg");
   if (!nombre) { msg.textContent = "El nombre es obligatorio"; return; }
+  const editandoId = window.__contaEditandoCuentaId;
   try {
-    const res = await fetch(`${API_BASE}/api/contabilidad/cuentas`, {
-      method: "POST",
+    const res = await fetch(`${API_BASE}/api/contabilidad/cuentas${editandoId ? "/" + editandoId : ""}`, {
+      method: editandoId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify({ nombre, saldo_inicial }),
+      body: JSON.stringify({ nombre, saldo_inicial, moneda }),
     });
     const d = await res.json();
     if (!res.ok) { msg.textContent = d.error || "Error"; return; }
-    document.getElementById("conta-nueva-nombre").value = "";
-    document.getElementById("conta-nueva-saldo").value = "";
     msg.textContent = "";
-    if (!window.contaState.cuentaId) window.contaState.cuentaId = d.id;
+    if (!editandoId && !window.contaState.cuentaId) window.contaState.cuentaId = d.id;
+    contaCancelarEdicionCuenta();
     await contaLoadCuentas();
     contaRenderCuentasList();
   } catch { msg.textContent = "Error de conexión"; }
@@ -12043,7 +12129,7 @@ window.contaAbrirFacturaMov = async function (movId) {
     if (f.error) { body.innerHTML = `<div style="color:#dc2626;font-size:13px;">${escapeHtml(f.error)}</div>`; return; }
     body.innerHTML = `
       <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;">Factura ${escapeHtml(f.numero)}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${escapeHtml(f.emisor_nombre || "")} → ${escapeHtml(f.cliente_nombre || "")} · ${escapeHtml(f.fecha || "")} (vence ${escapeHtml(f.vencimiento || "—")}) · ${contaFmtMoney(f.item?.precio)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${escapeHtml(f.emisor_nombre || "")} → ${escapeHtml(f.cliente_nombre || "")} · ${escapeHtml(f.fecha || "")} (vence ${escapeHtml(f.vencimiento || "—")}) · ${contaFmtMoneyEn(f.item?.precio, f.moneda)}</div>
 
       <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Descripción del servicio</label>
       <input id="conta-fac-desc" type="text" value="${escapeHtml(f.item?.descripcion || "")}"
