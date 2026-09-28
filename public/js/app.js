@@ -11908,6 +11908,73 @@ function contaMapearFilasNarvi(rows) {
   return { movimientos, sinFecha };
 }
 
+// Formato Mercury: "09-28-2026" (MM-DD-YYYY)
+function contaParseFechaMercury(s) {
+  const m = String(s || "").trim().match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!m) return null;
+  return `${m[3]}-${m[1]}-${m[2]}`;
+}
+
+// Mercury repite el nombre entre paréntesis para transferencias a personas/
+// empresas, ej. "Adaluz Del Carmen Marcano Sosa (Adaluz Del Carmen Marcano
+// Sosa)" o "FANOMI, LLC (FANOMI, LLC)" — se deja solo una vez.
+function contaLimpiarDescripcionMercury(desc) {
+  const d = (desc || "").trim();
+  const m = d.match(/^(.+?)\s*\(\1\)$/);
+  return m ? m[1] : d;
+}
+
+// Convierte las filas de un extracto Mercury a movimientos. A diferencia de
+// Narvi, aquí el importe ya viene neto en una sola columna con signo (sin
+// comisión aparte que desglosar) y hay que filtrar por Status: solo "Sent"
+// representa dinero que realmente se movió — "Failed" nunca llegó a
+// cobrarse/pagarse y "Pending" todavía no se ha liquidado.
+function contaMapearFilasMercury(rows) {
+  const header = rows[0].map(h => h.trim());
+  const idx = (name) => header.indexOf(name);
+  const iDate = idx("Date (UTC)"), iDesc = idx("Description"), iAmount = idx("Amount"),
+        iStatus = idx("Status"), iTrackingId = idx("Tracking ID");
+  if (iDate < 0 || iAmount < 0 || iStatus < 0) return { movimientos: null, sinFecha: 0, omitidos: 0 };
+
+  const movimientos = [];
+  let sinFecha = 0, omitidos = 0;
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.length < 2) continue;
+    const status = (r[iStatus] || "").trim().toLowerCase();
+    if (status !== "sent") { omitidos++; continue; }
+
+    const fecha = contaParseFechaMercury(r[iDate]);
+    if (!fecha) { sinFecha++; continue; }
+
+    const montoRaw = parseFloat(r[iAmount]) || 0;
+    if (!montoRaw) continue;
+    const tipo = montoRaw > 0 ? "ingreso" : "gasto";
+    const monto = Math.abs(montoRaw);
+    const descripcion = contaLimpiarDescripcionMercury(iDesc >= 0 ? r[iDesc] : "");
+    const trackingId = (iTrackingId >= 0 ? r[iTrackingId] : "").trim();
+
+    movimientos.push({ fecha, tipo, monto, descripcion: descripcion || null, external_id: trackingId || null });
+  }
+  return { movimientos, sinFecha, omitidos };
+}
+
+// Registro de formatos de banco soportados: cada uno se detecta por las
+// columnas de su cabecera, así no hace falta que el usuario diga qué banco
+// es — sumar un banco nuevo es solo añadir una entrada aquí.
+const CONTA_BANK_PARSERS = [
+  { nombre: "Narvi", detectar: h => h.includes("Transaction Id") && h.includes("Transaction date") && h.includes("Transaction type"), mapear: contaMapearFilasNarvi },
+  { nombre: "Mercury", detectar: h => h.includes("Date (UTC)") && h.includes("Amount") && h.includes("Status"), mapear: contaMapearFilasMercury },
+];
+
+function contaDetectarYMapearCSV(rows) {
+  const header = rows[0].map(h => h.trim());
+  for (const banco of CONTA_BANK_PARSERS) {
+    if (banco.detectar(header)) return { banco: banco.nombre, ...banco.mapear(rows) };
+  }
+  return { banco: null, movimientos: null, sinFecha: 0, omitidos: 0 };
+}
+
 window.contaImportarCSV = function () {
   if (!window.contaState.cuentaId) { alert("Primero crea o selecciona una cuenta bancaria."); return; }
   const input = document.createElement("input");
@@ -11925,12 +11992,12 @@ async function contaProcesarCSV(file) {
     const rows = contaParseCSV(text);
     if (rows.length < 2) { alert("El archivo no tiene datos"); return; }
 
-    const { movimientos, sinFecha } = contaMapearFilasNarvi(rows);
+    const { banco, movimientos, sinFecha, omitidos } = contaDetectarYMapearCSV(rows);
     if (movimientos === null) { alert("No se reconoce el formato de este CSV todavía."); return; }
     if (!movimientos.length) { alert("No se encontraron movimientos válidos en el archivo."); return; }
 
     const fechas = movimientos.map(m => m.fecha).sort();
-    const confirmMsg = `Se detectaron ${movimientos.length} movimiento(s) entre ${fechas[0]} y ${fechas[fechas.length - 1]}.\n\n¿Importarlos a la cuenta "${cuenta?.nombre || ""}"?`;
+    const confirmMsg = `Banco detectado: ${banco}.\nSe detectaron ${movimientos.length} movimiento(s) entre ${fechas[0]} y ${fechas[fechas.length - 1]}.\n\n¿Importarlos a la cuenta "${cuenta?.nombre || ""}"?`;
     if (!confirm(confirmMsg)) return;
 
     const res = await fetch(`${API_BASE}/api/contabilidad/movimientos/bulk`, {
@@ -11940,9 +12007,10 @@ async function contaProcesarCSV(file) {
     });
     const d = await res.json();
     if (!res.ok) { alert(d.error || "Error al importar"); return; }
-    let msg = `✅ Importación completa\n${d.insertados} nuevo(s) movimiento(s)\n${d.actualizados} ya existían y se corrigieron (fecha/tipo/importe/descripción)`;
+    let msg = `✅ Importación completa (${banco})\n${d.insertados} nuevo(s) movimiento(s)\n${d.actualizados} ya existían y se corrigieron (fecha/tipo/importe/descripción)`;
     if (d.invalidos) msg += `\n${d.invalidos} fila(s) no reconocida(s)`;
     if (sinFecha) msg += `\n${sinFecha} fila(s) sin fecha válida`;
+    if (omitidos) msg += `\n${omitidos} fila(s) omitida(s) (pendientes o fallidas — no se llegaron a cobrar/pagar)`;
     alert(msg);
     contaLoadMes();
   } catch (e) {
