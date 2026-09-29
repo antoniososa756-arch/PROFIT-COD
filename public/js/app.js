@@ -4028,18 +4028,11 @@ if (id === "carritos-activos") {
   // delegado la ve (a diferencia de Contabilidad).
   if (currentUser.role !== "Administrador") { setSection("metricas"); return; }
   if (t) t.textContent = "Carritos Activos";
-  if (s) s.textContent = "Carritos de compra activos en tiendas";
+  if (s) s.textContent = "Actividad en vivo de tus tiendas Shopify";
   if (c) c.textContent = "Carritos Activos";
   box.className = "card";
-  box.innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;text-align:center;gap:14px;">
-      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#9ca3af" stroke-width="1.5">
-        <circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/>
-        <path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"/>
-      </svg>
-      <div style="font-size:16px;font-weight:700;color:var(--text);">Carritos Activos</div>
-      <div style="font-size:13px;color:var(--muted);max-width:360px;">Próximamente. Esta sección aún no tiene contenido.</div>
-    </div>`;
+  box.innerHTML = `<div id="carritos-wrap"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>`;
+  carritosIniciar();
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -11331,6 +11324,77 @@ window.pfacturaDownloadPDF = async function(id, numero) {
     URL.revokeObjectURL(url);
   } catch (e) { alert(e.message || "Error al descargar el PDF"); }
 };
+
+// =========================
+// CARRITOS ACTIVOS — actividad en vivo por tienda (visitantes, sesiones,
+// carritos, checkout, compras), a partir de los eventos que reporta el pixel
+// instalado en cada tienda (ver server/routes/carritos.routes.js). Se
+// refresca sola mientras la sección esté abierta.
+// =========================
+const CARRITOS_ICONOS = {
+  visitantes: `<circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke-linecap="round" stroke-linejoin="round"/>`,
+  ventas: `<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round" stroke-linejoin="round"/>`,
+  sesiones: `<path d="M3 12h4l2 8 6-16 2 8h4" stroke-linecap="round" stroke-linejoin="round"/>`,
+  pedidos: `<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke-linecap="round" stroke-linejoin="round"/><polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke-linecap="round" stroke-linejoin="round"/>`,
+  carrito: `<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6" stroke-linecap="round" stroke-linejoin="round"/>`,
+  pago: `<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>`,
+  compra: `<path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>`,
+};
+function carritosIcono(clave) { return `<svg viewBox="0 0 24 24">${CARRITOS_ICONOS[clave]}</svg>`; }
+
+function carritosTarjeta(clave, color, numero, label) {
+  return `
+    <div class="stat-card">
+      <div class="stat-icon ${color}">${carritosIcono(clave)}</div>
+      <div class="stat-info">
+        <span class="stat-num">${numero}</span>
+        <span class="stat-label">${label}</span>
+      </div>
+    </div>`;
+}
+
+async function carritosIniciar() {
+  await carritosCargar();
+  if (window.__carritosInterval) clearInterval(window.__carritosInterval);
+  window.__carritosInterval = setInterval(() => {
+    // Se auto-detiene si el usuario ya se fue de la sección, para no seguir
+    // pegándole al servidor de fondo indefinidamente.
+    if (window.__currentRoute?.id !== "carritos-activos") { clearInterval(window.__carritosInterval); return; }
+    carritosCargar();
+  }, 20000);
+}
+
+async function carritosCargar() {
+  const wrap = document.getElementById("carritos-wrap");
+  if (!wrap) return;
+  try {
+    const rows = await fetch(`${API_BASE}/api/carritos/resumen`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
+    if (!Array.isArray(rows)) { wrap.innerHTML = `<div style="color:#dc2626;font-size:13px;">${escapeHtml(rows?.error || "Error cargando datos")}</div>`; return; }
+    if (!rows.length) { wrap.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:20px 0;">No tienes tiendas Shopify conectadas.</div>`; return; }
+
+    wrap.innerHTML = rows.map(r => `
+      <div style="margin-bottom:28px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
+          <div style="font-weight:700;font-size:14px;color:var(--text);">${escapeHtml(r.shop_name)}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
+          ${carritosTarjeta("visitantes", "cyan", r.visitantes_ahora, "Visitantes ahora mismo")}
+          ${carritosTarjeta("ventas", "green", `${Number(r.ventas_totales || 0).toFixed(2).replace(".", ",")} ${escapeHtml(r.moneda || "EUR")}`, "Ventas totales (hoy)")}
+          ${carritosTarjeta("sesiones", "purple", r.sesiones, "Sesiones (hoy)")}
+          ${carritosTarjeta("pedidos", "orange", r.pedidos, "Pedidos (hoy)")}
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Comportamiento de clientes ahora mismo</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          ${carritosTarjeta("carrito", "blue", r.carritos_activos, "Carritos activos")}
+          ${carritosTarjeta("pago", "teal", r.en_pago, "En el pago")}
+          ${carritosTarjeta("compra", "green", r.compras_realizadas, "Compras realizadas")}
+        </div>
+      </div>`).join("");
+  } catch {
+    wrap.innerHTML = `<div style="color:#dc2626;font-size:13px;">Error cargando datos</div>`;
+  }
+}
 
 // =========================
 // CONTABILIDAD — libro diario interno de PROFITCOD (admin y su apoyo delegado):

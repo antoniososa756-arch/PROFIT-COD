@@ -611,6 +611,25 @@ await pool.query(`
   // acción de "generar facturas" para el mismo remitente.
   await pool.query(`ALTER TABLE contabilidad_movimientos ADD COLUMN IF NOT EXISTS pfactura_id INTEGER REFERENCES pfacturas(id) ON DELETE SET NULL`);
 
+  // Carritos Activos: una fila por visitante (clientId del pixel) y tienda,
+  // que se va "subiendo" de estado a medida que llegan sus eventos en vivo
+  // (ver server/routes/carritos.routes.js). No se guarda un historial de
+  // eventos completo a propósito -- solo el último estado y cuándo se vio
+  // por última vez -- para no acumular filas sin límite con cada page view.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS carritos_sesiones (
+      id SERIAL PRIMARY KEY,
+      shop_domain TEXT NOT NULL,
+      client_id TEXT NOT NULL,
+      estado TEXT NOT NULL,
+      estado_orden SMALLINT NOT NULL DEFAULT 1,
+      last_seen TIMESTAMPTZ NOT NULL DEFAULT now(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE(shop_domain, client_id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_carritos_sesiones_shop ON carritos_sesiones(shop_domain, last_seen)`);
+
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 

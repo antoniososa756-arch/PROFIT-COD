@@ -53,6 +53,11 @@ app.use("/api/health",  require("./routes/health.routes"));
 // Shopify: connect y callback son redirects sin Auth header, se registran sin planCheck
 app.use("/api/shopify", shopifyRoutes);
 
+// Carritos Activos: /evento es publico (lo llama el pixel desde el navegador
+// de visitantes anonimos de la tienda, sin sesion de PROFITCOD); /resumen
+// exige auth y ademas rol admin, ambas cosas resueltas dentro del propio router.
+app.use("/api/carritos", require("./routes/carritos.routes"));
+
 
 
 // Rutas de datos — requieren plan activo (clientes)
