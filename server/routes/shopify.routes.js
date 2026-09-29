@@ -4,45 +4,6 @@ const crypto = require("crypto");
 const db = require("../db");
 const router = express.Router();
 
-// Scopes que necesita "Carritos Activos" (ver server/routes/carritos.routes.js)
-// para poder activar el pixel de rastreo en vivo: write_pixels (crear/editar
-// el pixel) y read_customer_events (leer eventos de clientes). Se agregan
-// aquí en vez de depender de que alguien actualice la env var
-// SHOPIFY_SCOPES a mano — así una tienda ya conectada que se reconecta
-// (Integraciones → reconectar) los pide automáticamente sin tocar nada más.
-function shopifyScopesConSoporteDePixel() {
-  const base = (process.env.SHOPIFY_SCOPES || "").split(",").map(s => s.trim()).filter(Boolean);
-  for (const s of ["write_pixels", "read_customer_events"]) {
-    if (!base.includes(s)) base.push(s);
-  }
-  return base.join(",");
-}
-
-// Activa (o reactiva) el pixel de "Carritos Activos" en una tienda. No es
-// fatal si falla: la extensión del pixel se despliega aparte (Shopify CLI,
-// fuera de este deploy normal) y hasta que eso no esté hecho esta llamada
-// devolverá error de Shopify — no debe romper el flujo normal de conexión.
-async function activarPixelCarritos(shop, accessToken) {
-  try {
-    const query = `mutation webPixelCreate($webPixel: WebPixelInput!) {
-      webPixelCreate(webPixel: $webPixel) {
-        userErrors { field message }
-      }
-    }`;
-    const variables = { webPixel: { settings: JSON.stringify({ shopDomain: shop }) } };
-    const r = await fetch(`https://${shop}/admin/api/2024-10/graphql.json`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": accessToken },
-      body: JSON.stringify({ query, variables }),
-    });
-    const data = await r.json();
-    const errores = data?.data?.webPixelCreate?.userErrors;
-    if (errores?.length) console.error(`webPixelCreate (${shop}):`, errores);
-  } catch (e) {
-    console.error(`activarPixelCarritos error (${shop}):`, e.message);
-  }
-}
-
 async function autoStartTrial(userId) {
   try {
     const u = await db.get("SELECT plan_status, trial_started_at FROM users WHERE id = $1", [userId]);
@@ -75,7 +36,7 @@ router.get("/connect", async (req, res) => {
 
   const state = Buffer.from(JSON.stringify({ userId: user.id, shop })).toString("base64");
   const redirectUri = process.env.SHOPIFY_REDIRECT_URI;
-  const scopes = shopifyScopesConSoporteDePixel();
+  const scopes = process.env.SHOPIFY_SCOPES;
   const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
   res.redirect(installUrl);
 });
@@ -154,10 +115,6 @@ router.get("/callback", async (req, res) => {
       }).catch(() => {});
     }
 
-    // No bloquea la conexión si falla (ver activarPixelCarritos) — solo
-    // funciona una vez desplegada la extensión del pixel por separado.
-    activarPixelCarritos(shop, accessToken);
-
     // Auto-arrancar trial de 30 días si el usuario aún no tiene trial ni plan activo
     await autoStartTrial(userId);
 
@@ -207,11 +164,6 @@ if (!appSecret) appSecret = process.env.SHOPIFY_API_SECRET || "";
         body: JSON.stringify({ webhook: { topic, address: webhookUrl, format: "json" } }),
       });
     }
-
-    // No bloquea la conexión si falla (ver activarPixelCarritos) — depende de
-    // que el access token manual ya tenga los scopes write_pixels/
-    // read_customer_events concedidos en Shopify.
-    activarPixelCarritos(myshopifyDomain, accessToken);
 
     // Auto-arrancar trial de 30 días si el usuario aún no tiene trial ni plan activo
     await autoStartTrial(userId);
