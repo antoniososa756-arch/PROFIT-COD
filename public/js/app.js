@@ -470,6 +470,14 @@ const icons = {
       <rect x="3" y="16" width="7" height="5" rx="1.5"/>
     </svg>
   `,
+  "carritos-activos": `
+    <svg viewBox="0 0 24 24">
+      <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none"/>
+      <circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none"/>
+      <path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="18.5" cy="4.5" r="2.5" fill="#22c55e" stroke="none"/>
+    </svg>
+  `,
   rentabilidad: `
     <svg viewBox="0 0 24 24">
       <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" stroke-linecap="round" stroke-linejoin="round"/>
@@ -577,6 +585,7 @@ const I18N = {
   ES: {
     labels: {
       metricas: "Métricas",
+      "carritos-activos": "Carritos Activos",
       rentabilidad: "Rentabilidad",
       tiendas: "Integraciones",
       productos: "Productos",
@@ -623,6 +632,7 @@ const I18N = {
   EN: {
     labels: {
       metricas: "Metrics",
+      "carritos-activos": "Active Carts",
       tiendas: "Stores",
       productos: "Products",
       pedidos: "Orders",
@@ -668,6 +678,7 @@ const I18N = {
   PT: {
     labels: {
       metricas: "Métricas",
+      "carritos-activos": "Carrinhos Ativos",
       tiendas: "Lojas",
       productos: "Produtos",
       pedidos: "Pedidos",
@@ -890,7 +901,7 @@ function closeOnBackdropClick(el, closeFn) {
 // F5 o compartir el link no pierda dónde estabas. __skipPush evita generar una
 // entrada nueva en el historial cuando estamos restaurando desde popstate/carga inicial.
 // =========================
-const VALID_ROUTE_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
+const VALID_ROUTE_SECTIONS = ["metricas","carritos-activos","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
 let __skipPush = false;
 
 function _syncUrlForRoute(path) {
@@ -997,9 +1008,13 @@ function loadApp(section) {
       </div>
 
       ${(() => {
+        // "Carritos Activos" es exclusiva de la cuenta Administrador (por ahora
+        // ni siquiera su apoyo delegado la ve — a diferencia de Contabilidad).
+        const sections = ["metricas"];
+        if (currentUser.role === "Administrador") sections.push("carritos-activos");
+        sections.push("rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura");
         // "Contabilidad" es exclusiva del admin: solo se ofrece en el menú al
         // propio admin, o a sus cuentas de apoyo (nunca a las de un Cliente).
-        const sections = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
         if (currentUser.role === "Administrador" || currentUser.apoyoDeAdmin) sections.push("contabilidad");
         sections.push("ayuda");
         return sections;
@@ -4008,6 +4023,28 @@ if (id === "ayuda") {
 // =========================
 // SECCIÓN PAGOS CONFIG (solo admin)
 // =========================
+if (id === "carritos-activos") {
+  // Exclusiva de la cuenta Administrador por ahora — ni siquiera su apoyo
+  // delegado la ve (a diferencia de Contabilidad).
+  if (currentUser.role !== "Administrador") { setSection("metricas"); return; }
+  if (t) t.textContent = "Carritos Activos";
+  if (s) s.textContent = "Carritos de compra activos en tiendas";
+  if (c) c.textContent = "Carritos Activos";
+  box.className = "card";
+  box.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;text-align:center;gap:14px;">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#9ca3af" stroke-width="1.5">
+        <circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/>
+        <path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"/>
+      </svg>
+      <div style="font-size:16px;font-weight:700;color:var(--text);">Carritos Activos</div>
+      <div style="font-size:13px;color:var(--muted);max-width:360px;">Próximamente. Esta sección aún no tiene contenido.</div>
+    </div>`;
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
 if (id === "pagos-config") {
   if (currentUser.role !== "Administrador") { setSection("metricas"); return; }
   if (t) t.textContent = "Configuración de pagos";
