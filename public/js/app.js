@@ -6594,9 +6594,18 @@ async function disableStore(storeId) {
 // =========================
 let __metricasLoadId = 0;
 window.__refreshMetrics = () => loadMetricas();
+const METRICAS_STAT_IDS = ["stat-total","stat-sin-cancelados","stat-enviados","stat-pendientes","stat-transito","stat-entregados","stat-devueltos","stat-destruidos","stat-facturacion","stat-cpa","stat-roas"];
+function metricasSetTarjetasCargando(cargando) {
+  METRICAS_STAT_IDS.forEach(id => {
+    const icon = document.getElementById(id)?.closest(".stat-card")?.querySelector(".stat-icon");
+    icon?.classList.toggle("is-loading", cargando);
+  });
+}
+
 async function loadMetricas() {
   const _myLoadId = ++__metricasLoadId;
   window.__showLoadingBar?.("Actualizando métricas...");
+  metricasSetTarjetasCargando(true);
   const now = new Date();
   const _lmY = toMadridPart(now,'year'), _lmM = toMadridPart(now,'month');
 
@@ -6627,13 +6636,14 @@ async function loadMetricas() {
     if (_payFilter !== "all") statsParams.set("payment_type", _payFilter);
     const statsRes = await fetch(`${API_BASE}/api/metrics/stats?${statsParams}`, { headers: h });
     const stats = await statsRes.json();
-    if (_myLoadId !== __metricasLoadId) { window.__hideLoadingBar?.(); return; }
+    if (_myLoadId !== __metricasLoadId) { window.__hideLoadingBar?.(); metricasSetTarjetasCargando(false); return; }
 
     // Si el token expiró (p.ej. impersonación de más de 2h) o el plan está bloqueado,
     // no mostrar en silencio "0 pedidos" como si la cuenta estuviera vacía — eso
     // confunde con una pérdida real de datos. Avisar claramente en su lugar.
     if (!statsRes.ok) {
       window.__hideLoadingBar?.();
+      metricasSetTarjetasCargando(false);
       showToast("❌ No se pudieron cargar las métricas", stats.message || stats.error || "Vuelve a iniciar sesión e inténtalo de nuevo.", "#dc2626");
       return;
     }
@@ -6723,6 +6733,7 @@ async function loadMetricas() {
     console.error("Error cargando métricas:", e);
   }
   window.__hideLoadingBar?.();
+  metricasSetTarjetasCargando(false);
 
   // Actualizar filtro con todas las tiendas que tuvieron pedidos en el período
   {
