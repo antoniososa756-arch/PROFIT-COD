@@ -7067,20 +7067,37 @@ window.leadsDragStart = leadsDragStart;
 window.leadsDragOver  = leadsDragOver;
 window.leadsDrop      = leadsDrop;
 
+// Nivel de "fuego" de una tienda según qué tan avanzado está el cliente más
+// activo ahora mismo -- 0 (nadie), una pizca (solo en la tienda), 25% (viendo
+// el formulario), 50% (rellenándolo) y 100% durante 1 minuto justo después de
+// confirmarse un pedido real (ultimo_pedido_at lo pone el webhook de Shopify).
+function leadsFireLevel(d) {
+  if (d.ultimo_pedido_at && (Date.now() - new Date(d.ultimo_pedido_at).getTime()) < 60000) return 1;
+  if ((d.rellenando || 0) > 0) return 0.5;
+  if ((d.formularios_activos || 0) > 0) return 0.25;
+  if ((d.visitantes_vivo || 0) > 0) return 0.08;
+  return 0;
+}
+
 function leadsStorePanelHtml(d, sessions) {
   const domain = d.shop_domain;
   const panelId = `leads-panel-${domain.replace(/[^a-z0-9]/gi, "_")}`;
   const fmtMoney = n => (parseFloat(n) || 0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  // Hay visitantes AHORA MISMO -- le pone vida a la tarjeta con un latido y
-  // una llama encima, en vez de que se vea igual de "en blanco" que una
-  // tienda sin nadie dentro.
-  const isHot = (d.visitantes_vivo || 0) > 0;
+  const fireLevel = leadsFireLevel(d);
+  // El fuego vive DETRÁS de todo el contenido (z-index 0) -- como cada
+  // tarjetita interna ya tiene su propio fondo opaco, se ve como un brillo
+  // que asoma por los huecos/bordes, creciendo desde abajo según el nivel,
+  // sin tapar ningún dato.
+  const fireOverlay = fireLevel > 0
+    ? `<div class="leads-fire-overlay" style="height:${Math.round(fireLevel * 100)}%;"></div>`
+    : "";
 
   return `
-    <div class="card leads-store-panel${isHot ? " leads-panel-hot" : ""}" data-domain="${escapeAttr(domain)}" draggable="${window.__leadsUnlocked ? "true" : "false"}"
+    <div class="card leads-store-panel" data-domain="${escapeAttr(domain)}" draggable="${window.__leadsUnlocked ? "true" : "false"}"
       style="padding:0;overflow:hidden;position:relative;${window.__leadsUnlocked ? "cursor:grab;" : ""}"
       ondragstart="leadsDragStart(event,'${escapeAttr(domain)}')" ondragover="leadsDragOver(event)" ondrop="leadsDrop(event,'${escapeAttr(domain)}')">
-      ${isHot ? `<span class="leads-fire-badge" title="Hay visitantes ahora mismo">🔥</span>` : ""}
+      ${fireOverlay}
+      <div style="position:relative;z-index:1;">
       <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div style="font-size:14.5px;font-weight:700;color:var(--text);">${escapeHtml(d.shop_name)}</div>
         <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);padding:4px 10px;border-radius:20px;">
@@ -7109,6 +7126,7 @@ function leadsStorePanelHtml(d, sessions) {
         <div id="${panelId}" style="flex:1 1 220px;min-width:0;display:flex;flex-direction:column;">
           ${leadsSessionsHistoryHtml(domain, sessions)}
         </div>
+      </div>
       </div>
     </div>`;
 }
