@@ -2481,6 +2481,7 @@ if (id === "leads") {
         <span id="leads-lock-text">Bloqueado</span>
       </button>
     </div>
+    <div id="leads-totals-row" style="display:flex;justify-content:center;align-items:flex-end;gap:14px;margin-bottom:18px;"></div>
     <div id="leads-page-grid" class="leads-page-grid">
       <div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Cargando...</div>
     </div>`;
@@ -6862,6 +6863,23 @@ async function loadLeadsPage() {
     ]);
     if (!Array.isArray(dash)) { grid.innerHTML = `<div style="padding:40px;text-align:center;color:#dc2626;font-size:13px;">${escapeHtml(dash?.error || "Error cargando Leads")}</div>`; return; }
     if (!dash.length) { grid.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">No tienes tiendas Shopify conectadas.</div>`; return; }
+
+    // Totales sumados entre todas las tiendas, arriba de todo.
+    const totalsRow = document.getElementById("leads-totals-row");
+    if (totalsRow) {
+      const totalPedidos = dash.reduce((acc, d) => acc + (d.pedidos_hoy || 0), 0);
+      const totalVentas  = dash.reduce((acc, d) => acc + (parseFloat(d.ventas_hoy) || 0), 0);
+      const fmtMoney = n => n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      totalsRow.innerHTML = `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 18px;text-align:center;">
+          <div style="font-size:20px;font-weight:800;color:var(--text);line-height:1;">${totalPedidos}</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:4px;white-space:nowrap;">Pedidos totales (hoy)</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 26px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#22c55e;line-height:1;">${fmtMoney(totalVentas)} €</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px;white-space:nowrap;">Ventas totales (hoy)</div>
+        </div>`;
+    }
 
     // Aplicar el orden guardado (tiendas nuevas que no estén en el orden
     // guardado se agregan al final, en vez de desaparecer).
