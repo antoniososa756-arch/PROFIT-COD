@@ -2482,10 +2482,10 @@ if (id === "leads") {
           <feComposite in="goo" in2="goo" operator="atop" />
         </filter>
         <filter id="leads-fire-turbulence" x="-30%" y="-30%" width="160%" height="160%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="2" seed="2" result="noise">
-            <animate attributeName="seed" values="1;15;30;15;1" dur="7s" repeatCount="indefinite" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.015 0.11" numOctaves="3" seed="2" result="noise">
+            <animate attributeName="seed" values="1;15;30;15;1" dur="6s" repeatCount="indefinite" />
           </feTurbulence>
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="22" xChannelSelector="R" yChannelSelector="G" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="27" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </defs>
     </svg>
@@ -7112,7 +7112,9 @@ function leadsStorePanelHtml(d, sessions) {
         <div class="lava-blob-wrap">
           <span class="lava-blob b1"></span><span class="lava-blob b2"></span>
           <span class="lava-blob b3"></span><span class="lava-blob b4"></span>
+          <span class="lava-blob b5"></span>
         </div>
+        <span class="lava-ember e1"></span><span class="lava-ember e2"></span><span class="lava-ember e3"></span>
       </div>`
     : "";
 

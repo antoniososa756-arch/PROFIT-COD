@@ -1707,13 +1707,22 @@ body.dark .btn-filter:hover { background: rgba(34,197,94,.12); }
 .lava-blob {
   position: absolute;
   bottom: 0;
+  /* Más alto que ancho (óvalo, no círculo) -- las lenguas de fuego de
+     verdad son alargadas hacia arriba, no redondas. */
   border-radius: 50%;
   background: radial-gradient(circle at 50% 65%, #fef9c3 0%, #fbbf24 32%, #f97316 62%, #b91c1c 100%);
 }
-.lava-blob.b1 { left: 2%;  width: 42%; height: 42%; animation: lava-rise-a 3.6s ease-in-out infinite; }
-.lava-blob.b2 { left: 28%; width: 50%; height: 50%; animation: lava-rise-b 4.2s ease-in-out infinite .4s; }
-.lava-blob.b3 { left: 54%; width: 40%; height: 40%; animation: lava-rise-a 3.9s ease-in-out infinite .9s; }
-.lava-blob.b4 { left: 14%; width: 34%; height: 34%; animation: lava-rise-b 3.2s ease-in-out infinite 1.3s; }
+.lava-blob.b1 { left: 2%;  width: 36%; height: 52%; animation: lava-rise-a 3.6s ease-in-out infinite; }
+.lava-blob.b2 { left: 28%; width: 42%; height: 62%; animation: lava-rise-b 4.2s ease-in-out infinite .4s; }
+.lava-blob.b3 { left: 54%; width: 34%; height: 50%; animation: lava-rise-a 3.9s ease-in-out infinite .9s; }
+.lava-blob.b4 { left: 14%; width: 28%; height: 42%; animation: lava-rise-b 3.2s ease-in-out infinite 1.3s; }
+/* Núcleo caliente: más chico, más brillante y claro, centrado y bajo -- el
+   punto "más caliente" de una llama real, que le da contraste al resto. */
+.lava-blob.b5 {
+  left: 38%; width: 24%; height: 30%;
+  background: radial-gradient(circle at 50% 70%, #ffffff 0%, #fef08a 35%, #fbbf24 70%, #f97316 100%);
+  animation: lava-core-pulse 1.8s ease-in-out infinite;
+}
 
 @keyframes lava-rise-a {
   0%, 100% { transform: translate(0, 8%)    scale(1);    }
@@ -1722,6 +1731,32 @@ body.dark .btn-filter:hover { background: rgba(34,197,94,.12); }
 @keyframes lava-rise-b {
   0%, 100% { transform: translate(0, 14%)   scale(1);    }
   50%      { transform: translate(-5%, -12%) scale(1.12); }
+}
+@keyframes lava-core-pulse {
+  0%, 100% { transform: translateY(0)    scale(1);   opacity: 1;  }
+  50%      { transform: translateY(-10%) scale(1.15); opacity: .85; }
+}
+
+/* Chispas subiendo -- fuera del filtro "goo" para que queden nítidas (puntos
+   de verdad) en vez de fundirse con el resto; es el detalle que más vende
+   "fuego real" a simple vista. */
+.lava-ember {
+  position: absolute;
+  bottom: 12%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fef3c7;
+  box-shadow: 0 0 5px 1.5px rgba(251,191,36,.95);
+  animation: lava-ember-rise 2.1s ease-in infinite;
+}
+.lava-ember.e1 { left: 20%; animation-delay: 0s;   }
+.lava-ember.e2 { left: 46%; animation-delay: .7s;  }
+.lava-ember.e3 { left: 68%; animation-delay: 1.3s; }
+@keyframes lava-ember-rise {
+  0%   { transform: translate(0,0)         scale(.6); opacity: 0;  }
+  12%  { opacity: 1; }
+  100% { transform: translate(4px,-140%)   scale(.2); opacity: 0;  }
 }
 
 /* =========================
