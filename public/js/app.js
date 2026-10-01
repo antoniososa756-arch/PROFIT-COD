@@ -6608,20 +6608,41 @@ function renderLeadRow(s, sessionNumber) {
       </div>`
     : "";
 
+  // Recogido por defecto -- con muchas sesiones, ver la cronología de todas
+  // abierta de una vez hace un desastre. El estado abierto/cerrado se guarda
+  // en window.__leadsExpandedSessions para que no se cierre solo en cada
+  // actualización automática de la página.
+  const expandedSet = (window.__leadsExpandedSessions ||= new Set());
+  const expanded = expandedSet.has(s.session_id);
   return `
     <div id="lead-row-${s.session_id}" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);flex-shrink:0;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 16px;background:var(--input);border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div onclick="toggleLeadRow('${s.session_id}')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 16px;background:var(--input);border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <svg id="lead-chevron-${s.session_id}" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--muted);transition:transform .15s;transform:rotate(${expanded ? 180 : 0}deg);"><polyline points="6 9 12 15 18 9"/></svg>
           <span style="font-size:12px;font-weight:700;color:var(--muted);">Sesión ${sessionNumber}${s.country ? ` · ${escapeHtml([s.region, s.country].filter(Boolean).join(", "))}` : ""}</span>
           <span class="status ${st.cls}">${st.text}</span>
           <span style="font-size:12px;color:var(--muted);">${escapeHtml(s.shop_domain)}</span>
         </div>
         <span style="font-size:12px;color:var(--muted);">${ts}</span>
       </div>
-      ${datosHtml}
-      <div style="padding:8px 16px;">${timelineHtml}</div>
+      <div id="lead-body-${s.session_id}" style="display:${expanded ? "block" : "none"};">
+        ${datosHtml}
+        <div style="padding:8px 16px;">${timelineHtml}</div>
+      </div>
     </div>`;
 }
+
+function toggleLeadRow(sid) {
+  const set = (window.__leadsExpandedSessions ||= new Set());
+  const body = document.getElementById(`lead-body-${sid}`);
+  const chevron = document.getElementById(`lead-chevron-${sid}`);
+  if (!body) return;
+  const nowOpen = !set.has(sid);
+  if (nowOpen) set.add(sid); else set.delete(sid);
+  body.style.display = nowOpen ? "block" : "none";
+  if (chevron) chevron.style.transform = `rotate(${nowOpen ? 180 : 0}deg)`;
+}
+window.toggleLeadRow = toggleLeadRow;
 
 async function loadLeadsCOD(container) {
   container.innerHTML = `
