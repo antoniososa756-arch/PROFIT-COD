@@ -1591,22 +1591,22 @@ const now = new Date();
             <svg viewBox="0 0 24 24"><path d="M3 7l9 5 9-5M3 7v10l9 5 9-5V7" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;min-width:0;">
-            <div class="stat-info" style="min-width:0;">
+            <div class="stat-info" style="min-width:0;cursor:pointer;" onclick="irAPedidosDesdeMetricas('')" title="Ver estos pedidos">
               <span class="stat-num" id="stat-total">0</span>
               <span class="stat-label">Total Pedidos</span>
             </div>
-            <div style="border-left:1px solid #1f2937;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;min-width:0;">
+            <div style="border-left:1px solid #1f2937;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;min-width:0;cursor:pointer;" onclick="irAPedidosDesdeMetricas(['pendiente','enviado','en_transito','entregado','devuelto','destruido','franquicia'])" title="Ver estos pedidos">
               <span class="stat-num" id="stat-sin-cancelados">0</span>
               <span class="stat-label">Sin cancelados</span>
             </div>
           </div>
-          <div style="border-top:1px solid #1f2937;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;">
+          <div style="border-top:1px solid #1f2937;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="irAPedidosDesdeMetricas(['enviado','en_transito','entregado','devuelto','destruido','franquicia'])" title="Ver estos pedidos">
             <span style="font-size:12px;color:#6b7280;display:flex;flex-direction:column;line-height:1.4;">Enviados<span style="font-size:10px;color:#9ca3af;">(excl. pendientes y cancelados)</span></span>
             <span style="font-size:14px;font-weight:700;color:#22c55e;" id="stat-enviados">0</span>
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="irAPedidosDesdeMetricas('pendiente')" title="Ver estos pedidos">
           <div class="stat-icon blue">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
           </div>
@@ -1616,7 +1616,7 @@ const now = new Date();
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="irAPedidosDesdeMetricas('en_transito')" title="Ver estos pedidos">
           <div class="stat-icon blue">
             <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           </div>
@@ -1626,7 +1626,7 @@ const now = new Date();
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="irAPedidosDesdeMetricas('entregado')" title="Ver estos pedidos">
           <div class="stat-icon green">
             <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
@@ -1636,7 +1636,7 @@ const now = new Date();
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="irAPedidosDesdeMetricas('devuelto')" title="Ver estos pedidos">
           <div class="stat-icon red">
             <svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
@@ -1646,7 +1646,7 @@ const now = new Date();
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="irAPedidosDesdeMetricas('destruido')" title="Ver estos pedidos">
           <div class="stat-icon purple">
             <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </div>
@@ -1711,19 +1711,19 @@ const now = new Date();
               </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
-              <div style="display:flex;align-items:center;gap:10px;">
+              <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="irAPedidosDesdeMetricas('entregado')" title="Ver estos pedidos">
                 <span style="width:30px;height:26px;border-radius:7px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
                   <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></span>
                 </span>
                 <span id="legend-entregado" style="color:var(--text);">Entregado 0%</span>
               </div>
-              <div style="display:flex;align-items:center;gap:10px;">
+              <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="irAPedidosDesdeMetricas(['devuelto','destruido'])" title="Ver estos pedidos">
                 <span style="width:30px;height:26px;border-radius:7px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
                   <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></span>
                 </span>
                 <span id="legend-rojo" style="color:var(--text);">Dev+Dest 0%</span>
               </div>
-              <div style="display:flex;align-items:center;gap:10px;">
+              <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="irAPedidosDesdeMetricas('en_transito')" title="Ver estos pedidos">
                 <span style="width:30px;height:26px;border-radius:7px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
                   <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></span>
                 </span>
@@ -3053,15 +3053,15 @@ if (id === "pedidos") {
 
         <div class="tabs">
 
-          <span class="tab active" onclick="filterByTab(this, '')">Todos</span>
-          <span class="tab" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
+          <span class="tab active" data-status="" onclick="filterByTab(this, '')">Todos</span>
+          <span class="tab" data-status="pendiente" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
           <span class="tab" onclick="filterByTabPendienteMRW(this)">Pend. entregar MRW</span>
-          <span class="tab" onclick="filterByTab(this, 'enviado')">Enviado</span>
-          <span class="tab" onclick="filterByTab(this, 'en_transito')">En tránsito</span>
-          <span class="tab" onclick="filterByTab(this, 'entregado')">Entregado</span>
-          <span class="tab" onclick="filterByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
-          <span class="tab" onclick="filterByTab(this, 'franquicia')">Franquicia</span>
-          <span class="tab" onclick="filterByTab(this, 'cancelado')">Cancelado</span>
+          <span class="tab" data-status="enviado" onclick="filterByTab(this, 'enviado')">Enviado</span>
+          <span class="tab" data-status="en_transito" onclick="filterByTab(this, 'en_transito')">En tránsito</span>
+          <span class="tab" data-status="entregado" onclick="filterByTab(this, 'entregado')">Entregado</span>
+          <span class="tab" data-status="devuelto,destruido" onclick="filterByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
+          <span class="tab" data-status="franquicia" onclick="filterByTab(this, 'franquicia')">Franquicia</span>
+          <span class="tab" data-status="cancelado" onclick="filterByTab(this, 'cancelado')">Cancelado</span>
           <span class="tab tab-warn" onclick="filterByTabMrwRechazado(this)">⚠️ Rechazado MRW</span>
         </div>
 
@@ -3121,6 +3121,12 @@ if (id === "pedidos") {
           opt.textContent = shopLabel(s);
           sel.appendChild(opt);
         });
+        // Si llegamos desde una tarjeta de Estadísticas (irAPedidosDesdeMetricas),
+        // el <select> aún no tenía las opciones cuando se intentó marcar la tienda.
+        if (sel && window.__pendingOrdersShop) {
+          sel.value = window.__pendingOrdersShop;
+          window.__pendingOrdersShop = null;
+        }
       }
     }).catch(() => {});
 
@@ -6602,6 +6608,32 @@ function metricasSetTarjetasCargando(cargando) {
   });
   document.getElementById("donut-card")?.classList.toggle("is-loading", cargando);
 }
+
+// Click en una tarjeta/leyenda de Estadísticas -> lleva a Pedidos ya filtrado
+// por ese mismo estado, manteniendo el rango de fechas y la tienda activos en
+// Estadísticas (si hay más de una tienda seleccionada ahí, Pedidos no soporta
+// filtrar por varias a la vez, así que en ese caso se muestra "todas").
+function irAPedidosDesdeMetricas(status) {
+  const dateFrom = document.getElementById("metrics-date-from")?.value || "";
+  const dateTo   = document.getElementById("metrics-date-to")?.value   || "";
+  let dominiosFiltro = [];
+  if (window.__metExplicitFilter !== null && window.__metExplicitFilter !== undefined) {
+    dominiosFiltro = [...window.__metExplicitFilter];
+  } else {
+    const checkboxes = document.querySelectorAll("#met-shop-filter-panel input[type='checkbox'][value]");
+    if (checkboxes.length > 0) {
+      dominiosFiltro = [...checkboxes].filter(c => c.checked).map(c => c.value);
+      if (dominiosFiltro.length === checkboxes.length) dominiosFiltro = [];
+    }
+  }
+  window.__pendingOrdersFilter = {
+    status: Array.isArray(status) ? status.join(",") : (status || ""),
+    shop: dominiosFiltro.length === 1 ? dominiosFiltro[0] : "",
+    dateFrom, dateTo,
+  };
+  setSection("pedidos");
+}
+window.irAPedidosDesdeMetricas = irAPedidosDesdeMetricas;
 
 async function loadMetricas() {
   const _myLoadId = ++__metricasLoadId;
@@ -12355,6 +12387,39 @@ async function fetchOrdersFiltered() {
 async function fetchOrders() {
   const body = document.getElementById("ordersBody");
   if (!body) return;
+
+  // Si venimos de un click en una tarjeta de Estadísticas (irAPedidosDesdeMetricas),
+  // aplicar ese filtro (fecha + estado + tienda) en vez de los valores por defecto.
+  if (window.__pendingOrdersFilter) {
+    const pf = window.__pendingOrdersFilter;
+    window.__pendingOrdersFilter = null;
+
+    const df = document.getElementById("filter-date-from");
+    const dt = document.getElementById("filter-date-to");
+    if (df) df.value = pf.dateFrom || "";
+    if (dt) dt.value = pf.dateTo   || "";
+    const dpfState = window.__DPF._inst["filter"];
+    if (dpfState) {
+      dpfState.startDate = pf.dateFrom || null;
+      dpfState.endDate   = pf.dateTo   || null;
+      dpfState.preset = "personalizado";
+      dpfState.presetLabel = (pf.dateFrom || pf.dateTo) ? "Personalizado" : "Período";
+    }
+    const lbl = document.getElementById("filter-picker-label");
+    if (lbl) lbl.textContent = dpfState ? dpfState.presetLabel : "Período";
+
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    const matchTab = document.querySelector(`.tab[data-status="${pf.status || ""}"]`);
+    if (matchTab) matchTab.classList.add("active");
+
+    const sel = document.getElementById("filter-shop-inline");
+    if (sel) sel.value = pf.shop || "";
+    window.__pendingOrdersShop = pf.shop || "";
+
+    ordersState = { q: "", status: pf.status || "", shop: pf.shop || "", dateFrom: pf.dateFrom || "", dateTo: pf.dateTo || "", page: 1 };
+    await fetchOrdersFiltered();
+    return;
+  }
 
   // Si venimos de una notificación, buscar ese pedido directamente
   if (window.__pendingSearchNoti) {
