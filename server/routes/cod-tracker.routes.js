@@ -44,10 +44,9 @@ router.get("/script.js", async (req, res) => {
     attachedForm=form;
     form.querySelectorAll("input,select,textarea").forEach(function(el){
       el.addEventListener("focus",function(){send("field_focus",{field:fieldName(el)});});
+      // Solo "blur" (salió del campo) -- "change" dispara casi al mismo
+      // tiempo para el mismo cambio y duplicaba cada dato en la cronología.
       el.addEventListener("blur",function(){
-        if(el.value){fd[fieldName(el)]=el.value;send("field_blur",{field:fieldName(el),value:el.value,formData:fd});}
-      });
-      el.addEventListener("change",function(){
         if(el.value){fd[fieldName(el)]=el.value;send("field_blur",{field:fieldName(el),value:el.value,formData:fd});}
       });
     });

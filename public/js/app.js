@@ -6510,7 +6510,7 @@ const COD_FIELD_LABEL = {
 
 const COD_EVENT_LABEL = {
   form_open:    { icon: "👁", text: () => "Abrió el formulario" },
-  field_blur:   { icon: "✍️", text: (e) => `Rellenó ${COD_FIELD_LABEL[e.field]||e.field}: "${e.value||""}"` },
+  field_blur:   { icon: "✍️", text: (e, corrigio) => `${corrigio ? "Corrigió" : "Rellenó"} ${COD_FIELD_LABEL[e.field]||e.field}: "${e.value||""}"` },
   form_submit:  { icon: "🟢", text: () => "Envió el pedido" },
   form_abandon: { icon: "🔴", text: () => "Abandonó el formulario" },
 };
@@ -6519,13 +6519,16 @@ function renderLeadRow(s, sessionNumber) {
   const st = COD_STATUS_LABEL[s.status] || { text: s.status, color: "#6b7280" };
   const ts = new Date(s.updated_at || s.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" });
   const events = Array.isArray(s.events) ? s.events : [];
+  const seenFields = new Set();
   const timelineHtml = events.length
     ? events.map(e => {
         const def = COD_EVENT_LABEL[e.type] || { icon: "•", text: () => e.type };
         const hora = new Date(e.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+        let corrigio = false;
+        if (e.type === "field_blur") { corrigio = seenFields.has(e.field); seenFields.add(e.field); }
         return `<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0;">
           <span style="font-size:11px;color:#6b7280;width:58px;flex-shrink:0;">${hora}</span>
-          <span style="font-size:12px;">${def.icon} ${escapeHtml(def.text(e))}</span>
+          <span style="font-size:12px;">${def.icon} ${escapeHtml(def.text(e, corrigio))}</span>
         </div>`;
       }).join("")
     : `<div style="font-size:11px;color:#6b7280;padding:3px 0;">Sin eventos registrados todavía</div>`;
