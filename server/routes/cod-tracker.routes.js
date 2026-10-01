@@ -305,7 +305,7 @@ async function expireStaleSessions(userId) {
 // ── Listar sesiones con su cronología completa (auth) ───────────────────────────
 router.get("/sessions", auth, async (req, res) => {
   const userId = req.user.id;
-  const { shop, status, limit = 100 } = req.query;
+  const { shop, status, limit = 100, hours } = req.query;
   try {
     await expireStaleSessions(userId);
     let q = `SELECT session_id, shop_domain, status, form_data, page_url, country, region, created_at, updated_at
@@ -313,8 +313,14 @@ router.get("/sessions", auth, async (req, res) => {
     const params = [userId];
     if (shop) { q += ` AND shop_domain = $${params.length + 1}`; params.push(shop); }
     if (status) { q += ` AND status = $${params.length + 1}`; params.push(status); }
+    // "hours" permite pedir una ventana de tiempo garantizada (ej. 48h para
+    // poder revisar completados/abandonados con calma) en vez de depender solo
+    // del LIMIT, que con suficiente tráfico podía dejar fuera sesiones viejas
+    // aunque todavía estuvieran dentro de esa ventana.
+    const h = Math.min(parseInt(hours) || 0, 168);
+    if (h > 0) { q += ` AND updated_at > NOW() - ($${params.length + 1} || ' hours')::interval`; params.push(h); }
     q += ` ORDER BY updated_at DESC LIMIT $${params.length + 1}`;
-    params.push(Math.min(parseInt(limit) || 100, 500));
+    params.push(Math.min(parseInt(limit) || 100, 2000));
     const rows = await db.all(q, params);
 
     if (rows.length) {

@@ -6827,12 +6827,9 @@ async function refreshLeads() {
     const res = await fetch(url, { headers: { Authorization: "Bearer " + getActiveToken() } });
     const sessions = await res.json();
 
-    // Numerar cada sesión según cuándo empezó (la más antigua = Sesión 1), no
-    // según el orden en que se muestran (que es por actividad más reciente),
-    // para que el número de cada cliente se mantenga estable con el tiempo.
-    const byAge = [...sessions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    const numberOf = {};
-    byAge.forEach((s, i) => { numberOf[s.session_id] = i + 1; });
+    // Numerar cada sesión según cuándo empezó dentro de SU día (hora España),
+    // no de forma acumulada para siempre -- ver leadsDailySessionNumbers().
+    const numberOf = leadsDailySessionNumbers(sessions);
 
     const list = document.getElementById("leads-list");
     if (list) list.innerHTML = sessions.length
@@ -6973,7 +6970,9 @@ async function loadLeadsPage() {
 
     // Historial de sesiones de todas las tiendas en una sola llamada, se
     // reparte por shop_domain abajo -- evita una petición por tienda.
-    const allSessions = await fetch(`${API_BASE}/api/cod-tracker/sessions?limit=200`, { headers: h }).then(r => r.json()).catch(() => []);
+    // 48h fijas: para poder revisar completados/abandonados con calma sin que
+    // se corten antes de tiempo si hay mucho tráfico entre varias tiendas.
+    const allSessions = await fetch(`${API_BASE}/api/cod-tracker/sessions?hours=48&limit=2000`, { headers: h }).then(r => r.json()).catch(() => []);
     const sessionsByShop = {};
     (Array.isArray(allSessions) ? allSessions : []).forEach(sess => { (sessionsByShop[sess.shop_domain] ||= []).push(sess); });
 
@@ -7088,6 +7087,23 @@ function leadsStorePanelHtml(d, sessions) {
     </div>`;
 }
 
+// Numera cada sesión dentro de SU día (hora España), no de forma acumulada
+// para siempre -- igual que "Pedidos" reinicia a medianoche, "Sesión 1" debe
+// volver a aparecer cada día en vez de seguir subiendo (Sesión 107, 108...)
+// indefinidamente, que hacía parecer que el conteo nunca se reiniciaba.
+function leadsDailySessionNumbers(sessions) {
+  const madridDay = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
+  const byAge = [...sessions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const numberOf = {};
+  const dayCounters = {};
+  byAge.forEach(s => {
+    const day = madridDay(s.created_at);
+    dayCounters[day] = (dayCounters[day] || 0) + 1;
+    numberOf[s.session_id] = dayCounters[day];
+  });
+  return numberOf;
+}
+
 function leadsFilterSessions(sessions, filter) {
   if (filter === "activos") return sessions.filter(s => ["browsing", "open", "filling", "processing"].includes(s.status));
   if (filter === "abandonados") return sessions.filter(s => s.status === "page_abandoned");
@@ -7103,9 +7119,7 @@ const LEADS_STATUS_PRIORITY = { processing: 4, filling: 3, open: 2, browsing: 1 
 
 function leadsSessionsHistoryHtml(domain, sessions) {
   const filter = window.__leadsGlobalFilter || "todos";
-  const byAge = [...sessions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  const numberOf = {};
-  byAge.forEach((s, i) => { numberOf[s.session_id] = i + 1; });
+  const numberOf = leadsDailySessionNumbers(sessions);
   const filtered = leadsFilterSessions(sessions, filter)
     .sort((a, b) => {
       const pa = LEADS_STATUS_PRIORITY[a.status] || 0;
