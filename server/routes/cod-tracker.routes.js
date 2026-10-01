@@ -17,12 +17,12 @@ router.get("/script.js", async (req, res) => {
 
   const appUrl = process.env.APP_URL || "https://profit-cod.onrender.com";
 
-  const script = `/* PROFIT-COD COD Tracker v2 */
+  const script = `/* PROFIT-COD COD Tracker v3 */
 (function(){
   var SHOP="${shop}", API="${appUrl}";
   var sid=sessionStorage.getItem("_pc_sid");
   if(!sid){sid=Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem("_pc_sid",sid);}
-  var fd={}, tracked=false;
+  var fd={}, tracked=false, attachedForm=null;
   var FM={
     "Nombre y apellidos":"nombre","Teléfono":"telefono",
     "Dirección (Calle y número)":"direccion","Casa, Piso, Local...":"direccion2",
@@ -40,6 +40,8 @@ router.get("/script.js", async (req, res) => {
   }
   function fieldName(el){return FM[el.placeholder]||FM[el.name]||el.name||el.placeholder||"campo";}
   function attachForm(form){
+    if(attachedForm===form)return;
+    attachedForm=form;
     form.querySelectorAll("input,select,textarea").forEach(function(el){
       el.addEventListener("focus",function(){send("field_focus",{field:fieldName(el)});});
       el.addEventListener("blur",function(){
@@ -51,35 +53,29 @@ router.get("/script.js", async (req, res) => {
     });
     form.addEventListener("submit",function(){send("form_submit",{formData:fd});},true);
   }
-  function onModalOpen(){
-    if(tracked)return; tracked=true; fd={};
-    send("form_open");
-    var form=document.getElementById("_rsi-cod-form-modal-form");
-    if(form)attachForm(form);
+  // En vez de dejar un observer pegado a UNA referencia del modal (frágil si la
+  // app lo reemplaza/recrea en vez de solo cambiarle la clase), se pregunta de
+  // cero cada 700ms si está abierto ahora mismo -- funciona sin importar cómo
+  // lo maneje la app por dentro.
+  function checkState(){
+    var modal=document.getElementById("_rsi-cod-form-modal");
+    var isOpen=!!(modal&&modal.classList.contains("_rsi-cod-form-modal-open"));
+    if(isOpen&&!tracked){
+      tracked=true; fd={};
+      send("form_open");
+      var form=document.getElementById("_rsi-cod-form-modal-form");
+      if(form)attachForm(form);
+    } else if(!isOpen&&tracked){
+      tracked=false; attachedForm=null;
+      send("form_abandon",{formData:fd});
+    }
   }
-  function onModalClose(){
-    if(!tracked)return; tracked=false;
-    send("form_abandon",{formData:fd});
-  }
-  function watchModal(modal){
-    var obs=new MutationObserver(function(){
-      modal.classList.contains("_rsi-cod-form-modal-open")?onModalOpen():onModalClose();
-    });
-    obs.observe(modal,{attributes:true,attributeFilter:["class"]});
-    if(modal.classList.contains("_rsi-cod-form-modal-open"))onModalOpen();
-  }
-  var m=document.getElementById("_rsi-cod-form-modal");
-  if(m){watchModal(m);}else{
-    var bo=new MutationObserver(function(){
-      var m2=document.getElementById("_rsi-cod-form-modal");
-      if(m2){bo.disconnect();watchModal(m2);}
-    });
-    bo.observe(document.body,{childList:true,subtree:true});
-  }
+  checkState();
+  setInterval(checkState,700);
 })();`;
 
   res.setHeader("Content-Type", "application/javascript");
-  res.setHeader("Cache-Control", "public, max-age=300");
+  res.setHeader("Cache-Control", "public, max-age=30");
   res.send(script);
 });
 
