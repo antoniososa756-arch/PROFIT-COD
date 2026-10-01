@@ -1689,7 +1689,7 @@ const now = new Date();
     </div>
       </div>
       <div style="flex:30;min-width:200px;display:flex;flex-direction:column;">
-        <div class="stat-card" style="flex-direction:column;align-items:center;justify-content:center;gap:18px;flex:1;height:100%;box-sizing:border-box;padding:24px;">
+        <div class="stat-card" id="donut-card" style="flex-direction:column;align-items:center;justify-content:center;gap:18px;flex:1;height:100%;box-sizing:border-box;padding:24px;">
           <div style="display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;">
             <span style="font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;">Tasa de entrega</span>
             <span id="donut-base" style="font-size:12px;color:#6b7280;font-weight:500;letter-spacing:.2px;"></span>
@@ -6600,6 +6600,7 @@ function metricasSetTarjetasCargando(cargando) {
     const icon = document.getElementById(id)?.closest(".stat-card")?.querySelector(".stat-icon");
     icon?.classList.toggle("is-loading", cargando);
   });
+  document.getElementById("donut-card")?.classList.toggle("is-loading", cargando);
 }
 
 async function loadMetricas() {
