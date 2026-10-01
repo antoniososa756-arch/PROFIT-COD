@@ -6498,10 +6498,10 @@ window.copyTrackerScript = copyTrackerScript;
 // ─── LEADS COD ────────────────────────────────────────────────────────────────
 
 const COD_STATUS_LABEL = {
-  open:      { text: "👁 Viendo formulario", color: "#3b82f6" },
-  filling:   { text: "✍️ Rellenando",         color: "#f97316" },
-  abandoned: { text: "🔴 Abandonado",          color: "#ef4444" },
-  submitted: { text: "🟢 Pedido enviado",       color: "#22c55e" },
+  open:      { text: "👁 Viendo formulario", cls: "blue" },
+  filling:   { text: "✍️ Rellenando",         cls: "orange" },
+  abandoned: { text: "🔴 Abandonado",          cls: "red" },
+  submitted: { text: "🟢 Pedido enviado",       cls: "green" },
 };
 const COD_FIELD_LABEL = {
   nombre:"Nombre", telefono:"Teléfono", direccion:"Dirección",
@@ -6517,7 +6517,7 @@ const COD_EVENT_LABEL = {
 };
 
 function renderLeadRow(s, sessionNumber) {
-  const st = COD_STATUS_LABEL[s.status] || { text: s.status, color: "#6b7280" };
+  const st = COD_STATUS_LABEL[s.status] || { text: s.status, cls: "" };
   const ts = new Date(s.updated_at || s.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" });
   const events = Array.isArray(s.events) ? s.events : [];
   const seenFields = new Set();
@@ -6527,61 +6527,60 @@ function renderLeadRow(s, sessionNumber) {
         const hora = new Date(e.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
         let corrigio = false;
         if (e.type === "field_blur") { corrigio = seenFields.has(e.field); seenFields.add(e.field); }
-        return `<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0;">
-          <span style="font-size:11px;color:#6b7280;width:58px;flex-shrink:0;">${hora}</span>
-          <span style="font-size:12px;">${def.icon} ${escapeHtml(def.text(e, corrigio))}</span>
+        return `<div style="display:flex;align-items:baseline;gap:10px;padding:5px 0;">
+          <span style="font-size:11.5px;color:var(--muted);width:60px;flex-shrink:0;font-variant-numeric:tabular-nums;">${hora}</span>
+          <span style="font-size:13px;color:var(--text);">${def.icon} ${escapeHtml(def.text(e, corrigio))}</span>
         </div>`;
       }).join("")
-    : `<div style="font-size:11px;color:#6b7280;padding:3px 0;">Sin eventos registrados todavía</div>`;
+    : `<div style="font-size:12px;color:var(--muted);padding:5px 0;">Sin eventos registrados todavía</div>`;
 
   return `
-    <div id="lead-row-${s.session_id}" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div id="lead-row-${s.session_id}" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 16px;background:var(--input);border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <span style="font-size:12px;font-weight:700;color:var(--muted);">Sesión ${sessionNumber}</span>
-          <span style="width:8px;height:8px;border-radius:50%;background:${st.color};flex-shrink:0;"></span>
-          <span style="font-size:12px;font-weight:600;color:#e5e7eb;">${st.text}</span>
-          <span style="font-size:11px;color:#6b7280;">${escapeHtml(s.shop_domain)}</span>
+          <span class="status ${st.cls}">${st.text}</span>
+          <span style="font-size:12px;color:var(--muted);">${escapeHtml(s.shop_domain)}</span>
         </div>
-        <span style="font-size:11px;color:#6b7280;">${ts}</span>
+        <span style="font-size:12px;color:var(--muted);">${ts}</span>
       </div>
-      <div style="border-left:2px solid var(--border);padding-left:10px;margin-left:3px;">${timelineHtml}</div>
+      <div style="padding:8px 16px;">${timelineHtml}</div>
     </div>`;
 }
 
 async function loadLeadsCOD(container) {
   container.innerHTML = `
     <div class="card" style="padding:0;overflow:hidden;">
-      <div style="padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="padding:22px 24px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
-          <div style="font-size:15px;font-weight:700;color:#f9fafb;">Leads Releasit COD en tiempo real</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:2px;">Clientes que abren el formulario COD en tus tiendas</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.2px;">Leads Releasit COD en tiempo real</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:3px;">Clientes que abren el formulario de pago contra reembolso en tus tiendas</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <select id="leads-filter-shop" onchange="filterLeads()"
-            style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-family:inherit;">
+            style="padding:8px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit;">
             <option value="">Todas las tiendas</option>
           </select>
           <select id="leads-filter-status" onchange="filterLeads()"
-            style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-size:12px;font-family:inherit;">
+            style="padding:8px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit;">
             <option value="">Todos los estados</option>
             <option value="open">Viendo</option>
             <option value="filling">Rellenando</option>
             <option value="abandoned">Abandonados</option>
             <option value="submitted">Enviados</option>
           </select>
-          <div style="display:flex;align-items:center;gap:5px;">
-            <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.3);animation:pulse 2s infinite;"></div>
-            <span style="font-size:11px;color:#22c55e;font-weight:600;">EN VIVO</span>
+          <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);padding:6px 12px;border-radius:20px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.3);animation:pulse 2s infinite;"></div>
+            <span style="font-size:11px;color:#16a34a;font-weight:700;letter-spacing:.3px;">EN VIVO</span>
           </div>
         </div>
       </div>
-      <div id="leads-stats" style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;min-height:44px;"></div>
-      <div id="leads-install-box" style="padding:16px 20px;border-bottom:1px solid var(--border);">
-        <div style="font-size:12px;font-weight:600;color:#9ca3af;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em;">Tracker por tienda</div>
+      <div id="leads-stats" style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap;"></div>
+      <div id="leads-install-box" style="padding:18px 24px;border-bottom:1px solid var(--border);">
+        <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;">Tracker por tienda</div>
         <div id="leads-install-list" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
-      <div id="leads-list" style="max-height:480px;overflow-y:auto;"></div>
+      <div id="leads-list" style="max-height:560px;overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:12px;"></div>
     </div>`;
 
   await refreshLeads();
@@ -6618,18 +6617,19 @@ async function loadLeadsCOD(container) {
 
         const row = document.createElement("div");
         row.id = `cod-install-row-${s.domain}`;
-        row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--input);flex-wrap:wrap;";
+        row.style.cssText = "display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;background:var(--input);border:1px solid var(--border);flex-wrap:wrap;";
 
         const badge = document.createElement("span");
-        badge.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:${installed ? "rgba(34,197,94,.15)" : "rgba(107,114,128,.12)"};color:${installed ? "#22c55e" : "#9ca3af"};`;
+        badge.className = `status ${installed ? "green" : ""}`;
+        if (!installed) badge.style.cssText = "background:var(--card);color:var(--muted);border:1px solid var(--border);";
         badge.textContent = installed ? (manual ? "✓ Instalado (manual)" : "✓ Instalado") : "Sin instalar";
 
         const name = document.createElement("span");
-        name.style.cssText = "font-size:13px;font-weight:600;color:#e5e7eb;flex:1;min-width:100px;";
+        name.style.cssText = "font-size:13.5px;font-weight:600;color:var(--text);flex:1;min-width:100px;";
         name.textContent = s.shop_name || s.domain;
 
         const actions = document.createElement("div");
-        actions.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;";
+        actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;";
 
         if (manual) {
           // Ya funciona porque se pegó a mano en el tema -- no hay nada que
@@ -6637,7 +6637,9 @@ async function loadLeadsCOD(container) {
         } else if (!installed) {
           const installBtn = document.createElement("button");
           installBtn.textContent = "Instalar automáticamente";
-          installBtn.style.cssText = "padding:5px 12px;border-radius:7px;border:none;background:#22c55e;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;";
+          installBtn.style.cssText = "padding:6px 14px;border-radius:8px;border:none;background:#22c55e;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s;";
+          installBtn.onmouseover = () => installBtn.style.opacity = ".85";
+          installBtn.onmouseout = () => installBtn.style.opacity = "1";
           installBtn.addEventListener("click", async () => {
             installBtn.disabled = true;
             installBtn.textContent = "Instalando...";
@@ -6649,8 +6651,8 @@ async function loadLeadsCOD(container) {
               const d = await r.json();
               if (d.ok) {
                 showToast("✅", `Script instalado en ${s.shop_name || s.domain}`, "#22c55e");
-                badge.style.background = "rgba(34,197,94,.15)";
-                badge.style.color = "#22c55e";
+                badge.className = "status green";
+                badge.removeAttribute("style");
                 badge.textContent = "✓ Instalado";
                 installBtn.remove();
                 addUninstallBtn();
@@ -6679,7 +6681,7 @@ async function loadLeadsCOD(container) {
         function addUninstallBtn() {
           const u = document.createElement("button");
           u.textContent = "Desinstalar";
-          u.style.cssText = "padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;font-family:inherit;";
+          u.style.cssText = "padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;";
           u.addEventListener("click", async () => {
             u.disabled = true;
             const r = await fetch(`${API_BASE}/api/shopify/cod-script/uninstall/${encodeURIComponent(s.domain)}`, {
@@ -6688,8 +6690,8 @@ async function loadLeadsCOD(container) {
             }).catch(() => null);
             if (r && r.ok) {
               showToast("✅", "Script desinstalado", "#22c55e");
-              badge.style.background = "rgba(107,114,128,.12)";
-              badge.style.color = "#9ca3af";
+              badge.className = "status";
+              badge.style.cssText = "background:var(--card);color:var(--muted);border:1px solid var(--border);";
               badge.textContent = "Sin instalar";
               u.remove();
               // Re-add install button
@@ -6705,7 +6707,7 @@ async function loadLeadsCOD(container) {
         function addCopyBtn() {
           const c = document.createElement("button");
           c.textContent = "Copiar script manual";
-          c.style.cssText = "padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;font-family:inherit;";
+          c.style.cssText = "padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;";
           c.addEventListener("click", () => navigator.clipboard.writeText(scriptTag).then(() => showToast("✅", "Script copiado — pégalo antes de </body> en theme.liquid", "#22c55e")));
           actions.appendChild(c);
         }
@@ -6725,15 +6727,15 @@ async function refreshLeadsStats() {
     if (!statsEl) return;
     const sr2 = await fetch(`${API_BASE}/api/cod-tracker/stats`, { headers: { Authorization: "Bearer " + getActiveToken() } });
     const stats = await sr2.json();
-    statsEl.innerHTML = stats.map(s => `
-      <div style="display:flex;flex-direction:column;gap:2px;">
-        <span style="font-size:10px;color:#6b7280;">${escapeHtml(s.shop_domain)}</span>
-        <div style="display:flex;gap:10px;">
-          <span style="font-size:13px;font-weight:700;color:#3b82f6;">${s.live} <span style="font-size:10px;font-weight:400;">en vivo</span></span>
-          <span style="font-size:13px;font-weight:700;color:#ef4444;">${s.abandoned} <span style="font-size:10px;font-weight:400;">abandonados</span></span>
-          <span style="font-size:13px;font-weight:700;color:#22c55e;">${s.submitted} <span style="font-size:10px;font-weight:400;">enviados</span></span>
+    statsEl.innerHTML = stats.length ? stats.map(s => `
+      <div style="background:var(--input);border:1px solid var(--border);border-radius:12px;padding:12px 18px;flex:1;min-width:220px;">
+        <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:8px;">${escapeHtml(s.shop_domain)}</div>
+        <div style="display:flex;gap:20px;">
+          <div><div style="font-size:19px;font-weight:800;color:#3b82f6;line-height:1;">${s.live}</div><div style="font-size:10.5px;color:var(--muted);margin-top:4px;">en vivo</div></div>
+          <div><div style="font-size:19px;font-weight:800;color:#ef4444;line-height:1;">${s.abandoned}</div><div style="font-size:10.5px;color:var(--muted);margin-top:4px;">abandonados hoy</div></div>
+          <div><div style="font-size:19px;font-weight:800;color:#22c55e;line-height:1;">${s.submitted}</div><div style="font-size:10.5px;color:var(--muted);margin-top:4px;">enviados hoy</div></div>
         </div>
-      </div>`).join('<div style="width:1px;background:var(--border);"></div>');
+      </div>`).join("") : `<div style="font-size:12px;color:var(--muted);">Sin datos todavía</div>`;
   } catch (e) { console.error("Leads stats error:", e); }
 }
 
@@ -6757,7 +6759,7 @@ async function refreshLeads() {
     const list = document.getElementById("leads-list");
     if (list) list.innerHTML = sessions.length
       ? sessions.map(s => renderLeadRow(s, numberOf[s.session_id])).join("")
-      : `<div style="padding:40px;text-align:center;color:#6b7280;font-size:13px;">Sin leads todavía — instala el script en tu tienda</div>`;
+      : `<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Sin leads todavía — instala el script en tu tienda</div>`;
 
     await refreshLeadsStats();
   } catch (e) { console.error("Leads error:", e); }
