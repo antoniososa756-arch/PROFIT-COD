@@ -1537,11 +1537,6 @@ const now = new Date();
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button id="met-refresh-btn" onclick="loadMetricas()" title="Actualizar ahora"
-            style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;cursor:pointer;transition:all .15s;"
-            onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-          </button>
           <div style="position:relative;" id="met-picker-wrap">
             <button id="met-picker-trigger" onclick="toggleMetDatePicker()"
               style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
