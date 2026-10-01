@@ -7105,7 +7105,9 @@ function leadsDailySessionNumbers(sessions) {
 }
 
 function leadsFilterSessions(sessions, filter) {
-  if (filter === "activos") return sessions.filter(s => ["browsing", "open", "filling", "processing"].includes(s.status));
+  // "Activos" = en el formulario (viendo/rellenando/confirmando) -- "en la
+  // tienda sin más" ya lo cubre el contador de "Visitantes ahora mismo".
+  if (filter === "activos") return sessions.filter(s => ["open", "filling", "processing"].includes(s.status));
   if (filter === "abandonados") return sessions.filter(s => s.status === "page_abandoned");
   if (filter === "completados") return sessions.filter(s => s.status === "submitted");
   if (filter === "no_completados") return sessions.filter(s => s.status === "error");
