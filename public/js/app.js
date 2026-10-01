@@ -2465,14 +2465,23 @@ if (id === "mi-equipo") {
 }
 
 // =========================
-// SECCIÓN LEADS (en construcción)
+// SECCIÓN LEADS — vista en vivo por tienda + historial de sesiones
 // =========================
 if (id === "leads") {
   if (t) t.textContent = "Leads";
-  if (s) s.textContent = "";
+  if (s) s.textContent = "Actividad en vivo y leads de Releasit COD, por tienda";
   if (c) c.textContent = "Leads";
-  box.className = "card";
-  box.innerHTML = "";
+  box.className = "";
+  box.removeAttribute("style");
+  box.innerHTML = `<div id="leads-page-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:20px;">
+    <div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Cargando...</div>
+  </div>`;
+  loadLeadsPage();
+  if (window.__leadsPageInterval) clearInterval(window.__leadsPageInterval);
+  window.__leadsPageInterval = setInterval(() => {
+    if (window.__currentRoute?.id !== "leads") { clearInterval(window.__leadsPageInterval); return; }
+    loadLeadsPage();
+  }, 20000);
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -6566,7 +6575,7 @@ function renderLeadRow(s, sessionNumber) {
     <div id="lead-row-${s.session_id}" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);flex-shrink:0;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 16px;background:var(--input);border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <span style="font-size:12px;font-weight:700;color:var(--muted);">Sesión ${sessionNumber}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--muted);">Sesión ${sessionNumber}${s.country ? ` · ${escapeHtml([s.region, s.country].filter(Boolean).join(", "))}` : ""}</span>
           <span class="status ${st.cls}">${st.text}</span>
           <span style="font-size:12px;color:var(--muted);">${escapeHtml(s.shop_domain)}</span>
         </div>
@@ -6801,11 +6810,134 @@ window.filterLeads = refreshLeads;
 // cliente en el formulario dispara un evento.
 let __codRefreshDebounce = null;
 function handleCodEvent(data) {
-  if (!document.getElementById("leads-list")) return; // pestaña Leads no abierta
-  clearTimeout(__codRefreshDebounce);
-  __codRefreshDebounce = setTimeout(refreshLeads, 400);
+  if (document.getElementById("leads-list")) {
+    clearTimeout(__codRefreshDebounce);
+    __codRefreshDebounce = setTimeout(refreshLeads, 400);
+  }
+  if (document.getElementById("leads-page-grid") && window.__currentRoute?.id === "leads") {
+    clearTimeout(window.__leadsPageDebounce);
+    window.__leadsPageDebounce = setTimeout(loadLeadsPage, 400);
+  }
 }
 window.handleCodEvent = handleCodEvent;
+
+// ─── PÁGINA "LEADS" — vista en vivo + historial, separada por tienda ───────────
+
+const LEADS_FILTER_LABELS = { todos: "Todos", activos: "Activos", abandonados: "Abandonados" };
+window.__leadsPageFilter = window.__leadsPageFilter || {}; // { [shop_domain]: 'todos'|'activos'|'abandonados' }
+
+function leadsStatIcon(path) {
+  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+}
+function leadsStatCard(color, number, label, icon) {
+  return `
+    <div class="stat-card">
+      <div class="stat-icon ${color}">${icon}</div>
+      <div class="stat-info">
+        <span class="stat-num">${number}</span>
+        <span class="stat-label">${label}</span>
+      </div>
+    </div>`;
+}
+
+async function loadLeadsPage() {
+  const grid = document.getElementById("leads-page-grid");
+  if (!grid) return;
+  try {
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const dash = await fetch(`${API_BASE}/api/cod-tracker/leads-dashboard`, { headers: h }).then(r => r.json());
+    if (!Array.isArray(dash)) { grid.innerHTML = `<div style="padding:40px;text-align:center;color:#dc2626;font-size:13px;">${escapeHtml(dash?.error || "Error cargando Leads")}</div>`; return; }
+    if (!dash.length) { grid.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">No tienes tiendas Shopify conectadas.</div>`; return; }
+
+    // Historial de sesiones de todas las tiendas en una sola llamada, se
+    // reparte por shop_domain abajo -- evita una petición por tienda.
+    const allSessions = await fetch(`${API_BASE}/api/cod-tracker/sessions?limit=200`, { headers: h }).then(r => r.json()).catch(() => []);
+    const sessionsByShop = {};
+    (Array.isArray(allSessions) ? allSessions : []).forEach(sess => { (sessionsByShop[sess.shop_domain] ||= []).push(sess); });
+
+    grid.innerHTML = dash.map(d => leadsStorePanelHtml(d, sessionsByShop[d.shop_domain] || [])).join("");
+  } catch (e) {
+    console.error("loadLeadsPage:", e);
+    grid.innerHTML = `<div style="padding:40px;text-align:center;color:#dc2626;font-size:13px;">Error cargando Leads</div>`;
+  }
+}
+window.loadLeadsPage = loadLeadsPage;
+
+function leadsStorePanelHtml(d, sessions) {
+  const domain = d.shop_domain;
+  const panelId = `leads-panel-${domain.replace(/[^a-z0-9]/gi, "_")}`;
+  const fmtMoney = n => (parseFloat(n) || 0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  return `
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="font-size:14.5px;font-weight:700;color:var(--text);">${escapeHtml(d.shop_name)}</div>
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);padding:4px 10px;border-radius:20px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.3);animation:pulse 2s infinite;"></div>
+          <span style="font-size:10.5px;color:#16a34a;font-weight:700;">EN VIVO</span>
+        </div>
+      </div>
+
+      <div style="padding:16px 20px;">
+        <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);gap:10px;">
+          ${leadsStatCard("blue", d.visitantes_vivo, "Visitantes ahora mismo", leadsStatIcon('<circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>'))}
+          ${leadsStatCard("green", `${fmtMoney(d.ventas_hoy)} €`, "Ventas totales (hoy)", leadsStatIcon('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'))}
+          ${leadsStatCard("purple", d.sesiones_hoy, "Sesiones (hoy)", leadsStatIcon('<path d="M3 12h4l2 8 6-16 2 8h4"/>'))}
+          ${leadsStatCard("orange", d.pedidos_hoy, "Pedidos (hoy)", leadsStatIcon('<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/>'))}
+        </div>
+
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">Comportamiento de clientes ahora mismo</div>
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);gap:10px;">
+          ${leadsStatCard("blue", d.formularios_activos, "Formularios activos", leadsStatIcon('<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"/>'))}
+          ${leadsStatCard("teal", d.rellenando, "Rellenando el formulario", leadsStatIcon('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'))}
+          ${leadsStatCard("green", d.compras_hoy, "Compras realizadas (hoy)", leadsStatIcon('<path d="M20 6L9 17l-5-5"/>'))}
+        </div>
+      </div>
+
+      <div id="${panelId}" style="border-top:1px solid var(--border);">
+        ${leadsSessionsHistoryHtml(domain, sessions)}
+      </div>
+    </div>`;
+}
+
+function leadsFilterSessions(sessions, filter) {
+  if (filter === "activos") return sessions.filter(s => ["browsing", "open", "filling"].includes(s.status));
+  if (filter === "abandonados") return sessions.filter(s => s.status === "page_abandoned");
+  return sessions;
+}
+
+function leadsSessionsHistoryHtml(domain, sessions) {
+  const filter = window.__leadsPageFilter[domain] || "todos";
+  const byAge = [...sessions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const numberOf = {};
+  byAge.forEach((s, i) => { numberOf[s.session_id] = i + 1; });
+  const filtered = leadsFilterSessions(sessions, filter)
+    .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+
+  const tabsHtml = Object.entries(LEADS_FILTER_LABELS).map(([key, label]) => `
+    <span onclick="setLeadsFilter('${escapeAttr(domain)}','${key}')"
+      style="padding:5px 13px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;
+             background:${filter === key ? "#22c55e" : "transparent"};color:${filter === key ? "#fff" : "var(--muted)"};">
+      ${label}
+    </span>`).join("");
+
+  return `
+    <div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Historial de sesiones</div>
+      <div style="display:flex;gap:4px;background:var(--input);padding:3px;border-radius:9px;">${tabsHtml}</div>
+    </div>
+    <div style="max-height:380px;overflow-y:auto;padding:0 20px 16px;display:flex;flex-direction:column;gap:10px;">
+      ${filtered.length
+        ? filtered.map(s => renderLeadRow(s, numberOf[s.session_id])).join("")
+        : `<div style="padding:24px;text-align:center;color:var(--muted);font-size:12.5px;">Sin sesiones ${filter !== "todos" ? LEADS_FILTER_LABELS[filter].toLowerCase() : ""}</div>`}
+    </div>`;
+}
+
+function setLeadsFilter(domain, filter) {
+  window.__leadsPageFilter[domain] = filter;
+  loadLeadsPage();
+}
+window.setLeadsFilter = setLeadsFilter;
 
 function toggleColorPicker(storeId, e) {
   e.stopPropagation();

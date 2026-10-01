@@ -120,11 +120,34 @@ router.options("/event", (req, res) => {
 // req.body en {} en silencio (sin error visible), lo que causaba que ningún
 // evento se guardara nunca a pesar de que el script sí llegaba a la tienda y
 // recibía su 204 — exactamente el bug de "no trae ningún dato" de la vez pasada.
+// Geolocaliza una sesión por IP (país/provincia) una sola vez -- se usa el
+// primer "page_view" de cada sesión. ip-api.com es gratis sin API key para
+// este volumen; si falla o no hay IP, simplemente queda sin país/provincia.
+async function geolocateSession(shopDomain, sid, ip) {
+  try {
+    if (!ip) return;
+    const existing = await db.get(
+      "SELECT country FROM checkout_sessions WHERE shop_domain = $1 AND session_id = $2",
+      [shopDomain, sid]
+    );
+    if (existing?.country) return;
+    const r = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName`, { signal: AbortSignal.timeout(4000) });
+    const d = await r.json();
+    if (d.status === "success") {
+      await db.run(
+        "UPDATE checkout_sessions SET country = $1, region = $2 WHERE shop_domain = $3 AND session_id = $4",
+        [d.country || null, d.regionName || null, shopDomain, sid]
+      );
+    }
+  } catch (e) {}
+}
+
 router.post("/event", async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.status(204).end(); // responder rápido, procesar async
   const { shop, sid, type, field, value, formData, url } = req.body || {};
   if (!shop || !sid || !type) return;
+  const clientIp = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || null;
 
   try {
     const shopRow = await db.get(
@@ -163,6 +186,8 @@ router.post("/event", async (req, res) => {
       [shop.toLowerCase(), shopRow.user_id, sid, status,
        JSON.stringify(formData || {}), url || null]
     );
+
+    if (type === "page_view") geolocateSession(shop.toLowerCase(), sid, clientIp);
 
     // Cronología de la sesión (lo que arma "Sesión 1: entró, abrió el
     // formulario, rellenó X, abandonó/envió") — se omiten field_focus (sin
@@ -223,7 +248,7 @@ router.get("/sessions", auth, async (req, res) => {
   const { shop, status, limit = 100 } = req.query;
   try {
     await expireStaleSessions(userId);
-    let q = `SELECT session_id, shop_domain, status, form_data, page_url, created_at, updated_at
+    let q = `SELECT session_id, shop_domain, status, form_data, page_url, country, region, created_at, updated_at
              FROM checkout_sessions WHERE user_id = $1`;
     const params = [userId];
     if (shop) { q += ` AND shop_domain = $${params.length + 1}`; params.push(shop); }
@@ -269,6 +294,91 @@ router.get("/stats", auth, async (req, res) => {
     );
     res.json(rows);
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Dashboard de la sección "Leads" (en vivo + hoy, por tienda) ───────────────
+// Visitantes en vivo / formularios activos / rellenando salen de
+// checkout_sessions (presencia en tiempo real). Ventas y pedidos de hoy salen
+// de orders -- mismo cálculo que ya usa Gastos Ads (facturación ya restando
+// cancelados del día, pedidos sin contar cancelados).
+router.get("/leads-dashboard", auth, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    await expireStaleSessions(userId);
+
+    const shops = await db.all(
+      "SELECT shop_domain, shop_name FROM shops WHERE user_id = $1 AND status = 'active' ORDER BY shop_name ASC",
+      [userId]
+    );
+    if (!shops.length) return res.json([]);
+
+    const sessionRows = await db.all(
+      `SELECT shop_domain,
+              COUNT(*) FILTER (WHERE status IN ('browsing','open','filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS visitantes_vivo,
+              COUNT(*) FILTER (WHERE status = 'open'    AND updated_at > NOW() - INTERVAL '3 minutes') AS formularios_activos,
+              COUNT(*) FILTER (WHERE status = 'filling' AND updated_at > NOW() - INTERVAL '3 minutes') AS rellenando,
+              COUNT(*) FILTER (WHERE status = 'submitted' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS compras_hoy,
+              COUNT(*) FILTER (WHERE (created_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS sesiones_hoy
+       FROM checkout_sessions WHERE user_id = $1
+       GROUP BY shop_domain`,
+      [userId]
+    );
+    const sessionMap = {};
+    sessionRows.forEach(r => { sessionMap[r.shop_domain] = r; });
+
+    // Mismo cálculo que la tabla de Gastos Ads: ingresos/pedidos por día de
+    // CREACIÓN del pedido, y el descuento de cancelados por día en que se
+    // CANCELÓ (puede ser un pedido creado otro día y cancelado hoy).
+    const shopFilter = `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+      OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`;
+    const ingresosRows = await db.all(
+      `SELECT COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
+              COALESCE(SUM(o.total_price), 0) AS ingresos_hoy,
+              COUNT(*) FILTER (WHERE o.fulfillment_status != 'cancelado') AS pedidos_hoy
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE ${shopFilter} AND (o.created_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date
+       GROUP BY COALESCE(o.shop_domain, s.shop_domain)`,
+      [userId]
+    );
+    const descuentoRows = await db.all(
+      `SELECT COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
+              COALESCE(SUM(o.total_price), 0) AS descuento_hoy
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE ${shopFilter} AND o.fulfillment_status = 'cancelado' AND o.cancelled_at IS NOT NULL
+         AND (o.cancelled_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date
+       GROUP BY COALESCE(o.shop_domain, s.shop_domain)`,
+      [userId]
+    );
+    const ordersMap = {};
+    ingresosRows.forEach(r => { ordersMap[r.shop_domain] = { ventas_hoy: parseFloat(r.ingresos_hoy || 0), pedidos_hoy: r.pedidos_hoy }; });
+    descuentoRows.forEach(r => {
+      const o = ordersMap[r.shop_domain] || { ventas_hoy: 0, pedidos_hoy: 0 };
+      o.ventas_hoy -= parseFloat(r.descuento_hoy || 0);
+      ordersMap[r.shop_domain] = o;
+    });
+
+    const result = shops.map(s => {
+      const sess = sessionMap[s.shop_domain] || {};
+      const ord  = ordersMap[s.shop_domain] || {};
+      return {
+        shop_domain: s.shop_domain,
+        shop_name: s.shop_name || s.shop_domain,
+        visitantes_vivo: parseInt(sess.visitantes_vivo || 0),
+        formularios_activos: parseInt(sess.formularios_activos || 0),
+        rellenando: parseInt(sess.rellenando || 0),
+        compras_hoy: parseInt(sess.compras_hoy || 0),
+        sesiones_hoy: parseInt(sess.sesiones_hoy || 0),
+        ventas_hoy: parseFloat(ord.ventas_hoy || 0),
+        pedidos_hoy: parseInt(ord.pedidos_hoy || 0),
+      };
+    });
+    res.json(result);
+  } catch (e) {
+    console.error("cod-tracker/leads-dashboard error:", e);
     res.status(500).json({ error: e.message });
   }
 });

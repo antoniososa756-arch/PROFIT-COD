@@ -438,6 +438,10 @@ await pool.query(`
       UNIQUE(shop_domain, session_id)
     )
   `);
+  // País/provincia desde donde se conecta cada sesión (geolocalización por IP,
+  // una sola vez al crearse la sesión — ver server/routes/cod-tracker.routes.js)
+  await pool.query(`ALTER TABLE checkout_sessions ADD COLUMN IF NOT EXISTS country TEXT`);
+  await pool.query(`ALTER TABLE checkout_sessions ADD COLUMN IF NOT EXISTS region TEXT`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_cs_user_updated ON checkout_sessions(user_id, updated_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_cs_status ON checkout_sessions(status)`);
 
