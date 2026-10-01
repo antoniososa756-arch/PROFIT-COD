@@ -2474,6 +2474,21 @@ if (id === "leads") {
   box.className = "";
   box.removeAttribute("style");
   box.innerHTML = `
+    <svg width="0" height="0" style="position:absolute;overflow:hidden;" aria-hidden="true">
+      <defs>
+        <filter id="leads-fire-goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10" result="goo" />
+          <feComposite in="goo" in2="goo" operator="atop" />
+        </filter>
+        <filter id="leads-fire-turbulence" x="-30%" y="-30%" width="160%" height="160%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="2" seed="2" result="noise">
+            <animate attributeName="seed" values="1;15;30;15;1" dur="7s" repeatCount="indefinite" />
+          </feTurbulence>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="22" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
     <div class="card" style="margin-bottom:20px;">
       <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
         <button id="leads-lock-btn" onclick="toggleLeadsLock()" title="Desbloquear para reordenar las tiendas"
@@ -7085,15 +7100,19 @@ function leadsStorePanelHtml(d, sessions) {
   const fmtMoney = n => (parseFloat(n) || 0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fireLevel = leadsFireLevel(d);
   // El fuego vive DETRÁS de todo el contenido (z-index 0) -- como cada
-  // tarjetita interna ya tiene su propio fondo opaco, se ve como llamas de
-  // verdad (varias "lenguas" con su propio parpadeo) que asoman por los
-  // huecos/bordes, creciendo desde abajo según el nivel, sin tapar ningún
-  // dato. Con pedido recién confirmado (fireLevel 1) la tarjeta ENTERA arde
-  // sin el difuminado hacia arriba que sí llevan los niveles parciales.
+  // tarjetita interna ya tiene su propio fondo opaco, se ve como un brillo
+  // que asoma por los huecos/bordes. Las "manchas" se funden entre sí
+  // (filtro SVG "goo") y luego se distorsionan con ruido animado (filtro de
+  // turbulencia) para un movimiento fluido y errático, más parecido a fuego
+  // real que una forma geométrica fija. Con pedido recién confirmado
+  // (fireLevel 1) la tarjeta ENTERA arde, sin el difuminado hacia arriba que
+  // sí llevan los niveles parciales.
   const fireOverlay = fireLevel > 0
     ? `<div class="leads-fire-overlay${fireLevel >= 1 ? " is-full" : ""}" style="height:${Math.round(fireLevel * 100)}%;">
-        <i class="flame-t t1"></i><i class="flame-t t2"></i><i class="flame-t t3"></i><i class="flame-t t4"></i><i class="flame-t t5"></i>
-        <span class="flame-ember e1"></span><span class="flame-ember e2"></span><span class="flame-ember e3"></span>
+        <div class="lava-blob-wrap">
+          <span class="lava-blob b1"></span><span class="lava-blob b2"></span>
+          <span class="lava-blob b3"></span><span class="lava-blob b4"></span>
+        </div>
       </div>`
     : "";
 
