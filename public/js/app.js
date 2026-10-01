@@ -1600,12 +1600,12 @@ const now = new Date();
               <span class="stat-num" id="stat-total">0</span>
               <span class="stat-label">Total Pedidos</span>
             </div>
-            <div style="border-left:1px solid #1f2937;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;min-width:0;cursor:pointer;" onclick="irAPedidosDesdeMetricas(['pendiente','enviado','en_transito','entregado','devuelto','destruido','franquicia'])" title="Ver estos pedidos">
+            <div style="border-left:1px solid #1f2937;padding-left:10px;display:flex;flex-direction:column;align-items:flex-start;min-width:0;cursor:pointer;" onclick="irAPedidosDesdeMetricas(['pendiente','en_preparacion','enviado','en_transito','entregado','devuelto','destruido','franquicia'])" title="Ver estos pedidos">
               <span class="stat-num" id="stat-sin-cancelados">0</span>
               <span class="stat-label">Sin cancelados</span>
             </div>
           </div>
-          <div style="border-top:1px solid #1f2937;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="irAPedidosDesdeMetricas(['enviado','en_transito','entregado','devuelto','destruido','franquicia'])" title="Ver estos pedidos">
+          <div style="border-top:1px solid #1f2937;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="irAPedidosDesdeMetricas(['en_preparacion','enviado','en_transito','entregado','devuelto','destruido','franquicia'])" title="Ver estos pedidos">
             <span style="font-size:12px;color:#6b7280;display:flex;flex-direction:column;line-height:1.4;">Enviados<span style="font-size:10px;color:#9ca3af;">(excl. pendientes y cancelados)</span></span>
             <span style="font-size:14px;font-weight:700;color:#22c55e;" id="stat-enviados">0</span>
           </div>
@@ -1621,7 +1621,7 @@ const now = new Date();
           </div>
         </div>
 
-        <div class="stat-card" style="cursor:pointer;" onclick="irAPedidosDesdeMetricas('en_transito')" title="Ver estos pedidos">
+        <div class="stat-card" style="cursor:pointer;" onclick="irAPedidosDesdeMetricas(['en_preparacion','enviado','en_transito','franquicia'])" title="Ver estos pedidos">
           <div class="stat-icon blue">
             <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           </div>
@@ -1728,7 +1728,7 @@ const now = new Date();
                 </span>
                 <span id="legend-rojo" style="color:var(--text);">Dev+Dest 0%</span>
               </div>
-              <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="irAPedidosDesdeMetricas('en_transito')" title="Ver estos pedidos">
+              <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="irAPedidosDesdeMetricas(['en_preparacion','enviado','en_transito','franquicia'])" title="Ver estos pedidos">
                 <span style="width:30px;height:26px;border-radius:7px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
                   <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></span>
                 </span>
