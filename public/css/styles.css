@@ -1631,6 +1631,12 @@ body.dark .btn-filter:hover { background: rgba(34,197,94,.12); }
   75%, 100%  { transform: scale(2.2); opacity: 0; }
 }
 
+/* Punto "EN VIVO" de la pestaña Leads COD. */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .35; }
+}
+
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
 }

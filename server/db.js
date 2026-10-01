@@ -421,6 +421,26 @@ await pool.query(`
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_cancelled_at ON orders(cancelled_at)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_shop_domain  ON orders(shop_domain)`);
 
+  // Tracker de formularios Releasit COD (antes "Realist", el nombre real de la
+  // app) — sesiones de gente abriendo/llenando/enviando el formulario de pago
+  // contra reembolso en tiempo real (ver server/routes/cod-tracker.routes.js).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS checkout_sessions (
+      id          SERIAL PRIMARY KEY,
+      user_id     INTEGER NOT NULL,
+      shop_domain TEXT NOT NULL,
+      session_id  TEXT NOT NULL,
+      status      TEXT NOT NULL DEFAULT 'open',
+      form_data   JSONB NOT NULL DEFAULT '{}',
+      page_url    TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(shop_domain, session_id)
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_cs_user_updated ON checkout_sessions(user_id, updated_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_cs_status ON checkout_sessions(status)`);
+
   // PFactura — facturación sencilla de cada cliente hacia terceros suyos
   // (independiente de billing_invoices, que es lo que ProfitCod cobra a sus clientes)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pfactura_seq INTEGER NOT NULL DEFAULT 0`);
