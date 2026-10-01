@@ -6990,7 +6990,7 @@ function leadsStorePanelHtml(d, sessions) {
           <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);gap:8px;">
             ${leadsStatCard("blue", d.formularios_activos, "Formularios activos", leadsStatIcon('<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"/>'))}
             ${leadsStatCard("teal", d.rellenando, "Rellenando el formulario", leadsStatIcon('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'))}
-            ${leadsStatCard("green", d.compras_hoy, "Compras realizadas (hoy)", leadsStatIcon('<path d="M20 6L9 17l-5-5"/>'))}
+            ${leadsStatCard("green", d.compras_recientes, "Compras realizadas (5 min)", leadsStatIcon('<path d="M20 6L9 17l-5-5"/>'))}
           </div>
         </div>
 

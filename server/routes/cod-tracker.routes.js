@@ -317,9 +317,9 @@ router.get("/leads-dashboard", auth, async (req, res) => {
     const sessionRows = await db.all(
       `SELECT shop_domain,
               COUNT(*) FILTER (WHERE status IN ('browsing','open','filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS visitantes_vivo,
-              COUNT(*) FILTER (WHERE status = 'open'    AND updated_at > NOW() - INTERVAL '3 minutes') AS formularios_activos,
+              COUNT(*) FILTER (WHERE status IN ('open','filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS formularios_activos,
               COUNT(*) FILTER (WHERE status = 'filling' AND updated_at > NOW() - INTERVAL '3 minutes') AS rellenando,
-              COUNT(*) FILTER (WHERE status = 'submitted' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS compras_hoy,
+              COUNT(*) FILTER (WHERE status = 'submitted' AND updated_at > NOW() - INTERVAL '5 minutes') AS compras_recientes,
               COUNT(*) FILTER (WHERE (created_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS sesiones_hoy
        FROM checkout_sessions WHERE user_id = $1
        GROUP BY shop_domain`,
@@ -370,7 +370,7 @@ router.get("/leads-dashboard", auth, async (req, res) => {
         visitantes_vivo: parseInt(sess.visitantes_vivo || 0),
         formularios_activos: parseInt(sess.formularios_activos || 0),
         rellenando: parseInt(sess.rellenando || 0),
-        compras_hoy: parseInt(sess.compras_hoy || 0),
+        compras_recientes: parseInt(sess.compras_recientes || 0),
         sesiones_hoy: parseInt(sess.sesiones_hoy || 0),
         ventas_hoy: parseFloat(ord.ventas_hoy || 0),
         pedidos_hoy: parseInt(ord.pedidos_hoy || 0),
