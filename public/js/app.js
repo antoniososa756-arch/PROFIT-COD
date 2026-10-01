@@ -6949,7 +6949,19 @@ async function loadLeadsPage() {
     const sessionsByShop = {};
     (Array.isArray(allSessions) ? allSessions : []).forEach(sess => { (sessionsByShop[sess.shop_domain] ||= []).push(sess); });
 
+    // Cada auto-refresh reconstruye todo el HTML, lo que reiniciaba el scroll
+    // del historial a la parte de arriba -- imposible leer sesiones viejas
+    // mientras sigue actualizando. Se guarda el scroll de cada tienda antes y
+    // se restaura después.
+    const scrollPositions = {};
+    grid.querySelectorAll(".leads-sessions-scroll").forEach(el => { scrollPositions[el.dataset.domain] = el.scrollTop; });
+
     grid.innerHTML = ordered.map(d => leadsStorePanelHtml(d, sessionsByShop[d.shop_domain] || [])).join("");
+
+    grid.querySelectorAll(".leads-sessions-scroll").forEach(el => {
+      const saved = scrollPositions[el.dataset.domain];
+      if (saved) el.scrollTop = saved;
+    });
   } catch (e) {
     console.error("loadLeadsPage:", e);
     grid.innerHTML = `<div style="padding:40px;text-align:center;color:#dc2626;font-size:13px;">Error cargando Leads</div>`;
@@ -7075,7 +7087,7 @@ function leadsSessionsHistoryHtml(domain, sessions) {
     <div style="padding:14px 20px 10px;">
       <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Historial de sesiones</div>
     </div>
-    <div style="max-height:380px;overflow-y:auto;padding:0 20px 16px;display:flex;flex-direction:column;gap:10px;">
+    <div class="leads-sessions-scroll" data-domain="${escapeAttr(domain)}" style="max-height:380px;overflow-y:auto;padding:0 20px 16px;display:flex;flex-direction:column;gap:10px;">
       ${filtered.length
         ? filtered.map(s => renderLeadRow(s, numberOf[s.session_id])).join("")
         : `<div style="padding:24px;text-align:center;color:var(--muted);font-size:12.5px;">Sin sesiones ${filter !== "todos" ? LEADS_FILTER_LABELS[filter].toLowerCase() : ""}</div>`}
