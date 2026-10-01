@@ -339,7 +339,7 @@ router.get("/leads-dashboard", auth, async (req, res) => {
               COUNT(*) FILTER (WHERE o.fulfillment_status != 'cancelado') AS pedidos_hoy
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE ${shopFilter} AND (o.created_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date
+       WHERE ${shopFilter} AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date
        GROUP BY COALESCE(o.shop_domain, s.shop_domain)`,
       [userId]
     );
@@ -349,7 +349,7 @@ router.get("/leads-dashboard", auth, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE ${shopFilter} AND o.fulfillment_status = 'cancelado' AND o.cancelled_at IS NOT NULL
-         AND (o.cancelled_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date
+         AND (o.cancelled_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date
        GROUP BY COALESCE(o.shop_domain, s.shop_domain)`,
       [userId]
     );
