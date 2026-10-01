@@ -72,6 +72,12 @@ router.get("/script.js", async (req, res) => {
   }
   checkState();
   setInterval(checkState,700);
+  // Si cierra la pestaña o navega fuera de la página con el formulario
+  // todavía abierto, el script se mata de golpe y nunca llega a detectar el
+  // cierre por el polling de arriba -- se manda un último aviso justo antes.
+  addEventListener("pagehide",function(){
+    if(tracked){tracked=false;send("form_abandon",{formData:fd});}
+  });
 })();`;
 
   res.setHeader("Content-Type", "application/javascript");
@@ -167,7 +173,7 @@ router.get("/stats", auth, async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT shop_domain,
-              COUNT(*) FILTER (WHERE status='open' OR status='filling') AS live,
+              COUNT(*) FILTER (WHERE (status='open' OR status='filling') AND updated_at > NOW() - INTERVAL '10 minutes') AS live,
               COUNT(*) FILTER (WHERE status='abandoned') AS abandoned,
               COUNT(*) FILTER (WHERE status='submitted') AS submitted,
               COUNT(*) FILTER (WHERE updated_at > NOW() - INTERVAL '24 hours') AS today
