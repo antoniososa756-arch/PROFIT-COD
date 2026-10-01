@@ -6863,7 +6863,7 @@ window.handleCodEvent = handleCodEvent;
 
 // ─── PÁGINA "LEADS" — vista en vivo + historial, separada por tienda ───────────
 
-const LEADS_FILTER_LABELS = { todos: "Todos", activos: "Activos", completados: "Completados", no_completados: "No completados", abandonados: "Abandonados" };
+const LEADS_FILTER_LABELS = { todos: "Todos", activos: "Activos", formularios: "Formularios", completados: "Completados", no_completados: "No completados", abandonados: "Abandonados" };
 
 function leadsStatIcon(path) {
   return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
@@ -7105,9 +7105,10 @@ function leadsDailySessionNumbers(sessions) {
 }
 
 function leadsFilterSessions(sessions, filter) {
-  // "Activos" = en el formulario (viendo/rellenando/confirmando) -- "en la
-  // tienda sin más" ya lo cubre el contador de "Visitantes ahora mismo".
-  if (filter === "activos") return sessions.filter(s => ["open", "filling", "processing"].includes(s.status));
+  if (filter === "activos") return sessions.filter(s => ["browsing", "open", "filling", "processing"].includes(s.status));
+  // "Formularios" = solo actividad en el formulario (viendo/rellenando/
+  // confirmando pedido) -- sin contar el simple "en la tienda".
+  if (filter === "formularios") return sessions.filter(s => ["open", "filling", "processing"].includes(s.status));
   if (filter === "abandonados") return sessions.filter(s => s.status === "page_abandoned");
   if (filter === "completados") return sessions.filter(s => s.status === "submitted");
   if (filter === "no_completados") return sessions.filter(s => s.status === "error");
