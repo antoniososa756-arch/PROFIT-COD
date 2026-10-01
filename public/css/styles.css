@@ -1717,9 +1717,17 @@ body.dark .btn-filter:hover { background: rgba(34,197,94,.12); }
 .flame-t {
   position: absolute;
   bottom: -8%;
-  border-radius: 50% 50% 48% 48% / 68% 68% 32% 32%;
+  /* Silueta de llama de verdad (punta arriba, "cintura" marcada a los lados,
+     base ancha) en vez de un óvalo -- un óvalo con blur se lee como una
+     bola, no como fuego. */
+  clip-path: polygon(
+    50% 0%,
+    75% 32%, 60% 38%, 86% 64%, 66% 70%,
+    82% 100%, 18% 100%, 34% 70%, 14% 64%,
+    40% 38%, 25% 32%
+  );
   background: linear-gradient(to top, #b91c1c 0%, #f97316 42%, #fbbf24 72%, #fef3c7 100%);
-  filter: blur(1.5px);
+  filter: blur(2px);
   transform-origin: bottom center;
   opacity: .95;
 }
