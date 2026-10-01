@@ -221,12 +221,14 @@ router.get("/stats", auth, async (req, res) => {
   const userId = req.user.id;
   try {
     await expireStaleSessions(userId);
+    // "abandonados" y "enviados" son del día de hoy en hora España (se
+    // reinician a medianoche, igual que el resto de PROFITCOD) -- "en vivo"
+    // no, porque es un estado de ahora mismo, no un total diario.
     const rows = await db.all(
       `SELECT shop_domain,
               COUNT(*) FILTER (WHERE (status='open' OR status='filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS live,
-              COUNT(*) FILTER (WHERE status='abandoned') AS abandoned,
-              COUNT(*) FILTER (WHERE status='submitted') AS submitted,
-              COUNT(*) FILTER (WHERE updated_at > NOW() - INTERVAL '24 hours') AS today
+              COUNT(*) FILTER (WHERE status='abandoned' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS abandoned,
+              COUNT(*) FILTER (WHERE status='submitted' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS submitted
        FROM checkout_sessions WHERE user_id = $1
        GROUP BY shop_domain`,
       [userId]
