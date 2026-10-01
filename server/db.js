@@ -459,6 +459,10 @@ await pool.query(`
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_cse_session ON checkout_session_events(shop_domain, session_id, created_at)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_cse_user ON checkout_session_events(user_id, created_at DESC)`);
+  // Migración: sesiones que quedaron con el estado viejo "abandoned" antes de
+  // separarlo en "page_abandoned" (página) -- sin esto se muestran como texto
+  // plano sin estilo porque ya no existe esa clave en el mapa de estados.
+  await pool.query(`UPDATE checkout_sessions SET status = 'page_abandoned' WHERE status = 'abandoned'`);
 
   // PFactura — facturación sencilla de cada cliente hacia terceros suyos
   // (independiente de billing_invoices, que es lo que ProfitCod cobra a sus clientes)

@@ -57,17 +57,30 @@ router.get("/script.js", async (req, res) => {
   // cero cada 700ms si está abierto ahora mismo -- funciona sin importar cómo
   // lo maneje la app por dentro. "Abandonó el formulario" ya NO termina la
   // sesión -- el cliente sigue en la tienda, solo cerró el formulario.
+  //
+  // closedStreak exige verlo cerrado en 2 chequeos seguidos (~1.4s) antes de
+  // avisar -- la propia app de Releasit parece quitar y volver a poner la
+  // clase "abierto" por un instante al cambiar de campo (visto con el
+  // autocompletado de dirección), y sin este margen eso se registraba como un
+  // cierre y reapertura real del formulario.
+  var closedStreak=0;
   function checkState(){
     var modal=document.getElementById("_rsi-cod-form-modal");
     var isOpen=!!(modal&&modal.classList.contains("_rsi-cod-form-modal-open"));
-    if(isOpen&&!tracked){
-      tracked=true; fd={};
-      send("form_open");
-      var form=document.getElementById("_rsi-cod-form-modal-form");
-      if(form)attachForm(form);
-    } else if(!isOpen&&tracked){
-      tracked=false; attachedForm=null;
-      send("form_abandon",{formData:fd});
+    if(isOpen){
+      closedStreak=0;
+      if(!tracked){
+        tracked=true; fd={};
+        send("form_open");
+        var form=document.getElementById("_rsi-cod-form-modal-form");
+        if(form)attachForm(form);
+      }
+    } else if(tracked){
+      closedStreak++;
+      if(closedStreak>=2){
+        tracked=false; attachedForm=null; closedStreak=0;
+        send("form_abandon",{formData:fd});
+      }
     }
   }
   // "En vivo" ya no depende de tener el formulario abierto -- este latido cada
