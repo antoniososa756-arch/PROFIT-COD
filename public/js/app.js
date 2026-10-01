@@ -6699,6 +6699,24 @@ async function loadLeadsCOD(container) {
   } catch(e) { console.error("loadLeadsCOD stores:", e); }
 }
 
+async function refreshLeadsStats() {
+  try {
+    const statsEl = document.getElementById("leads-stats");
+    if (!statsEl) return;
+    const sr2 = await fetch(`${API_BASE}/api/cod-tracker/stats`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const stats = await sr2.json();
+    statsEl.innerHTML = stats.map(s => `
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <span style="font-size:10px;color:#6b7280;">${escapeHtml(s.shop_domain)}</span>
+        <div style="display:flex;gap:10px;">
+          <span style="font-size:13px;font-weight:700;color:#3b82f6;">${s.live} <span style="font-size:10px;font-weight:400;">en vivo</span></span>
+          <span style="font-size:13px;font-weight:700;color:#ef4444;">${s.abandoned} <span style="font-size:10px;font-weight:400;">abandonados</span></span>
+          <span style="font-size:13px;font-weight:700;color:#22c55e;">${s.submitted} <span style="font-size:10px;font-weight:400;">enviados</span></span>
+        </div>
+      </div>`).join('<div style="width:1px;background:var(--border);"></div>');
+  } catch (e) { console.error("Leads stats error:", e); }
+}
+
 async function refreshLeads() {
   try {
     const shop = document.getElementById("leads-filter-shop")?.value || "";
@@ -6714,26 +6732,13 @@ async function refreshLeads() {
       ? sessions.map(renderLeadRow).join("")
       : `<div style="padding:40px;text-align:center;color:#6b7280;font-size:13px;">Sin leads todavía — instala el script en tu tienda</div>`;
 
-    // Stats
-    const statsEl = document.getElementById("leads-stats");
-    const sr2 = await fetch(`${API_BASE}/api/cod-tracker/stats`, { headers: { Authorization: "Bearer " + getActiveToken() } });
-    const stats = await sr2.json();
-    if (statsEl) {
-      statsEl.innerHTML = stats.map(s => `
-        <div style="display:flex;flex-direction:column;gap:2px;">
-          <span style="font-size:10px;color:#6b7280;">${escapeHtml(s.shop_domain)}</span>
-          <div style="display:flex;gap:10px;">
-            <span style="font-size:13px;font-weight:700;color:#3b82f6;">${s.live} <span style="font-size:10px;font-weight:400;">en vivo</span></span>
-            <span style="font-size:13px;font-weight:700;color:#ef4444;">${s.abandoned} <span style="font-size:10px;font-weight:400;">abandonados</span></span>
-            <span style="font-size:13px;font-weight:700;color:#22c55e;">${s.submitted} <span style="font-size:10px;font-weight:400;">enviados</span></span>
-          </div>
-        </div>`).join('<div style="width:1px;background:var(--border);"></div>');
-    }
+    await refreshLeadsStats();
   } catch (e) { console.error("Leads error:", e); }
 }
 window.filterLeads = refreshLeads;
 
 // Actualizar lead existente desde SSE en tiempo real
+let __codStatsDebounce = null;
 function handleCodEvent(data) {
   // Actualizar fila si existe, sino prepend
   const existing = document.getElementById(`lead-row-${data.sid}`);
@@ -6756,6 +6761,14 @@ function handleCodEvent(data) {
   } else {
     list.insertAdjacentHTML("afterbegin", html);
   }
+
+  // El contador de arriba ("X en vivo") solo se calculaba al abrir/recargar la
+  // pestaña — un evento en vivo actualizaba la fila pero no ese resumen, por
+  // eso se quedaba desactualizado mientras llegaban eventos nuevos. Se
+  // recalcula también aquí (con un pequeño debounce porque cada tecleo del
+  // cliente en el formulario dispara un evento).
+  clearTimeout(__codStatsDebounce);
+  __codStatsDebounce = setTimeout(refreshLeadsStats, 400);
 }
 window.handleCodEvent = handleCodEvent;
 
