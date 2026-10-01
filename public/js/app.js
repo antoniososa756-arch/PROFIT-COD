@@ -3071,7 +3071,7 @@ if (id === "pedidos") {
           <span class="tab" data-status="pendiente" onclick="filterByTab(this, 'pendiente')">Pendiente</span>
           <span class="tab" onclick="filterByTabPendienteMRW(this)">Pend. entregar MRW</span>
           <span class="tab" data-status="enviado" onclick="filterByTab(this, 'enviado')">Enviado</span>
-          <span class="tab" data-status="en_transito" onclick="filterByTab(this, 'en_transito')">En tránsito</span>
+          <span class="tab" data-status="en_preparacion,enviado,en_transito,franquicia" onclick="filterByTabMulti(this, ['en_preparacion','enviado','en_transito','franquicia'])">En tránsito</span>
           <span class="tab" data-status="entregado" onclick="filterByTab(this, 'entregado')">Entregado</span>
           <span class="tab" data-status="devuelto,destruido" onclick="filterByTabMulti(this, ['devuelto','destruido'])">Dev/Destruido</span>
           <span class="tab" data-status="franquicia" onclick="filterByTab(this, 'franquicia')">Franquicia</span>
