@@ -283,12 +283,12 @@ async function expireStaleSessions(userId) {
 
     // Pedidos que se quedaron en "processing" (el cliente dio clic en
     // "Completar pedido") sin que llegara la confirmación real del webhook de
-    // Shopify "orders/create" -- 5 minutos es de sobra para un pedido que sí
-    // se completó (el webhook llega casi al instante), así que pasado ese
-    // tiempo se marca como "error" en vez de quedar mintiendo como "enviado".
+    // Shopify "orders/create" -- el webhook llega en segundos cuando el
+    // pedido sí se completa, así que 1 minuto es de sobra; pasado ese tiempo
+    // se marca como "error" en vez de quedar mintiendo como "enviado".
     const failed = await db.all(
       `UPDATE checkout_sessions SET status = 'error', updated_at = updated_at
-       WHERE user_id = $1 AND status = 'processing' AND updated_at < NOW() - INTERVAL '5 minutes'
+       WHERE user_id = $1 AND status = 'processing' AND updated_at < NOW() - INTERVAL '1 minute'
        RETURNING session_id, shop_domain`,
       [userId]
     );
