@@ -6866,31 +6866,38 @@ function leadsSparkline(hoy, ayer, color) {
     const y = 28 - (v / max) * 26;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
-  return `<svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:100%;height:34px;display:block;margin-top:8px;">
-    ${arrAyer.length > 1 ? `<polyline points="${toPoints(arrAyer)}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="3,3" opacity=".35"/>` : ""}
-    ${arr.length > 1 ? `<polyline points="${toPoints(arr)}" fill="none" stroke="${color}" stroke-width="2"/>` : ""}
+  return `<svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:56px;height:22px;display:block;flex-shrink:0;">
+    ${arrAyer.length > 1 ? `<polyline points="${toPoints(arrAyer)}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="3,3" opacity=".35"/>` : ""}
+    ${arr.length > 1 ? `<polyline points="${toPoints(arr)}" fill="none" stroke="${color}" stroke-width="2.5"/>` : ""}
   </svg>`;
 }
 
-// Tarjeta "a lo Shopify": solo título en negrita y el valor debajo, sin ícono.
+// Tarjeta "a lo Shopify": título en negrita arriba (con la mini-gráfica
+// pegada a su lado, chiquita, como en el Live View real) y el valor debajo.
 function leadsStatCardPlain(title, value, sparklineHtml) {
   return `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;min-width:0;">
-      <div style="font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
-      <div style="font-size:21px;font-weight:800;color:var(--text);margin-top:5px;">${value}</div>
-      ${sparklineHtml || ""}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div style="font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+        ${sparklineHtml || ""}
+      </div>
+      <div style="font-size:21px;font-weight:800;color:var(--text);margin-top:6px;">${value}</div>
     </div>`;
 }
 
-// Tarjeta de "Comportamiento de clientes": una barra de color se enciende
-// cuando hay actividad (>0), para que se note sin depender de leer el número.
+// Tarjeta de "Comportamiento de clientes": cuando hay actividad (>0) se
+// enciende una barra GRANDE y llamativa (no una rayita) -- el objetivo es que
+// se note de reojo que algo está pasando ahí, sin tener que leer el número.
 function leadsBehaviorCard(color, number, label) {
   const active = number > 0;
+  const bar = active
+    ? `<div style="height:72px;border-radius:10px;background:linear-gradient(180deg, ${color}, ${color}cc);box-shadow:0 0 0 1px ${color}40, 0 6px 16px ${color}55;animation:leads-behavior-pulse 1.6s ease-in-out infinite;"></div>`
+    : `<div style="height:72px;border-radius:10px;background:var(--input);border:1px dashed var(--border);"></div>`;
   return `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;min-width:0;">
       <div style="font-size:11.5px;color:var(--muted);">${label}</div>
-      <div style="font-size:19px;font-weight:800;color:var(--text);margin:4px 0 9px;">${number}</div>
-      <div style="height:6px;border-radius:3px;background:${active ? color : "var(--input)"};transition:background .3s;"></div>
+      <div style="font-size:19px;font-weight:800;color:var(--text);margin:4px 0 10px;">${number}</div>
+      ${bar}
     </div>`;
 }
 

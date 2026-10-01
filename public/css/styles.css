@@ -1637,6 +1637,12 @@ body.dark .btn-filter:hover { background: rgba(34,197,94,.12); }
   50%      { opacity: .35; }
 }
 
+/* Barra grande de "Comportamiento de clientes" en Leads cuando hay actividad. */
+@keyframes leads-behavior-pulse {
+  0%, 100% { transform: scaleY(1);    opacity: 1; }
+  50%      { transform: scaleY(.94); opacity: .85; }
+}
+
 /* Grid de paneles por tienda en la página "Leads": nunca más de 2 columnas,
    sin importar cuán ancha sea la pantalla; baja a 1 sola con zoom o pantallas
    angostas. (auto-fit por sí solo seguiría agregando columnas en monitores
