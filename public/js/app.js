@@ -7071,11 +7071,16 @@ function leadsStorePanelHtml(d, sessions) {
   const domain = d.shop_domain;
   const panelId = `leads-panel-${domain.replace(/[^a-z0-9]/gi, "_")}`;
   const fmtMoney = n => (parseFloat(n) || 0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Hay visitantes AHORA MISMO -- le pone vida a la tarjeta con un latido y
+  // una llama encima, en vez de que se vea igual de "en blanco" que una
+  // tienda sin nadie dentro.
+  const isHot = (d.visitantes_vivo || 0) > 0;
 
   return `
-    <div class="card leads-store-panel" data-domain="${escapeAttr(domain)}" draggable="${window.__leadsUnlocked ? "true" : "false"}"
-      style="padding:0;overflow:hidden;${window.__leadsUnlocked ? "cursor:grab;" : ""}"
+    <div class="card leads-store-panel${isHot ? " leads-panel-hot" : ""}" data-domain="${escapeAttr(domain)}" draggable="${window.__leadsUnlocked ? "true" : "false"}"
+      style="padding:0;overflow:hidden;position:relative;${window.__leadsUnlocked ? "cursor:grab;" : ""}"
       ondragstart="leadsDragStart(event,'${escapeAttr(domain)}')" ondragover="leadsDragOver(event)" ondrop="leadsDrop(event,'${escapeAttr(domain)}')">
+      ${isHot ? `<span class="leads-fire-badge" title="Hay visitantes ahora mismo">🔥</span>` : ""}
       <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div style="font-size:14.5px;font-weight:700;color:var(--text);">${escapeHtml(d.shop_name)}</div>
         <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);padding:4px 10px;border-radius:20px;">
