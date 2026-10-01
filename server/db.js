@@ -441,6 +441,25 @@ await pool.query(`
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_cs_user_updated ON checkout_sessions(user_id, updated_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_cs_status ON checkout_sessions(status)`);
 
+  // Cronología de cada sesión del tracker COD -- checkout_sessions guarda solo
+  // el último estado (para el contador "en vivo"), esta tabla guarda cada
+  // evento individual en orden, para poder ver "sesión 1: abrió, rellenó
+  // teléfono, abandonó" en vez de solo el estado final.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS checkout_session_events (
+      id          SERIAL PRIMARY KEY,
+      user_id     INTEGER NOT NULL,
+      shop_domain TEXT NOT NULL,
+      session_id  TEXT NOT NULL,
+      type        TEXT NOT NULL,
+      field       TEXT,
+      value       TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_cse_session ON checkout_session_events(shop_domain, session_id, created_at)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_cse_user ON checkout_session_events(user_id, created_at DESC)`);
+
   // PFactura — facturación sencilla de cada cliente hacia terceros suyos
   // (independiente de billing_invoices, que es lo que ProfitCod cobra a sus clientes)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pfactura_seq INTEGER NOT NULL DEFAULT 0`);

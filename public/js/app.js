@@ -6508,28 +6508,40 @@ const COD_FIELD_LABEL = {
   direccion2:"Piso/Local", ciudad:"Ciudad", cp:"C.P.", email:"Email",
 };
 
-function renderLeadRow(s) {
-  const fd = typeof s.form_data === "string" ? JSON.parse(s.form_data || "{}") : (s.form_data || {});
+const COD_EVENT_LABEL = {
+  form_open:    { icon: "👁", text: () => "Abrió el formulario" },
+  field_blur:   { icon: "✍️", text: (e) => `Rellenó ${COD_FIELD_LABEL[e.field]||e.field}: "${e.value||""}"` },
+  form_submit:  { icon: "🟢", text: () => "Envió el pedido" },
+  form_abandon: { icon: "🔴", text: () => "Abandonó el formulario" },
+};
+
+function renderLeadRow(s, sessionNumber) {
   const st = COD_STATUS_LABEL[s.status] || { text: s.status, color: "#6b7280" };
-  const hasData = Object.keys(fd).length > 0;
-  const dataHtml = hasData
-    ? Object.entries(fd).map(([k,v]) =>
-        `<span style="background:var(--input);border-radius:6px;padding:2px 8px;font-size:11px;color:#e5e7eb;">
-          <span style="color:#6b7280;">${COD_FIELD_LABEL[k]||k}:</span> ${escapeHtml(String(v))}
-        </span>`).join("")
-    : `<span style="font-size:11px;color:#6b7280;">Sin datos capturados</span>`;
   const ts = new Date(s.updated_at || s.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" });
+  const events = Array.isArray(s.events) ? s.events : [];
+  const timelineHtml = events.length
+    ? events.map(e => {
+        const def = COD_EVENT_LABEL[e.type] || { icon: "•", text: () => e.type };
+        const hora = new Date(e.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+        return `<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0;">
+          <span style="font-size:11px;color:#6b7280;width:58px;flex-shrink:0;">${hora}</span>
+          <span style="font-size:12px;">${def.icon} ${escapeHtml(def.text(e))}</span>
+        </div>`;
+      }).join("")
+    : `<div style="font-size:11px;color:#6b7280;padding:3px 0;">Sin eventos registrados todavía</div>`;
+
   return `
-    <div id="lead-row-${s.session_id}" style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;">
+    <div id="lead-row-${s.session_id}" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:12px;font-weight:700;color:var(--muted);">Sesión ${sessionNumber}</span>
           <span style="width:8px;height:8px;border-radius:50%;background:${st.color};flex-shrink:0;"></span>
           <span style="font-size:12px;font-weight:600;color:#e5e7eb;">${st.text}</span>
           <span style="font-size:11px;color:#6b7280;">${escapeHtml(s.shop_domain)}</span>
         </div>
         <span style="font-size:11px;color:#6b7280;">${ts}</span>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px;">${dataHtml}</div>
+      <div style="border-left:2px solid var(--border);padding-left:10px;margin-left:3px;">${timelineHtml}</div>
     </div>`;
 }
 
@@ -6727,9 +6739,16 @@ async function refreshLeads() {
     const res = await fetch(url, { headers: { Authorization: "Bearer " + getActiveToken() } });
     const sessions = await res.json();
 
+    // Numerar cada sesión según cuándo empezó (la más antigua = Sesión 1), no
+    // según el orden en que se muestran (que es por actividad más reciente),
+    // para que el número de cada cliente se mantenga estable con el tiempo.
+    const byAge = [...sessions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const numberOf = {};
+    byAge.forEach((s, i) => { numberOf[s.session_id] = i + 1; });
+
     const list = document.getElementById("leads-list");
     if (list) list.innerHTML = sessions.length
-      ? sessions.map(renderLeadRow).join("")
+      ? sessions.map(s => renderLeadRow(s, numberOf[s.session_id])).join("")
       : `<div style="padding:40px;text-align:center;color:#6b7280;font-size:13px;">Sin leads todavía — instala el script en tu tienda</div>`;
 
     await refreshLeadsStats();
@@ -6737,38 +6756,15 @@ async function refreshLeads() {
 }
 window.filterLeads = refreshLeads;
 
-// Actualizar lead existente desde SSE en tiempo real
-let __codStatsDebounce = null;
+// Un evento en vivo (SSE) refresca la lista completa -- así la cronología que
+// se muestra siempre viene de lo realmente guardado, en vez de intentar
+// reconstruir el estado en el navegador. Con debounce porque cada tecleo del
+// cliente en el formulario dispara un evento.
+let __codRefreshDebounce = null;
 function handleCodEvent(data) {
-  // Actualizar fila si existe, sino prepend
-  const existing = document.getElementById(`lead-row-${data.sid}`);
-  const list = document.getElementById("leads-list");
-  if (!list) return;
-
-  const fakeSession = {
-    session_id: data.sid,
-    shop_domain: data.shopDomain,
-    status: data.eventType === "form_submit" ? "submitted"
-          : data.eventType === "form_abandon" ? "abandoned"
-          : data.eventType === "form_open" ? "open" : "filling",
-    form_data: data.formData || {},
-    updated_at: new Date().toISOString(),
-  };
-
-  const html = renderLeadRow(fakeSession);
-  if (existing) {
-    existing.outerHTML = html;
-  } else {
-    list.insertAdjacentHTML("afterbegin", html);
-  }
-
-  // El contador de arriba ("X en vivo") solo se calculaba al abrir/recargar la
-  // pestaña — un evento en vivo actualizaba la fila pero no ese resumen, por
-  // eso se quedaba desactualizado mientras llegaban eventos nuevos. Se
-  // recalcula también aquí (con un pequeño debounce porque cada tecleo del
-  // cliente en el formulario dispara un evento).
-  clearTimeout(__codStatsDebounce);
-  __codStatsDebounce = setTimeout(refreshLeadsStats, 400);
+  if (!document.getElementById("leads-list")) return; // pestaña Leads no abierta
+  clearTimeout(__codRefreshDebounce);
+  __codRefreshDebounce = setTimeout(refreshLeads, 400);
 }
 window.handleCodEvent = handleCodEvent;
 

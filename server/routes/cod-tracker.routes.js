@@ -117,7 +117,7 @@ router.post("/event", async (req, res) => {
                  : type === "form_open"    ? "open"
                  : "filling";
 
-    // Upsert sesión
+    // Upsert sesión (último estado — lo que usa el contador "en vivo")
     await db.run(
       `INSERT INTO checkout_sessions (shop_domain, user_id, session_id, status, form_data, page_url)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -130,6 +130,17 @@ router.post("/event", async (req, res) => {
       [shop.toLowerCase(), shopRow.user_id, sid, status,
        JSON.stringify(formData || {}), url || null]
     );
+
+    // Cronología de la sesión (lo que arma "Sesión 1: abrió, rellenó X,
+    // abandonó/envió") — se omite field_focus a propósito, sin valor todavía
+    // no aporta nada a la cronología y solo genera ruido.
+    if (type !== "field_focus") {
+      await db.run(
+        `INSERT INTO checkout_session_events (user_id, shop_domain, session_id, type, field, value)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [shopRow.user_id, shop.toLowerCase(), sid, type, field || null, value || null]
+      );
+    }
 
     // Emitir evento SSE al dueño de la tienda
     sseManager.emitToUser(shopRow.user_id, {
@@ -148,7 +159,7 @@ router.post("/event", async (req, res) => {
   }
 });
 
-// ── Listar sesiones (auth) ─────────────────────────────────────────────────────
+// ── Listar sesiones con su cronología completa (auth) ───────────────────────────
 router.get("/sessions", auth, async (req, res) => {
   const userId = req.user.id;
   const { shop, status, limit = 100 } = req.query;
@@ -161,6 +172,19 @@ router.get("/sessions", auth, async (req, res) => {
     q += ` ORDER BY updated_at DESC LIMIT $${params.length + 1}`;
     params.push(Math.min(parseInt(limit) || 100, 500));
     const rows = await db.all(q, params);
+
+    if (rows.length) {
+      const sessionIds = [...new Set(rows.map(r => r.session_id))];
+      const events = await db.all(
+        `SELECT session_id, type, field, value, created_at FROM checkout_session_events
+         WHERE user_id = $1 AND session_id = ANY($2::text[]) ORDER BY created_at ASC`,
+        [userId, sessionIds]
+      );
+      const bySession = {};
+      for (const e of events) (bySession[e.session_id] ||= []).push(e);
+      for (const r of rows) r.events = bySession[r.session_id] || [];
+    }
+
     res.json(rows);
   } catch (e) {
     res.status(500).json({ error: e.message });
