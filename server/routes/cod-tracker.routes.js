@@ -17,7 +17,7 @@ router.get("/script.js", async (req, res) => {
 
   const appUrl = process.env.APP_URL || "https://profit-cod.onrender.com";
 
-  const script = `/* PROFIT-COD COD Tracker v3 */
+  const script = `/* PROFIT-COD COD Tracker v4 */
 (function(){
   var SHOP="${shop}", API="${appUrl}";
   var sid=sessionStorage.getItem("_pc_sid");
@@ -55,7 +55,8 @@ router.get("/script.js", async (req, res) => {
   // En vez de dejar un observer pegado a UNA referencia del modal (frágil si la
   // app lo reemplaza/recrea en vez de solo cambiarle la clase), se pregunta de
   // cero cada 700ms si está abierto ahora mismo -- funciona sin importar cómo
-  // lo maneje la app por dentro.
+  // lo maneje la app por dentro. "Abandonó el formulario" ya NO termina la
+  // sesión -- el cliente sigue en la tienda, solo cerró el formulario.
   function checkState(){
     var modal=document.getElementById("_rsi-cod-form-modal");
     var isOpen=!!(modal&&modal.classList.contains("_rsi-cod-form-modal-open"));
@@ -69,13 +70,21 @@ router.get("/script.js", async (req, res) => {
       send("form_abandon",{formData:fd});
     }
   }
+  // "En vivo" ya no depende de tener el formulario abierto -- este latido cada
+  // 20s mientras la pestaña está visible es lo que mantiene la sesión activa
+  // en cualquier parte de la tienda. Si se pone en segundo plano (el típico
+  // "vuelve a Instagram sin cerrar nada") los latidos paran solos.
+  function heartbeat(){
+    if(document.visibilityState==="visible") send("heartbeat");
+  }
+  send("page_view");
   checkState();
   setInterval(checkState,700);
-  // Si cierra la pestaña o navega fuera de la página con el formulario
-  // todavía abierto, el script se mata de golpe y nunca llega a detectar el
-  // cierre por el polling de arriba -- se manda un último aviso justo antes.
+  setInterval(heartbeat,20000);
+  // Esto sí es salir de verdad (cerrar la pestaña o navegar fuera del sitio) --
+  // ahí termina la sesión en vivo, haya formulario abierto o no.
   addEventListener("pagehide",function(){
-    if(tracked){tracked=false;send("form_abandon",{formData:fd});}
+    send("page_abandon",{formData:fd});
   });
 })();`;
 
@@ -111,18 +120,30 @@ router.post("/event", async (req, res) => {
     );
     if (!shopRow) return;
 
-    const status = type === "form_submit" ? "submitted"
-                 : type === "form_abandon" ? "abandoned"
-                 : type === "form_open"    ? "open"
-                 : "filling";
+    // "En vivo" ya no depende del formulario: el estado ahora distingue
+    // "browsing" (en la tienda, en cualquier página) de los pasos del
+    // formulario. "form_abandon" (cerró el formulario) ya NO es un estado
+    // final -- vuelve a "browsing" porque el cliente sigue en la tienda.
+    // Solo "page_abandon" (cerró la pestaña / se fue del sitio) termina la
+    // sesión de verdad. "heartbeat" no cambia el estado, solo refresca
+    // updated_at para que el latido de presencia mantenga viva la sesión.
+    const status = type === "form_submit"   ? "submitted"
+                 : type === "page_abandon"  ? "page_abandoned"
+                 : type === "form_abandon"  ? "browsing"
+                 : type === "form_open"     ? "open"
+                 : type === "field_blur"    ? "filling"
+                 : type === "page_view"     ? "browsing"
+                 : type === "heartbeat"     ? null
+                 : "browsing";
 
     // Upsert sesión (último estado — lo que usa el contador "en vivo")
     await db.run(
       `INSERT INTO checkout_sessions (shop_domain, user_id, session_id, status, form_data, page_url)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       VALUES ($1, $2, $3, COALESCE($4, 'browsing'), $5, $6)
        ON CONFLICT (shop_domain, session_id) DO UPDATE SET
          status    = CASE WHEN checkout_sessions.status = 'submitted' THEN 'submitted'
-                          ELSE EXCLUDED.status END,
+                          WHEN $4 IS NULL THEN checkout_sessions.status
+                          ELSE $4 END,
          form_data = CASE WHEN EXCLUDED.form_data::text != '{}'
                           THEN EXCLUDED.form_data ELSE checkout_sessions.form_data END,
          updated_at = NOW()`,
@@ -130,10 +151,10 @@ router.post("/event", async (req, res) => {
        JSON.stringify(formData || {}), url || null]
     );
 
-    // Cronología de la sesión (lo que arma "Sesión 1: abrió, rellenó X,
-    // abandonó/envió") — se omite field_focus a propósito, sin valor todavía
-    // no aporta nada a la cronología y solo genera ruido.
-    if (type !== "field_focus") {
+    // Cronología de la sesión (lo que arma "Sesión 1: entró, abrió el
+    // formulario, rellenó X, abandonó/envió") — se omiten field_focus (sin
+    // valor, no aporta nada) y heartbeat (cada 20s, solo generaría ruido).
+    if (type !== "field_focus" && type !== "heartbeat") {
       await db.run(
         `INSERT INTO checkout_session_events (user_id, shop_domain, session_id, type, field, value)
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -168,8 +189,8 @@ router.post("/event", async (req, res) => {
 async function expireStaleSessions(userId) {
   try {
     const expired = await db.all(
-      `UPDATE checkout_sessions SET status = 'abandoned', updated_at = updated_at
-       WHERE user_id = $1 AND status IN ('open','filling') AND updated_at < NOW() - INTERVAL '3 minutes'
+      `UPDATE checkout_sessions SET status = 'page_abandoned', updated_at = updated_at
+       WHERE user_id = $1 AND status IN ('browsing','open','filling') AND updated_at < NOW() - INTERVAL '3 minutes'
        RETURNING session_id, shop_domain`,
       [userId]
     );
@@ -226,8 +247,8 @@ router.get("/stats", auth, async (req, res) => {
     // no, porque es un estado de ahora mismo, no un total diario.
     const rows = await db.all(
       `SELECT shop_domain,
-              COUNT(*) FILTER (WHERE (status='open' OR status='filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS live,
-              COUNT(*) FILTER (WHERE status='abandoned' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS abandoned,
+              COUNT(*) FILTER (WHERE status IN ('browsing','open','filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS live,
+              COUNT(*) FILTER (WHERE status='page_abandoned' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS abandoned,
               COUNT(*) FILTER (WHERE status='submitted' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS submitted
        FROM checkout_sessions WHERE user_id = $1
        GROUP BY shop_domain`,

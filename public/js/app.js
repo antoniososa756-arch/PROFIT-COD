@@ -470,6 +470,14 @@ const icons = {
       <rect x="3" y="16" width="7" height="5" rx="1.5"/>
     </svg>
   `,
+  leads: `
+    <svg viewBox="0 0 24 24">
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="19" y1="8" x2="19" y2="14" stroke-linecap="round"/>
+      <line x1="16" y1="11" x2="22" y2="11" stroke-linecap="round"/>
+    </svg>
+  `,
   rentabilidad: `
     <svg viewBox="0 0 24 24">
       <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" stroke-linecap="round" stroke-linejoin="round"/>
@@ -577,6 +585,7 @@ const I18N = {
   ES: {
     labels: {
       metricas: "Métricas",
+      leads: "Leads",
       rentabilidad: "Rentabilidad",
       tiendas: "Integraciones",
       productos: "Productos",
@@ -623,6 +632,7 @@ const I18N = {
   EN: {
     labels: {
       metricas: "Metrics",
+      leads: "Leads",
       tiendas: "Stores",
       productos: "Products",
       pedidos: "Orders",
@@ -668,6 +678,7 @@ const I18N = {
   PT: {
     labels: {
       metricas: "Métricas",
+      leads: "Leads",
       tiendas: "Lojas",
       productos: "Produtos",
       pedidos: "Pedidos",
@@ -890,7 +901,7 @@ function closeOnBackdropClick(el, closeFn) {
 // F5 o compartir el link no pierda dónde estabas. __skipPush evita generar una
 // entrada nueva en el historial cuando estamos restaurando desde popstate/carga inicial.
 // =========================
-const VALID_ROUTE_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
+const VALID_ROUTE_SECTIONS = ["metricas","leads","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
 let __skipPush = false;
 
 function _syncUrlForRoute(path) {
@@ -997,7 +1008,7 @@ function loadApp(section) {
       </div>
 
       ${(() => {
-        const sections = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
+        const sections = ["metricas","leads","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
         // "Contabilidad" es exclusiva del admin: solo se ofrece en el menú al
         // propio admin, o a sus cuentas de apoyo (nunca a las de un Cliente).
         if (currentUser.role === "Administrador" || currentUser.apoyoDeAdmin) sections.push("contabilidad");
@@ -2448,6 +2459,20 @@ if (id === "mi-equipo") {
   };
 
   renderEquipo();
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
+// =========================
+// SECCIÓN LEADS (en construcción)
+// =========================
+if (id === "leads") {
+  if (t) t.textContent = "Leads";
+  if (s) s.textContent = "";
+  if (c) c.textContent = "Leads";
+  box.className = "card";
+  box.innerHTML = "";
   closeAllDrops();
   closeSearchDrop();
   return;
@@ -6498,10 +6523,11 @@ window.copyTrackerScript = copyTrackerScript;
 // ─── LEADS COD ────────────────────────────────────────────────────────────────
 
 const COD_STATUS_LABEL = {
-  open:      { text: "👁 Viendo formulario", cls: "blue" },
-  filling:   { text: "✍️ Rellenando",         cls: "orange" },
-  abandoned: { text: "🔴 Abandonado",          cls: "red" },
-  submitted: { text: "🟢 Pedido enviado",       cls: "green" },
+  browsing:       { text: "🌐 En la tienda",     cls: "blue" },
+  open:           { text: "👁 Viendo formulario", cls: "blue" },
+  filling:        { text: "✍️ Rellenando",         cls: "orange" },
+  submitted:      { text: "🟢 Pedido enviado",      cls: "green" },
+  page_abandoned: { text: "🔴 Abandonó la página",  cls: "red" },
 };
 const COD_FIELD_LABEL = {
   nombre:"Nombre", telefono:"Teléfono", direccion:"Dirección",
@@ -6509,11 +6535,13 @@ const COD_FIELD_LABEL = {
 };
 
 const COD_EVENT_LABEL = {
+  page_view:    { icon: "🌐", text: () => "Entró a la tienda" },
   form_open:    { icon: "👁", text: () => "Abrió el formulario" },
   field_blur:   { icon: "✍️", text: (e, corrigio) => `${corrigio ? "Corrigió" : "Rellenó"} ${COD_FIELD_LABEL[e.field]||e.field}: "${e.value||""}"` },
   form_submit:  { icon: "🟢", text: () => "Envió el pedido" },
-  form_abandon: { icon: "🔴", text: () => "Abandonó el formulario" },
-  auto_timeout: { icon: "⏱️", text: () => "Sin actividad por 3 min — marcado como abandonado" },
+  form_abandon: { icon: "🟠", text: () => "Formulario abandonado (siguió en la tienda)" },
+  page_abandon: { icon: "🔴", text: () => "Página abandonada" },
+  auto_timeout: { icon: "⏱️", text: () => "Sin actividad por 3 min — se dio por salido de la tienda" },
 };
 
 function renderLeadRow(s, sessionNumber) {
@@ -6564,9 +6592,10 @@ async function loadLeadsCOD(container) {
           <select id="leads-filter-status" onchange="filterLeads()"
             style="padding:8px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit;">
             <option value="">Todos los estados</option>
-            <option value="open">Viendo</option>
+            <option value="browsing">En la tienda</option>
+            <option value="open">Viendo formulario</option>
             <option value="filling">Rellenando</option>
-            <option value="abandoned">Abandonados</option>
+            <option value="page_abandoned">Abandonaron la página</option>
             <option value="submitted">Enviados</option>
           </select>
           <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);padding:6px 12px;border-radius:20px;">
