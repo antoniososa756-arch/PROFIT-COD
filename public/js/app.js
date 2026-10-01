@@ -6563,7 +6563,7 @@ function renderLeadRow(s, sessionNumber) {
     : `<div style="font-size:12px;color:var(--muted);padding:5px 0;">Sin eventos registrados todavía</div>`;
 
   return `
-    <div id="lead-row-${s.session_id}" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);">
+    <div id="lead-row-${s.session_id}" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);flex-shrink:0;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 16px;background:var(--input);border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <span style="font-size:12px;font-weight:700;color:var(--muted);">Sesión ${sessionNumber}</span>
