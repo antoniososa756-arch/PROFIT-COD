@@ -6854,6 +6854,46 @@ function leadsStatCard(color, number, label, icon) {
     </div>`;
 }
 
+// Mini gráfica de tendencia (hoy sólido vs. ayer punteado a la misma hora),
+// estilo "Live View" de Shopify -- para ver de un vistazo si hoy va mejor o
+// peor que ayer a esta misma hora, sin tener que comparar números a mano.
+function leadsSparkline(hoy, ayer, color) {
+  const arr = Array.isArray(hoy) ? hoy : [];
+  const arrAyer = Array.isArray(ayer) ? ayer : [];
+  const max = Math.max(1, ...arr, ...arrAyer);
+  const toPoints = a => a.map((v, i) => {
+    const x = a.length > 1 ? (i / (a.length - 1)) * 100 : 100;
+    const y = 28 - (v / max) * 26;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return `<svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:100%;height:34px;display:block;margin-top:8px;">
+    ${arrAyer.length > 1 ? `<polyline points="${toPoints(arrAyer)}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="3,3" opacity=".35"/>` : ""}
+    ${arr.length > 1 ? `<polyline points="${toPoints(arr)}" fill="none" stroke="${color}" stroke-width="2"/>` : ""}
+  </svg>`;
+}
+
+// Tarjeta "a lo Shopify": solo título en negrita y el valor debajo, sin ícono.
+function leadsStatCardPlain(title, value, sparklineHtml) {
+  return `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;min-width:0;">
+      <div style="font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+      <div style="font-size:21px;font-weight:800;color:var(--text);margin-top:5px;">${value}</div>
+      ${sparklineHtml || ""}
+    </div>`;
+}
+
+// Tarjeta de "Comportamiento de clientes": una barra de color se enciende
+// cuando hay actividad (>0), para que se note sin depender de leer el número.
+function leadsBehaviorCard(color, number, label) {
+  const active = number > 0;
+  return `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;min-width:0;">
+      <div style="font-size:11.5px;color:var(--muted);">${label}</div>
+      <div style="font-size:19px;font-weight:800;color:var(--text);margin:4px 0 9px;">${number}</div>
+      <div style="height:6px;border-radius:3px;background:${active ? color : "var(--input)"};transition:background .3s;"></div>
+    </div>`;
+}
+
 async function loadLeadsPage() {
   const grid = document.getElementById("leads-page-grid");
   if (!grid) return;
@@ -6980,17 +7020,17 @@ function leadsStorePanelHtml(d, sessions) {
       <div style="display:flex;flex-wrap:wrap;">
         <div style="flex:1.6 1 280px;min-width:0;padding:16px 20px;border-right:1px solid var(--border);">
           <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);gap:10px;">
-            ${leadsStatCard("blue", d.visitantes_vivo, "Visitantes ahora mismo", leadsStatIcon('<circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>'))}
-            ${leadsStatCard("green", `${fmtMoney(d.ventas_hoy)} €`, "Ventas totales (hoy)", leadsStatIcon('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'))}
-            ${leadsStatCard("purple", d.sesiones_hoy, "Sesiones (hoy)", leadsStatIcon('<path d="M3 12h4l2 8 6-16 2 8h4"/>'))}
-            ${leadsStatCard("orange", d.pedidos_hoy, "Pedidos (hoy)", leadsStatIcon('<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/>'))}
+            ${leadsStatCardPlain("Visitantes ahora mismo", d.visitantes_vivo)}
+            ${leadsStatCardPlain("Ventas totales", `${fmtMoney(d.ventas_hoy)} €`, leadsSparkline(d.series?.ventas?.hoy, d.series?.ventas?.ayer, "#22c55e"))}
+            ${leadsStatCardPlain("Sesiones", d.sesiones_hoy, leadsSparkline(d.series?.sesiones?.hoy, d.series?.sesiones?.ayer, "#8b5cf6"))}
+            ${leadsStatCardPlain("Pedidos", d.pedidos_hoy, leadsSparkline(d.series?.pedidos?.hoy, d.series?.pedidos?.ayer, "#f97316"))}
           </div>
 
           <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">Comportamiento de clientes ahora mismo</div>
           <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);gap:8px;">
-            ${leadsStatCard("blue", d.formularios_activos, "Formularios activos", leadsStatIcon('<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"/>'))}
-            ${leadsStatCard("teal", d.rellenando, "Rellenando el formulario", leadsStatIcon('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'))}
-            ${leadsStatCard("green", d.compras_recientes, "Compras realizadas (5 min)", leadsStatIcon('<path d="M20 6L9 17l-5-5"/>'))}
+            ${leadsBehaviorCard("#3b82f6", d.formularios_activos, "Formularios activos")}
+            ${leadsBehaviorCard("#14b8a6", d.rellenando, "Rellenando el formulario")}
+            ${leadsBehaviorCard("#22c55e", d.compras_recientes, "Compras (5 min)")}
           </div>
         </div>
 
@@ -7007,13 +7047,22 @@ function leadsFilterSessions(sessions, filter) {
   return sessions;
 }
 
+// Prioridad para subir arriba lo que más vale la pena mirar ahora mismo:
+// rellenando > viendo el formulario > en la tienda sin más > el resto.
+const LEADS_STATUS_PRIORITY = { filling: 3, open: 2, browsing: 1 };
+
 function leadsSessionsHistoryHtml(domain, sessions) {
   const filter = window.__leadsGlobalFilter || "todos";
   const byAge = [...sessions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   const numberOf = {};
   byAge.forEach((s, i) => { numberOf[s.session_id] = i + 1; });
   const filtered = leadsFilterSessions(sessions, filter)
-    .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+    .sort((a, b) => {
+      const pa = LEADS_STATUS_PRIORITY[a.status] || 0;
+      const pb = LEADS_STATUS_PRIORITY[b.status] || 0;
+      if (pa !== pb) return pb - pa;
+      return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
+    });
 
   return `
     <div style="padding:14px 20px 10px;">
