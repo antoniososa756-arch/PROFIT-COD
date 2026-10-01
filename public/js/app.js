@@ -1731,7 +1731,7 @@ const now = new Date();
               </div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;width:100%;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
             <span style="position:relative;display:inline-flex;width:10px;height:10px;flex-shrink:0;">
               <span style="position:absolute;inset:0;border-radius:50%;background:#22c55e;opacity:.6;animation:en-reparto-ping 1.6s cubic-bezier(0,0,.2,1) infinite;"></span>
               <span style="position:relative;width:10px;height:10px;border-radius:50%;background:#22c55e;"></span>
