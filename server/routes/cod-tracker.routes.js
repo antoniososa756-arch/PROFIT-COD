@@ -383,4 +383,27 @@ router.get("/leads-dashboard", auth, async (req, res) => {
   }
 });
 
+// ── Orden guardado de las tarjetas de tienda en Leads (por usuario) ──────────
+router.get("/leads-order", auth, async (req, res) => {
+  try {
+    const row = await db.get("SELECT leads_order FROM users WHERE id = $1", [req.user.id]);
+    let order = [];
+    try { order = row?.leads_order ? JSON.parse(row.leads_order) : []; } catch (e) { order = []; }
+    res.json({ order });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post("/leads-order", auth, async (req, res) => {
+  const { order } = req.body || {};
+  if (!Array.isArray(order)) return res.status(400).json({ error: "order debe ser un array" });
+  try {
+    await db.run("UPDATE users SET leads_order = $1 WHERE id = $2", [JSON.stringify(order), req.user.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

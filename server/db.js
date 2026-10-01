@@ -298,6 +298,9 @@ await pool.query(`
 
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active INTEGER NOT NULL DEFAULT 1`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT`);
+  // Orden elegido a mano de las tarjetas de tienda en la sección Leads (array
+  // JSON de shop_domain) -- para que se vea igual en cualquier dispositivo.
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS leads_order TEXT`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_rejected BOOLEAN DEFAULT false`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_history_json TEXT`);

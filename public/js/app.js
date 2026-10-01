@@ -2473,9 +2473,18 @@ if (id === "leads") {
   if (c) c.textContent = "Leads";
   box.className = "";
   box.removeAttribute("style");
-  box.innerHTML = `<div id="leads-page-grid" class="leads-page-grid">
-    <div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Cargando...</div>
-  </div>`;
+  box.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <button id="leads-lock-btn" onclick="toggleLeadsLock()" title="Desbloquear para reordenar las tiendas"
+        style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">
+        <svg id="leads-lock-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span id="leads-lock-text">Bloqueado</span>
+      </button>
+    </div>
+    <div id="leads-page-grid" class="leads-page-grid">
+      <div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Cargando...</div>
+    </div>`;
+  window.__leadsUnlocked = false;
   loadLeadsPage();
   if (window.__leadsPageInterval) clearInterval(window.__leadsPageInterval);
   window.__leadsPageInterval = setInterval(() => {
@@ -6845,9 +6854,25 @@ async function loadLeadsPage() {
   if (!grid) return;
   try {
     const h = { Authorization: "Bearer " + getActiveToken() };
-    const dash = await fetch(`${API_BASE}/api/cod-tracker/leads-dashboard`, { headers: h }).then(r => r.json());
+    const [dash, orderRes] = await Promise.all([
+      fetch(`${API_BASE}/api/cod-tracker/leads-dashboard`, { headers: h }).then(r => r.json()),
+      window.__leadsSavedOrder
+        ? Promise.resolve({ order: window.__leadsSavedOrder })
+        : fetch(`${API_BASE}/api/cod-tracker/leads-order`, { headers: h }).then(r => r.json()).catch(() => ({ order: [] })),
+    ]);
     if (!Array.isArray(dash)) { grid.innerHTML = `<div style="padding:40px;text-align:center;color:#dc2626;font-size:13px;">${escapeHtml(dash?.error || "Error cargando Leads")}</div>`; return; }
     if (!dash.length) { grid.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">No tienes tiendas Shopify conectadas.</div>`; return; }
+
+    // Aplicar el orden guardado (tiendas nuevas que no estén en el orden
+    // guardado se agregan al final, en vez de desaparecer).
+    const savedOrder = window.__leadsSavedOrder || orderRes?.order || [];
+    window.__leadsSavedOrder = savedOrder;
+    const dashByDomain = {};
+    dash.forEach(d => { dashByDomain[d.shop_domain] = d; });
+    const ordered = [
+      ...savedOrder.map(dom => dashByDomain[dom]).filter(Boolean),
+      ...dash.filter(d => !savedOrder.includes(d.shop_domain)),
+    ];
 
     // Historial de sesiones de todas las tiendas en una sola llamada, se
     // reparte por shop_domain abajo -- evita una petición por tienda.
@@ -6855,7 +6880,7 @@ async function loadLeadsPage() {
     const sessionsByShop = {};
     (Array.isArray(allSessions) ? allSessions : []).forEach(sess => { (sessionsByShop[sess.shop_domain] ||= []).push(sess); });
 
-    grid.innerHTML = dash.map(d => leadsStorePanelHtml(d, sessionsByShop[d.shop_domain] || [])).join("");
+    grid.innerHTML = ordered.map(d => leadsStorePanelHtml(d, sessionsByShop[d.shop_domain] || [])).join("");
   } catch (e) {
     console.error("loadLeadsPage:", e);
     grid.innerHTML = `<div style="padding:40px;text-align:center;color:#dc2626;font-size:13px;">Error cargando Leads</div>`;
@@ -6863,13 +6888,65 @@ async function loadLeadsPage() {
 }
 window.loadLeadsPage = loadLeadsPage;
 
+function toggleLeadsLock() {
+  window.__leadsUnlocked = !window.__leadsUnlocked;
+  const btn  = document.getElementById("leads-lock-btn");
+  const txt  = document.getElementById("leads-lock-text");
+  const icon = document.getElementById("leads-lock-icon");
+  if (txt)  txt.textContent = window.__leadsUnlocked ? "Desbloqueado" : "Bloqueado";
+  if (btn)  { btn.style.borderColor = window.__leadsUnlocked ? "#22c55e" : "var(--border)"; btn.style.color = window.__leadsUnlocked ? "#22c55e" : "var(--text)"; }
+  if (icon) icon.innerHTML = window.__leadsUnlocked
+    ? '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>'
+    : '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>';
+  document.querySelectorAll(".leads-store-panel").forEach(p => {
+    p.setAttribute("draggable", window.__leadsUnlocked ? "true" : "false");
+    p.style.cursor = window.__leadsUnlocked ? "grab" : "default";
+  });
+}
+window.toggleLeadsLock = toggleLeadsLock;
+
+let __leadsDragDomain = null;
+function leadsDragStart(e, domain) {
+  if (!window.__leadsUnlocked) { e.preventDefault(); return; }
+  __leadsDragDomain = domain;
+  e.dataTransfer.effectAllowed = "move";
+}
+function leadsDragOver(e) {
+  if (!window.__leadsUnlocked) return;
+  e.preventDefault();
+}
+function leadsDrop(e, targetDomain) {
+  if (!window.__leadsUnlocked || !__leadsDragDomain || __leadsDragDomain === targetDomain) return;
+  e.preventDefault();
+  const grid = document.getElementById("leads-page-grid");
+  const panels = [...grid.querySelectorAll(".leads-store-panel")];
+  const order = panels.map(p => p.dataset.domain);
+  const fromIdx = order.indexOf(__leadsDragDomain);
+  const toIdx   = order.indexOf(targetDomain);
+  if (fromIdx === -1 || toIdx === -1) return;
+  order.splice(toIdx, 0, order.splice(fromIdx, 1)[0]);
+  window.__leadsSavedOrder = order;
+  __leadsDragDomain = null;
+  loadLeadsPage();
+  fetch(`${API_BASE}/api/cod-tracker/leads-order`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+    body: JSON.stringify({ order }),
+  }).catch(() => {});
+}
+window.leadsDragStart = leadsDragStart;
+window.leadsDragOver  = leadsDragOver;
+window.leadsDrop      = leadsDrop;
+
 function leadsStorePanelHtml(d, sessions) {
   const domain = d.shop_domain;
   const panelId = `leads-panel-${domain.replace(/[^a-z0-9]/gi, "_")}`;
   const fmtMoney = n => (parseFloat(n) || 0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return `
-    <div class="card" style="padding:0;overflow:hidden;">
+    <div class="card leads-store-panel" data-domain="${escapeAttr(domain)}" draggable="${window.__leadsUnlocked ? "true" : "false"}"
+      style="padding:0;overflow:hidden;${window.__leadsUnlocked ? "cursor:grab;" : ""}"
+      ondragstart="leadsDragStart(event,'${escapeAttr(domain)}')" ondragover="leadsDragOver(event)" ondrop="leadsDrop(event,'${escapeAttr(domain)}')">
       <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div style="font-size:14.5px;font-weight:700;color:var(--text);">${escapeHtml(d.shop_name)}</div>
         <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);padding:4px 10px;border-radius:20px;">
@@ -6878,24 +6955,26 @@ function leadsStorePanelHtml(d, sessions) {
         </div>
       </div>
 
-      <div style="padding:16px 20px;">
-        <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);gap:10px;">
-          ${leadsStatCard("blue", d.visitantes_vivo, "Visitantes ahora mismo", leadsStatIcon('<circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>'))}
-          ${leadsStatCard("green", `${fmtMoney(d.ventas_hoy)} €`, "Ventas totales (hoy)", leadsStatIcon('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'))}
-          ${leadsStatCard("purple", d.sesiones_hoy, "Sesiones (hoy)", leadsStatIcon('<path d="M3 12h4l2 8 6-16 2 8h4"/>'))}
-          ${leadsStatCard("orange", d.pedidos_hoy, "Pedidos (hoy)", leadsStatIcon('<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/>'))}
+      <div style="display:flex;flex-wrap:wrap;">
+        <div style="flex:1 1 280px;min-width:0;padding:16px 20px;border-right:1px solid var(--border);">
+          <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);gap:10px;">
+            ${leadsStatCard("blue", d.visitantes_vivo, "Visitantes ahora mismo", leadsStatIcon('<circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>'))}
+            ${leadsStatCard("green", `${fmtMoney(d.ventas_hoy)} €`, "Ventas totales (hoy)", leadsStatIcon('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'))}
+            ${leadsStatCard("purple", d.sesiones_hoy, "Sesiones (hoy)", leadsStatIcon('<path d="M3 12h4l2 8 6-16 2 8h4"/>'))}
+            ${leadsStatCard("orange", d.pedidos_hoy, "Pedidos (hoy)", leadsStatIcon('<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/>'))}
+          </div>
+
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">Comportamiento de clientes ahora mismo</div>
+          <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);gap:8px;">
+            ${leadsStatCard("blue", d.formularios_activos, "Formularios activos", leadsStatIcon('<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"/>'))}
+            ${leadsStatCard("teal", d.rellenando, "Rellenando el formulario", leadsStatIcon('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'))}
+            ${leadsStatCard("green", d.compras_hoy, "Compras realizadas (hoy)", leadsStatIcon('<path d="M20 6L9 17l-5-5"/>'))}
+          </div>
         </div>
 
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">Comportamiento de clientes ahora mismo</div>
-        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);gap:10px;">
-          ${leadsStatCard("blue", d.formularios_activos, "Formularios activos", leadsStatIcon('<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6"/>'))}
-          ${leadsStatCard("teal", d.rellenando, "Rellenando el formulario", leadsStatIcon('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>'))}
-          ${leadsStatCard("green", d.compras_hoy, "Compras realizadas (hoy)", leadsStatIcon('<path d="M20 6L9 17l-5-5"/>'))}
+        <div id="${panelId}" style="flex:1 1 280px;min-width:0;display:flex;flex-direction:column;">
+          ${leadsSessionsHistoryHtml(domain, sessions)}
         </div>
-      </div>
-
-      <div id="${panelId}" style="border-top:1px solid var(--border);">
-        ${leadsSessionsHistoryHtml(domain, sessions)}
       </div>
     </div>`;
 }
