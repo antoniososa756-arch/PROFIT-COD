@@ -6842,21 +6842,18 @@ window.filterLeads = refreshLeads;
 // se muestra siempre viene de lo realmente guardado, en vez de intentar
 // reconstruir el estado en el navegador. Con debounce porque cada tecleo del
 // cliente en el formulario dispara un evento.
-// 1.8s de margen (no 400ms): algunas tiendas hacen una recarga técnica
-// brevísima de la página al rellenar ciertos campos (sin que el cliente
-// navegue a ningún lado), lo que manda "page_abandon" seguido casi al
-// instante de un "page_view" nuevo -- con un debounce corto eso se veía como
-// un parpadeo real en el panel (activo → inactivo → activo) aunque el estado
-// final ya quedaba bien.
+// El parpadeo real era un bug aparte (field_focus reiniciaba el estado, ya
+// corregido) -- este margen solo necesita absorber ráfagas de eventos muy
+// seguidos, no esconder segundos de retraso real.
 let __codRefreshDebounce = null;
 function handleCodEvent(data) {
   if (document.getElementById("leads-list")) {
     clearTimeout(__codRefreshDebounce);
-    __codRefreshDebounce = setTimeout(refreshLeads, 1800);
+    __codRefreshDebounce = setTimeout(refreshLeads, 500);
   }
   if (document.getElementById("leads-page-grid") && window.__currentRoute?.id === "leads") {
     clearTimeout(window.__leadsPageDebounce);
-    window.__leadsPageDebounce = setTimeout(loadLeadsPage, 1800);
+    window.__leadsPageDebounce = setTimeout(loadLeadsPage, 500);
   }
 }
 window.handleCodEvent = handleCodEvent;
