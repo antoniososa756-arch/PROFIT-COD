@@ -2473,7 +2473,7 @@ if (id === "leads") {
   if (c) c.textContent = "Leads";
   box.className = "";
   box.removeAttribute("style");
-  box.innerHTML = `<div id="leads-page-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:20px;">
+  box.innerHTML = `<div id="leads-page-grid" class="leads-page-grid">
     <div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Cargando...</div>
   </div>`;
   loadLeadsPage();
