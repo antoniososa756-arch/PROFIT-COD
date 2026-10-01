@@ -6513,7 +6513,7 @@ const COD_EVENT_LABEL = {
   field_blur:   { icon: "✍️", text: (e, corrigio) => `${corrigio ? "Corrigió" : "Rellenó"} ${COD_FIELD_LABEL[e.field]||e.field}: "${e.value||""}"` },
   form_submit:  { icon: "🟢", text: () => "Envió el pedido" },
   form_abandon: { icon: "🔴", text: () => "Abandonó el formulario" },
-  auto_timeout: { icon: "⏱️", text: () => "Sin actividad por 10 min — marcado como abandonado" },
+  auto_timeout: { icon: "⏱️", text: () => "Sin actividad por 3 min — marcado como abandonado" },
 };
 
 function renderLeadRow(s, sessionNumber) {

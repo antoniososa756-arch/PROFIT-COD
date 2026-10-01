@@ -159,15 +159,17 @@ router.post("/event", async (req, res) => {
 });
 
 // Si el cliente cierra la pestaña de un modo que el "pagehide" del script no
-// alcanza a avisar (navegador raro, proceso matado, etc.), la sesión se queda
-// trabada en open/filling para siempre. Se marca como abandonada cualquiera
-// sin actividad hace más de 10 minutos -- mismo criterio que ya usaba el
-// contador "en vivo" de /stats, para que la lista y el contador coincidan.
+// alcanza a avisar (navegador raro, proceso matado, etc.), o simplemente deja
+// la pestaña en segundo plano sin cerrarla (común en compras por el móvil
+// desde un anuncio: vuelve a Instagram/Facebook y no regresa), la sesión se
+// queda trabada en open/filling para siempre. Se marca como abandonada
+// cualquiera sin actividad hace más de 3 minutos -- mismo criterio que ya usaba
+// el contador "en vivo" de /stats, para que la lista y el contador coincidan.
 async function expireStaleSessions(userId) {
   try {
     const expired = await db.all(
       `UPDATE checkout_sessions SET status = 'abandoned', updated_at = updated_at
-       WHERE user_id = $1 AND status IN ('open','filling') AND updated_at < NOW() - INTERVAL '10 minutes'
+       WHERE user_id = $1 AND status IN ('open','filling') AND updated_at < NOW() - INTERVAL '3 minutes'
        RETURNING session_id, shop_domain`,
       [userId]
     );
@@ -221,7 +223,7 @@ router.get("/stats", auth, async (req, res) => {
     await expireStaleSessions(userId);
     const rows = await db.all(
       `SELECT shop_domain,
-              COUNT(*) FILTER (WHERE (status='open' OR status='filling') AND updated_at > NOW() - INTERVAL '10 minutes') AS live,
+              COUNT(*) FILTER (WHERE (status='open' OR status='filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS live,
               COUNT(*) FILTER (WHERE status='abandoned') AS abandoned,
               COUNT(*) FILTER (WHERE status='submitted') AS submitted,
               COUNT(*) FILTER (WHERE updated_at > NOW() - INTERVAL '24 hours') AS today
