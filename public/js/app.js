@@ -6978,7 +6978,7 @@ function leadsStorePanelHtml(d, sessions) {
       </div>
 
       <div style="display:flex;flex-wrap:wrap;">
-        <div style="flex:1 1 280px;min-width:0;padding:16px 20px;border-right:1px solid var(--border);">
+        <div style="flex:1.6 1 280px;min-width:0;padding:16px 20px;border-right:1px solid var(--border);">
           <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);gap:10px;">
             ${leadsStatCard("blue", d.visitantes_vivo, "Visitantes ahora mismo", leadsStatIcon('<circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>'))}
             ${leadsStatCard("green", `${fmtMoney(d.ventas_hoy)} €`, "Ventas totales (hoy)", leadsStatIcon('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'))}
@@ -6994,7 +6994,7 @@ function leadsStorePanelHtml(d, sessions) {
           </div>
         </div>
 
-        <div id="${panelId}" style="flex:1 1 280px;min-width:0;display:flex;flex-direction:column;">
+        <div id="${panelId}" style="flex:1 1 220px;min-width:0;display:flex;flex-direction:column;">
           ${leadsSessionsHistoryHtml(domain, sessions)}
         </div>
       </div>
