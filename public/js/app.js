@@ -3099,13 +3099,14 @@ if (id === "pedidos") {
         </div>
 
         <div class="orders-table">
-          <div class="orders-row head" style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;">
+          <div class="orders-row head" style="display:grid;grid-template-columns:30px 13% 8% 10% 12% 11% 15% 1fr 9%;gap:0;">
             <div><input type="checkbox" id="orders-select-all" onclick="toggleSelectAllOrders(this)" style="cursor:pointer;"></div>
             <div>Pedido</div>
             <div>Tipo de pago</div>
             <div>Fecha de creación</div>
             <div>Nº seguimiento</div>
             <div>Estado logístico</div>
+            <div>Último estado MRW</div>
             <div>Nombre del cliente</div>
             <div>Costo</div>
           </div>
@@ -12653,7 +12654,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
     <div class="orders-row" onclick="handleOrderRowClick(event, ${o.id})"
       onmouseover="this.style.background='var(--hover)';this.style.boxShadow='inset 0 0 0 1px rgba(34,197,94,.4)';this.style.borderRadius='8px';"
       onmouseout="this.style.background='';this.style.boxShadow='';this.style.borderRadius='';"
-      style="display:grid;grid-template-columns:30px 14% 9% 11% 13% 12% 1fr 10%;gap:0;cursor:pointer;transition:box-shadow .12s,background .12s;">
+      style="display:grid;grid-template-columns:30px 13% 8% 10% 12% 11% 15% 1fr 9%;gap:0;cursor:pointer;transition:box-shadow .12s,background .12s;">
       <div data-row-actions="1" style="display:flex;align-items:center;overflow:hidden;" onclick="event.stopPropagation()">
         <input type="checkbox" class="order-select-cb" data-order-id="${o.id}" onclick="toggleSelectOrder(event, ${o.id})" style="cursor:pointer;">
       </div>
@@ -12662,6 +12663,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
+      <div title="${escapeAttr(o.mrw_estado_texto || "")}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);">${escapeHtml(o.mrw_estado_texto || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
       <div data-row-actions="1" style="display:flex;align-items:center;gap:6px;overflow:visible;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
