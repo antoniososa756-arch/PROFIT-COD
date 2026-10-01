@@ -165,15 +165,19 @@ router.post("/event", async (req, res) => {
     // formulario. "form_abandon" (cerró el formulario) ya NO es un estado
     // final -- vuelve a "browsing" porque el cliente sigue en la tienda.
     // Solo "page_abandon" (cerró la pestaña / se fue del sitio) termina la
-    // sesión de verdad. "heartbeat" no cambia el estado, solo refresca
-    // updated_at para que el latido de presencia mantenga viva la sesión.
+    // sesión de verdad. "heartbeat" y "field_focus" NO cambian el estado --
+    // heartbeat es solo un latido de presencia, y field_focus (pararse en un
+    // campo vacío, antes de escribir) caía antes en el "else" de abajo, que
+    // reiniciaba la sesión a "browsing" y hacía que "Formularios activos" y
+    // "Rellenando" se fueran a 0 un instante cada vez que el cliente entraba
+    // a un campo vacío del formulario, aunque seguía con el formulario abierto.
     const status = type === "form_submit"   ? "submitted"
                  : type === "page_abandon"  ? "page_abandoned"
                  : type === "form_abandon"  ? "browsing"
                  : type === "form_open"     ? "open"
                  : type === "field_blur"    ? "filling"
                  : type === "page_view"     ? "browsing"
-                 : type === "heartbeat"     ? null
+                 : (type === "heartbeat" || type === "field_focus") ? null
                  : "browsing";
 
     // Upsert sesión (último estado — lo que usa el contador "en vivo")
