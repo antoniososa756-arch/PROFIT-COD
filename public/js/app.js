@@ -2474,16 +2474,18 @@ if (id === "leads") {
   box.className = "";
   box.removeAttribute("style");
   box.innerHTML = `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
-      <button id="leads-lock-btn" onclick="toggleLeadsLock()" title="Desbloquear para reordenar las tiendas"
-        style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">
-        <svg id="leads-lock-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span id="leads-lock-text">Bloqueado</span>
-      </button>
-    </div>
-    <div id="leads-totals-row" style="display:flex;justify-content:center;align-items:stretch;gap:14px;margin-bottom:14px;"></div>
-    <div style="display:flex;justify-content:center;margin-bottom:18px;">
-      <div id="leads-global-filter" style="display:flex;gap:4px;background:var(--input);padding:3px;border-radius:9px;"></div>
+    <div class="card" style="margin-bottom:20px;">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <button id="leads-lock-btn" onclick="toggleLeadsLock()" title="Desbloquear para reordenar las tiendas"
+          style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--input);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">
+          <svg id="leads-lock-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span id="leads-lock-text">Bloqueado</span>
+        </button>
+      </div>
+      <div id="leads-totals-row" style="display:flex;justify-content:center;align-items:stretch;gap:14px;margin-bottom:14px;"></div>
+      <div style="display:flex;justify-content:center;">
+        <div id="leads-global-filter" style="display:flex;gap:4px;background:var(--input);padding:3px;border-radius:9px;"></div>
+      </div>
     </div>
     <div id="leads-page-grid" class="leads-page-grid">
       <div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Cargando...</div>
