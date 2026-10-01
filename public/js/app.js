@@ -12650,6 +12650,14 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       }
     } catch(e) { paymentBadge = "-"; }
 
+    // Pedidos ya entregados/devueltos/destruidos salen de la rotación del cron
+    // de MRW (no tiene sentido seguir consultándolos), así que si nunca se les
+    // llegó a guardar el texto crudo (p.ej. llegaron a ese estado antes de que
+    // existiera esta columna), se usa la etiqueta del estado como texto final
+    // en vez de dejarlo vacío — ya no hay ambigüedad de sub-estado posible.
+    const ultimoMrwTexto = o.mrw_estado_texto
+      || (["entregado","devuelto","destruido"].includes(o.fulfillment_status) ? statusLabel(o.fulfillment_status) : "");
+
     return `
     <div class="orders-row" onclick="handleOrderRowClick(event, ${o.id})"
       onmouseover="this.style.background='var(--hover)';this.style.boxShadow='inset 0 0 0 1px rgba(34,197,94,.4)';this.style.borderRadius='8px';"
@@ -12663,7 +12671,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
-      <div title="${escapeAttr(o.mrw_estado_texto || "")}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);">${escapeHtml(o.mrw_estado_texto || "-")}</div>
+      <div title="${escapeAttr(ultimoMrwTexto)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);">${escapeHtml(ultimoMrwTexto || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
       <div data-row-actions="1" style="display:flex;align-items:center;gap:6px;overflow:visible;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</span>
