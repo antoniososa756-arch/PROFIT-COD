@@ -3065,6 +3065,11 @@ if (id === "pedidos") {
           <span class="tab tab-warn" onclick="filterByTabMrwRechazado(this)">⚠️ Rechazado MRW</span>
         </div>
 
+        <div id="orders-ids-filter-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:8px 14px;margin-bottom:10px;">
+          <span id="orders-ids-filter-text" style="font-size:12.5px;color:var(--text);"></span>
+          <button onclick="ocultarFiltroIdsPedidos(true)" style="padding:5px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;">Quitar filtro</button>
+        </div>
+
         <div id="orders-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
 
         <div id="orders-bulk-bar" style="display:none;align-items:center;gap:10px;background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.3);border-radius:8px;padding:8px 14px;margin-bottom:10px;flex-wrap:wrap;">
@@ -6634,6 +6639,26 @@ function irAPedidosDesdeMetricas(status) {
   setSection("pedidos");
 }
 window.irAPedidosDesdeMetricas = irAPedidosDesdeMetricas;
+
+// Abre Pedidos mostrando solo una lista explícita de ids (ej. "pedidos que
+// MRW no reconoce"), ignorando fecha/estado/tienda ya que esos pedidos
+// pueden ser de cualquier fecha o tienda.
+function irAPedidosConIds(ids, etiqueta) {
+  if (!Array.isArray(ids) || !ids.length) return;
+  window.__pendingOrdersIds = { ids, etiqueta };
+  setSection("pedidos");
+}
+window.irAPedidosConIds = irAPedidosConIds;
+
+function ocultarFiltroIdsPedidos(refrescar) {
+  const banner = document.getElementById("orders-ids-filter-banner");
+  if (banner) banner.style.display = "none";
+  if (refrescar) {
+    ordersState = { ...ordersState, ids: "", page: 1 };
+    fetchOrdersFiltered();
+  }
+}
+window.ocultarFiltroIdsPedidos = ocultarFiltroIdsPedidos;
 
 async function loadMetricas() {
   const _myLoadId = ++__metricasLoadId;
@@ -12335,7 +12360,7 @@ async function refreshCacheBackground() {
 setInterval(refreshCacheBackground, 55000);
 
 // Estado de filtros de pedidos (server-side)
-let ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false };
+let ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false, ids: "" };
 let ordersTotal = 0, ordersPages = 0;
 let __ordersFetchId = 0;
 
@@ -12357,6 +12382,7 @@ async function fetchOrdersFiltered() {
   }
   if (ordersState.hasTracking) params.set("hasTracking", "1");
   if (ordersState.mrwRejected) params.set("mrwRejected", "1");
+  if (ordersState.ids)         params.set("ids",         ordersState.ids);
 
   try {
     const res = await fetch(`${API_BASE}/api/orders?${params}`, {
@@ -12388,11 +12414,29 @@ async function fetchOrders() {
   const body = document.getElementById("ordersBody");
   if (!body) return;
 
+  // Si venimos de un listado puntual de pedidos específicos (ej. "pedidos que
+  // MRW no reconoce"), mostrar solo esos ids e ignorar cualquier otro filtro.
+  if (window.__pendingOrdersIds) {
+    const { ids, etiqueta } = window.__pendingOrdersIds;
+    window.__pendingOrdersIds = null;
+    ocultarFiltroIdsPedidos(false);
+    const banner = document.getElementById("orders-ids-filter-banner");
+    const texto  = document.getElementById("orders-ids-filter-text");
+    if (banner) banner.style.display = "flex";
+    if (texto)  texto.textContent = etiqueta || `Mostrando ${ids.length} pedido${ids.length === 1 ? "" : "s"} seleccionado${ids.length === 1 ? "" : "s"}`;
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelector('.tab[data-status=""]')?.classList.add("active");
+    ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, ids: ids.join(",") };
+    await fetchOrdersFiltered();
+    return;
+  }
+
   // Si venimos de un click en una tarjeta de Estadísticas (irAPedidosDesdeMetricas),
   // aplicar ese filtro (fecha + estado + tienda) en vez de los valores por defecto.
   if (window.__pendingOrdersFilter) {
     const pf = window.__pendingOrdersFilter;
     window.__pendingOrdersFilter = null;
+    ocultarFiltroIdsPedidos(false);
 
     const df = document.getElementById("filter-date-from");
     const dt = document.getElementById("filter-date-to");
@@ -12416,7 +12460,7 @@ async function fetchOrders() {
     if (sel) sel.value = pf.shop || "";
     window.__pendingOrdersShop = pf.shop || "";
 
-    ordersState = { q: "", status: pf.status || "", shop: pf.shop || "", dateFrom: pf.dateFrom || "", dateTo: pf.dateTo || "", page: 1 };
+    ordersState = { q: "", status: pf.status || "", shop: pf.shop || "", dateFrom: pf.dateFrom || "", dateTo: pf.dateTo || "", page: 1, ids: "" };
     await fetchOrdersFiltered();
     return;
   }
@@ -12432,13 +12476,15 @@ async function fetchOrders() {
     return;
   }
 
+  ocultarFiltroIdsPedidos(false);
   ordersState = {
     q: "",
     status: "",
     shop: "",
     dateFrom: document.getElementById("filter-date-from")?.value || "",
     dateTo:   document.getElementById("filter-date-to")?.value   || "",
-    page: 1
+    page: 1,
+    ids: ""
   };
   await fetchOrdersFiltered();
 }
@@ -13971,20 +14017,23 @@ function applyFilters() {
     return;
   }
 
-  ordersState = { ...ordersState, status, shop, dateFrom, dateTo, page: 1 };
+  ordersState = { ...ordersState, status, shop, dateFrom, dateTo, page: 1, ids: "" };
+  ocultarFiltroIdsPedidos(false);
   clearOrdersSelection();
   fetchOrdersFiltered();
 }
 
 function clearFilters() {
-  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false };
+  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false, ids: "" };
+  ocultarFiltroIdsPedidos(false);
   clearOrdersSelection();
   fetchOrdersFiltered();
   toggleFilterPanel();
 }
 
 function clearFiltersInline() {
-  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false };
+  ordersState = { q: "", status: "", shop: "", dateFrom: "", dateTo: "", page: 1, hasTracking: false, mrwRejected: false, ids: "" };
+  ocultarFiltroIdsPedidos(false);
   clearOrdersSelection();
   const df = document.getElementById("filter-date-from");
   const dt = document.getElementById("filter-date-to");
@@ -14012,28 +14061,32 @@ function filterByTab(el, status) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
   _clearSearchOnTabSwitch();
-  ordersState = { ...ordersState, status: status || "", hasTracking: false, mrwRejected: false, page: 1 };
+  ocultarFiltroIdsPedidos(false);
+  ordersState = { ...ordersState, status: status || "", hasTracking: false, mrwRejected: false, page: 1, ids: "" };
   fetchOrdersFiltered();
 }
 function filterByTabMulti(el, statuses) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
   _clearSearchOnTabSwitch();
-  ordersState = { ...ordersState, status: statuses.join(","), hasTracking: false, mrwRejected: false, page: 1 };
+  ocultarFiltroIdsPedidos(false);
+  ordersState = { ...ordersState, status: statuses.join(","), hasTracking: false, mrwRejected: false, page: 1, ids: "" };
   fetchOrdersFiltered();
 }
 function filterByTabPendienteMRW(el) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
   _clearSearchOnTabSwitch();
-  ordersState = { ...ordersState, status: "pendiente", hasTracking: true, mrwRejected: false, page: 1 };
+  ocultarFiltroIdsPedidos(false);
+  ordersState = { ...ordersState, status: "pendiente", hasTracking: true, mrwRejected: false, page: 1, ids: "" };
   fetchOrdersFiltered();
 }
 function filterByTabMrwRechazado(el) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
   _clearSearchOnTabSwitch();
-  ordersState = { ...ordersState, status: "", hasTracking: false, mrwRejected: true, page: 1 };
+  ocultarFiltroIdsPedidos(false);
+  ordersState = { ...ordersState, status: "", hasTracking: false, mrwRejected: true, page: 1, ids: "" };
   fetchOrdersFiltered();
 }
 window.filterByTab = filterByTab;
@@ -15841,7 +15894,13 @@ function mostrarPedidosFallidosMRW(errores) {
       <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:16px;">
         ${rows}
       </div>
-      <button onclick="closeModal()" style="padding:10px;border:1px solid #374151;border-radius:8px;background:#111827;color:#f9fafb;font-size:13px;cursor:pointer;font-weight:600;">Cerrar</button>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeModal();irAPedidosConIds(${JSON.stringify(errores.map(e => e.orderId))}, 'Pedidos que MRW no reconoce (${errores.length})')"
+          style="flex:1;padding:10px;border:1px solid rgba(59,130,246,.4);border-radius:8px;background:rgba(59,130,246,.1);color:#3b82f6;font-size:13px;cursor:pointer;font-weight:600;">
+          Ver y gestionar todos en Pedidos
+        </button>
+        <button onclick="closeModal()" style="padding:10px 18px;border:1px solid #374151;border-radius:8px;background:#111827;color:#f9fafb;font-size:13px;cursor:pointer;font-weight:600;">Cerrar</button>
+      </div>
     </div>
   `;
   document.body.appendChild(modal);

@@ -15,6 +15,7 @@ function buildOrdersWhere(req, userId) {
   const from   = req.query.from   || null;
   const to     = req.query.to     || null;
   const q      = req.query.q      || null;
+  const ids    = req.query.ids    || null;
   const hasTracking = req.query.hasTracking === "1";
   const mrwRejected = req.query.mrwRejected === "1";
 
@@ -41,6 +42,13 @@ function buildOrdersWhere(req, userId) {
   }
   if (hasTracking) { conditions.push(`o.tracking_number IS NOT NULL AND o.tracking_number != ''`); }
   if (mrwRejected) { conditions.push(`o.mrw_rejected = true AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')`); }
+  if (ids) {
+    // Lista explícita de ids internos (ej. "pedidos que MRW no reconoce" u
+    // otros listados puntuales) — ignora el resto de filtros de fecha/estado,
+    // se usa sola para mostrar exactamente ese conjunto.
+    const idList = ids.split(",").map(s => parseInt(s.trim(), 10)).filter(n => Number.isInteger(n));
+    if (idList.length) { conditions.push(`o.id = ANY($${i++}::int[])`); params.push(idList); }
+  }
 
   return { where: conditions.join(" AND "), params, nextIndex: i };
 }
