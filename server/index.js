@@ -4,6 +4,7 @@ require("dotenv").config({
 
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const cors = require("cors");
 
 // DB
@@ -84,10 +85,24 @@ app.use("/api/gmail", (req, res, next) => {
 }, gmailRoutes, require("./routes/gmail.pdf.routes"));
 
 // FRONT
-app.use(express.static(path.resolve(__dirname, "../public")));
-app.get("/", (req, res) => {
-  res.sendFile(path.resolve(__dirname, "../public/index.html"));
-});
+// index.html referencia /js/app.js y /css/styles.css sin versión, y el navegador
+// puede quedarse con una copia vieja en caché después de cada deploy (justo lo
+// que pasó: un fix ya subido no se reflejaba hasta hacer un hard refresh). Se
+// le agrega "?v=<arranque del servidor>" a esos dos archivos y se le pide al
+// navegador no cachear el propio HTML, para que cada deploy nuevo (que arranca
+// un proceso nuevo) sirva automáticamente la versión nueva de los assets.
+const BUILD_VERSION = String(Date.now());
+const INDEX_HTML_TEMPLATE = fs.readFileSync(path.resolve(__dirname, "../public/index.html"), "utf8")
+  .replace('src="/js/app.js"', `src="/js/app.js?v=${BUILD_VERSION}"`)
+  .replace('href="/css/styles.css"', `href="/css/styles.css?v=${BUILD_VERSION}"`);
+
+function sendIndexHtml(req, res) {
+  res.set("Cache-Control", "no-cache");
+  res.type("html").send(INDEX_HTML_TEMPLATE);
+}
+
+app.use(express.static(path.resolve(__dirname, "../public"), { index: false }));
+app.get("/", sendIndexHtml);
 app.get("/privacidad", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../public/privacidad.html"));
 });
@@ -105,9 +120,7 @@ app.use("/api/push", require("./routes/push.routes").router);
 // (p.ej. /pedidos, /pedido/12345) sirve el mismo index.html — el router del
 // frontend decide qué mostrar según la URL. Debe ir después de la API y de
 // express.static, y antes del 404 final.
-app.get(/^\/(?!api\/).*/, (req, res) => {
-  res.sendFile(path.resolve(__dirname, "../public/index.html"));
-});
+app.get(/^\/(?!api\/).*/, sendIndexHtml);
 
 // 404
 app.use((req, res) => {
