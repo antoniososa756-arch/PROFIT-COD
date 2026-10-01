@@ -6555,7 +6555,7 @@ const COD_STATUS_LABEL = {
 };
 const COD_FIELD_LABEL = {
   nombre:"Nombre", telefono:"Teléfono", direccion:"Dirección",
-  direccion2:"Piso/Local", ciudad:"Ciudad", cp:"C.P.", email:"Email",
+  direccion2:"Piso/Local", ciudad:"Ciudad", cp:"C.P.", email:"Email", provincia:"Provincia",
 };
 
 const COD_EVENT_LABEL = {
@@ -6586,6 +6586,22 @@ function renderLeadRow(s, sessionNumber) {
       }).join("")
     : `<div style="font-size:12px;color:var(--muted);padding:5px 0;">Sin eventos registrados todavía</div>`;
 
+  // Resumen completo de lo capturado (checkout_sessions.form_data) aparte de
+  // la cronología -- es un respaldo: si algún evento individual se perdiera
+  // en el camino (red, recarga de la tienda a mitad del llenado, etc.), este
+  // resumen igual se actualiza con cada envío exitoso y no deja de mostrar
+  // un dato solo porque su evento puntual no llegó.
+  let fd = {};
+  try { fd = typeof s.form_data === "string" ? JSON.parse(s.form_data || "{}") : (s.form_data || {}); } catch (e) { fd = {}; }
+  const datosHtml = Object.keys(fd).length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:5px;padding:8px 16px 2px;">
+        ${Object.entries(fd).map(([k, v]) => `
+          <span style="background:var(--input);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--text);">
+            <span style="color:var(--muted);">${escapeHtml(COD_FIELD_LABEL[k] || k)}:</span> ${escapeHtml(String(v))}
+          </span>`).join("")}
+      </div>`
+    : "";
+
   return `
     <div id="lead-row-${s.session_id}" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);flex-shrink:0;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 16px;background:var(--input);border-bottom:1px solid var(--border);">
@@ -6596,6 +6612,7 @@ function renderLeadRow(s, sessionNumber) {
         </div>
         <span style="font-size:12px;color:var(--muted);">${ts}</span>
       </div>
+      ${datosHtml}
       <div style="padding:8px 16px;">${timelineHtml}</div>
     </div>`;
 }

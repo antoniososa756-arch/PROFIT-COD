@@ -27,7 +27,10 @@ router.get("/script.js", async (req, res) => {
     "Nombre y apellidos":"nombre","Teléfono":"telefono",
     "Dirección (Calle y número)":"direccion","Casa, Piso, Local...":"direccion2",
     "Ciudad":"ciudad","Código postal":"cp","Email (opcional)":"email",
-    "Nombre":"nombre","Phone":"telefono","Address":"direccion","City":"ciudad","Zip":"cp","Email":"email"
+    "Nombre":"nombre","Phone":"telefono","Address":"direccion","City":"ciudad","Zip":"cp","Email":"email",
+    // Nombres internos reales del formulario de Releasit (no son el placeholder
+    // visible) -- se mapean por el atributo "name" del campo.
+    "civic_number":"direccion2","street_name":"direccion","zip_code":"cp","province":"provincia"
   };
   function send(type,extra){
     var p=Object.assign({shop:SHOP,sid:sid,type:type,url:location.href},extra||{});
@@ -50,7 +53,15 @@ router.get("/script.js", async (req, res) => {
         if(el.value){fd[fieldName(el)]=el.value;send("field_blur",{field:fieldName(el),value:el.value,formData:fd});}
       });
     });
-    form.addEventListener("submit",function(){send("form_submit",{formData:fd});},true);
+    form.addEventListener("submit",function(){
+      // A prueba de duplicados: se ha visto el submit disparar dos veces para
+      // el mismo pedido real. sessionStorage (no una variable en memoria)
+      // porque esta tienda a veces recarga la página brevemente a mitad del
+      // llenado, lo que reiniciaría una simple variable.
+      if(sessionStorage.getItem("_pc_submitted_"+sid))return;
+      sessionStorage.setItem("_pc_submitted_"+sid,"1");
+      send("form_submit",{formData:fd});
+    },true);
   }
   // En vez de dejar un observer pegado a UNA referencia del modal (frágil si la
   // app lo reemplaza/recrea en vez de solo cambiarle la clase), se pregunta de
@@ -200,7 +211,17 @@ router.post("/event", async (req, res) => {
     // Cronología de la sesión (lo que arma "Sesión 1: entró, abrió el
     // formulario, rellenó X, abandonó/envió") — se omiten field_focus (sin
     // valor, no aporta nada) y heartbeat (cada 20s, solo generaría ruido).
-    if (type !== "field_focus" && type !== "heartbeat") {
+    // Respaldo extra contra duplicados de "form_submit" (la guarda del
+    // sessionStorage en el script es la principal, esto es por si el mismo
+    // aviso llega dos veces igual, ej. un reintento de red).
+    let yaEnviado = false;
+    if (type === "form_submit") {
+      yaEnviado = !!(await db.get(
+        "SELECT 1 FROM checkout_session_events WHERE session_id = $1 AND type = 'form_submit' LIMIT 1",
+        [sid]
+      ));
+    }
+    if (type !== "field_focus" && type !== "heartbeat" && !yaEnviado) {
       await db.run(
         `INSERT INTO checkout_session_events (user_id, shop_domain, session_id, type, field, value)
          VALUES ($1, $2, $3, $4, $5, $6)`,
