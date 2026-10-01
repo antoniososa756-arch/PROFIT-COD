@@ -7085,11 +7085,16 @@ function leadsStorePanelHtml(d, sessions) {
   const fmtMoney = n => (parseFloat(n) || 0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fireLevel = leadsFireLevel(d);
   // El fuego vive DETRÁS de todo el contenido (z-index 0) -- como cada
-  // tarjetita interna ya tiene su propio fondo opaco, se ve como un brillo
-  // que asoma por los huecos/bordes, creciendo desde abajo según el nivel,
-  // sin tapar ningún dato.
+  // tarjetita interna ya tiene su propio fondo opaco, se ve como llamas de
+  // verdad (varias "lenguas" con su propio parpadeo) que asoman por los
+  // huecos/bordes, creciendo desde abajo según el nivel, sin tapar ningún
+  // dato. Con pedido recién confirmado (fireLevel 1) la tarjeta ENTERA arde
+  // sin el difuminado hacia arriba que sí llevan los niveles parciales.
   const fireOverlay = fireLevel > 0
-    ? `<div class="leads-fire-overlay" style="height:${Math.round(fireLevel * 100)}%;"></div>`
+    ? `<div class="leads-fire-overlay${fireLevel >= 1 ? " is-full" : ""}" style="height:${Math.round(fireLevel * 100)}%;">
+        <i class="flame-t t1"></i><i class="flame-t t2"></i><i class="flame-t t3"></i><i class="flame-t t4"></i><i class="flame-t t5"></i>
+        <span class="flame-ember e1"></span><span class="flame-ember e2"></span><span class="flame-ember e3"></span>
+      </div>`
     : "";
 
   return `
