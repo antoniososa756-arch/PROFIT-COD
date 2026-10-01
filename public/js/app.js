@@ -2484,7 +2484,7 @@ if (id === "leads") {
       </div>
       <div id="leads-totals-row" style="display:flex;justify-content:center;align-items:stretch;gap:14px;margin-bottom:14px;"></div>
       <div style="display:flex;justify-content:center;">
-        <div id="leads-global-filter" style="display:flex;gap:4px;background:var(--input);padding:3px;border-radius:9px;"></div>
+        <div id="leads-global-filter" style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;background:var(--input);padding:3px;border-radius:9px;"></div>
       </div>
     </div>
     <div id="leads-page-grid" class="leads-page-grid">
@@ -6866,7 +6866,7 @@ window.handleCodEvent = handleCodEvent;
 
 // ─── PÁGINA "LEADS" — vista en vivo + historial, separada por tienda ───────────
 
-const LEADS_FILTER_LABELS = { todos: "Todos", activos: "Activos", abandonados: "Abandonados" };
+const LEADS_FILTER_LABELS = { todos: "Todos", activos: "Activos", completados: "Completados", no_completados: "No completados", abandonados: "Abandonados" };
 
 function leadsStatIcon(path) {
   return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
@@ -7090,7 +7090,9 @@ function leadsStorePanelHtml(d, sessions) {
 
 function leadsFilterSessions(sessions, filter) {
   if (filter === "activos") return sessions.filter(s => ["browsing", "open", "filling", "processing"].includes(s.status));
-  if (filter === "abandonados") return sessions.filter(s => ["page_abandoned", "error"].includes(s.status));
+  if (filter === "abandonados") return sessions.filter(s => s.status === "page_abandoned");
+  if (filter === "completados") return sessions.filter(s => s.status === "submitted");
+  if (filter === "no_completados") return sessions.filter(s => s.status === "error");
   return sessions;
 }
 
