@@ -6612,6 +6612,7 @@ async function loadLeadsCOD(container) {
       stores.forEach(s => {
         const info = statusMap[s.domain] || {};
         const installed = info.installed;
+        const manual = info.manual;
         const scopeError = info.scopeError;
         const scriptTag = `<script src="${API_BASE}/api/cod-tracker/script.js?shop=${s.domain}" defer><\/script>`;
 
@@ -6621,7 +6622,7 @@ async function loadLeadsCOD(container) {
 
         const badge = document.createElement("span");
         badge.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:${installed ? "rgba(34,197,94,.15)" : "rgba(107,114,128,.12)"};color:${installed ? "#22c55e" : "#9ca3af"};`;
-        badge.textContent = installed ? "✓ Instalado" : "Sin instalar";
+        badge.textContent = installed ? (manual ? "✓ Instalado (manual)" : "✓ Instalado") : "Sin instalar";
 
         const name = document.createElement("span");
         name.style.cssText = "font-size:13px;font-weight:600;color:#e5e7eb;flex:1;min-width:100px;";
@@ -6630,7 +6631,10 @@ async function loadLeadsCOD(container) {
         const actions = document.createElement("div");
         actions.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;";
 
-        if (!installed) {
+        if (manual) {
+          // Ya funciona porque se pegó a mano en el tema -- no hay nada que
+          // instalar/desinstalar vía API para este caso.
+        } else if (!installed) {
           const installBtn = document.createElement("button");
           installBtn.textContent = "Instalar automáticamente";
           installBtn.style.cssText = "padding:5px 12px;border-radius:7px;border:none;background:#22c55e;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;";

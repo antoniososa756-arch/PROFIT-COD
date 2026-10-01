@@ -1238,6 +1238,20 @@ async function listCodScriptTags(shopDomain, accessToken) {
   return { tags };
 }
 
+// Detecta el script aunque se haya pegado a mano directo en el tema (en vez
+// de instalado por la API de Script Tags) -- lee el HTML público de la
+// tienda, sin necesitar ningún token ni permiso, y busca la referencia.
+async function detectManualCodScript(shopDomain) {
+  try {
+    const r = await fetch(`https://${shopDomain}/`, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return false;
+    const html = await r.text();
+    return html.includes("/api/cod-tracker/script.js");
+  } catch (e) {
+    return false;
+  }
+}
+
 router.get("/cod-script/status", auth, async (req, res) => {
   const userId = req.user.id;
   const shops = await db.all(
@@ -1246,8 +1260,16 @@ router.get("/cod-script/status", auth, async (req, res) => {
   );
   const result = [];
   for (const shop of shops) {
-    const { tags, error } = await listCodScriptTags(shop.shop_domain, shop.access_token);
-    result.push({ shop: shop.shop_domain, installed: tags.length > 0, scopeError: error === 403 });
+    const [{ tags, error }, manual] = await Promise.all([
+      listCodScriptTags(shop.shop_domain, shop.access_token),
+      detectManualCodScript(shop.shop_domain),
+    ]);
+    result.push({
+      shop: shop.shop_domain,
+      installed: tags.length > 0 || manual,
+      manual: manual && tags.length === 0,
+      scopeError: error === 403,
+    });
   }
   res.json(result);
 });
