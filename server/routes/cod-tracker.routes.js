@@ -158,11 +158,35 @@ router.post("/event", async (req, res) => {
   }
 });
 
+// Si el cliente cierra la pestaña de un modo que el "pagehide" del script no
+// alcanza a avisar (navegador raro, proceso matado, etc.), la sesión se queda
+// trabada en open/filling para siempre. Se marca como abandonada cualquiera
+// sin actividad hace más de 10 minutos -- mismo criterio que ya usaba el
+// contador "en vivo" de /stats, para que la lista y el contador coincidan.
+async function expireStaleSessions(userId) {
+  try {
+    const expired = await db.all(
+      `UPDATE checkout_sessions SET status = 'abandoned', updated_at = updated_at
+       WHERE user_id = $1 AND status IN ('open','filling') AND updated_at < NOW() - INTERVAL '10 minutes'
+       RETURNING session_id, shop_domain`,
+      [userId]
+    );
+    for (const s of expired) {
+      await db.run(
+        `INSERT INTO checkout_session_events (user_id, shop_domain, session_id, type)
+         VALUES ($1, $2, $3, 'auto_timeout')`,
+        [userId, s.shop_domain, s.session_id]
+      ).catch(() => {});
+    }
+  } catch (e) {}
+}
+
 // ── Listar sesiones con su cronología completa (auth) ───────────────────────────
 router.get("/sessions", auth, async (req, res) => {
   const userId = req.user.id;
   const { shop, status, limit = 100 } = req.query;
   try {
+    await expireStaleSessions(userId);
     let q = `SELECT session_id, shop_domain, status, form_data, page_url, created_at, updated_at
              FROM checkout_sessions WHERE user_id = $1`;
     const params = [userId];
@@ -194,6 +218,7 @@ router.get("/sessions", auth, async (req, res) => {
 router.get("/stats", auth, async (req, res) => {
   const userId = req.user.id;
   try {
+    await expireStaleSessions(userId);
     const rows = await db.all(
       `SELECT shop_domain,
               COUNT(*) FILTER (WHERE (status='open' OR status='filling') AND updated_at > NOW() - INTERVAL '10 minutes') AS live,
