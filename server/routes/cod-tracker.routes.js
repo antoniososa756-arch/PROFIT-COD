@@ -58,11 +58,15 @@ router.get("/script.js", async (req, res) => {
   // lo maneje la app por dentro. "Abandonó el formulario" ya NO termina la
   // sesión -- el cliente sigue en la tienda, solo cerró el formulario.
   //
-  // closedStreak exige verlo cerrado en 2 chequeos seguidos (~1.4s) antes de
-  // avisar -- la propia app de Releasit parece quitar y volver a poner la
-  // clase "abierto" por un instante al cambiar de campo (visto con el
-  // autocompletado de dirección), y sin este margen eso se registraba como un
-  // cierre y reapertura real del formulario.
+  // closedStreak exige verlo cerrado en varios chequeos seguidos (~3.5s)
+  // antes de avisar -- la propia app de Releasit parece quitar y volver a
+  // poner la clase "abierto" por un instante al cambiar de campo (visto con
+  // el autocompletado de dirección y, según reportado, con otros campos
+  // también), y un margen corto (antes 2 chequeos, ~1.4s) seguía
+  // registrando eso como un cierre y reapertura real, haciendo que
+  // "Formularios activos"/"Rellenando" cayeran a 0 un momento mientras el
+  // cliente seguía escribiendo. El cierre/salida real sigue cubierto por
+  // "pagehide" (instantáneo) sin depender de este margen.
   var closedStreak=0;
   function checkState(){
     var modal=document.getElementById("_rsi-cod-form-modal");
@@ -77,7 +81,7 @@ router.get("/script.js", async (req, res) => {
       }
     } else if(tracked){
       closedStreak++;
-      if(closedStreak>=2){
+      if(closedStreak>=5){
         tracked=false; attachedForm=null; closedStreak=0;
         send("form_abandon",{formData:fd});
       }
