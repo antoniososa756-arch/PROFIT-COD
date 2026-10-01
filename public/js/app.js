@@ -2481,11 +2481,16 @@ if (id === "leads") {
         <span id="leads-lock-text">Bloqueado</span>
       </button>
     </div>
-    <div id="leads-totals-row" style="display:flex;justify-content:center;align-items:stretch;gap:14px;margin-bottom:18px;"></div>
+    <div id="leads-totals-row" style="display:flex;justify-content:center;align-items:stretch;gap:14px;margin-bottom:14px;"></div>
+    <div style="display:flex;justify-content:center;margin-bottom:18px;">
+      <div id="leads-global-filter" style="display:flex;gap:4px;background:var(--input);padding:3px;border-radius:9px;"></div>
+    </div>
     <div id="leads-page-grid" class="leads-page-grid">
       <div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Cargando...</div>
     </div>`;
   window.__leadsUnlocked = false;
+  window.__leadsGlobalFilter = window.__leadsGlobalFilter || "todos";
+  renderLeadsGlobalFilter();
   loadLeadsPage();
   if (window.__leadsPageInterval) clearInterval(window.__leadsPageInterval);
   window.__leadsPageInterval = setInterval(() => {
@@ -6834,7 +6839,6 @@ window.handleCodEvent = handleCodEvent;
 // ─── PÁGINA "LEADS" — vista en vivo + historial, separada por tienda ───────────
 
 const LEADS_FILTER_LABELS = { todos: "Todos", activos: "Activos", abandonados: "Abandonados" };
-window.__leadsPageFilter = window.__leadsPageFilter || {}; // { [shop_domain]: 'todos'|'activos'|'abandonados' }
 
 function leadsStatIcon(path) {
   return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
@@ -7004,24 +7008,16 @@ function leadsFilterSessions(sessions, filter) {
 }
 
 function leadsSessionsHistoryHtml(domain, sessions) {
-  const filter = window.__leadsPageFilter[domain] || "todos";
+  const filter = window.__leadsGlobalFilter || "todos";
   const byAge = [...sessions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   const numberOf = {};
   byAge.forEach((s, i) => { numberOf[s.session_id] = i + 1; });
   const filtered = leadsFilterSessions(sessions, filter)
     .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
 
-  const tabsHtml = Object.entries(LEADS_FILTER_LABELS).map(([key, label]) => `
-    <span onclick="setLeadsFilter('${escapeAttr(domain)}','${key}')"
-      style="padding:5px 13px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;
-             background:${filter === key ? "#22c55e" : "transparent"};color:${filter === key ? "#fff" : "var(--muted)"};">
-      ${label}
-    </span>`).join("");
-
   return `
-    <div style="padding:14px 20px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+    <div style="padding:14px 20px 10px;">
       <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Historial de sesiones</div>
-      <div style="display:flex;gap:4px;background:var(--input);padding:3px;border-radius:9px;">${tabsHtml}</div>
     </div>
     <div style="max-height:380px;overflow-y:auto;padding:0 20px 16px;display:flex;flex-direction:column;gap:10px;">
       ${filtered.length
@@ -7030,8 +7026,24 @@ function leadsSessionsHistoryHtml(domain, sessions) {
     </div>`;
 }
 
-function setLeadsFilter(domain, filter) {
-  window.__leadsPageFilter[domain] = filter;
+// Un único filtro arriba de todo controla el historial de TODAS las tiendas
+// a la vez, en vez de uno independiente por tienda.
+function renderLeadsGlobalFilter() {
+  const el = document.getElementById("leads-global-filter");
+  if (!el) return;
+  const filter = window.__leadsGlobalFilter || "todos";
+  el.innerHTML = Object.entries(LEADS_FILTER_LABELS).map(([key, label]) => `
+    <span onclick="setLeadsFilter('${key}')"
+      style="padding:6px 16px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;
+             background:${filter === key ? "#22c55e" : "transparent"};color:${filter === key ? "#fff" : "var(--muted)"};">
+      ${label}
+    </span>`).join("");
+}
+window.renderLeadsGlobalFilter = renderLeadsGlobalFilter;
+
+function setLeadsFilter(filter) {
+  window.__leadsGlobalFilter = filter;
+  renderLeadsGlobalFilter();
   loadLeadsPage();
 }
 window.setLeadsFilter = setLeadsFilter;
