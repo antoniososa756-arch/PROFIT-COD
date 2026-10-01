@@ -301,6 +301,11 @@ await pool.query(`
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_rejected BOOLEAN DEFAULT false`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_history_json TEXT`);
+// Texto crudo del último evento de seguimiento MRW (ej. "Envío en reparto"),
+// aparte del fulfillment_status interno que agrupa varios textos distintos
+// bajo "en_transito" — lo actualiza el cron de MRW en cada ciclo (ver
+// syncAllMRW en server/cron.js) y lo usa /api/metrics/en-reparto.
+await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_estado_texto TEXT`);
 await pool.query(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS tracking_number TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_name TEXT`);

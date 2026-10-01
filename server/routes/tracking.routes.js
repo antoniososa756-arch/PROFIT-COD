@@ -364,8 +364,12 @@ router.get("/mrw-history/:orderId", auth, async (req, res) => {
     }
 
     // Guardamos el histórico bueno más reciente para poder servirlo si en el
-    // futuro MRW deja de tenerlo (ver arriba).
-    await req.db.run("UPDATE orders SET mrw_history_json = $1 WHERE id = $2", [JSON.stringify(history), order.id]).catch(() => {});
+    // futuro MRW deja de tenerlo (ver arriba), y el texto crudo del último
+    // evento (ej. "Envío en reparto") que usa /api/metrics/en-reparto.
+    await req.db.run(
+      "UPDATE orders SET mrw_history_json = $1, mrw_estado_texto = $2 WHERE id = $3",
+      [JSON.stringify(history), history[history.length - 1].estado, order.id]
+    ).catch(() => {});
 
     res.json({ history });
   } catch (e) {

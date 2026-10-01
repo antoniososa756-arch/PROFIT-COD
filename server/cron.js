@@ -185,7 +185,13 @@ async function syncAllMRW() {
             const nuevoStatus = estadoTexto === "entregado"
               ? "entregado"
               : resolveStatusFromHistory(allEstados);
+            // Texto crudo del último evento (ej. "Envío en reparto") — se guarda
+            // aparte de nuevoStatus porque éste agrupa varios textos distintos
+            // bajo "en_transito" y se pierde el detalle de en cuál sub-estado
+            // real está el envío (lo usa /api/metrics/en-reparto).
+            const ultimoTextoRaw = allEstados.length ? allEstados[allEstados.length - 1] : "Entregado";
             console.log(`[MRW CRON] ${pedido.tracking_number} → ${nuevoStatus}`);
+            await db.run(`UPDATE orders SET mrw_estado_texto = $1 WHERE id = $2`, [ultimoTextoRaw, pedido.id]).catch(() => {});
             if (nuevoStatus !== pedido.fulfillment_status) {
               await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
               updated++;

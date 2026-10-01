@@ -1625,6 +1625,12 @@ body.dark .btn-filter:hover { background: rgba(34,197,94,.12); }
   animation: stat-icon-spin .7s linear infinite;
 }
 
+/* Punto parpadeante del aviso "Actualmente tienes X pedidos en reparto". */
+@keyframes en-reparto-ping {
+  0%         { transform: scale(1);   opacity: .6; }
+  75%, 100%  { transform: scale(2.2); opacity: 0; }
+}
+
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
 }

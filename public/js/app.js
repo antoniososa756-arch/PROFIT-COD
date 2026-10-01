@@ -1731,6 +1731,13 @@ const now = new Date();
               </div>
             </div>
           </div>
+          <div style="display:flex;align-items:center;gap:10px;width:100%;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
+            <span style="position:relative;display:inline-flex;width:10px;height:10px;flex-shrink:0;">
+              <span style="position:absolute;inset:0;border-radius:50%;background:#22c55e;opacity:.6;animation:en-reparto-ping 1.6s cubic-bezier(0,0,.2,1) infinite;"></span>
+              <span style="position:relative;width:10px;height:10px;border-radius:50%;background:#22c55e;"></span>
+            </span>
+            <span id="en-reparto-texto" style="font-size:13px;color:var(--text);font-weight:600;">Cargando...</span>
+          </div>
         </div>
       </div>
       </div>
@@ -6669,6 +6676,29 @@ function ocultarFiltroIdsPedidos(refrescar) {
 }
 window.ocultarFiltroIdsPedidos = ocultarFiltroIdsPedidos;
 
+// Banner "Actualmente tienes X pedidos en reparto" dentro de la tarjeta de
+// Tasa de entrega. A diferencia del resto de Estadísticas, no depende del
+// rango de fechas (es un estado de "ahora mismo"), solo de la tienda
+// filtrada. Se refresca junto con loadMetricas() (cada 60s), más que
+// suficiente frente al mínimo de 3 minutos pedido, ya que el propio cron de
+// MRW que alimenta este dato corre cada 5 minutos.
+async function cargarEnReparto(dominios) {
+  const texto = document.getElementById("en-reparto-texto");
+  if (!texto) return;
+  try {
+    const params = new URLSearchParams();
+    if (dominios && dominios.length) params.set("shops", dominios.join(","));
+    const r = await fetch(`${API_BASE}/api/metrics/en-reparto?${params}`, {
+      headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await r.json();
+    const n = Number(data?.en_reparto || 0);
+    texto.textContent = n === 1 ? "Actualmente tienes 1 pedido en reparto" : `Actualmente tienes ${n} pedidos en reparto`;
+  } catch {
+    texto.textContent = "No se pudo cargar pedidos en reparto";
+  }
+}
+
 async function loadMetricas() {
   const _myLoadId = ++__metricasLoadId;
   window.__showLoadingBar?.("Actualizando métricas...");
@@ -6694,6 +6724,7 @@ async function loadMetricas() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
   const h = { Authorization: "Bearer " + getActiveToken() };
+  cargarEnReparto(dominiosFiltro);
   try {
 
     // Llamada al nuevo endpoint de stats — toda la lógica queda en el servidor

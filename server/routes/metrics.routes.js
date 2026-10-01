@@ -123,6 +123,41 @@ router.get("/stats", auth, async (req, res) => {
   }
 });
 
+// GET /api/metrics/en-reparto
+// Params: shops (coma-separado, opcional)
+// Cuenta pedidos activos cuyo último evento real de MRW es "en reparto" —
+// a diferencia de fulfillment_status (que agrupa ese texto junto con varios
+// otros dentro de "en_transito"), usa mrw_estado_texto, el texto crudo que
+// guarda el cron de MRW en cada ciclo (ver syncAllMRW en server/cron.js).
+router.get("/en-reparto", auth, async (req, res) => {
+  const userId = req.user.id;
+  let shops = req.query.shops || null;
+  if (shops && typeof shops === "string") shops = shops.split(",").map(s => s.trim()).filter(Boolean);
+  if (!Array.isArray(shops) || shops.length === 0) shops = null;
+
+  try {
+    const params = [userId];
+    let shopCond = "";
+    if (shops) { shopCond = `AND COALESCE(o.shop_domain, s.shop_domain) = ANY($2::text[])`; params.push(shops); }
+
+    const row = await db.get(
+      `SELECT COUNT(*)::int AS n
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+         OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+         AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
+         AND o.mrw_estado_texto ILIKE '%reparto%'
+         ${shopCond}`,
+      params
+    );
+    res.json({ en_reparto: row?.n || 0 });
+  } catch (e) {
+    console.error("metrics/en-reparto error:", e);
+    res.status(500).json({ error: "Error calculando pedidos en reparto" });
+  }
+});
+
 // GET /api/metrics/ads-table
 // Params: shop (requerido), month, year
 // Devuelve: array de días con { day, ingresos, pedidos, descuento_cancelados, facturacion }
