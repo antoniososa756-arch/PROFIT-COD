@@ -5,6 +5,50 @@ const sseManager = require("../sse");
 const { webpush } = require("./push.routes");
 const router = express.Router();
 
+// El formulario COD (Releasit) marca la sesión de Leads como "processing" en
+// cuanto el cliente da clic en "Completar pedido" -- pero eso no garantiza que
+// el pedido se haya creado de verdad (puede fallar por un dato incompleto, sin
+// stock, un error de red...). Este webhook SÍ es la confirmación real de
+// Shopify, así que cuando llega un pedido nuevo se busca la sesión de Leads
+// que lo originó (por teléfono, normalizado a los últimos 9 dígitos para no
+// depender del formato/prefijo) y recién ahí se marca "submitted". Si no
+// aparece ninguna coincidencia no pasa nada -- expireStaleSessions() en
+// cod-tracker.routes.js la marcará como "error" a los 5 minutos.
+async function linkOrderToLeadSession(shop, o) {
+  try {
+    const phoneRaw = o.phone || o.customer?.phone || o.shipping_address?.phone || o.billing_address?.phone;
+    if (!phoneRaw) return;
+    const last9 = String(phoneRaw).replace(/\D/g, "").slice(-9);
+    if (last9.length < 7) return;
+
+    const candidates = await db.all(
+      `SELECT session_id, form_data FROM checkout_sessions
+       WHERE shop_domain = $1 AND status = 'processing' AND updated_at > NOW() - INTERVAL '30 minutes'`,
+      [shop.shop_domain]
+    );
+    for (const c of candidates) {
+      let fd = c.form_data || {};
+      if (typeof fd === "string") { try { fd = JSON.parse(fd || "{}"); } catch (e) { fd = {}; } }
+      const tel = String(fd.telefono || "").replace(/\D/g, "").slice(-9);
+      if (tel && tel === last9) {
+        await db.run(
+          `UPDATE checkout_sessions SET status = 'submitted', updated_at = NOW()
+           WHERE shop_domain = $1 AND session_id = $2`,
+          [shop.shop_domain, c.session_id]
+        );
+        await db.run(
+          `INSERT INTO checkout_session_events (user_id, shop_domain, session_id, type)
+           VALUES ($1, $2, $3, 'order_confirmed')`,
+          [shop.user_id, shop.shop_domain, c.session_id]
+        ).catch(() => {});
+        break;
+      }
+    }
+  } catch (e) {
+    console.warn("[Webhook] No se pudo vincular el pedido con una sesión de Leads:", e.message);
+  }
+}
+
 function mapStatus(o) {
   if (o.cancelled_at) return "cancelado";
   if (o.financial_status === "refunded") return "devuelto";
@@ -107,6 +151,8 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
       });
 
       // Las notificaciones de escritorio se gestionan en el cliente vía SSE + Notification API.
+
+      linkOrderToLeadSession(shop, o).catch(() => {});
 
     } else if (topic === "orders/updated") {
       const status = mapStatus(o);

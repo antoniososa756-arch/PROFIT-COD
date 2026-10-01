@@ -6552,7 +6552,9 @@ const COD_STATUS_LABEL = {
   browsing:       { text: "🌐 En la tienda",     cls: "blue" },
   open:           { text: "👁 Viendo formulario", cls: "blue" },
   filling:        { text: "✍️ Rellenando",         cls: "orange" },
+  processing:     { text: "📨 Confirmando pedido…", cls: "orange" },
   submitted:      { text: "🟢 Pedido enviado",      cls: "green" },
+  error:          { text: "⚠️ Pedido no completado", cls: "red" },
   page_abandoned: { text: "🔴 Abandonó la página",  cls: "red" },
 };
 const COD_FIELD_LABEL = {
@@ -6564,7 +6566,9 @@ const COD_EVENT_LABEL = {
   page_view:    { icon: "🌐", text: () => "Entró a la tienda" },
   form_open:    { icon: "👁", text: () => "Abrió el formulario" },
   field_blur:   { icon: "✍️", text: (e, corrigio) => `${corrigio ? "Corrigió" : "Rellenó"} ${COD_FIELD_LABEL[e.field]||e.field}: "${e.value||""}"` },
-  form_submit:  { icon: "🟢", text: () => "Envió el pedido" },
+  form_submit:  { icon: "📨", text: () => "Dio clic en \"Completar pedido\"" },
+  order_confirmed: { icon: "🟢", text: () => "Pedido confirmado en Shopify" },
+  order_failed: { icon: "⚠️", text: () => "El pedido no se completó (sin confirmación de Shopify)" },
   form_abandon: { icon: "🟠", text: () => "Formulario abandonado (siguió en la tienda)" },
   page_abandon: { icon: "🔴", text: () => "Página abandonada" },
   auto_timeout: { icon: "⏱️", text: () => "Sin actividad por 3 min — se dio por salido de la tienda" },
@@ -6638,7 +6642,9 @@ async function loadLeadsCOD(container) {
             <option value="browsing">En la tienda</option>
             <option value="open">Viendo formulario</option>
             <option value="filling">Rellenando</option>
+            <option value="processing">Confirmando pedido</option>
             <option value="page_abandoned">Abandonaron la página</option>
+            <option value="error">Pedido no completado</option>
             <option value="submitted">Enviados</option>
           </select>
           <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);padding:6px 12px;border-radius:20px;">
@@ -7083,14 +7089,15 @@ function leadsStorePanelHtml(d, sessions) {
 }
 
 function leadsFilterSessions(sessions, filter) {
-  if (filter === "activos") return sessions.filter(s => ["browsing", "open", "filling"].includes(s.status));
-  if (filter === "abandonados") return sessions.filter(s => s.status === "page_abandoned");
+  if (filter === "activos") return sessions.filter(s => ["browsing", "open", "filling", "processing"].includes(s.status));
+  if (filter === "abandonados") return sessions.filter(s => ["page_abandoned", "error"].includes(s.status));
   return sessions;
 }
 
 // Prioridad para subir arriba lo que más vale la pena mirar ahora mismo:
-// rellenando > viendo el formulario > en la tienda sin más > el resto.
-const LEADS_STATUS_PRIORITY = { filling: 3, open: 2, browsing: 1 };
+// confirmando pedido > rellenando > viendo el formulario > en la tienda sin
+// más > el resto.
+const LEADS_STATUS_PRIORITY = { processing: 4, filling: 3, open: 2, browsing: 1 };
 
 function leadsSessionsHistoryHtml(domain, sessions) {
   const filter = window.__leadsGlobalFilter || "todos";

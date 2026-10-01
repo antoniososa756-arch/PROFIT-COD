@@ -182,7 +182,15 @@ router.post("/event", async (req, res) => {
     // reiniciaba la sesión a "browsing" y hacía que "Formularios activos" y
     // "Rellenando" se fueran a 0 un instante cada vez que el cliente entraba
     // a un campo vacío del formulario, aunque seguía con el formulario abierto.
-    const status = type === "form_submit"   ? "submitted"
+    //
+    // "form_submit" (el cliente dio clic en "Completar pedido") NO significa
+    // que el pedido se haya creado de verdad en Shopify -- puede fallar por un
+    // dato incompleto, stock, un error de red, etc. Por eso NO marca
+    // "submitted" directamente: pasa a "processing" (esperando confirmación) y
+    // solo el webhook real de Shopify "orders/create" (ver shopify.webhooks.js)
+    // lo sube a "submitted" cuando el pedido de verdad existe. Si no llega esa
+    // confirmación en unos minutos, expireStaleSessions() lo pasa a "error".
+    const status = type === "form_submit"   ? "processing"
                  : type === "page_abandon"  ? "page_abandoned"
                  : type === "form_abandon"  ? "browsing"
                  : type === "form_open"     ? "open"
@@ -191,12 +199,16 @@ router.post("/event", async (req, res) => {
                  : (type === "heartbeat" || type === "field_focus") ? null
                  : "browsing";
 
-    // Upsert sesión (último estado — lo que usa el contador "en vivo")
+    // Upsert sesión (último estado — lo que usa el contador "en vivo"). Una vez
+    // en "processing" o "submitted" el estado queda bloqueado para eventos del
+    // propio navegador (ej. el redirect tras enviar dispara "page_abandon" y
+    // antes lo pisaba) -- solo lo cambia la confirmación real del webhook o el
+    // timeout de expireStaleSessions().
     await db.run(
       `INSERT INTO checkout_sessions (shop_domain, user_id, session_id, status, form_data, page_url)
        VALUES ($1, $2, $3, COALESCE($4, 'browsing'), $5, $6)
        ON CONFLICT (shop_domain, session_id) DO UPDATE SET
-         status    = CASE WHEN checkout_sessions.status = 'submitted' THEN 'submitted'
+         status    = CASE WHEN checkout_sessions.status IN ('submitted','processing') THEN checkout_sessions.status
                           WHEN $4 IS NULL THEN checkout_sessions.status
                           ELSE $4 END,
          form_data = CASE WHEN EXCLUDED.form_data::text != '{}'
@@ -268,6 +280,25 @@ async function expireStaleSessions(userId) {
         [userId, s.shop_domain, s.session_id]
       ).catch(() => {});
     }
+
+    // Pedidos que se quedaron en "processing" (el cliente dio clic en
+    // "Completar pedido") sin que llegara la confirmación real del webhook de
+    // Shopify "orders/create" -- 5 minutos es de sobra para un pedido que sí
+    // se completó (el webhook llega casi al instante), así que pasado ese
+    // tiempo se marca como "error" en vez de quedar mintiendo como "enviado".
+    const failed = await db.all(
+      `UPDATE checkout_sessions SET status = 'error', updated_at = updated_at
+       WHERE user_id = $1 AND status = 'processing' AND updated_at < NOW() - INTERVAL '5 minutes'
+       RETURNING session_id, shop_domain`,
+      [userId]
+    );
+    for (const s of failed) {
+      await db.run(
+        `INSERT INTO checkout_session_events (user_id, shop_domain, session_id, type)
+         VALUES ($1, $2, $3, 'order_failed')`,
+        [userId, s.shop_domain, s.session_id]
+      ).catch(() => {});
+    }
   } catch (e) {}
 }
 
@@ -314,9 +345,10 @@ router.get("/stats", auth, async (req, res) => {
     // no, porque es un estado de ahora mismo, no un total diario.
     const rows = await db.all(
       `SELECT shop_domain,
-              COUNT(*) FILTER (WHERE status IN ('browsing','open','filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS live,
+              COUNT(*) FILTER (WHERE status IN ('browsing','open','filling','processing') AND updated_at > NOW() - INTERVAL '3 minutes') AS live,
               COUNT(*) FILTER (WHERE status='page_abandoned' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS abandoned,
-              COUNT(*) FILTER (WHERE status='submitted' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS submitted
+              COUNT(*) FILTER (WHERE status='submitted' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS submitted,
+              COUNT(*) FILTER (WHERE status='error' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS failed
        FROM checkout_sessions WHERE user_id = $1
        GROUP BY shop_domain`,
       [userId]
@@ -345,10 +377,11 @@ router.get("/leads-dashboard", auth, async (req, res) => {
 
     const sessionRows = await db.all(
       `SELECT shop_domain,
-              COUNT(*) FILTER (WHERE status IN ('browsing','open','filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS visitantes_vivo,
-              COUNT(*) FILTER (WHERE status IN ('open','filling') AND updated_at > NOW() - INTERVAL '3 minutes') AS formularios_activos,
+              COUNT(*) FILTER (WHERE status IN ('browsing','open','filling','processing') AND updated_at > NOW() - INTERVAL '3 minutes') AS visitantes_vivo,
+              COUNT(*) FILTER (WHERE status IN ('open','filling','processing') AND updated_at > NOW() - INTERVAL '3 minutes') AS formularios_activos,
               COUNT(*) FILTER (WHERE status = 'filling' AND updated_at > NOW() - INTERVAL '3 minutes') AS rellenando,
               COUNT(*) FILTER (WHERE status = 'submitted' AND updated_at > NOW() - INTERVAL '5 minutes') AS compras_recientes,
+              COUNT(*) FILTER (WHERE status = 'error' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS pedidos_fallidos_hoy,
               COUNT(*) FILTER (WHERE (created_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS sesiones_hoy
        FROM checkout_sessions WHERE user_id = $1
        GROUP BY shop_domain`,
@@ -441,6 +474,7 @@ router.get("/leads-dashboard", auth, async (req, res) => {
         formularios_activos: parseInt(sess.formularios_activos || 0),
         rellenando: parseInt(sess.rellenando || 0),
         compras_recientes: parseInt(sess.compras_recientes || 0),
+        pedidos_fallidos_hoy: parseInt(sess.pedidos_fallidos_hoy || 0),
         sesiones_hoy: parseInt(sess.sesiones_hoy || 0),
         ventas_hoy: parseFloat(ord.ventas_hoy || 0),
         pedidos_hoy: parseInt(ord.pedidos_hoy || 0),
