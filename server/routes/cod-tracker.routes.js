@@ -389,6 +389,20 @@ router.get("/leads-dashboard", auth, async (req, res) => {
               COUNT(*) FILTER (WHERE status = 'submitted' AND updated_at > NOW() - INTERVAL '5 minutes') AS compras_recientes,
               COUNT(*) FILTER (WHERE status = 'error' AND (updated_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS pedidos_fallidos_hoy,
               COUNT(*) FILTER (WHERE (created_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date) AS sesiones_hoy,
+              -- Sesiones de HOY que de verdad llegaron a escribir algo en el
+              -- formulario (tienen al menos un evento field_blur -- ese solo
+              -- se manda si el campo tenía valor) -- no solo las que lo
+              -- abrieron y lo cerraron sin tocar nada. El status actual no
+              -- sirve para esto porque solo guarda el último estado (pudo
+              -- pasar por "filling" y luego terminar en "submitted" o
+              -- "page_abandoned", perdiendo el rastro de que sí rellenó).
+              COUNT(*) FILTER (
+                WHERE (created_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date
+                AND EXISTS (
+                  SELECT 1 FROM checkout_session_events e
+                  WHERE e.session_id = checkout_sessions.session_id AND e.type = 'field_blur'
+                )
+              ) AS formularios_totales_hoy,
               MAX(updated_at) FILTER (WHERE status = 'submitted') AS ultimo_pedido_at
        FROM checkout_sessions WHERE user_id = $1
        GROUP BY shop_domain`,
@@ -484,6 +498,7 @@ router.get("/leads-dashboard", auth, async (req, res) => {
         pedidos_fallidos_hoy: parseInt(sess.pedidos_fallidos_hoy || 0),
         ultimo_pedido_at: sess.ultimo_pedido_at || null,
         sesiones_hoy: parseInt(sess.sesiones_hoy || 0),
+        formularios_totales_hoy: parseInt(sess.formularios_totales_hoy || 0),
         ventas_hoy: parseFloat(ord.ventas_hoy || 0),
         pedidos_hoy: parseInt(ord.pedidos_hoy || 0),
         series: {
