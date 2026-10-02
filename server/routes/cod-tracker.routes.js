@@ -458,7 +458,8 @@ router.get("/leads-dashboard", auth, async (req, res) => {
     // Simplificado a nivel hora -- no reaplica el descuento de cancelados por
     // hora, solo el bruto, suficiente para ver si la tendencia va mejor o peor.
     const horaActual = parseInt((await db.get("SELECT EXTRACT(HOUR FROM (NOW() AT TIME ZONE 'Europe/Madrid'))::int AS h")).h);
-    const [ordersHoyRows, ordersAyerRows, sesHoyRows, sesAyerRows] = await Promise.all([
+    const [ordersHoyRows, ordersAyerRows, sesHoyRows, sesAyerRows,
+           formAbHoyRows, formAbAyerRows, inicRelHoyRows, inicRelAyerRows] = await Promise.all([
       db.all(
         `SELECT COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
                 EXTRACT(HOUR FROM (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid'))::int AS hora,
@@ -483,6 +484,30 @@ router.get("/leads-dashboard", auth, async (req, res) => {
         `SELECT shop_domain, EXTRACT(HOUR FROM (created_at AT TIME ZONE 'Europe/Madrid'))::int AS hora, COUNT(*) AS n
          FROM checkout_sessions WHERE user_id = $1 AND (created_at AT TIME ZONE 'Europe/Madrid')::date = ((NOW() AT TIME ZONE 'Europe/Madrid')::date - INTERVAL '1 day')
          GROUP BY shop_domain, hora`, [userId]),
+      db.all(
+        `SELECT cs.shop_domain, EXTRACT(HOUR FROM (cs.created_at AT TIME ZONE 'Europe/Madrid'))::int AS hora, COUNT(*) AS n
+         FROM checkout_sessions cs
+         WHERE cs.user_id = $1 AND (cs.created_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date
+           AND EXISTS (SELECT 1 FROM checkout_session_events e WHERE e.session_id = cs.session_id AND e.type = 'form_open')
+         GROUP BY cs.shop_domain, hora`, [userId]),
+      db.all(
+        `SELECT cs.shop_domain, EXTRACT(HOUR FROM (cs.created_at AT TIME ZONE 'Europe/Madrid'))::int AS hora, COUNT(*) AS n
+         FROM checkout_sessions cs
+         WHERE cs.user_id = $1 AND (cs.created_at AT TIME ZONE 'Europe/Madrid')::date = ((NOW() AT TIME ZONE 'Europe/Madrid')::date - INTERVAL '1 day')
+           AND EXISTS (SELECT 1 FROM checkout_session_events e WHERE e.session_id = cs.session_id AND e.type = 'form_open')
+         GROUP BY cs.shop_domain, hora`, [userId]),
+      db.all(
+        `SELECT cs.shop_domain, EXTRACT(HOUR FROM (cs.created_at AT TIME ZONE 'Europe/Madrid'))::int AS hora, COUNT(*) AS n
+         FROM checkout_sessions cs
+         WHERE cs.user_id = $1 AND (cs.created_at AT TIME ZONE 'Europe/Madrid')::date = (NOW() AT TIME ZONE 'Europe/Madrid')::date
+           AND EXISTS (SELECT 1 FROM checkout_session_events e WHERE e.session_id = cs.session_id AND e.type = 'field_blur')
+         GROUP BY cs.shop_domain, hora`, [userId]),
+      db.all(
+        `SELECT cs.shop_domain, EXTRACT(HOUR FROM (cs.created_at AT TIME ZONE 'Europe/Madrid'))::int AS hora, COUNT(*) AS n
+         FROM checkout_sessions cs
+         WHERE cs.user_id = $1 AND (cs.created_at AT TIME ZONE 'Europe/Madrid')::date = ((NOW() AT TIME ZONE 'Europe/Madrid')::date - INTERVAL '1 day')
+           AND EXISTS (SELECT 1 FROM checkout_session_events e WHERE e.session_id = cs.session_id AND e.type = 'field_blur')
+         GROUP BY cs.shop_domain, hora`, [userId]),
     ]);
 
     function buildSeries(domain, rows, field) {
@@ -515,6 +540,8 @@ router.get("/leads-dashboard", auth, async (req, res) => {
           ventas:   { hoy: buildSeries(s.shop_domain, ordersHoyRows, "ventas"),   ayer: buildSeries(s.shop_domain, ordersAyerRows, "ventas") },
           pedidos:  { hoy: buildSeries(s.shop_domain, ordersHoyRows, "pedidos"),  ayer: buildSeries(s.shop_domain, ordersAyerRows, "pedidos") },
           sesiones: { hoy: buildSeries(s.shop_domain, sesHoyRows, "n"),           ayer: buildSeries(s.shop_domain, sesAyerRows, "n") },
+          formularios_abiertos: { hoy: buildSeries(s.shop_domain, formAbHoyRows, "n"), ayer: buildSeries(s.shop_domain, formAbAyerRows, "n") },
+          iniciaron_rellenado:  { hoy: buildSeries(s.shop_domain, inicRelHoyRows, "n"), ayer: buildSeries(s.shop_domain, inicRelAyerRows, "n") },
         },
       };
     });

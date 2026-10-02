@@ -6935,14 +6935,17 @@ function leadsSparkline(hoy, ayer, color) {
 
 // Tarjeta "a lo Shopify": título en negrita arriba (con la mini-gráfica
 // pegada a su lado, chiquita, como en el Live View real) y el valor debajo.
-function leadsStatCardPlain(title, value, sparklineHtml) {
+function leadsStatCardPlain(title, value, sparklineHtml, pctText) {
   return `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;min-width:0;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <div style="font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
         ${sparklineHtml || ""}
       </div>
-      <div style="font-size:21px;font-weight:800;color:var(--text);margin-top:6px;">${value}</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:6px;">
+        <div style="font-size:21px;font-weight:800;color:var(--text);">${value}</div>
+        ${pctText ? `<span style="font-size:11px;font-weight:700;color:#8b5cf6;background:rgba(139,92,246,.1);padding:2px 7px;border-radius:6px;flex-shrink:0;">${pctText}</span>` : ""}
+      </div>
     </div>`;
 }
 
@@ -7138,12 +7141,21 @@ function leadsStorePanelHtml(d, sessions) {
             ${leadsStatCardPlain("Visitantes ahora mismo", d.visitantes_vivo)}
             ${leadsStatCardPlain("Ventas totales", `${fmtMoney(d.ventas_hoy)} €`, leadsSparkline(d.series?.ventas?.hoy, d.series?.ventas?.ayer, "#22c55e"))}
           </div>
+          ${(() => {
+            // % sobre la base de "Formularios abiertos" -- de los que abrieron
+            // el formulario, cuántos llegaron a escribir algo, y cuántos de
+            // esos terminaron en un pedido real.
+            const abiertos = d.formularios_abiertos_hoy || 0;
+            const pctRellenado = abiertos > 0 ? Math.round((d.iniciaron_rellenado_hoy || 0) / abiertos * 100) : 0;
+            const pctPedido    = abiertos > 0 ? Math.round((d.pedidos_hoy || 0) / abiertos * 100) : 0;
+            return `
           <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;">
             ${leadsStatCardPlain("Sesiones", d.sesiones_hoy, leadsSparkline(d.series?.sesiones?.hoy, d.series?.sesiones?.ayer, "#8b5cf6"))}
-            ${leadsStatCardPlain("Formularios abiertos", d.formularios_abiertos_hoy)}
-            ${leadsStatCardPlain("Iniciaron rellenado", d.iniciaron_rellenado_hoy)}
-            ${leadsStatCardPlain("Pedidos", d.pedidos_hoy, leadsSparkline(d.series?.pedidos?.hoy, d.series?.pedidos?.ayer, "#f97316"))}
-          </div>
+            ${leadsStatCardPlain("Formularios abiertos", abiertos, leadsSparkline(d.series?.formularios_abiertos?.hoy, d.series?.formularios_abiertos?.ayer, "#3b82f6"))}
+            ${leadsStatCardPlain("Iniciaron rellenado", d.iniciaron_rellenado_hoy, leadsSparkline(d.series?.iniciaron_rellenado?.hoy, d.series?.iniciaron_rellenado?.ayer, "#14b8a6"), abiertos > 0 ? `${pctRellenado}%` : "")}
+            ${leadsStatCardPlain("Pedidos", d.pedidos_hoy, leadsSparkline(d.series?.pedidos?.hoy, d.series?.pedidos?.ayer, "#f97316"), abiertos > 0 ? `${pctPedido}%` : "")}
+          </div>`;
+          })()}
 
           <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">Comportamiento de clientes ahora mismo</div>
           <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);gap:8px;">
