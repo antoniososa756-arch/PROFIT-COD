@@ -7138,9 +7138,10 @@ function leadsStorePanelHtml(d, sessions) {
             ${leadsStatCardPlain("Visitantes ahora mismo", d.visitantes_vivo)}
             ${leadsStatCardPlain("Ventas totales", `${fmtMoney(d.ventas_hoy)} €`, leadsSparkline(d.series?.ventas?.hoy, d.series?.ventas?.ayer, "#22c55e"))}
           </div>
-          <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px;">
+          <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;">
             ${leadsStatCardPlain("Sesiones", d.sesiones_hoy, leadsSparkline(d.series?.sesiones?.hoy, d.series?.sesiones?.ayer, "#8b5cf6"))}
-            ${leadsStatCardPlain("Total formulario", d.formularios_totales_hoy)}
+            ${leadsStatCardPlain("Formularios abiertos", d.formularios_abiertos_hoy)}
+            ${leadsStatCardPlain("Iniciaron rellenado", d.iniciaron_rellenado_hoy)}
             ${leadsStatCardPlain("Pedidos", d.pedidos_hoy, leadsSparkline(d.series?.pedidos?.hoy, d.series?.pedidos?.ayer, "#f97316"))}
           </div>
 
