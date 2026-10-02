@@ -7145,13 +7145,15 @@ function leadsStorePanelHtml(d, sessions) {
             // % sobre la base de "Formularios abiertos" -- de los que abrieron
             // el formulario, cuántos llegaron a escribir algo, y cuántos de
             // esos terminaron en un pedido real.
+            const sesiones = d.sesiones_hoy || 0;
             const abiertos = d.formularios_abiertos_hoy || 0;
+            const pctAbiertos  = sesiones > 0 ? Math.round(abiertos / sesiones * 100) : 0;
             const pctRellenado = abiertos > 0 ? Math.round((d.iniciaron_rellenado_hoy || 0) / abiertos * 100) : 0;
             const pctPedido    = abiertos > 0 ? Math.round((d.pedidos_hoy || 0) / abiertos * 100) : 0;
             return `
           <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;">
             ${leadsStatCardPlain("Sesiones", d.sesiones_hoy, leadsSparkline(d.series?.sesiones?.hoy, d.series?.sesiones?.ayer, "#8b5cf6"))}
-            ${leadsStatCardPlain("Formularios abiertos", abiertos, leadsSparkline(d.series?.formularios_abiertos?.hoy, d.series?.formularios_abiertos?.ayer, "#3b82f6"))}
+            ${leadsStatCardPlain("Formularios abiertos", abiertos, leadsSparkline(d.series?.formularios_abiertos?.hoy, d.series?.formularios_abiertos?.ayer, "#3b82f6"), sesiones > 0 ? `${pctAbiertos}%` : "")}
             ${leadsStatCardPlain("Iniciaron rellenado", d.iniciaron_rellenado_hoy, leadsSparkline(d.series?.iniciaron_rellenado?.hoy, d.series?.iniciaron_rellenado?.ayer, "#14b8a6"), abiertos > 0 ? `${pctRellenado}%` : "")}
             ${leadsStatCardPlain("Pedidos", d.pedidos_hoy, leadsSparkline(d.series?.pedidos?.hoy, d.series?.pedidos?.ayer, "#f97316"), abiertos > 0 ? `${pctPedido}%` : "")}
           </div>`;
