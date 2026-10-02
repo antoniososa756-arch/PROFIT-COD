@@ -7437,7 +7437,7 @@ window.ocultarFiltroIdsPedidos = ocultarFiltroIdsPedidos;
 // filtrada. Se refresca junto con loadMetricas() (cada 60s), más que
 // suficiente frente al mínimo de 3 minutos pedido, ya que el propio cron de
 // MRW que alimenta este dato corre cada 5 minutos.
-async function cargarEnReparto(dominios) {
+async function cargarEnReparto(dominios, _loadId) {
   const texto = document.getElementById("en-reparto-texto");
   if (!texto) return;
   try {
@@ -7447,9 +7447,17 @@ async function cargarEnReparto(dominios) {
       headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const data = await r.json();
+    // Si mientras esta petición estaba en vuelo el usuario cambió el filtro
+    // de tiendas (dispara otro loadMetricas con otro _loadId), esta respuesta
+    // ya es vieja -- aplicarla igual podía pisar el número correcto con el
+    // de un filtro anterior si la petición nueva, por azar de red, llegaba
+    // antes que esta. Mismo guardado por _myLoadId que ya usa el resto de
+    // loadMetricas().
+    if (_loadId !== undefined && _loadId !== __metricasLoadId) return;
     const n = Number(data?.en_reparto || 0);
     texto.textContent = n === 1 ? "Actualmente tienes 1 pedido en reparto" : `Actualmente tienes ${n} pedidos en reparto`;
   } catch {
+    if (_loadId !== undefined && _loadId !== __metricasLoadId) return;
     texto.textContent = "No se pudo cargar pedidos en reparto";
   }
 }
@@ -7479,7 +7487,7 @@ async function loadMetricas() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
   const h = { Authorization: "Bearer " + getActiveToken() };
-  cargarEnReparto(dominiosFiltro);
+  cargarEnReparto(dominiosFiltro, _myLoadId);
   try {
 
     // Llamada al nuevo endpoint de stats — toda la lógica queda en el servidor
