@@ -466,6 +466,12 @@ await pool.query(`
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_cse_session ON checkout_session_events(shop_domain, session_id, created_at)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_cse_user ON checkout_session_events(user_id, created_at DESC)`);
+  // Soporta los EXISTS por session_id+type de "Formularios abiertos" /
+  // "Iniciaron rellenado" en leads-dashboard -- sin este índice, cada una de
+  // esas consultas (corren cada 20s mientras Leads está abierto) escaneaba
+  // la tabla entera de eventos en vez de buscar directo, haciendo que toda
+  // la página (y de rebote la app) se sintiera lenta.
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_cse_session_type ON checkout_session_events(session_id, type)`);
   // Migración: sesiones que quedaron con el estado viejo "abandoned" antes de
   // separarlo en "page_abandoned" (página) -- sin esto se muestran como texto
   // plano sin estilo porque ya no existe esa clave en el mapa de estados.
