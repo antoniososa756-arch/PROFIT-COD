@@ -96,7 +96,12 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
       const customerName = o.customer
         ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim()
         : "Cliente";
-      await db.run(
+      // RETURNING (xmax = 0) distingue un INSERT real de una redelivery que
+      // solo tocó la rama DO UPDATE -- Shopify puede reenviar el mismo
+      // webhook varias veces (reintentos, o una suscripción duplicada al
+      // mismo topic). Antes esto no se distinguía, así que cada redelivery
+      // disparaba otra notificación de "pedido nuevo" para el mismo pedido.
+      const upsertResult = await db.get(
         `INSERT INTO orders
            (shop_id, shop_domain, order_id, order_number, created_at, customer_name,
             total_price, currency, fulfillment_status, financial_status,
@@ -120,35 +125,40 @@ router.post("/orders", express.raw({ type: "application/json" }), async (req, re
            tracking_number = COALESCE(EXCLUDED.tracking_number, orders.tracking_number),
            cancelled_at    = EXCLUDED.cancelled_at,
            raw_json        = EXCLUDED.raw_json,
-           updated_at      = now()::text`,
+           updated_at      = now()::text
+         RETURNING (xmax = 0) AS inserted`,
         [shop.id, shop.shop_domain, String(o.id), o.name, o.created_at, customerName,
          parseFloat(o.total_price || 0), o.currency, status, o.financial_status || null,
          tracking, o.cancelled_at || null, JSON.stringify(o)]
       );
 
-      // Contar pedidos del día en hora española (aislado para que un fallo no bloquee el emit)
-      let dailyCount = 1;
-      try {
-        const countRow = await db.get(
-          `SELECT COUNT(*) AS cnt FROM orders
-           WHERE shop_id = $1
-           AND (created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date
-             = (NOW() AT TIME ZONE 'Europe/Madrid')::date`,
-          [shop.id]
-        );
-        dailyCount = parseInt(countRow?.cnt || 1, 10);
-      } catch (e) {
-        console.warn("[Webhook] Error contando pedidos del día:", e.message);
+      if (upsertResult?.inserted) {
+        // Contar pedidos del día en hora española (aislado para que un fallo no bloquee el emit)
+        let dailyCount = 1;
+        try {
+          const countRow = await db.get(
+            `SELECT COUNT(*) AS cnt FROM orders
+             WHERE shop_id = $1
+             AND (created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date
+               = (NOW() AT TIME ZONE 'Europe/Madrid')::date`,
+            [shop.id]
+          );
+          dailyCount = parseInt(countRow?.cnt || 1, 10);
+        } catch (e) {
+          console.warn("[Webhook] Error contando pedidos del día:", e.message);
+        }
+
+        const color = shop.notification_color || "#3b82f6";
+        const shopName = shop.shop_name || shop.shop_domain;
+        console.log(`[Webhook] orders/create → tienda ${shop.shop_domain}, usuario ${shop.user_id}, pedido #${dailyCount} del día`);
+
+        // SSE (pestaña abierta)
+        sseManager.emitToUser(shop.user_id, {
+          type: "new_order", color, shopName, dailyCount, orderNumber: o.name,
+        });
+      } else {
+        console.log(`[Webhook] orders/create duplicado (redelivery) para pedido ${o.name} en ${shop.shop_domain} — se actualizó el registro sin volver a notificar`);
       }
-
-      const color = shop.notification_color || "#3b82f6";
-      const shopName = shop.shop_name || shop.shop_domain;
-      console.log(`[Webhook] orders/create → tienda ${shop.shop_domain}, usuario ${shop.user_id}, pedido #${dailyCount} del día`);
-
-      // SSE (pestaña abierta)
-      sseManager.emitToUser(shop.user_id, {
-        type: "new_order", color, shopName, dailyCount, orderNumber: o.name,
-      });
 
       // Las notificaciones de escritorio se gestionan en el cliente vía SSE + Notification API.
 
