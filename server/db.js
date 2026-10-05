@@ -3,6 +3,12 @@ const { Pool } = require("pg");
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+  // Por defecto pg solo abre 10 conexiones a la vez. La página de Leads
+  // dispara muchas consultas de golpe cada 20s (más con las tarjetas nuevas
+  // de hoy) y las llenaba todas, dejando a CUALQUIER otra parte de la app
+  // (ej. Métricas) esperando en fila por una conexión libre aunque sus
+  // propias consultas no tuvieran nada que ver ni fueran lentas.
+  max: 20,
 });
 
 // Helper para compatibilidad con el código existente (que usa db.run, db.get, db.all)
