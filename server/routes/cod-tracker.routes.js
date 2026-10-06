@@ -244,8 +244,14 @@ router.post("/event", async (req, res) => {
       );
     }
 
-    // Emitir evento SSE al dueño de la tienda
-    sseManager.emitToUser(shopRow.user_id, {
+    // Emitir evento SSE al dueño de la tienda -- "heartbeat" y "field_focus"
+    // NO cambian nada visible (no tocan status ni el historial, por eso ya
+    // se excluían del log de arriba), pero SÍ disparaban este emit antes, y
+    // el frontend reacciona a CUALQUIER cod_event recargando todo el
+    // dashboard de Leads. Con varios visitantes activos mandando heartbeat
+    // cada 60s eso se traducía en recargas completas constantes -- el
+    // verdadero efecto cascada detrás del gasto de peticiones en Render.
+    if (type !== "heartbeat" && type !== "field_focus") sseManager.emitToUser(shopRow.user_id, {
       type: "cod_event",
       eventType: type,
       shop: shopRow.shop_name || shop,
