@@ -10,10 +10,19 @@ router.get("/script.js", async (req, res) => {
   if (!shop) return res.status(400).send("// falta ?shop=dominio");
 
   const shopRow = await db.get(
-    "SELECT user_id FROM shops WHERE LOWER(shop_domain) = $1 AND status = 'active'",
+    "SELECT s.user_id, u.leads_tracking_enabled FROM shops s JOIN users u ON u.id = s.user_id WHERE LOWER(s.shop_domain) = $1 AND s.status = 'active'",
     [shop]
   ).catch(() => null);
   if (!shopRow) return res.status(404).send("// tienda no encontrada en PROFIT-COD");
+
+  // Interruptor de Leads apagado -- se sirve un script vacío en vez del real,
+  // así el navegador del cliente no manda ni un solo evento (ni heartbeat ni
+  // nada) mientras esté así.
+  if (shopRow.leads_tracking_enabled === false) {
+    res.setHeader("Content-Type", "application/javascript");
+    res.setHeader("Cache-Control", "public, max-age=30");
+    return res.send("// Leads desactivado");
+  }
 
   const appUrl = process.env.APP_URL || "https://profit-cod.onrender.com";
 
@@ -169,10 +178,16 @@ router.post("/event", async (req, res) => {
 
   try {
     const shopRow = await db.get(
-      "SELECT id, user_id, shop_name, notification_color FROM shops WHERE LOWER(shop_domain) = $1 AND status = 'active'",
+      `SELECT s.id, s.user_id, s.shop_name, s.notification_color, u.leads_tracking_enabled
+       FROM shops s JOIN users u ON u.id = s.user_id
+       WHERE LOWER(s.shop_domain) = $1 AND s.status = 'active'`,
       [shop.toLowerCase()]
     );
     if (!shopRow) return;
+    // Por si el navegador del cliente todavía tiene en caché el script viejo
+    // (hasta 30s, o más si algún proxy/CDN lo retiene) -- no guardar nada ni
+    // emitir SSE mientras el interruptor esté apagado.
+    if (shopRow.leads_tracking_enabled === false) return;
 
     // "En vivo" ya no depende del formulario: el estado ahora distingue
     // "browsing" (en la tienda, en cualquier página) de los pasos del
@@ -579,6 +594,31 @@ router.post("/leads-order", auth, async (req, res) => {
   try {
     await db.run("UPDATE users SET leads_order = $1 WHERE id = $2", [JSON.stringify(order), req.user.id]);
     res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Interruptor de captura de Leads (script + guardado de eventos) ──────────
+// Visible para cualquiera con acceso a Leads (admin o apoyo), pero solo la
+// cuenta "admin" puede CAMBIARLO -- si un apoyo lo apagara sin querer, el
+// dueño del negocio se queda ciego de la actividad de sus tiendas.
+router.get("/tracking-enabled", auth, async (req, res) => {
+  try {
+    const row = await db.get("SELECT leads_tracking_enabled FROM users WHERE id = $1", [req.user.id]);
+    res.json({ enabled: row?.leads_tracking_enabled !== false });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post("/tracking-enabled", auth, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Solo la cuenta administrador puede cambiar esto" });
+  const { enabled } = req.body || {};
+  if (typeof enabled !== "boolean") return res.status(400).json({ error: "enabled debe ser true/false" });
+  try {
+    await db.run("UPDATE users SET leads_tracking_enabled = $1 WHERE id = $2", [enabled, req.user.id]);
+    res.json({ ok: true, enabled });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

@@ -307,6 +307,9 @@ await pool.query(`
   // Orden elegido a mano de las tarjetas de tienda en la sección Leads (array
   // JSON de shop_domain) -- para que se vea igual en cualquier dispositivo.
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS leads_order TEXT`);
+  // Interruptor para apagar la captura de Leads (script de tracking +
+  // guardado de eventos) sin tocar código -- por defecto encendido.
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS leads_tracking_enabled BOOLEAN NOT NULL DEFAULT true`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_rejected BOOLEAN DEFAULT false`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_history_json TEXT`);

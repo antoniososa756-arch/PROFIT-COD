@@ -2490,7 +2490,8 @@ if (id === "leads") {
       </defs>
     </svg>
     <div class="card" style="margin-bottom:20px;">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap;">
+        <div id="leads-tracking-toggle"></div>
         <button id="leads-lock-btn" onclick="toggleLeadsLock()" title="Desbloquear para reordenar las tiendas"
           style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--input);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">
           <svg id="leads-lock-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -2508,6 +2509,7 @@ if (id === "leads") {
   window.__leadsUnlocked = false;
   window.__leadsGlobalFilter = window.__leadsGlobalFilter || "todos";
   renderLeadsGlobalFilter();
+  renderLeadsTrackingToggle("leads-tracking-toggle");
   loadLeadsPage();
   if (window.__leadsPageInterval) clearInterval(window.__leadsPageInterval);
   window.__leadsPageInterval = setInterval(() => {
@@ -6659,6 +6661,53 @@ function toggleLeadRow(sid) {
 }
 window.toggleLeadRow = toggleLeadRow;
 
+// ── Interruptor de captura de Leads -- un mismo control (misma llamada al
+// servidor) pintado en dos sitios: la página "Leads" del menú y la pestaña
+// "Leads COD" de Integraciones. Apagarlo detiene el script en las tiendas
+// (deja de mandar cualquier evento) y el guardado en el servidor. Solo la
+// cuenta administrador puede cambiarlo -- un apoyo lo puede ver pero no
+// tocar, para que no se apague por accidente y el dueño pierda visibilidad.
+async function renderLeadsTrackingToggle(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const isAdmin = currentUser?.role === "Administrador";
+  try {
+    const r = await fetch(`${API_BASE}/api/cod-tracker/tracking-enabled`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const data = await r.json();
+    const enabled = data.enabled !== false;
+    window.__leadsTrackingEnabled = enabled;
+    if (isAdmin) {
+      el.innerHTML = `
+        <button onclick="toggleLeadsTracking()" title="${enabled ? "Apagar la captura de Leads en tus tiendas" : "Encender la captura de Leads en tus tiendas"}"
+          style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:9px;border:1.5px solid ${enabled ? "rgba(34,197,94,.3)" : "var(--border)"};background:${enabled ? "rgba(34,197,94,.08)" : "var(--input)"};color:${enabled ? "#16a34a" : "var(--muted)"};font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${enabled ? "#22c55e" : "#9ca3af"};flex-shrink:0;"></span>
+          Leads: ${enabled ? "Activado" : "Apagado"}
+        </button>`;
+    } else {
+      el.innerHTML = enabled ? "" : `<span style="font-size:12px;color:var(--muted);">⚪ Leads apagado por el administrador</span>`;
+    }
+  } catch (e) { /* silencioso */ }
+}
+window.renderLeadsTrackingToggle = renderLeadsTrackingToggle;
+
+async function toggleLeadsTracking() {
+  const next = !window.__leadsTrackingEnabled;
+  try {
+    const r = await fetch(`${API_BASE}/api/cod-tracker/tracking-enabled`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ enabled: next }),
+    });
+    const data = await r.json();
+    if (!r.ok) { showToast("❌", data.error || "No se pudo cambiar", "#ef4444"); return; }
+    window.__leadsTrackingEnabled = data.enabled;
+    showToast(data.enabled ? "🟢" : "⚪", data.enabled ? "Leads activado" : "Leads apagado", data.enabled ? "#22c55e" : "#6b7280");
+    renderLeadsTrackingToggle("leads-tracking-toggle");
+    renderLeadsTrackingToggle("leads-cod-tracking-toggle");
+  } catch (e) { showToast("❌", "Error de red", "#ef4444"); }
+}
+window.toggleLeadsTracking = toggleLeadsTracking;
+
 async function loadLeadsCOD(container) {
   container.innerHTML = `
     <div class="card" style="padding:0;overflow:hidden;">
@@ -6666,6 +6715,7 @@ async function loadLeadsCOD(container) {
         <div>
           <div style="font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.2px;">Leads Releasit COD en tiempo real</div>
           <div style="font-size:13px;color:var(--muted);margin-top:3px;">Clientes que abren el formulario de pago contra reembolso en tus tiendas</div>
+          <div id="leads-cod-tracking-toggle" style="margin-top:8px;"></div>
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <select id="leads-filter-shop" onchange="filterLeads()"
@@ -6697,6 +6747,7 @@ async function loadLeadsCOD(container) {
       <div id="leads-list" style="max-height:560px;overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:12px;"></div>
     </div>`;
 
+  renderLeadsTrackingToggle("leads-cod-tracking-toggle");
   await refreshLeads();
 
   // Cargar tiendas y estado de instalación
