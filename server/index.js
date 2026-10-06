@@ -23,6 +23,28 @@ const nominaRoutes = require("./routes/nomina.routes");
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
 
+// ── Contador temporal de tráfico por ruta ───────────────────────────────────
+// Para saber qué endpoint pesa más en la factura de Render sin necesitar el
+// plan de pago que trae el desglose por Path en "Network Metrics" -- esto se
+// ve gratis en la pestaña "Logs". Cuenta TODO (incluye webhooks y el
+// tracker), guarda en memoria (se resetea cada 5 min, así el log siempre
+// refleja la ventana reciente) y no toca la respuesta de nadie.
+// Quitar este bloque (y la línea reqCounts[...]++ de abajo) una vez
+// diagnosticado -- es solo para investigar, no debe quedar para siempre.
+const reqCounts = {};
+app.use((req, res, next) => {
+  const key = `${req.method} ${req.path}`;
+  reqCounts[key] = (reqCounts[key] || 0) + 1;
+  next();
+});
+setInterval(() => {
+  const entries = Object.entries(reqCounts).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((acc, [, n]) => acc + n, 0);
+  console.log(`[ReqStats] Últimos 5 min: ${total} peticiones totales`);
+  entries.slice(0, 20).forEach(([key, n]) => console.log(`[ReqStats]   ${n.toString().padStart(5)}  ${key}`));
+  for (const k in reqCounts) delete reqCounts[k];
+}, 5 * 60 * 1000);
+
 // ⚠️ IMPORTANTE: webhooks usan RAW body (SIEMPRE ANTES DE json)
 app.use("/api/shopify/webhooks", shopifyWebhooks);
 // Stripe webhook necesita raw body también
