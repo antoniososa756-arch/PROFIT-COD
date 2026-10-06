@@ -98,17 +98,20 @@ router.get("/script.js", async (req, res) => {
       }
     }
   }
-  // "En vivo" ya no depende de tener el formulario abierto -- este latido cada
-  // 20s mientras la pestaña está visible es lo que mantiene la sesión activa
-  // en cualquier parte de la tienda. Si se pone en segundo plano (el típico
-  // "vuelve a Instagram sin cerrar nada") los latidos paran solos.
+  // "En vivo" ya no depende de tener el formulario abierto -- este latido es
+  // lo que mantiene la sesión activa en cualquier parte de la tienda. Si se
+  // pone en segundo plano (el típico "vuelve a Instagram sin cerrar nada")
+  // los latidos paran solos. 60s (antes 20s) -- se multiplica por CADA
+  // visitante real, así que con tráfico de anuncios esto pesa mucho en
+  // peticiones/factura de hosting; 60s sigue dejando de sobra margen frente
+  // a los 3 minutos de inactividad que usa el backend para marcar abandono.
   function heartbeat(){
     if(document.visibilityState==="visible") send("heartbeat");
   }
   send("page_view");
   checkState();
   setInterval(checkState,700);
-  setInterval(heartbeat,20000);
+  setInterval(heartbeat,60000);
   // Esto sí es salir de verdad (cerrar la pestaña o navegar fuera del sitio) --
   // ahí termina la sesión en vivo, haya formulario abierto o no.
   addEventListener("pagehide",function(){
