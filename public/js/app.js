@@ -7101,6 +7101,28 @@ function leadsStorePanelHtml(d, sessions) {
   const domain = d.shop_domain;
   const panelId = `leads-panel-${domain.replace(/[^a-z0-9]/gi, "_")}`;
   const fmtMoney = n => (parseFloat(n) || 0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // El número de "en vivo" (arriba) y el historial filtrado (abajo) deben
+  // salir SIEMPRE del mismo dato -- antes el número venía de una consulta
+  // aparte (leads-dashboard) y la lista de otra (/sessions), hechas en
+  // momentos ligeramente distintos, así que una sesión que justo cambiaba de
+  // estado entre una llamada y la otra hacía que no coincidieran (ej. "dice
+  // 1 pero aparecen 2 en la lista"). Ahora los números se calculan aquí
+  // mismo, a partir de las MISMAS sesiones que se usan para pintar el
+  // historial, así que nunca pueden desincronizarse entre sí.
+  const now = Date.now();
+  const liveSessions = sessions.filter(s =>
+    ["browsing", "open", "filling", "processing"].includes(s.status) &&
+    (now - new Date(s.updated_at || s.created_at).getTime()) < 3 * 60 * 1000
+  );
+  d = {
+    ...d,
+    visitantes_vivo: liveSessions.length,
+    formularios_activos: liveSessions.filter(s => ["open", "filling", "processing"].includes(s.status)).length,
+    rellenando: liveSessions.filter(s => s.status === "filling").length,
+    compras_recientes: sessions.filter(s => s.status === "submitted" && (now - new Date(s.updated_at || s.created_at).getTime()) < 5 * 60 * 1000).length,
+  };
+
   const fireLevel = leadsFireLevel(d);
   // El fuego vive DETRÁS de todo el contenido (z-index 0) -- como cada
   // tarjetita interna ya tiene su propio fondo opaco, se ve como un brillo
