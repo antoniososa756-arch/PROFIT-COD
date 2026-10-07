@@ -1318,7 +1318,7 @@ function updateOrderLimitBanner() {
     const textEl = document.getElementById("order-limit-banner-text");
     if (textEl) textEl.textContent = up.is_lifetime_limit
       ? `⛔ Límite gratuito alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos). La app está bloqueada. Actualiza a un plan de pago para continuar.`
-      : `⛔ Límite de pedidos alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")}). La app está bloqueada. Cambia de plan o espera al inicio del mes (${daysLeft} día${daysLeft === 1 ? "" : "s"}).`;
+      : `⛔ Límite de pedidos alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")}). La app está bloqueada. El bloqueo no se levanta solo al renovar el mes — cambia a un plan superior para continuar.`;
   } else if (limit && used >= limit * 0.85) {
     banner.style.cssText = "display:flex;background:#f59e0b;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
     const textEl = document.getElementById("order-limit-banner-text");
@@ -1491,8 +1491,6 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
 
   // Bloqueo por límite de pedidos superado (plan activo pero excedido)
   if (up.is_blocked) {
-    const now = new Date();
-    const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
     if (box) {
       box.style.position = "relative";
       // Eliminar overlay anterior si existe
@@ -1517,9 +1515,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
         </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;">
           <button onclick="setSection('plan')" style="padding:11px 28px;background:#22c55e;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;">Cambiar de plan</button>
-          ${up.is_lifetime_limit
-            ? `<span style="font-size:13px;color:#9ca3af;">este límite no se reinicia — necesitas actualizar de plan</span>`
-            : `<span style="font-size:13px;color:#9ca3af;">o espera ${daysLeft} día${daysLeft===1?"":"s"} para que se reinicie</span>`}
+          <span style="font-size:13px;color:#9ca3af;">este bloqueo no se levanta solo al renovar el mes — necesitas actualizar de plan</span>
         </div>`;
       box.appendChild(overlay);
     }
