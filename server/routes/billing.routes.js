@@ -8,7 +8,7 @@ const router = express.Router();
 // mensual fija del Price ID de Stripe (ver stripe/create-session) — nunca se ha
 // facturado un coste variable por pedido, así que tampoco debe mostrarse como si se cobrara.
 const PLANS = {
-  starter:  { name: "Starter",  base_price: 0,   price_per_order: 0, order_limit: 120  }, // gratis hasta 120
+  starter:  { name: "Starter",  base_price: 14.99, price_per_order: 0, order_limit: 120  },
   growth:   { name: "Growth",   base_price: 39,  price_per_order: 0, order_limit: 420  },
   pro:      { name: "Pro",      base_price: 89,  price_per_order: 0, order_limit: 1000 },
   business: { name: "Business", base_price: 149, price_per_order: 0, order_limit: 3000 },
@@ -54,12 +54,13 @@ function getPriceId(cfg, plan) {
 
 // Contar pedidos desde que arrancó el ciclo de facturación actual (no desde el día 1 del mes,
 // así los pedidos del período de prueba no cuentan contra el límite del plan de pago).
-// El plan Starter es la excepción: es un tope de por vida (sus primeros 120 pedidos,
-// nunca), no uno que se reinicie cada mes — pero se cuenta DESDE trial_started_at, no
-// desde siempre: si no, un cliente con historial ya sincronizado desde Shopify antes
-// de unirse a la app agotaría el mes gratis el mismo día que se registra.
-async function getMonthlyOrders(userId, billingCycleStart, plan, trialStartedAt) {
-  const cycleStart = plan === "starter"
+// Starter SOLO es un tope de por vida (sus primeros 120 pedidos) MIENTRAS está en
+// trial sin pagar — se cuenta desde trial_started_at, no desde siempre: si no, un
+// cliente con historial ya sincronizado desde Shopify antes de unirse a la app
+// agotaría el mes gratis el mismo día que se registra. Un Starter YA PAGADO se
+// comporta como cualquier otro plan: límite mensual que se reinicia cada ciclo.
+async function getMonthlyOrders(userId, billingCycleStart, plan, trialStartedAt, status) {
+  const cycleStart = (plan === "starter" && status === "trial")
     ? (trialStartedAt ? new Date(trialStartedAt) : null)
     : getEffectiveCycleStart(billingCycleStart);
   const countRow = await db.get(`
@@ -82,7 +83,7 @@ router.get("/plan", auth, async (req, res) => {
 
     let monthlyOrders = 0;
     if (planInfo && req.user.role !== "admin") {
-      monthlyOrders = await getMonthlyOrders(req.user.id, user?.billing_cycle_start, planKey, user?.trial_started_at);
+      monthlyOrders = await getMonthlyOrders(req.user.id, user?.billing_cycle_start, planKey, user?.trial_started_at, user?.plan_status);
     }
 
     // ¿Está en trial? plan_expires_at es la fecha real de fin (se fija a +30 días al
@@ -100,8 +101,9 @@ router.get("/plan", auth, async (req, res) => {
     const trialActive  = trialStarted && trialEndsAt && new Date() < new Date(trialEndsAt);
 
     // ¿Bloqueado por exceder pedidos? Durante el trial no hay límite de pedidos... salvo en
-    // Starter, cuyo tope de 120 pedidos es de por vida y aplica siempre (igual que en planCheck).
-    const isLifetimeLimit = planKey === "starter";
+    // Starter, cuyo tope de 120 pedidos es de por vida MIENTRAS está en trial sin pagar
+    // (igual que en planCheck). Un Starter ya pagado usa el límite mensual normal.
+    const isLifetimeLimit = planKey === "starter" && user?.plan_status === "trial";
     const orderLimit = planInfo?.order_limit ?? null;
     const overLimitNow = orderLimit !== null && monthlyOrders > orderLimit && (isLifetimeLimit || !trialActive);
     // plan_overage_locked persiste el bloqueo aunque el ciclo actual ya haya
@@ -157,7 +159,9 @@ router.get("/plan", auth, async (req, res) => {
   }
 });
 
-// POST /api/billing/start-trial — activa 30 días gratis (solo si nunca ha tenido trial)
+// POST /api/billing/start-trial — activa 7 días gratis, o hasta 120 pedidos
+// (lo que llegue primero -- el tope de pedidos ya lo aplica planCheck.js de
+// forma independiente a esta fecha). Solo si nunca ha tenido trial.
 router.post("/start-trial", auth, async (req, res) => {
   const plan = "starter";
   try {
@@ -168,7 +172,7 @@ router.post("/start-trial", auth, async (req, res) => {
     if (user?.plan_status === "active") return res.status(400).json({ error: "Ya tienes un plan activo" });
 
     const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const trialEndsAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const cycleStart  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     await db.run(

@@ -9,7 +9,9 @@ async function autoStartTrial(userId) {
     const u = await db.get("SELECT plan_status, trial_started_at FROM users WHERE id = $1", [userId]);
     if (u?.trial_started_at || u?.plan_status === "active") return; // ya tiene trial o plan
     const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    // 7 días gratis, o hasta 120 pedidos (lo que llegue primero -- el tope de
+    // pedidos lo aplica planCheck.js de forma independiente a esta fecha).
+    const trialEndsAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const cycleStart  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     await db.run(
       `UPDATE users SET plan = 'starter', plan_status = 'trial', plan_expires_at = $1,
