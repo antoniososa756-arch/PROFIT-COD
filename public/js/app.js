@@ -4292,6 +4292,11 @@ if (id === "plan") {
     pro:      { name:"Pro",      price:"89",  limit:"1.000", color:"#8b5cf6", features:["Tiendas ilimitadas","Hasta 1.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
     business: { name:"Business", price:"149", limit:"3.000", color:"#f59e0b", features:["Tiendas ilimitadas","Hasta 3.000 pedidos/mes","Sincronización automática","Seguimiento MRW","Soporte prioritario"] },
   };
+  // Mismos topes que PLAN_ORDER_LIMITS en planCheck.js -- para saber, cuando
+  // está bloqueado por exceso de pedidos, qué planes de verdad lo
+  // desbloquean (los de límite MAYOR al que ya superó) y cuáles no sirven
+  // de nada ofrecerle (uno con límite igual o menor).
+  const PLAN_ORDER_LIMIT = { starter: 120, growth: 420, pro: 1000, business: 3000 };
 
   box.className = "card";
   box.innerHTML = `<div style="max-width:960px;">
@@ -4428,6 +4433,9 @@ if (id === "plan") {
       }
       const isCurrent = p === currentPlan;
       const canTrial  = p === "starter" && !d.had_trial && d.status !== "active" && d.status !== "trial";
+      // Bloqueado por exceso de pedidos: un plan con límite igual o menor al
+      // que ya superó no lo desbloquea -- no tiene sentido ofrecérselo.
+      const uselessIfBlocked = d.is_blocked && PLAN_ORDER_LIMIT[p] <= (PLAN_ORDER_LIMIT[currentPlan] || 0);
       actDiv.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:8px;position:relative;">
           ${isCurrent ? `<div style="text-align:center;padding:7px;background:rgba(34,197,94,.08);border-radius:8px;font-size:12px;font-weight:700;color:#22c55e;">✓ Plan actual${d.status === "trial" ? " (prueba)" : ""}</div>` : ""}
@@ -4439,11 +4447,12 @@ if (id === "plan") {
             style="width:100%;padding:9px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
             ⚙️ Gestionar suscripción
           </button>` : ""}
-          ${(!PLAN_DEFS[p].free && !(isCurrent && d.status === "active")) ? `<button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
+          ${(!PLAN_DEFS[p].free && !(isCurrent && d.status === "active") && !uselessIfBlocked) ? `<button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
             style="width:100%;padding:10px;background:#635bff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             Suscribirse
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>` : ""}
+          ${uselessIfBlocked ? `<div style="text-align:center;font-size:11px;color:#9ca3af;padding:6px 0;">No te desbloquea (límite igual o menor)</div>` : ""}
           <div id="payment-menu-${p}" style="display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#111827;border:1px solid #374151;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:100;">
             <button onclick="pagarStripe('${p}')"
               style="width:100%;padding:9px 12px;background:#1f2937;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;color:#f9fafb;margin-bottom:6px;">
