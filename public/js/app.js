@@ -7669,7 +7669,13 @@ async function loadMetricas() {
     set("donut-pct",       pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
     set("legend-rojo",      `Dev+Dest ${pctRojo}% (${rojos})`);
-    set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})${transito > 0 ? ` · +${pctPorUnidad}% c/u` : ""}`);
+    {
+      // Debajo de la cantidad (no al lado) para que no se confunda con el %
+      // de arriba -- "+0.33% c/u" es un dato aparte, no parte del mismo número.
+      const elPend = document.getElementById("legend-pendiente");
+      if (elPend) elPend.innerHTML = `En tránsito ${pctPendiente}% (${transito})`
+        + (transito > 0 ? `<div style="font-size:11px;color:var(--muted);font-weight:500;margin-top:1px;">+${pctPorUnidad}% c/u</div>` : "");
+    }
     set("donut-base",       `Base: ${enviados} enviados`);
 
     function setArc(id, pct, off) {
@@ -9052,7 +9058,13 @@ async function actualizarMetricasSinBalance() {
     set("donut-pct",        pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
     set("legend-rojo",      `Dev+Dest ${pctRojo}% (${rojos})`);
-    set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})${transito > 0 ? ` · +${pctPorUnidad}% c/u` : ""}`);
+    {
+      // Debajo de la cantidad (no al lado) para que no se confunda con el %
+      // de arriba -- "+0.33% c/u" es un dato aparte, no parte del mismo número.
+      const elPend = document.getElementById("legend-pendiente");
+      if (elPend) elPend.innerHTML = `En tránsito ${pctPendiente}% (${transito})`
+        + (transito > 0 ? `<div style="font-size:11px;color:var(--muted);font-weight:500;margin-top:1px;">+${pctPorUnidad}% c/u</div>` : "");
+    }
     set("donut-base",       `Base: ${enviados} enviados`);
 
     let offset = 0;
