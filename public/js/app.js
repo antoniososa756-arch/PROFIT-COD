@@ -7660,10 +7660,16 @@ async function loadMetricas() {
     const pctRojo      = ((rojos      / baseCalc) * 100).toFixed(2);
     const pctPendiente = ((transito   / baseCalc) * 100).toFixed(2);
 
+    // Cuánto sube "Entregado" por CADA pedido en tránsito que se entregue --
+    // cálculo real (no un número puesto a dedo): el % es count/base*100, así
+    // que un pedido más de base siempre suma 100/base puntos porcentuales,
+    // sin importar la categoría.
+    const pctPorUnidad = (100 / baseCalc).toFixed(2);
+
     set("donut-pct",       pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
     set("legend-rojo",      `Dev+Dest ${pctRojo}% (${rojos})`);
-    set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})`);
+    set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})${transito > 0 ? ` · +${pctPorUnidad}% c/u` : ""}`);
     set("donut-base",       `Base: ${enviados} enviados`);
 
     function setArc(id, pct, off) {
@@ -9038,10 +9044,15 @@ async function actualizarMetricasSinBalance() {
     set("stat-cpa",  cpa  != null ? fmtEurSB(cpa)  : "— €");
     set("stat-roas", roas != null ? roas.toFixed(2) : "—");
 
+    // Cuánto sube "Entregado" por CADA pedido en tránsito que se entregue --
+    // cálculo real: el % es count/base*100, así que un pedido más de base
+    // siempre suma 100/base puntos porcentuales.
+    const pctPorUnidad = (100 / baseCalc).toFixed(2);
+
     set("donut-pct",        pctEntregado + "%");
     set("legend-entregado", `Entregado ${pctEntregado}% (${entregados})`);
     set("legend-rojo",      `Dev+Dest ${pctRojo}% (${rojos})`);
-    set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})`);
+    set("legend-pendiente", `En tránsito ${pctPendiente}% (${transito})${transito > 0 ? ` · +${pctPorUnidad}% c/u` : ""}`);
     set("donut-base",       `Base: ${enviados} enviados`);
 
     let offset = 0;
