@@ -209,8 +209,10 @@ router.put("/payment-config", auth, admin, async (req, res) => {
 router.get("/debug-order/:num", auth, admin, async (req, res) => {
   try {
     const row = await db.get(
-      `SELECT id, order_number, fulfillment_status, financial_status, cancelled_at, created_at, updated_at, LENGTH(raw_json) AS raw_json_len
-       FROM orders WHERE order_number LIKE $1 ORDER BY id DESC LIMIT 1`,
+      `SELECT o.id, o.order_number, o.fulfillment_status, o.financial_status, o.cancelled_at, o.created_at, o.updated_at,
+              o.total_price, o.shop_id, o.shop_domain, s.shop_domain AS shop_domain_from_join
+       FROM orders o LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.order_number LIKE $1 ORDER BY o.id DESC LIMIT 1`,
       [`%${req.params.num}%`]
     );
     if (!row) return res.json({ found: false });
@@ -220,7 +222,26 @@ router.get("/debug-order/:num", auth, admin, async (req, res) => {
       const parsed = JSON.parse(rawRow.raw_json);
       rawParsed = { cancelled_at: parsed.cancelled_at, fulfillment_status: parsed.fulfillment_status, financial_status: parsed.financial_status, updated_at: parsed.updated_at };
     } catch (e) { rawError = e.message; }
-    res.json({ found: true, db: row, raw_json_parsed: rawParsed, raw_json_parse_error: rawError });
+    // Repetir exactamente la consulta de descuento por cancelados que usa
+    // /api/metrics/ads-table, mismo filtro de tienda, para ver si este
+    // pedido entra o no -- así se sabe si el problema es el filtro de
+    // tienda/usuario en vez de seguir adivinando.
+    const shopDomain = row.shop_domain || row.shop_domain_from_join;
+    const replay = shopDomain ? await db.get(
+      `SELECT TO_CHAR((o.cancelled_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS day,
+              COALESCE(SUM(o.total_price), 0) AS descuento, COUNT(*) AS n
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)
+         AND COALESCE(o.shop_domain, s.shop_domain) = $2
+         AND o.fulfillment_status = 'cancelado'
+         AND o.cancelled_at IS NOT NULL
+         AND o.id = $3
+       GROUP BY day`,
+      [req.user.id, shopDomain, row.id]
+    ) : null;
+
+    res.json({ found: true, db: row, raw_json_parsed: rawParsed, raw_json_parse_error: rawError, ads_table_query_replay: replay });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
