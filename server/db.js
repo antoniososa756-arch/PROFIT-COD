@@ -415,16 +415,30 @@ await pool.query(`
   // Columna cancelled_at separada para queries rápidas sin parsear raw_json
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TEXT`);
 
-  // Poblar cancelled_at de registros existentes con raw_json ya guardado
+  // Poblar cancelled_at de registros existentes con raw_json ya guardado.
+  // Antes era un único UPDATE con raw_json::json->>'cancelled_at' en el WHERE
+  // -- si CUALQUIER pedido cancelado tenía un raw_json que no castea limpio a
+  // json, todo el UPDATE fallaba de golpe (silencioso, solo un warning) y
+  // NINGÚN pedido se corregía, no solo el problemático. Fila por fila para
+  // que uno malo no tumbe a los demás.
   try {
-    await pool.query(`
-      UPDATE orders
-      SET cancelled_at = raw_json::json->>'cancelled_at'
-      WHERE fulfillment_status = 'cancelado'
-        AND raw_json IS NOT NULL
-        AND cancelled_at IS NULL
-        AND raw_json::json->>'cancelled_at' IS NOT NULL
+    const candidatos = await pool.query(`
+      SELECT id, raw_json FROM orders
+      WHERE fulfillment_status = 'cancelado' AND raw_json IS NOT NULL AND cancelled_at IS NULL
     `);
+    let fixed = 0, skipped = 0;
+    for (const row of candidatos.rows) {
+      try {
+        const parsed = JSON.parse(row.raw_json);
+        if (parsed?.cancelled_at) {
+          await pool.query(`UPDATE orders SET cancelled_at = $1 WHERE id = $2`, [parsed.cancelled_at, row.id]);
+          fixed++;
+        } else {
+          skipped++;
+        }
+      } catch (e) { skipped++; }
+    }
+    if (fixed || skipped) console.log(`Migration cancelled_at: ${fixed} corregidos, ${skipped} sin fecha o con raw_json inválido`);
   } catch(e) { console.warn("Migration cancelled_at:", e.message); }
 
   // Índices para queries rápidas con 50k+ pedidos
