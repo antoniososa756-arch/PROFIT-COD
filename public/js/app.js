@@ -9498,7 +9498,7 @@ async function loadAdsTable() {
                 onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)"
                 style="width:80px;padding:4px 8px;border:1.5px solid rgba(254,44,85,.4);border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:#fe2c55;font-weight:600;outline:none;">
             </td>
-            ${td(r.facturacion > 0 ? fmt(r.facturacion) : "0,00 €", "text-align:right;color:" + (r.facturacion > 0 ? "var(--text)" : "var(--muted)") + ";")}
+            ${td(fmt(r.facturacion), "text-align:right;" + (r.facturacion < 0 ? "font-weight:700;color:#dc2626;" : "color:" + (r.facturacion > 0 ? "var(--text)" : "var(--muted)") + ";"))}
             ${td(r.pedidos > 0 ? r.pedidos : "0", "text-align:right;color:" + (r.pedidos > 0 ? "var(--text)" : "var(--muted)") + ";")}
             ${td(fmt(r.cpa), "text-align:right;")}
             ${td(fmt2(r.roas), `text-align:right;font-weight:${r.roas!=null&&r.roas>=2?'700':'400'};color:${r.roas!=null&&r.roas>=2?'#16a34a':r.roas!=null&&r.roas<1?'#dc2626':'var(--text)'};`)}
