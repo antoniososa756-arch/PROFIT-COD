@@ -21,8 +21,8 @@ async function syncAllShopifyOrders() {
               : "Desconocido";
             const fStatus = mapStatus(o);
             await db.run(
-              `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, raw_json)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+              `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, cancelled_at, raw_json)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
                               ON CONFLICT(order_id) DO UPDATE SET
                  -- Una vez que el pedido tiene número de seguimiento, el estado logístico
                  -- pasa a ser propiedad exclusiva de la sincronización MRW (cron syncAllMRW /
@@ -46,11 +46,12 @@ async function syncAllShopifyOrders() {
                  financial_status   = EXCLUDED.financial_status,
                  tracking_number    = COALESCE(EXCLUDED.tracking_number, orders.tracking_number),
                  total_price        = EXCLUDED.total_price,
+                 cancelled_at       = EXCLUDED.cancelled_at,
                  raw_json           = EXCLUDED.raw_json`,
               [shop.id, String(o.id), o.name || String(o.order_number), customerName,
                fStatus, o.financial_status || null,
                o.fulfillments?.[0]?.tracking_number || null,
-               o.total_price, o.currency, o.created_at, JSON.stringify(o)]
+               o.total_price, o.currency, o.created_at, o.cancelled_at || null, JSON.stringify(o)]
             );
             total++;
           }
