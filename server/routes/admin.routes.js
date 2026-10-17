@@ -203,4 +203,25 @@ router.put("/payment-config", auth, admin, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── TEMPORAL: diagnóstico de un pedido, para investigar por qué cancelled_at
+// no se recupera en algunos casos (ver conversación sobre Facturación
+// negativa). Quitar una vez resuelto.
+router.get("/debug-order/:num", auth, admin, async (req, res) => {
+  try {
+    const row = await db.get(
+      `SELECT id, order_number, fulfillment_status, financial_status, cancelled_at, created_at, updated_at, LENGTH(raw_json) AS raw_json_len
+       FROM orders WHERE order_number LIKE $1 ORDER BY id DESC LIMIT 1`,
+      [`%${req.params.num}%`]
+    );
+    if (!row) return res.json({ found: false });
+    const rawRow = await db.get(`SELECT raw_json FROM orders WHERE id = $1`, [row.id]);
+    let rawParsed = null, rawError = null;
+    try {
+      const parsed = JSON.parse(rawRow.raw_json);
+      rawParsed = { cancelled_at: parsed.cancelled_at, fulfillment_status: parsed.fulfillment_status, financial_status: parsed.financial_status, updated_at: parsed.updated_at };
+    } catch (e) { rawError = e.message; }
+    res.json({ found: true, db: row, raw_json_parsed: rawParsed, raw_json_parse_error: rawError });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;
