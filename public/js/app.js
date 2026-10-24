@@ -8272,35 +8272,10 @@ async function loadMetricasBalance(dateFrom, dateTo) {
         );
       })
     );
-    // Filtrando por agencia, el gasto de cada día se reparte en proporción a
-    // los pedidos de ese día: si una tienda gastó 100€ un día con 10 pedidos y
-    // 2 son de CTT, a CTT le tocan 20€. Se cuentan solo pedidos no cancelados
-    // con agencia conocida, así MRW + CTT suman el gasto total del día.
-    let _pedidosDia = null;
-    if (_porAgencia) {
-      const madridDay = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
-      _pedidosDia = {};
-      _allOrdersRango.forEach(o => {
-        if (o.fulfillment_status === "cancelado" || o.cancelled_at) return;
-        const c = carrierDePedido(o);
-        if (!c || !o.created_at) return;
-        const k = o.shop_domain + "|" + madridDay(o.created_at);
-        if (!_pedidosDia[k]) _pedidosDia[k] = { total: 0, agencia: 0 };
-        _pedidosDia[k].total++;
-        if (c === _carrierF) _pedidosDia[k].agencia++;
-      });
-    }
     for (const { domain, rows } of adsResults) {
       if (!adsSpends[domain]) adsSpends[domain] = { meta:0, tiktok:0 };
       rows.filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo))
-        .forEach(r => {
-          let f = 1;
-          if (_pedidosDia) {
-            const d = _pedidosDia[domain + "|" + String(r.date).slice(0, 10)];
-            f = d && d.total > 0 ? d.agencia / d.total : 0;
-          }
-          adsSpends[domain].meta += (r.meta||0) * f; adsSpends[domain].tiktok += (r.tiktok||0) * f;
-        });
+        .forEach(r => { adsSpends[domain].meta += r.meta||0; adsSpends[domain].tiktok += r.tiktok||0; });
     }
   } catch {}
 
@@ -8327,18 +8302,15 @@ async function loadMetricasBalance(dateFrom, dateTo) {
 
   const balanceData = stores.map(store => {
     const ads = adsSpends[store.domain] || { meta:0, tiktok:0 };
-    // Filtrando por agencia no se imputan los gastos que no dependen de los
-    // pedidos (Shopify, gastos fijos, nómina, conceptos extra) ni los ingresos
-    // manuales: solo tienen sentido con "Todas".
-    const shopify = _porAgencia ? 0 : (gastosVarios[store.domain] || 0);
+    const shopify = gastosVarios[store.domain] || 0;
 
     const pedEnt = ordersRango.filter(o => o.shop_domain === store.domain && o.fulfillment_status === "entregado");
     const pedCOD = pedEnt.filter(o => { try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="pending"||fin==="cod"||fin==="pendiente"; } catch{return false;} });
     const pedPag = ordersRango.filter(o => { if(o.shop_domain!==store.domain)return false; const fin=(o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"||fin==="authorized"; });
     const tCOD = pedCOD.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
     const tPag = pedPag.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
-    const man1 = (!_porAgencia && manuales.find(m=>m.shop_domain===store.domain&&m.columna===1))||{valor:0};
-    const man2 = (!_porAgencia && manuales.find(m=>m.shop_domain===store.domain&&m.columna===2))||{valor:0};
+    const man1 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===1)||{valor:0};
+    const man2 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===2)||{valor:0};
     const totalIngreso = (tCOD - pedCOD.length*MRW_COMISION) + (tPag - tPag*TARJETA_PCT) + (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
 
     const pedTienda = pedidosBase.filter(o => o.shop_domain === store.domain);
@@ -8364,7 +8336,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
       man1nom: man1.nombre||"", man1val: parseFloat(man1.valor)||0,
       man2nom: man2.nombre||"", man2val: parseFloat(man2.valor)||0,
       meta: ads.meta, tiktok: ads.tiktok, costoProductos, mrw, logistica, shopify,
-      fijoXTienda: fijoTienda, nominaXTienda: nominaTienda, totalOtrosFijos, numTiendas, porAgencia: _porAgencia,
+      fijoXTienda, nominaXTienda, totalOtrosFijos, numTiendas,
       precioMRW, precioLog: precioLogistica,
       enviosMRW: envTienda.length, devMRW: devTienda,
       extras: gastosExtrasMetricas[store.domain] || []
@@ -8980,10 +8952,35 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
         );
       })
     );
+    // Filtrando por agencia, el gasto de cada día se reparte en proporción a
+    // los pedidos de ese día: si una tienda gastó 100€ un día con 10 pedidos y
+    // 2 son de CTT, a CTT le tocan 20€. Se cuentan solo pedidos no cancelados
+    // con agencia conocida, así MRW + CTT suman el gasto total del día.
+    let _pedidosDia = null;
+    if (_porAgencia) {
+      const madridDay = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
+      _pedidosDia = {};
+      _allOrdersRango.forEach(o => {
+        if (o.fulfillment_status === "cancelado" || o.cancelled_at) return;
+        const c = carrierDePedido(o);
+        if (!c || !o.created_at) return;
+        const k = o.shop_domain + "|" + madridDay(o.created_at);
+        if (!_pedidosDia[k]) _pedidosDia[k] = { total: 0, agencia: 0 };
+        _pedidosDia[k].total++;
+        if (c === _carrierF) _pedidosDia[k].agencia++;
+      });
+    }
     for (const { domain, rows } of adsResults) {
       if (!adsSpends[domain]) adsSpends[domain] = { meta:0, tiktok:0 };
       rows.filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo))
-        .forEach(r => { adsSpends[domain].meta += r.meta||0; adsSpends[domain].tiktok += r.tiktok||0; });
+        .forEach(r => {
+          let f = 1;
+          if (_pedidosDia) {
+            const d = _pedidosDia[domain + "|" + String(r.date).slice(0, 10)];
+            f = d && d.total > 0 ? d.agencia / d.total : 0;
+          }
+          adsSpends[domain].meta += (r.meta||0) * f; adsSpends[domain].tiktok += (r.tiktok||0) * f;
+        });
     }
   } catch {}
 
@@ -9004,15 +9001,18 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
 
   const balanceData = stores.map(store => {
     const ads = adsSpends[store.domain] || { meta:0, tiktok:0 };
-    const shopify = gastosVarios[store.domain] || 0;
+    // Filtrando por agencia no se imputan los gastos que no dependen de los
+    // pedidos (Shopify, gastos fijos, nómina, conceptos extra) ni los ingresos
+    // manuales: solo tienen sentido con "Todas".
+    const shopify = _porAgencia ? 0 : (gastosVarios[store.domain] || 0);
 
     const pedEnt = ordersRango.filter(o => o.shop_domain === store.domain && o.fulfillment_status === "entregado");
     const pedCOD = pedEnt.filter(o => { try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="pending"||fin==="cod"||fin==="pendiente"; } catch{return false;} });
     const pedPag = ordersRango.filter(o => { if(o.shop_domain!==store.domain)return false; const fin=(o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"||fin==="authorized"; });
     const tCOD = pedCOD.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
     const tPag = pedPag.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
-    const man1 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===1)||{valor:0};
-    const man2 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===2)||{valor:0};
+    const man1 = (!_porAgencia && manuales.find(m=>m.shop_domain===store.domain&&m.columna===1))||{valor:0};
+    const man2 = (!_porAgencia && manuales.find(m=>m.shop_domain===store.domain&&m.columna===2))||{valor:0};
     const totalIngreso = (tCOD - pedCOD.length*MRW_COMISION) + (tPag - tPag*TARJETA_PCT) + (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
 
     const pedTienda = pedidosBase.filter(o => o.shop_domain === store.domain);
@@ -9078,7 +9078,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       man1nom: man1.nombre||"", man1val: parseFloat(man1.valor)||0,
       man2nom: man2.nombre||"", man2val: parseFloat(man2.valor)||0,
       meta: ads.meta, tiktok: ads.tiktok, costoProductos, costoRecuperado, numDevueltosProd, mrw, logistica, shopify,
-      fijoXTienda, nominaXTienda, totalOtrosFijos, numTiendas,
+      fijoXTienda: fijoTienda, nominaXTienda: nominaTienda, totalOtrosFijos, numTiendas, porAgencia: _porAgencia,
       precioMRW, precioLog: precioLogistica,
       enviosMRW: envTienda.length, devMRW: devTienda,
       extras: extrasTienda,
