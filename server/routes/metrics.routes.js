@@ -22,6 +22,18 @@ router.get("/metrics", auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error métricas" }); }
 });
 
+// Filtro por agencia de envío (?carrier=ctt|mrw). Usa orders.carrier, que
+// rellena la primera agencia que encuentra el envío (ver db.js). Los pedidos
+// con seguimiento pero sin agencia asignada son históricos de MRW (los
+// entregados/devueltos ya no se vuelven a sincronizar, así que nunca reciben
+// carrier) -- salvo que Shopify diga que son de CTT (tracking_company).
+function carrierCond(carrier) {
+  const shopifyCTT = `COALESCE(o.raw_json,'') ILIKE '%"tracking_company":"CTT%'`;
+  if (carrier === "ctt") return `AND (o.carrier = 'ctt' OR (o.carrier IS NULL AND ${shopifyCTT}))`;
+  if (carrier === "mrw") return `AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND COALESCE(o.tracking_number,'') != '' AND NOT ${shopifyCTT}))`;
+  return "";
+}
+
 // GET /api/metrics/stats
 // Params: from, to, shops (coma-separado o array)
 // Devuelve: conteos por estado + facturación (con lógica cancelados por fecha)
@@ -30,6 +42,7 @@ router.get("/stats", auth, async (req, res) => {
   const from         = req.query.from || null;
   const to           = req.query.to   || null;
   const paymentType  = req.query.payment_type || "all"; // "all" | "cod" | "card"
+  const carrierFilter = carrierCond(req.query.carrier); // "" | ctt | mrw
 
   // shops puede venir como ?shops=a,b,c o como ?shops[]=a&shops[]=b
   let shops = req.query.shops || null;
@@ -74,7 +87,7 @@ router.get("/stats", auth, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
-         ${dateCondFrom} ${dateCondTo} ${shopCond} ${paymentCond}`,
+         ${dateCondFrom} ${dateCondTo} ${shopCond} ${paymentCond} ${carrierFilter}`,
       params
     );
 
@@ -99,7 +112,7 @@ router.get("/stats", auth, async (req, res) => {
        WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
          AND o.fulfillment_status = 'cancelado'
          AND o.cancelled_at IS NOT NULL
-         ${cancelDateFrom} ${cancelDateTo} ${cancelShopCond} ${paymentCond}`,
+         ${cancelDateFrom} ${cancelDateTo} ${cancelShopCond} ${paymentCond} ${carrierFilter}`,
       cancelParams
     );
 
@@ -148,7 +161,7 @@ router.get("/en-reparto", auth, async (req, res) => {
          OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
          AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
          AND o.mrw_estado_texto ILIKE '%reparto%'
-         ${shopCond}`,
+         ${shopCond} ${carrierCond(req.query.carrier)}`,
       params
     );
     res.json({ en_reparto: row?.n || 0 });

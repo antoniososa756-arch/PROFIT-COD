@@ -1543,7 +1543,7 @@ const now = new Date();
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <h3 style="margin:0;font-size:15px;font-weight:600;">Estadísticas</h3>
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
           <div style="position:relative;" id="met-picker-wrap">
             <button id="met-picker-trigger" onclick="toggleMetDatePicker()"
               style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
@@ -1556,6 +1556,21 @@ const now = new Date();
             <input type="date" id="metrics-date-from" value="${savedFrom}" style="display:none;">
             <input type="date" id="metrics-date-to" value="${savedTo}" style="display:none;">
             <select id="metrics-shop" style="display:none;"><option value="">Todas las tiendas</option></select>
+          </div>
+          <div id="met-carrier-wrap" style="position:relative;" onmouseleave="window.__metCT=setTimeout(function(){var p=document.getElementById('met-carrier-panel');if(p)p.style.display='none';},250)" onmouseenter="clearTimeout(window.__metCT)">
+            <button id="met-carrier-trigger" onclick="toggleMetCarrierFilter()"
+              style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
+              onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <span id="met-carrier-label">Agencia: Todas</span>
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div id="met-carrier-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:1500;background:var(--card);border:1px solid #374151;border-radius:12px;padding:6px;min-width:150px;">
+              ${[["all","Todas"],["mrw","Solo MRW"],["ctt","Solo CTT"]].map(([k,l]) => `
+                <div id="met-carrier-opt-${k}" onclick="setMetCarrierFilter('${k}')"
+                  style="padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;${(window.__metCarrierFilter || localStorage.getItem('met_carrier') || 'all') === k ? 'color:#22c55e;' : ''}"
+                  onmouseover="this.style.background='var(--pk-input)'" onmouseout="this.style.background=''">${l}</div>`).join("")}
+            </div>
           </div>
           <div id="met-shop-filter-wrap" style="position:relative;" onmouseleave="window.__metFT=setTimeout(function(){var p=document.getElementById('met-shop-filter-panel');var c=document.getElementById('met-filter-chevron');if(p&&p.style.display==='block'){p.style.display='none';if(c)c.style.transform='';localStorage.setItem('met_filter_open','0');}},250)" onmouseenter="clearTimeout(window.__metFT)">
             <button id="met-filter-trigger" onclick="toggleMetShopFilter()"
@@ -1912,6 +1927,31 @@ const now = new Date();
     </div>`;
     metReposition();
   }
+
+  // Filtro por agencia de envío (Todas / MRW / CTT) -- se recuerda entre visitas.
+  window.toggleMetCarrierFilter = function() {
+    const p = document.getElementById("met-carrier-panel");
+    if (p) p.style.display = p.style.display === "block" ? "none" : "block";
+  };
+  window.setMetCarrierFilter = function(k, silent) {
+    window.__metCarrierFilter = k;
+    try { localStorage.setItem("met_carrier", k); } catch (e) {}
+    const labels = { all: "Agencia: Todas", mrw: "Agencia: MRW", ctt: "Agencia: CTT" };
+    const lbl = document.getElementById("met-carrier-label");
+    if (lbl) lbl.textContent = labels[k] || labels.all;
+    ["all","mrw","ctt"].forEach(o => {
+      const el = document.getElementById("met-carrier-opt-" + o);
+      if (el) el.style.color = o === k ? "#22c55e" : "";
+    });
+    const p = document.getElementById("met-carrier-panel");
+    if (p) p.style.display = "none";
+    if (!silent && window.__refreshMetrics) window.__refreshMetrics();
+  };
+  (function() {
+    let saved = "all";
+    try { saved = localStorage.getItem("met_carrier") || "all"; } catch (e) {}
+    window.setMetCarrierFilter(saved, true);
+  })();
 
   window.setMetPaymentFilter = function(type) {
     window.__metPaymentFilter = type;
@@ -7763,6 +7803,7 @@ async function cargarEnReparto(dominios, _loadId) {
   try {
     const params = new URLSearchParams();
     if (dominios && dominios.length) params.set("shops", dominios.join(","));
+    if (window.__metCarrierFilter && window.__metCarrierFilter !== "all") params.set("carrier", window.__metCarrierFilter);
     const r = await fetch(`${API_BASE}/api/metrics/en-reparto?${params}`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     });
@@ -7815,6 +7856,8 @@ async function loadMetricas() {
     if (dominiosFiltro.length > 0) statsParams.set("shops", dominiosFiltro.join(","));
     const _payFilter = window.__metPaymentFilter || "all";
     if (_payFilter !== "all") statsParams.set("payment_type", _payFilter);
+    const _carrier = window.__metCarrierFilter || "all";
+    if (_carrier !== "all") statsParams.set("carrier", _carrier);
     const statsRes = await fetch(`${API_BASE}/api/metrics/stats?${statsParams}`, { headers: h });
     const stats = await statsRes.json();
     if (_myLoadId !== __metricasLoadId) { window.__hideLoadingBar?.(); metricasSetTarjetasCargando(false); return; }
