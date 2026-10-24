@@ -144,8 +144,16 @@ async function cttGetUserData(accessToken, idToken) {
   return {
     clientCode: user.client_id,
     centerIds: (user.client_centers || []).map((c) => c.client_center_id).filter(Boolean),
-    canViewAllCenters: !!user.effective_permissions?.can_view_all_centers,
+    // Igual que su web: una cuenta "master" no filtra por centro.
+    isMaster: !!user.is_client_master,
   };
+}
+
+// Filtros de cuenta que la web de CTT añade a toda consulta de rpc-shippings.
+function cttAccountFilters({ clientCode, centerIds, isMaster }) {
+  const f = [{ field: "client_code", operation: "EQUALS", value: clientCode }];
+  if (!isMaster && centerIds.length) f.push({ field: "client_center_code", operation: "IN", value: centerIds });
+  return f;
 }
 
 // Pide la lista de envíos recientes de la cuenta con los mismos filtros que
@@ -153,18 +161,15 @@ async function cttGetUserData(accessToken, idToken) {
 // así se traen VARIOS envíos en pocas llamadas en vez de una por pedido.
 // Recorre todas las páginas siguiendo pagination.page_offset.next, igual que
 // el scroll infinito de su web (con un tope por si la paginación no avanza).
-async function cttListShipments(accessToken, idToken, { pageLimit = 100, daysBack = 90, maxPages = 30 } = {}) {
-  const { clientCode, centerIds, canViewAllCenters } = await cttGetUserData(accessToken, idToken);
+async function cttListShipments(accessToken, idToken, { pageLimit = 100, daysBack = 90, maxPages = 30, userData = null } = {}) {
+  const account = userData || await cttGetUserData(accessToken, idToken);
   const now = new Date();
   const from = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
   const filters = [
     { field: "item_number", operation: "EQUALS", value: 1 },
     { field: "current_status_code", operation: "IS_NOT_NULL" },
-    { field: "client_code", operation: "EQUALS", value: clientCode },
+    ...cttAccountFilters(account),
   ];
-  if (!canViewAllCenters && centerIds.length) {
-    filters.push({ field: "client_center_code", operation: "IN", value: centerIds });
-  }
   filters.push({ field: "manifest_datetime", operation: "RANGE", from_value: from.toISOString(), to_value: now.toISOString() });
 
   const all = [];
@@ -208,11 +213,21 @@ async function cttShippingsPage(accessToken, idToken, body) {
   return json;
 }
 
-// Busca un envío puntual por su número de seguimiento dentro de la lista
-// reciente (ver cttListShipments).
-async function cttFetchShipment(accessToken, idToken, trackingNumber) {
-  const list = await cttListShipments(accessToken, idToken);
-  return list.find((s) => s.shipping_code === trackingNumber) || null;
+// Busca un envío puntual por su número de seguimiento con una consulta
+// directa (shipping_code EQUALS), igual que el buscador de su web -- sin
+// filtro de fechas, así encuentra también envíos recién creados que aún no
+// tienen manifest_datetime (la lista de cttListShipments los deja fuera).
+async function cttFetchShipment(accessToken, idToken, trackingNumber, userData = null) {
+  const account = userData || await cttGetUserData(accessToken, idToken);
+  const json = await cttShippingsPage(accessToken, idToken, {
+    page: { page_offset: 0, page_limit: 1 },
+    config: { view: "WEBCLIENT", language: "ES" },
+    filter: {
+      group_operation: "AND",
+      filters: [{ field: "shipping_code", operation: "EQUALS", value: String(trackingNumber).trim() }, ...cttAccountFilters(account)],
+    },
+  });
+  return Array.isArray(json?.data) && json.data[0] ? json.data[0] : null;
 }
 
 // Mapea el estado de CTT al mismo vocabulario que ya usa ProfitCOD
@@ -229,7 +244,8 @@ function mapCTTStatus(shipment) {
   if (milestone.includes("devuel")) return "devuelto";
   if (milestone.includes("destru")) return "destruido";
   if (milestone.includes("anulad") || milestone.includes("cancelad")) return "cancelado";
-  const lastEvent = (shipment.events || [])[shipment.events.length - 1];
+  const events = shipment.events || [];
+  const lastEvent = events[events.length - 1];
   const evCode = lastEvent?.code || "";
   if (evCode === "WEB0000") return "pendiente";
   if (evCode === "WEB0500") return "en_preparacion";
@@ -245,8 +261,10 @@ function mapCTTStatus(shipment) {
 // El texto crudo del último evento va a mrw_estado_texto (mismo uso que con
 // MRW: lo muestra el pedido y lo usa /api/metrics/en-reparto).
 async function syncCTTForUser(db, creds) {
+  await db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_ctt_check TEXT`).catch(() => {});
   const { accessToken, idToken } = await cttGetValidSession(db, creds);
-  const shipments = await cttListShipments(accessToken, idToken);
+  const userData = await cttGetUserData(accessToken, idToken);
+  const shipments = await cttListShipments(accessToken, idToken, { userData });
   const byCode = new Map();
   const byRef = new Map();
   for (const s of shipments) {
@@ -260,16 +278,29 @@ async function syncCTTForUser(db, creds) {
      WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
        OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
        AND (o.fulfillment_status IS NULL OR o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado'))
-       AND o.created_at >= $2`,
+       AND o.created_at >= $2
+     ORDER BY o.last_ctt_check ASC NULLS FIRST`,
     // created_at es TEXT ISO (de Shopify): comparar como texto evita que un
     // valor raro rompa toda la consulta con un cast a timestamptz.
     [creds.user_id, new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)]
   );
 
+  // Pedidos con seguimiento que no salen en la lista (ej. sin manifestar
+  // todavía, o más antiguos de 90 días): consulta directa, con tope por
+  // ciclo para no saturar a CTT -- el resto entra en los siguientes ciclos.
+  // No se distingue aquí si son de CTT o de MRW, así que una consulta vacía
+  // simplemente se ignora.
+  let directLeft = 60;
+
   let matched = 0, updated = 0;
   for (const pedido of pedidos) {
     const tracking = (pedido.tracking_number || "").trim();
     let shipment = tracking ? byCode.get(tracking) : null;
+    if (!shipment && tracking && directLeft > 0) {
+      directLeft--;
+      shipment = await cttFetchShipment(accessToken, idToken, tracking, userData).catch(() => null);
+      await db.run(`UPDATE orders SET last_ctt_check = now()::text WHERE id = $1`, [pedido.id]).catch(() => {});
+    }
     let setTracking = false;
     if (!shipment && !tracking && pedido.order_number) {
       shipment = byRef.get(String(pedido.order_number).trim().toUpperCase()) || null;
