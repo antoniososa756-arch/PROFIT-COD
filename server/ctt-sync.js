@@ -130,8 +130,16 @@ async function cttFetchShipment(accessToken, idToken, trackingNumber) {
   });
   const text = await res.text();
   let json;
-  try { json = JSON.parse(text); } catch (e) { throw new Error(`Respuesta no-JSON de CTT (${res.status}): ${text.slice(0, 200)}`); }
-  if (!res.ok) throw new Error(json?.message || json?.error || `CTT respondió ${res.status}`);
+  try { json = JSON.parse(text); } catch (e) { throw new Error(`Respuesta no-JSON de CTT (${res.status}): ${text.slice(0, 300)}`); }
+  if (!res.ok) {
+    // El error de CTT puede venir como string o como objeto anidado -- lo
+    // serializamos completo (antes se perdía el detalle real, mostrando
+    // solo "[object Object]" si message/error no era un string plano).
+    const detail = typeof json?.message === "string" ? json.message
+      : typeof json?.error === "string" ? json.error
+      : JSON.stringify(json).slice(0, 500);
+    throw new Error(`CTT respondió ${res.status}: ${detail}`);
+  }
   return json?.data?.[0] || null;
 }
 
