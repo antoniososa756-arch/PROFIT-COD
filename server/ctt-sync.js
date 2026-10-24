@@ -27,7 +27,7 @@ const CTT_REGION    = "eu-central-1";
 const CTT_POOL_ID   = "eu-central-1_F8jAzJtP0";
 const CTT_CLIENT_ID = "bmnqrafpvofp4i537u4stvkso";
 const CTT_SHIPPINGS_URL =
-  "https://ctt-pro-e-customer-web.de-c1.cloudhub.io/customer-web/item/de.history-history-api/v2/rpc-shippings";
+  "https://ctt-pro-e-customer-web.de-c1.cloudhub.io/customer-web/item-history-api/private/v2/rpc-shippings";
 
 function getUserPool() {
   return new CognitoUserPool({ UserPoolId: CTT_POOL_ID, ClientId: CTT_CLIENT_ID });
@@ -102,18 +102,27 @@ async function cttGetValidSession(db, creds) {
   return { accessToken: session.accessToken, idToken: session.idToken };
 }
 
-// Consulta el estado de un envío por su número de seguimiento.
-// NOTA: el formato exacto del "filter" (nombres de campo/operador) se infirió
-// observando la petición real en el navegador con el objeto colapsado --
-// puede necesitar un ajuste si CTT devuelve un error de filtro inválido.
-async function cttFetchShipment(accessToken, idToken, trackingNumber) {
+// Pide la lista de envíos recientes (sin filtrar por tienda/cliente): la
+// petición real capturada en el navegador filtraba también por
+// "client_code" y "client_center_code", pero esos valores van CIFRADOS en
+// esa captura (ej. "CzFmvEDOVGM=") -- no son el 81391/8139100001 en claro
+// que ya tenemos, así que no se pueden reproducir desde aquí sin saber cómo
+// los cifra su frontend. En su lugar se pide la lista completa (el token de
+// Cognito ya identifica la cuenta, así que el propio backend de CTT debería
+// devolver solo lo suyo) y se filtra en este lado por número de seguimiento
+// -- además sirve para traer VARIOS envíos en una sola llamada en vez de
+// una por pedido (como sí hace que hacer MRW).
+async function cttListShipments(accessToken, idToken, { pageLimit = 100, daysBack = 90 } = {}) {
+  const now = new Date();
+  const from = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
   const body = {
-    page: { page_offset: 0, page_limit: 1 },
-    config: { view: "WEBCLIENT", language: "ES" },
+    page: { page_offset: 0, page_limit: pageLimit },
+    config: { view: "WEBCLIENT", language: "ES", show_items: false },
     filter: {
       group_operation: "AND",
       filters: [
-        { field: "shipping_code", operator: "EQUALS", value: trackingNumber },
+        { field: "current_status_code", operation: "IS_NOT_NULL" },
+        { field: "manifest_datetime", operation: "RANGE", from_value: from.toISOString(), to_value: now.toISOString() },
       ],
     },
   };
@@ -126,7 +135,7 @@ async function cttFetchShipment(accessToken, idToken, trackingNumber) {
       Id_token: idToken,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(15000),
   });
   const text = await res.text();
   let json;
@@ -140,7 +149,14 @@ async function cttFetchShipment(accessToken, idToken, trackingNumber) {
       : JSON.stringify(json).slice(0, 500);
     throw new Error(`CTT respondió ${res.status}: ${detail}`);
   }
-  return json?.data?.[0] || null;
+  return Array.isArray(json?.data) ? json.data : [];
+}
+
+// Busca un envío puntual por su número de seguimiento dentro de la lista
+// reciente (ver cttListShipments).
+async function cttFetchShipment(accessToken, idToken, trackingNumber) {
+  const list = await cttListShipments(accessToken, idToken);
+  return list.find((s) => s.shipping_code === trackingNumber) || null;
 }
 
 // Mapea el estado de CTT al mismo vocabulario que ya usa ProfitCOD
@@ -164,4 +180,4 @@ function mapCTTStatus(shipment) {
   return "en_transito";
 }
 
-module.exports = { cttLogin, cttRefresh, cttGetValidSession, cttFetchShipment, mapCTTStatus };
+module.exports = { cttLogin, cttRefresh, cttGetValidSession, cttListShipments, cttFetchShipment, mapCTTStatus };
