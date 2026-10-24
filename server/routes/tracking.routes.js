@@ -4,6 +4,7 @@ const multer = require("multer");
 const XLSX = require("xlsx");
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+const { cttLogin, cttGetValidSession, cttFetchShipment, mapCTTStatus } = require("../ctt-sync");
 
 function mapMRWStatus(texto) {
   const t = (texto || "").toLowerCase();
@@ -136,6 +137,20 @@ router.use(async (req, res, next) => {
     `);
   } catch(e) {}
   try {
+    // Login real del "Área de Clientes" (Amazon Cognito) -- distinto de las 5
+    // credenciales del WebService de arriba. Es lo que de verdad usa la
+    // sincronización automática (ver server/ctt-sync.js), descubierto
+    // inspeccionando la web de CTT en vivo porque la documentación oficial de
+    // su API nunca llegó. Se guardan también los tokens de la última sesión
+    // para no tener que reautenticar en cada ciclo del cron.
+    await req.db.run(`ALTER TABLE ctt_credentials ADD COLUMN IF NOT EXISTS area_usuario TEXT`);
+    await req.db.run(`ALTER TABLE ctt_credentials ADD COLUMN IF NOT EXISTS area_contrasena TEXT`);
+    await req.db.run(`ALTER TABLE ctt_credentials ADD COLUMN IF NOT EXISTS access_token TEXT`);
+    await req.db.run(`ALTER TABLE ctt_credentials ADD COLUMN IF NOT EXISTS id_token TEXT`);
+    await req.db.run(`ALTER TABLE ctt_credentials ADD COLUMN IF NOT EXISTS refresh_token TEXT`);
+    await req.db.run(`ALTER TABLE ctt_credentials ADD COLUMN IF NOT EXISTS token_expires_at TEXT`);
+  } catch(e) {}
+  try {
     await req.db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);
   } catch(e) {}
   try {
@@ -205,7 +220,7 @@ router.delete("/mrw-credentials", auth, async (req, res) => {
 router.get("/ctt-credentials", auth, async (req, res) => {
   try {
     const row = await req.db.get(
-      "SELECT codigo_centro_cliente, id_cliente, usuario_ws FROM ctt_credentials WHERE user_id = $1",
+      "SELECT codigo_centro_cliente, id_cliente, usuario_ws, area_usuario FROM ctt_credentials WHERE user_id = $1",
       [req.user.id]
     );
     res.json({
@@ -213,6 +228,8 @@ router.get("/ctt-credentials", auth, async (req, res) => {
       codigo_centro_cliente: row?.codigo_centro_cliente || "",
       id_cliente: row?.id_cliente || "",
       usuario_ws: row?.usuario_ws || "",
+      area_usuario: row?.area_usuario || "",
+      area_conectada: !!row?.area_usuario,
     });
   } catch(e) {
     res.json({ integrated: false });
@@ -220,28 +237,98 @@ router.get("/ctt-credentials", auth, async (req, res) => {
 });
 
 // ── POST guardar credenciales CTT Express ─────────────────────
-// Nota: a diferencia de MRW, todavía no se valida contra la API real de CTT
-// al guardar -- falta confirmar el endpoint/formato exacto del WebService.
-// Se guarda igualmente para no bloquear al usuario; la sincronización
-// automática se activará en cuanto esa parte esté lista.
+// Los 5 datos del WebService se guardan sin validar en vivo (CTT nunca mandó
+// la documentación de ese endpoint). El usuario/contraseña del Área de
+// Clientes SÍ se valida de verdad: se intenta un login real contra Cognito
+// (ver ctt-sync.js) antes de guardar, igual que ya hace MRW con sus
+// credenciales -- así no se guarda una contraseña equivocada en silencio.
 router.post("/ctt-credentials", auth, async (req, res) => {
-  const { codigo_centro_cliente, id_cliente, secreto_cliente, usuario_ws, contrasena_ws } = req.body || {};
+  const body = req.body || {};
+  // Permite guardar solo el Área de Clientes sin tener que reenviar los 5
+  // datos del WebService: si un campo no viene en esta llamada, se rellena
+  // con lo que ya hubiera guardado antes (igual que el GET nunca devuelve
+  // los secretos al navegador, así el frontend no necesita reenviarlos).
+  const existing = await req.db.get("SELECT * FROM ctt_credentials WHERE user_id = $1", [req.user.id]).catch(() => null);
+  const codigo_centro_cliente = body.codigo_centro_cliente || existing?.codigo_centro_cliente;
+  const id_cliente            = body.id_cliente            || existing?.id_cliente;
+  const secreto_cliente       = body.secreto_cliente       || existing?.secreto_cliente;
+  const usuario_ws            = body.usuario_ws            || existing?.usuario_ws;
+  const contrasena_ws         = body.contrasena_ws         || existing?.contrasena_ws;
   if (!codigo_centro_cliente || !id_cliente || !secreto_cliente || !usuario_ws || !contrasena_ws) {
-    return res.status(400).json({ error: "Todos los campos son obligatorios" });
+    return res.status(400).json({ error: "Los 5 campos del WebService son obligatorios" });
+  }
+
+  let area_usuario    = body.area_usuario    || existing?.area_usuario    || null;
+  let area_contrasena = body.area_contrasena || existing?.area_contrasena || null;
+  let sessionFields = {
+    access_token: existing?.access_token || null,
+    id_token: existing?.id_token || null,
+    refresh_token: existing?.refresh_token || null,
+    token_expires_at: existing?.token_expires_at || null,
+  };
+  // Solo relogin si mandaron Área de Clientes NUEVO en esta llamada --
+  // si no cambió nada, se deja la sesión que ya hubiera guardada.
+  if (body.area_usuario && body.area_contrasena) {
+    try {
+      const session = await cttLogin(body.area_usuario, body.area_contrasena);
+      sessionFields = {
+        access_token: session.accessToken,
+        id_token: session.idToken,
+        refresh_token: session.refreshToken,
+        token_expires_at: session.expiresAt,
+      };
+    } catch (e) {
+      return res.status(400).json({ error: `CTT rechazó el usuario/contraseña del Área de Clientes: ${e.message || "credenciales inválidas"}` });
+    }
   }
   try {
     await req.db.run(`
-      INSERT INTO ctt_credentials (user_id, codigo_centro_cliente, id_cliente, secreto_cliente, usuario_ws, contrasena_ws)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO ctt_credentials (user_id, codigo_centro_cliente, id_cliente, secreto_cliente, usuario_ws, contrasena_ws, area_usuario, area_contrasena, access_token, id_token, refresh_token, token_expires_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       ON CONFLICT (user_id) DO UPDATE SET
         codigo_centro_cliente = EXCLUDED.codigo_centro_cliente,
         id_cliente            = EXCLUDED.id_cliente,
         secreto_cliente       = EXCLUDED.secreto_cliente,
         usuario_ws            = EXCLUDED.usuario_ws,
-        contrasena_ws         = EXCLUDED.contrasena_ws
-    `, [req.user.id, codigo_centro_cliente, id_cliente, secreto_cliente, usuario_ws, contrasena_ws]);
-    res.json({ ok: true, warning: "Guardado. La sincronización automática con CTT todavía está en construcción -- falta confirmar el formato real de su API." });
+        contrasena_ws         = EXCLUDED.contrasena_ws,
+        area_usuario          = EXCLUDED.area_usuario,
+        area_contrasena       = EXCLUDED.area_contrasena,
+        access_token          = EXCLUDED.access_token,
+        id_token              = EXCLUDED.id_token,
+        refresh_token         = EXCLUDED.refresh_token,
+        token_expires_at      = EXCLUDED.token_expires_at
+    `, [req.user.id, codigo_centro_cliente, id_cliente, secreto_cliente, usuario_ws, contrasena_ws,
+        area_usuario, area_contrasena,
+        sessionFields.access_token, sessionFields.id_token, sessionFields.refresh_token, sessionFields.token_expires_at]);
+    res.json({
+      ok: true,
+      warning: area_usuario
+        ? "Guardado. Inicio de sesión con CTT confirmado -- usa \"Probar con un envío\" para verificar la consulta de seguimiento."
+        : "Guardado. Falta el usuario/contraseña del Área de Clientes para activar la sincronización automática.",
+    });
   } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST probar la consulta de un envío real con las credenciales guardadas ──
+router.post("/ctt-test", auth, async (req, res) => {
+  const { tracking_number } = req.body || {};
+  if (!tracking_number) return res.status(400).json({ error: "Falta el número de seguimiento a probar" });
+  try {
+    const creds = await req.db.get("SELECT * FROM ctt_credentials WHERE user_id = $1", [req.user.id]);
+    if (!creds?.area_usuario) return res.status(400).json({ error: "No hay usuario del Área de Clientes guardado" });
+    const { accessToken, idToken } = await cttGetValidSession(req.db, creds);
+    const shipment = await cttFetchShipment(accessToken, idToken, tracking_number);
+    if (!shipment) return res.json({ found: false });
+    res.json({
+      found: true,
+      estado_ctt: shipment.tracking_info?.text || shipment.last_event_code,
+      estado_profitcod: mapCTTStatus(shipment),
+      ultimo_evento: shipment.events?.[shipment.events.length - 1]?.description || null,
+      referencia: shipment.client_reference || null,
+    });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
