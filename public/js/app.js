@@ -7823,6 +7823,18 @@ async function cargarEnReparto(dominios, _loadId) {
   }
 }
 
+// Enlace de seguimiento según la agencia del pedido: orders.carrier si el
+// servidor ya la sabe, si no por el formato del número (CTT ~22 dígitos solo
+// numéricos, MRW ~12 caracteres alfanuméricos -- misma regla que el trigger
+// de server/db.js). Para CTT se abre el detalle del envío en su Área de
+// Clientes: el localizador público de su web se queda cargando sin fin.
+function trackingUrl(o) {
+  const t = String(o?.tracking_number || "").trim();
+  const carrier = o?.carrier || (/^[0-9]{18,26}$/.test(t) ? "ctt" : "mrw");
+  if (carrier === "ctt") return `https://webcliente.cttexpress.com/shippings-tracking/${encodeURIComponent(t)}`;
+  return `https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(t)}`;
+}
+
 async function loadMetricas() {
   const _myLoadId = ++__metricasLoadId;
   window.__showLoadingBar?.("Actualizando métricas...");
@@ -13817,7 +13829,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${paymentBadge}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="${trackingUrl(o)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div title="${escapeAttr(ultimoMrwTexto)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);">${escapeHtml(ultimoMrwTexto || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.customer_name || "-")}</div>
@@ -14252,7 +14264,7 @@ function renderDetallePedido(order) {
     <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(320px,1fr);gap:24px;align-items:start;width:100%;">
       <div style="min-width:0;">
         ${_dpCard(
-          `<span style="flex:1;">📦 Productos (${lineItems.length})</span><span style="font-size:12.5px;font-weight:600;color:var(--muted);">${order.tracking_number ? `Nº seg.: <a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(order.tracking_number)}" target="_blank" style="color:#22c55e;font-weight:700;">${escapeHtml(order.tracking_number)}</a>` : "Sin seguimiento"}</span>`,
+          `<span style="flex:1;">📦 Productos (${lineItems.length})</span><span style="font-size:12.5px;font-weight:600;color:var(--muted);">${order.tracking_number ? `Nº seg.: <a href="${trackingUrl(order)}" target="_blank" style="color:#22c55e;font-weight:700;">${escapeHtml(order.tracking_number)}</a>` : "Sin seguimiento"}</span>`,
           `${shippingLine ? `<div style="padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;">🚚 ${escapeHtml(shippingLine.title || "Envío")}</div>` : ""}
            <div>${itemsHtml}</div>`,
           "pedido"
@@ -14482,7 +14494,7 @@ function renderReclamosPage(rows, total, page, totalPages) {
       <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;overflow:hidden;">${numero}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="${trackingUrl(o)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span class="status ${statusClass(o.fulfillment_status)}">${statusLabel(o.fulfillment_status)}</span></div>
       <div style="display:flex;align-items:center;gap:6px;">
         <input type="text" value="${escapeAttr(o.observacion || "")}" placeholder="Escribe una observación..."
@@ -15494,7 +15506,7 @@ async function fetchReembolsosFiltered() {
         <div class="orders-row" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
           <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
-          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="https://www.mrw.es/seguimiento_envios/MRW_historico_nacional.asp?enviament=${encodeURIComponent(o.tracking_number)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;font-size:12px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="${trackingUrl(o)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;font-size:12px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${escapeHtml(o.customer_name || "-")}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.total_price || 0} ${escapeHtml(o.currency || "")}</div>
