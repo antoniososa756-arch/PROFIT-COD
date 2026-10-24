@@ -323,8 +323,10 @@ await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_estado_texto T
 // ctt-sync.js y syncAllMRW en cron.js); a partir de ahí la otra agencia deja
 // de consultarlo, para no hacer doble seguimiento del mismo pedido.
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS carrier TEXT`);
-// Si Shopify ya dice la agencia (fulfillments[].tracking_company), se guarda en
-// carrier al grabar el pedido -- un trigger cubre los varios sitios que
+// Si Shopify ya dice la agencia (fulfillments[].tracking_company) -- o, como
+// pasa en la práctica, solo trae el enlace público de seguimiento
+// (tracking_url), cuyo dominio delata la agencia (cttexpress / mrw) -- se
+// guarda en carrier al grabar el pedido -- un trigger cubre los varios sitios que
 // insertan pedidos (cron, webhooks, sync manual). Así las métricas y los
 // syncs filtran por la columna en vez de buscar texto dentro de raw_json,
 // que es enorme y dejaba colgada la carga de Métricas.
@@ -334,7 +336,8 @@ await pool.query(`
   DECLARE tc TEXT;
   BEGIN
     IF NEW.carrier IS NULL AND NEW.raw_json IS NOT NULL THEN
-      tc := lower(substring(NEW.raw_json from '"tracking_company":"([^"]*)"'));
+      tc := lower(COALESCE(substring(NEW.raw_json from '"tracking_company":"([^"]*)"'), '') || ' ' ||
+                  COALESCE(substring(NEW.raw_json from '"tracking_url":"([^"]*)"'), ''));
       IF tc LIKE '%ctt%' THEN NEW.carrier := 'ctt';
       ELSIF tc LIKE '%mrw%' THEN NEW.carrier := 'mrw';
       END IF;
