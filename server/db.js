@@ -342,11 +342,24 @@ await pool.query(`
       ELSIF tc LIKE '%mrw%' THEN NEW.carrier := 'mrw';
       END IF;
     END IF;
+    -- Si Shopify no lo dice, por el formato del seguimiento: CTT usa ~22
+    -- dígitos solo numéricos (ej. 0050040050049700882...), MRW ~12
+    -- caracteres con letras y números (ej. 04700F763045).
+    IF NEW.carrier IS NULL AND NEW.tracking_number IS NOT NULL THEN
+      IF btrim(NEW.tracking_number) ~ '^[0-9]{18,26}$' THEN NEW.carrier := 'ctt';
+      ELSIF btrim(NEW.tracking_number) ~ '^[0-9A-Za-z]{8,15}$' THEN NEW.carrier := 'mrw';
+      END IF;
+    END IF;
     RETURN NEW;
   END $fn$ LANGUAGE plpgsql
 `);
 await pool.query(`DROP TRIGGER IF EXISTS trg_orders_carrier ON orders`);
 await pool.query(`CREATE TRIGGER trg_orders_carrier BEFORE INSERT OR UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_carrier_from_shopify()`);
+// Pedidos que ya existían sin agencia (sobre todo los cerrados, que ningún
+// sync vuelve a tocar): asignarla una vez por el formato del seguimiento.
+// Columna corta, barato; tras la primera vez casi no quedan filas NULL.
+await pool.query(`UPDATE orders SET carrier = 'ctt' WHERE carrier IS NULL AND btrim(tracking_number) ~ '^[0-9]{18,26}$'`);
+await pool.query(`UPDATE orders SET carrier = 'mrw' WHERE carrier IS NULL AND btrim(tracking_number) ~ '^[0-9A-Za-z]{8,15}$'`);
 } catch (e) { console.warn("Trigger carrier:", e.message); }
 await pool.query(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS tracking_number TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
