@@ -136,7 +136,7 @@ async function syncAllMRW() {
              AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
              -- Solo pedidos de MRW o aún sin agencia conocida (ver orders.carrier
              -- en db.js) -- los de CTT los sincroniza syncCTTForUser.
-             AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND COALESCE(o.raw_json,'') NOT ILIKE '%"tracking_company":"CTT%'))
+             AND (o.carrier IS NULL OR o.carrier = 'mrw')
            ORDER BY o.last_mrw_check ASC NULLS FIRST
            LIMIT 170`,
           [creds.user_id]

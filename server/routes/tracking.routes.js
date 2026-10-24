@@ -565,7 +565,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
         AND o.tracking_number != ''
         AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
         -- Solo pedidos de MRW o aún sin agencia (los de CTT van por /ctt-sync).
-        AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND COALESCE(o.raw_json,'') NOT ILIKE '%"tracking_company":"CTT%'))
+        AND (o.carrier IS NULL OR o.carrier = 'mrw')
     ORDER BY o.last_mrw_check ASC NULLS FIRST
     LIMIT 170
     `, [req.user.id]);

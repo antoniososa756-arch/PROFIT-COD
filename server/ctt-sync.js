@@ -276,7 +276,7 @@ async function syncCTTForUser(db, creds) {
        AND o.created_at >= $2
        -- Solo pedidos de CTT o aún sin agencia conocida: los que ya reclamó
        -- MRW (orders.carrier) no se vuelven a consultar aquí.
-       AND (o.carrier = 'ctt' OR (o.carrier IS NULL AND COALESCE(o.raw_json,'') NOT ILIKE '%"tracking_company":"MRW%'))
+       AND (o.carrier IS NULL OR o.carrier = 'ctt')
      ORDER BY o.last_ctt_check ASC NULLS FIRST`,
     // created_at es TEXT ISO (de Shopify): comparar como texto evita que un
     // valor raro rompa toda la consulta con un cast a timestamptz.

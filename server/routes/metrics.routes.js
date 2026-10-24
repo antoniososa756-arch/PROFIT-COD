@@ -22,15 +22,16 @@ router.get("/metrics", auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error métricas" }); }
 });
 
-// Filtro por agencia de envío (?carrier=ctt|mrw). Usa orders.carrier, que
-// rellena la primera agencia que encuentra el envío (ver db.js). Los pedidos
-// con seguimiento pero sin agencia asignada son históricos de MRW (los
-// entregados/devueltos ya no se vuelven a sincronizar, así que nunca reciben
-// carrier) -- salvo que Shopify diga que son de CTT (tracking_company).
+// Filtro por agencia de envío (?carrier=ctt|mrw). Usa SOLO orders.carrier
+// (nunca buscar dentro de raw_json aquí: es enorme y colgaba Métricas). La
+// rellena Shopify (trigger en db.js) o la primera agencia que encuentra el
+// envío. Los pedidos YA CERRADOS con seguimiento y sin agencia son históricos
+// de MRW (de antes de existir carrier; ahora toda agencia lo marca antes de
+// cerrar uno). Un pedido abierto sin agencia aún no cuenta en ninguna de las
+// dos hasta que se detecta (máx. 5 min) -- así nunca sale en la equivocada.
 function carrierCond(carrier) {
-  const shopifyCTT = `COALESCE(o.raw_json,'') ILIKE '%"tracking_company":"CTT%'`;
-  if (carrier === "ctt") return `AND (o.carrier = 'ctt' OR (o.carrier IS NULL AND ${shopifyCTT}))`;
-  if (carrier === "mrw") return `AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND COALESCE(o.tracking_number,'') != '' AND NOT ${shopifyCTT}))`;
+  if (carrier === "ctt") return `AND o.carrier = 'ctt'`;
+  if (carrier === "mrw") return `AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND COALESCE(o.tracking_number,'') != '' AND o.fulfillment_status IN ('entregado','devuelto','destruido','cancelado')))`;
   return "";
 }
 
