@@ -2581,6 +2581,21 @@ if (id === "rentabilidad") {
             ${window.__DPF.triggerBtn('rent', savedRentLabel)}
             <input type="date" id="rent-date-from" value="${savedFromR}" style="display:none;">
             <input type="date" id="rent-date-to" value="${savedToR}" style="display:none;">
+            <div id="rent-carrier-wrap" style="position:relative;" onmouseleave="window.__rentCT=setTimeout(function(){var p=document.getElementById('rent-carrier-panel');if(p)p.style.display='none';},250)" onmouseenter="clearTimeout(window.__rentCT)">
+              <button onclick="var p=document.getElementById('rent-carrier-panel');if(p)p.style.display=p.style.display==='block'?'none':'block';"
+                style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
+                onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span id="rent-carrier-label">Agencia: Todas</span>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div id="rent-carrier-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:1500;background:var(--card);border:1px solid #374151;border-radius:12px;padding:6px;min-width:150px;">
+                ${[["all","Todas"],["mrw","Solo MRW"],["ctt","Solo CTT"]].map(([k,l]) => `
+                  <div id="rent-carrier-opt-${k}" onclick="setRentCarrierFilter('${k}')"
+                    style="padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"
+                    onmouseover="this.style.background='var(--pk-input)'" onmouseout="this.style.background=''">${l}</div>`).join("")}
+              </div>
+            </div>
             <div id="rent-shop-filter-wrap" style="position:relative;" onmouseleave="window.__rentFT=setTimeout(function(){var p=document.getElementById('rent-shop-filter-panel');var c=document.getElementById('rent-filter-chevron');if(p&&p.style.display==='block'){p.style.display='none';if(c)c.style.transform='';localStorage.setItem('rent_filter_open','0');}},250)" onmouseenter="clearTimeout(window.__rentFT)">
               <button id="rent-filter-trigger" onclick="toggleRentShopFilter()"
                 style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
@@ -2604,6 +2619,27 @@ if (id === "rentabilidad") {
     localStorage.getItem("rent_from") ? 'personalizado' : 'mes',
     savedRentLabel, 'rent_from', 'rent_to',
     function() { window.loadRentabilidad(); });
+
+  // Filtro por agencia de envío (Todas / MRW / CTT) -- se recuerda entre visitas.
+  window.setRentCarrierFilter = function(k, silent) {
+    window.__rentCarrierFilter = k;
+    try { localStorage.setItem("rent_carrier", k); } catch (e) {}
+    const labels = { all: "Agencia: Todas", mrw: "Agencia: MRW", ctt: "Agencia: CTT" };
+    const lbl = document.getElementById("rent-carrier-label");
+    if (lbl) lbl.textContent = labels[k] || labels.all;
+    ["all","mrw","ctt"].forEach(o => {
+      const el = document.getElementById("rent-carrier-opt-" + o);
+      if (el) el.style.color = o === k ? "#22c55e" : "";
+    });
+    const p = document.getElementById("rent-carrier-panel");
+    if (p) p.style.display = "none";
+    if (!silent && window.loadRentabilidad) window.loadRentabilidad();
+  };
+  (function() {
+    let saved = "all";
+    try { saved = localStorage.getItem("rent_carrier") || "all"; } catch (e) {}
+    window.setRentCarrierFilter(saved, true);
+  })();
 
   window.toggleRentShopFilter = function() {
     const panel = document.getElementById('rent-shop-filter-panel');
@@ -8236,10 +8272,35 @@ async function loadMetricasBalance(dateFrom, dateTo) {
         );
       })
     );
+    // Filtrando por agencia, el gasto de cada día se reparte en proporción a
+    // los pedidos de ese día: si una tienda gastó 100€ un día con 10 pedidos y
+    // 2 son de CTT, a CTT le tocan 20€. Se cuentan solo pedidos no cancelados
+    // con agencia conocida, así MRW + CTT suman el gasto total del día.
+    let _pedidosDia = null;
+    if (_porAgencia) {
+      const madridDay = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
+      _pedidosDia = {};
+      _allOrdersRango.forEach(o => {
+        if (o.fulfillment_status === "cancelado" || o.cancelled_at) return;
+        const c = carrierDePedido(o);
+        if (!c || !o.created_at) return;
+        const k = o.shop_domain + "|" + madridDay(o.created_at);
+        if (!_pedidosDia[k]) _pedidosDia[k] = { total: 0, agencia: 0 };
+        _pedidosDia[k].total++;
+        if (c === _carrierF) _pedidosDia[k].agencia++;
+      });
+    }
     for (const { domain, rows } of adsResults) {
       if (!adsSpends[domain]) adsSpends[domain] = { meta:0, tiktok:0 };
       rows.filter(r => (!dateFrom || r.date >= dateFrom) && (!dateTo || r.date <= dateTo))
-        .forEach(r => { adsSpends[domain].meta += r.meta||0; adsSpends[domain].tiktok += r.tiktok||0; });
+        .forEach(r => {
+          let f = 1;
+          if (_pedidosDia) {
+            const d = _pedidosDia[domain + "|" + String(r.date).slice(0, 10)];
+            f = d && d.total > 0 ? d.agencia / d.total : 0;
+          }
+          adsSpends[domain].meta += (r.meta||0) * f; adsSpends[domain].tiktok += (r.tiktok||0) * f;
+        });
     }
   } catch {}
 
@@ -8266,15 +8327,18 @@ async function loadMetricasBalance(dateFrom, dateTo) {
 
   const balanceData = stores.map(store => {
     const ads = adsSpends[store.domain] || { meta:0, tiktok:0 };
-    const shopify = gastosVarios[store.domain] || 0;
+    // Filtrando por agencia no se imputan los gastos que no dependen de los
+    // pedidos (Shopify, gastos fijos, nómina, conceptos extra) ni los ingresos
+    // manuales: solo tienen sentido con "Todas".
+    const shopify = _porAgencia ? 0 : (gastosVarios[store.domain] || 0);
 
     const pedEnt = ordersRango.filter(o => o.shop_domain === store.domain && o.fulfillment_status === "entregado");
     const pedCOD = pedEnt.filter(o => { try { const raw=o.raw_json?(typeof o.raw_json==="string"?JSON.parse(o.raw_json):o.raw_json):null; const fin=(raw?.financial_status||o.financial_status||"").toLowerCase().trim(); return fin==="pending"||fin==="cod"||fin==="pendiente"; } catch{return false;} });
     const pedPag = ordersRango.filter(o => { if(o.shop_domain!==store.domain)return false; const fin=(o.financial_status||"").toLowerCase().trim(); return fin==="paid"||fin==="pagado"||fin==="authorized"; });
     const tCOD = pedCOD.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
     const tPag = pedPag.reduce((s,o)=>s+(parseFloat(o.total_price)||0),0);
-    const man1 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===1)||{valor:0};
-    const man2 = manuales.find(m=>m.shop_domain===store.domain&&m.columna===2)||{valor:0};
+    const man1 = (!_porAgencia && manuales.find(m=>m.shop_domain===store.domain&&m.columna===1))||{valor:0};
+    const man2 = (!_porAgencia && manuales.find(m=>m.shop_domain===store.domain&&m.columna===2))||{valor:0};
     const totalIngreso = (tCOD - pedCOD.length*MRW_COMISION) + (tPag - tPag*TARJETA_PCT) + (parseFloat(man1.valor)||0) + (parseFloat(man2.valor)||0);
 
     const pedTienda = pedidosBase.filter(o => o.shop_domain === store.domain);
@@ -8300,7 +8364,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
       man1nom: man1.nombre||"", man1val: parseFloat(man1.valor)||0,
       man2nom: man2.nombre||"", man2val: parseFloat(man2.valor)||0,
       meta: ads.meta, tiktok: ads.tiktok, costoProductos, mrw, logistica, shopify,
-      fijoXTienda, nominaXTienda, totalOtrosFijos, numTiendas,
+      fijoXTienda: fijoTienda, nominaXTienda: nominaTienda, totalOtrosFijos, numTiendas, porAgencia: _porAgencia,
       precioMRW, precioLog: precioLogistica,
       enviosMRW: envTienda.length, devMRW: devTienda,
       extras: gastosExtrasMetricas[store.domain] || []
@@ -8746,6 +8810,16 @@ window.loadOrdersChart = loadOrdersChart;
 // =========================
 // RENTABILIDAD BALANCE
 // =========================
+// Agencia de un pedido en el navegador -- misma regla que el filtro del
+// servidor (server/utils/carrier.js): orders.carrier, o MRW si es un pedido
+// ya cerrado con seguimiento y sin agencia (históricos de antes de carrier).
+function carrierDePedido(o) {
+  if (o.carrier) return o.carrier;
+  const cerrado = ["entregado","devuelto","destruido","cancelado"].includes(o.fulfillment_status);
+  if (cerrado && String(o.tracking_number || "").trim()) return "mrw";
+  return null;
+}
+
 async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
   const wrap = document.getElementById("rent-balance-wrap");
   if (!wrap) return;
@@ -8756,6 +8830,9 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
   const TARJETA_PCT  = 0.04;
 
   let stores = [], orders = [], manuales = [];
+  let _allOrdersRango = [];
+  const _carrierF = window.__rentCarrierFilter || "all";
+  const _porAgencia = _carrierF !== "all";
   let totalTiendasActivas = 1;
   let _inactiveStores = [];
   const facturacionPorTienda = {};
@@ -8769,6 +8846,10 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: h }).then(d => Array.isArray(d) ? d : []),
       fetch(`${API_BASE}/api/orders?${_balParams}`, { headers: h }).then(r => r.json()).then(d => Array.isArray(d) ? d : (d?.orders || []))
     ]);
+    // Filtro por agencia: se guardan TODOS los pedidos (para repartir el
+    // gasto de ads por día) y se sigue trabajando solo con los de la agencia.
+    _allOrdersRango = orders;
+    if (_porAgencia) orders = orders.filter(o => carrierDePedido(o) === _carrierF);
     _inactiveStores = stores.filter(s => s.status !== 'active');
     const _activeStoresAll = stores.filter(s => s.status === 'active');
     // Solo tiendas con pedidos REALES (no cancelados) en este período
@@ -8803,6 +8884,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
         const p = new URLSearchParams({ shops: store.domain });
         if (dateFrom) p.set("from", dateFrom);
         if (dateTo)   p.set("to",   dateTo);
+        if (_porAgencia) p.set("carrier", _carrierF);
         const s = await fetch(`${API_BASE}/api/metrics/stats?${p}`, { headers: h }).then(r => r.json());
         facturacionPorTienda[store.domain] = parseFloat(s.facturacion || 0);
       } catch {}
@@ -8950,8 +9032,11 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     const mrw      = precioMRW      * (envTienda.length + devTienda);
     const logistica = precioLogistica * envTienda.length;
     const ivaTotal = pedEnt.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
-    const extrasTotal = (gastosExtrasRent[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-    const totalGasto = ads.meta + ads.tiktok + shopify + (costoProductos - costoRecuperado) + mrw + logistica + fijoXTienda + nominaXTienda + extrasTotal + ivaTotal;
+    const extrasTienda = _porAgencia ? [] : (gastosExtrasRent[store.domain]||[]);
+    const extrasTotal = extrasTienda.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+    const fijoTienda   = _porAgencia ? 0 : fijoXTienda;
+    const nominaTienda = _porAgencia ? 0 : nominaXTienda;
+    const totalGasto = ads.meta + ads.tiktok + shopify + (costoProductos - costoRecuperado) + mrw + logistica + fijoTienda + nominaTienda + extrasTotal + ivaTotal;
     const resultado = totalIngreso - totalGasto;
     // Detalle de productos para modal — separa enviados/destruidos (coste) de devueltos (recuperado)
     const _prodMap = {};
@@ -8996,7 +9081,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       fijoXTienda, nominaXTienda, totalOtrosFijos, numTiendas,
       precioMRW, precioLog: precioLogistica,
       enviosMRW: envTienda.length, devMRW: devTienda,
-      extras: gastosExtrasRent[store.domain] || [],
+      extras: extrasTienda,
       productosDetalle
     };
   });
@@ -9027,13 +9112,13 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
           ${d.man2val > 0 ? tr(escapeHtml(d.man2nom||'Extra 2'), '', fmt(d.man2val)+' €') : ''}
           ${tr('Total Ingresos', '', fmt(d.totalIngreso)+' €', {bold:true, valColor:'#374151'})}
           <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f4f6;border-top:6px solid #f9fafb;">Gastos</td></tr>
-          ${tr('Gasto Meta', '', fmt(d.meta)+' €')}
-          ${tr('Gasto TikTok', '', fmt(d.tiktok)+' €')}
+          ${tr('Gasto Meta', d.porAgencia ? 'Proporcional a los pedidos de la agencia cada día' : '', fmt(d.meta)+' €')}
+          ${tr('Gasto TikTok', d.porAgencia ? 'Proporcional a los pedidos de la agencia cada día' : '', fmt(d.tiktok)+' €')}
           ${tr('Productos <span style="font-size:10px;color:#3b82f6;">▶ ver detalle</span>', `${fmt(d.costoProductos)}€ bruto${d.costoRecuperado>0?` − ${fmt(d.costoRecuperado)}€ recuperado (${d.numDevueltosProd} dev.)`:''}`, fmt(d.costoProductos-(d.costoRecuperado||0))+' €', {cursor:true, onclick:`verDetalleProductosRent('${d.domain}')`})}
-          ${tr('MRW', `${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.`, fmt(d.mrw)+' €')}
+          ${tr('Envíos', `${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.`, fmt(d.mrw)+' €')}
           ${tr('Logística', `${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos`, fmt(d.logistica)+' €')}
-          ${tr('Gastos Fijos', `${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas`, fmt(d.fijoXTienda)+' €')}
-          ${tr('Nómina', `Total nómina ÷ ${d.numTiendas} tiendas`, fmt(d.nominaXTienda)+' €')}
+          ${tr('Gastos Fijos', d.porAgencia ? 'No se imputan al filtrar por agencia' : `${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas`, fmt(d.fijoXTienda)+' €')}
+          ${tr('Nómina', d.porAgencia ? 'No se imputa al filtrar por agencia' : `Total nómina ÷ ${d.numTiendas} tiendas`, fmt(d.nominaXTienda)+' €')}
           ${tr('Shopify', '', fmt(d.shopify)+' €')}
           ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>tr(escapeHtml(g.nombre||'Concepto extra'),'',fmt(g.valor)+' €')).join('')}
           ${tr(`IVA (${(d.ivaPorcentaje*100).toFixed(0)}%)`, `${d.numCOD+d.numTarjeta} pedidos entregados × ${(d.ivaPorcentaje*100).toFixed(0)}%`, fmt(d.ivaTotal)+' €')}
@@ -9153,7 +9238,7 @@ function renderRentKpis(filtradas) {
       card('Impuestos (IVA)', fmt(ivaTotal)+' €'),
     ]) +
     section('Gastos logística', [
-      card('MRW', fmt(mrwTotal)+' €'),
+      card('Envíos', fmt(mrwTotal)+' €'),
       card('Logística', fmt(logisticaTotal)+' €'),
     ]);
 }
