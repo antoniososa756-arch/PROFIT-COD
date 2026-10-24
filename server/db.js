@@ -318,6 +318,11 @@ await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_history_json T
 // bajo "en_transito" — lo actualiza el cron de MRW en cada ciclo (ver
 // syncAllMRW en server/cron.js) y lo usa /api/metrics/en-reparto.
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_estado_texto TEXT`);
+// Agencia de envío del pedido ('ctt' | 'mrw' | NULL = aún sin saber). La
+// rellena la primera agencia que encuentra el envío (ver syncCTTForUser en
+// ctt-sync.js y syncAllMRW en cron.js); a partir de ahí la otra agencia deja
+// de consultarlo, para no hacer doble seguimiento del mismo pedido.
+await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS carrier TEXT`);
 await pool.query(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS tracking_number TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_name TEXT`);

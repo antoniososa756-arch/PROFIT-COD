@@ -375,7 +375,7 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
     if (!creds) return res.status(400).json({ error: "MRW no integrado" });
 
     const order = await req.db.get(
-      `SELECT o.id, o.tracking_number, o.fulfillment_status
+      `SELECT o.id, o.tracking_number, o.fulfillment_status, o.carrier
        FROM orders o
        WHERE o.id = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
@@ -383,6 +383,7 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
       [orderId, req.user.id]
     );
     if (!order?.tracking_number) return res.status(404).json({ error: "Pedido no encontrado o sin tracking" });
+    if (order.carrier === "ctt") return res.status(400).json({ error: "Este pedido es de CTT Express -- se sincroniza automáticamente con CTT, no con MRW" });
 
     const soapBody = `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
@@ -563,6 +564,8 @@ router.post("/mrw-sync", auth, async (req, res) => {
         AND o.tracking_number IS NOT NULL
         AND o.tracking_number != ''
         AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
+        -- Solo pedidos de MRW o aún sin agencia (los de CTT van por /ctt-sync).
+        AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND COALESCE(o.raw_json,'') NOT ILIKE '%"tracking_company":"CTT%'))
     ORDER BY o.last_mrw_check ASC NULLS FIRST
     LIMIT 170
     `, [req.user.id]);
@@ -642,6 +645,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
         const estadosEnProgreso = ['enviado', 'en_preparacion', 'en_transito'];
         const esCambioRedundante = nuevoStatus === 'en_transito' && estadosEnProgreso.includes(order.fulfillment_status);
 
+        await req.db.run("UPDATE orders SET carrier = COALESCE(carrier, 'mrw') WHERE id = $1", [order.id]).catch(() => {});
         if (nuevoStatus !== order.fulfillment_status && !esCambioRedundante) {
           await req.db.run(
             "UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2",

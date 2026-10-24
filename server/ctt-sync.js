@@ -256,6 +256,7 @@ function mapCTTStatus(shipment) {
 // MRW: lo muestra el pedido y lo usa /api/metrics/en-reparto).
 async function syncCTTForUser(db, creds) {
   await db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_ctt_check TEXT`).catch(() => {});
+  await db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS carrier TEXT`).catch(() => {});
   const { accessToken, idToken } = await cttGetValidSession(db, creds);
   const userData = await cttGetUserData(accessToken, idToken);
   const shipments = await cttListShipments(accessToken, idToken, { userData });
@@ -273,6 +274,9 @@ async function syncCTTForUser(db, creds) {
        OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
        AND (o.fulfillment_status IS NULL OR o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado'))
        AND o.created_at >= $2
+       -- Solo pedidos de CTT o aún sin agencia conocida: los que ya reclamó
+       -- MRW (orders.carrier) no se vuelven a consultar aquí.
+       AND (o.carrier = 'ctt' OR (o.carrier IS NULL AND COALESCE(o.raw_json,'') NOT ILIKE '%"tracking_company":"MRW%'))
      ORDER BY o.last_ctt_check ASC NULLS FIRST`,
     // created_at es TEXT ISO (de Shopify): comparar como texto evita que un
     // valor raro rompa toda la consulta con un cast a timestamptz.
@@ -307,7 +311,9 @@ async function syncCTTForUser(db, creds) {
     const lastEvent = (shipment.events || [])[(shipment.events || []).length - 1];
     const texto = lastEvent?.description || shipment.tracking_info?.text || null;
     await db.run(
-      `UPDATE orders SET mrw_estado_texto = $1, last_mrw_check = now()::text${setTracking ? ", tracking_number = $3" : ""} WHERE id = $2`,
+      // carrier = 'ctt' -> a partir de aquí MRW deja de consultarlo; también se
+      // limpia mrw_rejected, que MRW pudo marcar al no encontrarlo.
+      `UPDATE orders SET mrw_estado_texto = $1, carrier = 'ctt', mrw_rejected = false${setTracking ? ", tracking_number = $3" : ""} WHERE id = $2`,
       setTracking ? [texto, pedido.id, String(shipment.shipping_code).trim()] : [texto, pedido.id]
     ).catch(() => {});
     if (nuevoStatus && nuevoStatus !== pedido.fulfillment_status) {

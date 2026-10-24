@@ -134,6 +134,9 @@ async function syncAllMRW() {
              AND o.tracking_number IS NOT NULL
              AND o.tracking_number != ''
              AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
+             -- Solo pedidos de MRW o aún sin agencia conocida (ver orders.carrier
+             -- en db.js) -- los de CTT los sincroniza syncCTTForUser.
+             AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND COALESCE(o.raw_json,'') NOT ILIKE '%"tracking_company":"CTT%'))
            ORDER BY o.last_mrw_check ASC NULLS FIRST
            LIMIT 170`,
           [creds.user_id]
@@ -192,7 +195,7 @@ async function syncAllMRW() {
             // real está el envío (lo usa /api/metrics/en-reparto).
             const ultimoTextoRaw = allEstados.length ? allEstados[allEstados.length - 1] : "Entregado";
             console.log(`[MRW CRON] ${pedido.tracking_number} → ${nuevoStatus}`);
-            await db.run(`UPDATE orders SET mrw_estado_texto = $1 WHERE id = $2`, [ultimoTextoRaw, pedido.id]).catch(() => {});
+            await db.run(`UPDATE orders SET mrw_estado_texto = $1, carrier = COALESCE(carrier, 'mrw') WHERE id = $2`, [ultimoTextoRaw, pedido.id]).catch(() => {});
             if (nuevoStatus !== pedido.fulfillment_status) {
               await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
               updated++;
