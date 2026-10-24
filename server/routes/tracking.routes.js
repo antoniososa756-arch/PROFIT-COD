@@ -119,6 +119,23 @@ router.use(async (req, res, next) => {
     `);
   } catch(e) {}
   try {
+    // Credenciales CTT Express (WebService) -- a diferencia de MRW (solo
+    // login+pass), CTT pide 5 datos: código de centro cliente, ID + secreto
+    // de cliente (estilo OAuth2) y usuario+contraseña del WebService.
+    await req.db.run(`
+      CREATE TABLE IF NOT EXISTS ctt_credentials (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER UNIQUE NOT NULL,
+        codigo_centro_cliente TEXT NOT NULL,
+        id_cliente TEXT NOT NULL,
+        secreto_cliente TEXT NOT NULL,
+        usuario_ws TEXT NOT NULL,
+        contrasena_ws TEXT NOT NULL,
+        created_at TEXT DEFAULT now()::text
+      )
+    `);
+  } catch(e) {}
+  try {
     await req.db.run(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);
   } catch(e) {}
   try {
@@ -178,6 +195,61 @@ router.post("/mrw-credentials", auth, async (req, res) => {
 router.delete("/mrw-credentials", auth, async (req, res) => {
   try {
     await req.db.run("DELETE FROM mrw_credentials WHERE user_id = $1", [req.user.id]);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── GET credenciales CTT Express del usuario ─────────────────
+router.get("/ctt-credentials", auth, async (req, res) => {
+  try {
+    const row = await req.db.get(
+      "SELECT codigo_centro_cliente, id_cliente, usuario_ws FROM ctt_credentials WHERE user_id = $1",
+      [req.user.id]
+    );
+    res.json({
+      integrated: !!row,
+      codigo_centro_cliente: row?.codigo_centro_cliente || "",
+      id_cliente: row?.id_cliente || "",
+      usuario_ws: row?.usuario_ws || "",
+    });
+  } catch(e) {
+    res.json({ integrated: false });
+  }
+});
+
+// ── POST guardar credenciales CTT Express ─────────────────────
+// Nota: a diferencia de MRW, todavía no se valida contra la API real de CTT
+// al guardar -- falta confirmar el endpoint/formato exacto del WebService.
+// Se guarda igualmente para no bloquear al usuario; la sincronización
+// automática se activará en cuanto esa parte esté lista.
+router.post("/ctt-credentials", auth, async (req, res) => {
+  const { codigo_centro_cliente, id_cliente, secreto_cliente, usuario_ws, contrasena_ws } = req.body || {};
+  if (!codigo_centro_cliente || !id_cliente || !secreto_cliente || !usuario_ws || !contrasena_ws) {
+    return res.status(400).json({ error: "Todos los campos son obligatorios" });
+  }
+  try {
+    await req.db.run(`
+      INSERT INTO ctt_credentials (user_id, codigo_centro_cliente, id_cliente, secreto_cliente, usuario_ws, contrasena_ws)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (user_id) DO UPDATE SET
+        codigo_centro_cliente = EXCLUDED.codigo_centro_cliente,
+        id_cliente            = EXCLUDED.id_cliente,
+        secreto_cliente       = EXCLUDED.secreto_cliente,
+        usuario_ws            = EXCLUDED.usuario_ws,
+        contrasena_ws         = EXCLUDED.contrasena_ws
+    `, [req.user.id, codigo_centro_cliente, id_cliente, secreto_cliente, usuario_ws, contrasena_ws]);
+    res.json({ ok: true, warning: "Guardado. La sincronización automática con CTT todavía está en construcción -- falta confirmar el formato real de su API." });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── DELETE eliminar integración CTT Express ───────────────────
+router.delete("/ctt-credentials", auth, async (req, res) => {
+  try {
+    await req.db.run("DELETE FROM ctt_credentials WHERE user_id = $1", [req.user.id]);
     res.json({ ok: true });
   } catch(e) {
     res.status(500).json({ error: e.message });

@@ -2761,7 +2761,7 @@ if (id === "tiendas") {
 
     if (tab === "agencia") {
       content.innerHTML = `
-        <div class="card" style="padding:24px;">
+        <div class="card" style="padding:24px;margin-bottom:20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
             <div>
               <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">🚚 Integración MRW</div>
@@ -2771,8 +2771,19 @@ if (id === "tiendas") {
           </div>
           <div id="mrw-config-wrap"></div>
         </div>
+        <div class="card" style="padding:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">📦 Integración CTT Express</div>
+              <div style="font-size:13px;color:#6b7280;">Guarda tus credenciales de CTT -- la sincronización automática de estados se activará en cuanto esté lista</div>
+            </div>
+            <div id="ctt-status-badge"></div>
+          </div>
+          <div id="ctt-config-wrap"></div>
+        </div>
       `;
       cargarConfigMRW();
+      cargarConfigCTT();
     }
 
     if (tab === "reembolsos") {
@@ -2902,6 +2913,111 @@ if (id === "tiendas") {
         if (msg) { msg.style.color="#dc2626"; msg.textContent=data.error||"Error guardando"; }
       }
     } catch(e) { if (msg) { msg.style.color="#dc2626"; msg.textContent="Error de conexión"; } }
+  };
+
+  window.cargarConfigCTT = async function() {
+    const wrap = document.getElementById("ctt-config-wrap");
+    const badge = document.getElementById("ctt-status-badge");
+    if (!wrap) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/tracking/ctt-credentials`, {
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      });
+      const data = await res.json();
+      if (data.integrated) {
+        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:rgba(34,197,94,.12);color:#22c55e;border-radius:20px;font-size:13px;font-weight:700;">✓ Guardado</span>`;
+        wrap.innerHTML = `
+          <div style="background:rgba(245,158,11,.08);border:1px solid #fcd34d;border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-weight:600;color:#d97706;margin-bottom:4px;">Credenciales CTT guardadas</div>
+              <div style="font-size:13px;color:#6b7280;">Código centro cliente: <strong>${data.codigo_centro_cliente || "—"}</strong> · Usuario WS: <strong>${data.usuario_ws || "—"}</strong></div>
+              <div style="font-size:12px;color:#d97706;margin-top:4px;">⚠️ La sincronización automática de estados todavía está en construcción.</div>
+            </div>
+            <button onclick="desintegrarCTT();setTimeout(()=>switchIntegracionesTab('agencia'),500)"
+              style="padding:8px 18px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+              ✕ Eliminar
+            </button>
+          </div>
+        `;
+      } else {
+        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#1f2937;color:#6b7280;border-radius:20px;font-size:13px;font-weight:700;">No conectado</span>`;
+        const inp = `width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
+        wrap.innerHTML = `
+          <div style="max-width:480px;display:flex;flex-direction:column;gap:14px;">
+            <div style="background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#93c5fd;">
+              💡 Necesitas los 5 datos que te da CTT Express para su WebService de integración.
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Código centro cliente *</label>
+              <input id="ctt-codigo-int" type="text" style="${inp}">
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">ID Cliente *</label>
+              <input id="ctt-idcliente-int" type="text" style="${inp}">
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Secreto Cliente *</label>
+              <input id="ctt-secreto-int" type="password" style="${inp}">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Usuario de WS *</label>
+                <input id="ctt-usuario-int" type="text" style="${inp}">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Contraseña de WS *</label>
+                <input id="ctt-pass-int" type="password" style="${inp}">
+              </div>
+            </div>
+            <div id="ctt-int-msg" style="font-size:13px;min-height:18px;"></div>
+            <button onclick="conectarCTTIntegraciones()"
+              style="padding:10px 24px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;align-self:flex-start;">
+              🔗 Guardar credenciales CTT
+            </button>
+          </div>
+        `;
+      }
+    } catch(e) {
+      if (wrap) wrap.innerHTML = `<div style="color:#dc2626;">Error cargando configuración</div>`;
+    }
+  };
+
+  window.conectarCTTIntegraciones = async function() {
+    const codigo_centro_cliente = document.getElementById("ctt-codigo-int")?.value.trim();
+    const id_cliente            = document.getElementById("ctt-idcliente-int")?.value.trim();
+    const secreto_cliente       = document.getElementById("ctt-secreto-int")?.value.trim();
+    const usuario_ws            = document.getElementById("ctt-usuario-int")?.value.trim();
+    const contrasena_ws         = document.getElementById("ctt-pass-int")?.value.trim();
+    const msg = document.getElementById("ctt-int-msg");
+    if (!codigo_centro_cliente || !id_cliente || !secreto_cliente || !usuario_ws || !contrasena_ws) {
+      if (msg) { msg.style.color="#dc2626"; msg.textContent="Todos los campos son obligatorios"; }
+      return;
+    }
+    if (msg) { msg.style.color="#6b7280"; msg.textContent="Guardando..."; }
+    try {
+      const res = await fetch(`${API_BASE}/api/tracking/ctt-credentials`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+        body: JSON.stringify({ codigo_centro_cliente, id_cliente, secreto_cliente, usuario_ws, contrasena_ws })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast("✅ Credenciales CTT guardadas", data.warning || "Guardado correctamente", "#22c55e");
+        switchIntegracionesTab("agencia");
+      } else {
+        if (msg) { msg.style.color="#dc2626"; msg.textContent=data.error||"Error guardando"; }
+      }
+    } catch(e) { if (msg) { msg.style.color="#dc2626"; msg.textContent="Error de conexión"; } }
+  };
+
+  window.desintegrarCTT = async function() {
+    try {
+      await fetch(`${API_BASE}/api/tracking/ctt-credentials`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + getActiveToken() }
+      });
+      showToast("Desconectado", "Credenciales CTT eliminadas", "#6b7280");
+    } catch(e) {}
   };
 
   // Gmail config functions
