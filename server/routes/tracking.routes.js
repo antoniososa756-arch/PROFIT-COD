@@ -4,7 +4,7 @@ const multer = require("multer");
 const XLSX = require("xlsx");
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
-const { cttLogin, cttGetValidSession, cttFetchShipment, mapCTTStatus } = require("../ctt-sync");
+const { cttLogin, cttGetValidSession, cttFetchShipment, mapCTTStatus, syncCTTForUser } = require("../ctt-sync");
 
 function mapMRWStatus(texto) {
   const t = (texto || "").toLowerCase();
@@ -328,6 +328,17 @@ router.post("/ctt-test", auth, async (req, res) => {
       ultimo_evento: shipment.events?.[shipment.events.length - 1]?.description || null,
       referencia: shipment.client_reference || null,
     });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST sincronizar ahora todos los pedidos con CTT (lo mismo que el cron) ──
+router.post("/ctt-sync", auth, async (req, res) => {
+  try {
+    const creds = await req.db.get("SELECT * FROM ctt_credentials WHERE user_id = $1", [req.user.id]);
+    if (!creds?.area_usuario) return res.status(400).json({ error: "No hay usuario del Área de Clientes guardado" });
+    res.json({ ok: true, ...(await syncCTTForUser(req.db, creds)) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

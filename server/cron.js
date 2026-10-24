@@ -206,6 +206,25 @@ async function syncAllMRW() {
   finally { global.__cronMRWRunning = false; }
 }
 
+// ── Función: sincronizar CTT Express para todos los usuarios ────────────────
+// Una sola consulta paginada por usuario (ver syncCTTForUser en ctt-sync.js),
+// no una por pedido como MRW.
+async function syncAllCTT() {
+  if (global.__cronCTTRunning) { console.log("[CRON] CTT ya en curso, saltando"); return; }
+  global.__cronCTTRunning = true;
+  try {
+    const { syncCTTForUser } = require("./ctt-sync");
+    const credsList = await db.all(`SELECT * FROM ctt_credentials WHERE area_usuario IS NOT NULL AND area_usuario != ''`).catch(() => []);
+    for (const creds of credsList) {
+      try {
+        const r = await syncCTTForUser(db, creds);
+        console.log(`✅ [CRON] CTT user ${creds.user_id}: ${r.actualizados} actualizados, ${r.encontrados} encontrados en CTT de ${r.pedidos_revisados} pedidos (${r.envios_ctt} envíos CTT)`);
+      } catch(e) { console.error(`[CRON] CTT error user ${creds.user_id}:`, e.message); }
+    }
+  } catch(e) { console.error("[CRON] Error sync CTT:", e.message); }
+  finally { global.__cronCTTRunning = false; }
+}
+
 // ── Función: sincronizar PDFs de MRW via Gmail para todos los usuarios ───────
 async function syncAllGmailPDF() {
   console.log("⏰ [CRON] Iniciando sync Gmail PDF MRW...");
@@ -354,12 +373,15 @@ function startCrons() {
   setInterval(syncAllShopifyOrders, 1 * 60 * 1000);
   // Sync MRW cada 5 minutos
   setInterval(syncAllMRW, 5 * 60 * 1000);
+  // Sync CTT cada 5 minutos
+  setInterval(syncAllCTT, 5 * 60 * 1000);
 
   // También ejecutar una vez al arrancar (después de 30s para que la DB esté lista)
   setTimeout(syncAllShopifyOrders, 30 * 1000);
   setTimeout(syncAllMRW, 60 * 1000);
+  setTimeout(syncAllCTT, 90 * 1000);
 
-  console.log("✅ [CRON] Crons iniciados — Shopify cada 1min, MRW cada 5min");
+  console.log("✅ [CRON] Crons iniciados — Shopify cada 1min, MRW y CTT cada 5min");
 
   // ── Cierre de mes: comprobar cada hora si toca generar factura y resetear contadores ──
   setInterval(async () => {

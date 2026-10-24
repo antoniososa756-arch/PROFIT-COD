@@ -150,8 +150,10 @@ async function cttGetUserData(accessToken, idToken) {
 
 // Pide la lista de envíos recientes de la cuenta con los mismos filtros que
 // manda la web de CTT, y se filtra en este lado por número de seguimiento --
-// así se traen VARIOS envíos en una sola llamada en vez de una por pedido.
-async function cttListShipments(accessToken, idToken, { pageLimit = 100, daysBack = 90 } = {}) {
+// así se traen VARIOS envíos en pocas llamadas en vez de una por pedido.
+// Recorre todas las páginas siguiendo pagination.page_offset.next, igual que
+// el scroll infinito de su web (con un tope por si la paginación no avanza).
+async function cttListShipments(accessToken, idToken, { pageLimit = 100, daysBack = 90, maxPages = 30 } = {}) {
   const { clientCode, centerIds, canViewAllCenters } = await cttGetUserData(accessToken, idToken);
   const now = new Date();
   const from = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
@@ -164,11 +166,27 @@ async function cttListShipments(accessToken, idToken, { pageLimit = 100, daysBac
     filters.push({ field: "client_center_code", operation: "IN", value: centerIds });
   }
   filters.push({ field: "manifest_datetime", operation: "RANGE", from_value: from.toISOString(), to_value: now.toISOString() });
-  const body = {
-    page: { page_offset: 0, page_limit: pageLimit },
-    config: { view: "WEBCLIENT", language: "ES", show_items: false },
-    filter: { group_operation: "AND", filters },
-  };
+
+  const all = [];
+  const seenOffsets = new Set();
+  let offset = 0;
+  for (let i = 0; i < maxPages; i++) {
+    seenOffsets.add(offset);
+    const json = await cttShippingsPage(accessToken, idToken, {
+      page: { page_offset: offset, page_limit: pageLimit },
+      config: { view: "WEBCLIENT", language: "ES", show_items: false },
+      filter: { group_operation: "AND", filters },
+    });
+    const data = Array.isArray(json?.data) ? json.data : [];
+    all.push(...data);
+    const p = json?.pagination?.page_offset;
+    if (!p || p.next == null || p.current === p.last || seenOffsets.has(p.next) || data.length === 0) break;
+    offset = p.next;
+  }
+  return all;
+}
+
+async function cttShippingsPage(accessToken, idToken, body) {
   const res = await fetch(CTT_SHIPPINGS_URL, {
     method: "POST",
     headers: cttHeaders(accessToken, idToken),
@@ -187,7 +205,7 @@ async function cttListShipments(accessToken, idToken, { pageLimit = 100, daysBac
       : JSON.stringify(json).slice(0, 500);
     throw new Error(`CTT respondió ${res.status}: ${detail}`);
   }
-  return Array.isArray(json?.data) ? json.data : [];
+  return json;
 }
 
 // Busca un envío puntual por su número de seguimiento dentro de la lista
@@ -218,4 +236,61 @@ function mapCTTStatus(shipment) {
   return "en_transito";
 }
 
-module.exports = { cttLogin, cttRefresh, cttGetValidSession, cttGetUserData, cttListShipments, cttFetchShipment, mapCTTStatus };
+// Sincroniza los pedidos de un usuario con CTT: trae TODOS sus envíos de los
+// últimos 90 días en pocas llamadas y los cruza con sus pedidos abiertos --
+// primero por número de seguimiento, y si el pedido no tiene seguimiento en
+// Shopify, por la referencia de CTT (= nombre del pedido, ej. #LOJACOMFY31982),
+// guardando entonces también el seguimiento. Solo toca pedidos que existan en
+// CTT, así que no interfiere con los de MRW de ese mismo usuario.
+// El texto crudo del último evento va a mrw_estado_texto (mismo uso que con
+// MRW: lo muestra el pedido y lo usa /api/metrics/en-reparto).
+async function syncCTTForUser(db, creds) {
+  const { accessToken, idToken } = await cttGetValidSession(db, creds);
+  const shipments = await cttListShipments(accessToken, idToken);
+  const byCode = new Map();
+  const byRef = new Map();
+  for (const s of shipments) {
+    if (s.shipping_code) byCode.set(String(s.shipping_code).trim(), s);
+    if (s.client_reference) byRef.set(String(s.client_reference).trim().toUpperCase(), s);
+  }
+
+  const pedidos = await db.all(
+    `SELECT o.id, o.order_number, o.tracking_number, o.fulfillment_status
+     FROM orders o
+     WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+       OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+       AND (o.fulfillment_status IS NULL OR o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado'))
+       AND o.created_at >= $2`,
+    // created_at es TEXT ISO (de Shopify): comparar como texto evita que un
+    // valor raro rompa toda la consulta con un cast a timestamptz.
+    [creds.user_id, new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)]
+  );
+
+  let matched = 0, updated = 0;
+  for (const pedido of pedidos) {
+    const tracking = (pedido.tracking_number || "").trim();
+    let shipment = tracking ? byCode.get(tracking) : null;
+    let setTracking = false;
+    if (!shipment && !tracking && pedido.order_number) {
+      shipment = byRef.get(String(pedido.order_number).trim().toUpperCase()) || null;
+      setTracking = !!shipment?.shipping_code;
+    }
+    if (!shipment) continue;
+    matched++;
+
+    const nuevoStatus = mapCTTStatus(shipment);
+    const lastEvent = (shipment.events || [])[(shipment.events || []).length - 1];
+    const texto = lastEvent?.description || shipment.tracking_info?.text || null;
+    await db.run(
+      `UPDATE orders SET mrw_estado_texto = $1, last_mrw_check = now()::text${setTracking ? ", tracking_number = $3" : ""} WHERE id = $2`,
+      setTracking ? [texto, pedido.id, String(shipment.shipping_code).trim()] : [texto, pedido.id]
+    ).catch(() => {});
+    if (nuevoStatus && nuevoStatus !== pedido.fulfillment_status) {
+      await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
+      updated++;
+    }
+  }
+  return { envios_ctt: shipments.length, pedidos_revisados: pedidos.length, encontrados: matched, actualizados: updated };
+}
+
+module.exports = { cttLogin, cttRefresh, cttGetValidSession, cttGetUserData, cttListShipments, syncCTTForUser, cttFetchShipment, mapCTTStatus };

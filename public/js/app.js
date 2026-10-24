@@ -2965,6 +2965,10 @@ if (id === "tiendas") {
               <button onclick="probarCTT()" style="padding:9px 18px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Probar</button>
             </div>
             <div id="ctt-test-result" style="font-size:13px;min-height:18px;"></div>
+            <label style="font-size:12px;font-weight:600;color:#e5e7eb;margin-top:6px;">Sincronización de pedidos</label>
+            <div style="font-size:12px;color:#6b7280;">Los estados de tus pedidos CTT se actualizan solos cada 5 minutos. Puedes forzarlo ahora:</div>
+            <button onclick="sincronizarCTT()" style="padding:9px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;align-self:flex-start;">🔄 Sincronizar pedidos ahora</button>
+            <div id="ctt-sync-result" style="font-size:13px;min-height:18px;"></div>
           </div>`}
         `;
       } else {
@@ -3093,6 +3097,23 @@ if (id === "tiendas") {
       if (result) {
         result.style.color="#16a34a";
         result.innerHTML = `✓ Estado CTT: <strong>${escapeHtml(data.estado_ctt||"—")}</strong> → ProfitCOD: <strong>${escapeHtml(data.estado_profitcod||"—")}</strong>${data.referencia ? ` · Ref: ${escapeHtml(data.referencia)}` : ""}`;
+      }
+    } catch(e) { if (result) { result.style.color="#dc2626"; result.textContent="Error de conexión"; } }
+  };
+
+  window.sincronizarCTT = async function() {
+    const result = document.getElementById("ctt-sync-result");
+    if (result) { result.style.color="#6b7280"; result.textContent="Sincronizando con CTT..."; }
+    try {
+      const res = await fetch(`${API_BASE}/api/tracking/ctt-sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() }
+      });
+      const data = await res.json();
+      if (!res.ok) { if (result) { result.style.color="#dc2626"; result.textContent=data.error||"Error"; } return; }
+      if (result) {
+        result.style.color="#16a34a";
+        result.textContent = `✓ ${data.actualizados} pedidos actualizados · ${data.encontrados} encontrados en CTT de ${data.pedidos_revisados} pedidos abiertos (${data.envios_ctt} envíos en CTT, últimos 90 días)`;
       }
     } catch(e) { if (result) { result.style.color="#dc2626"; result.textContent="Error de conexión"; } }
   };
