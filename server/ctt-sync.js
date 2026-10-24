@@ -120,10 +120,10 @@ function decodeJwtPayload(token) {
 }
 
 // Datos de la cuenta: el backend de CTT exige filtrar rpc-shippings por
-// "client_code" (si no, responde 500 "Client_Code not found"). Esos códigos
-// van cifrados (ej. "CzFmvEDOVGM=") pero la propia web no los cifra: los
-// recibe ya cifrados de este endpoint, igual que los ids de los centros
-// (client_center_id, el "hideId" de su frontend).
+// "client_code" (si no, responde 500 "Client_Code not found"). Ese valor va
+// cifrado (ej. "CzFmvEDOVGM=") pero la propia web no lo cifra: lo recibe ya
+// cifrado de este endpoint como "client_id", igual que los ids de los
+// centros (client_center_id, el "hideId" de su frontend).
 async function cttGetUserData(accessToken, idToken) {
   const cognitoId = decodeJwtPayload(idToken)["cognito:username"];
   if (!cognitoId) throw new Error("El token de CTT no trae cognito:username");
@@ -137,9 +137,12 @@ async function cttGetUserData(accessToken, idToken) {
   try { json = JSON.parse(text); } catch (e) { throw new Error(`Respuesta no-JSON de CTT web-user-data (${res.status}): ${text.slice(0, 300)}`); }
   if (!res.ok) throw new Error(`CTT web-user-data respondió ${res.status}: ${JSON.stringify(json).slice(0, 500)}`);
   const user = Array.isArray(json?.data) ? json.data[0] : null;
-  if (!user?.client_code) throw new Error(`CTT web-user-data sin client_code: ${JSON.stringify(json).slice(0, 300)}`);
+  // OJO: el filtro "client_code" de rpc-shippings espera el client_id (la
+  // versión cifrada), no el client_code en claro -- con este último CTT
+  // responde 500 DECRYPT_ERROR. Así lo hace su frontend (clientCode: clientId).
+  if (!user?.client_id) throw new Error(`CTT web-user-data sin client_id: ${JSON.stringify(json).slice(0, 300)}`);
   return {
-    clientCode: user.client_code,
+    clientCode: user.client_id,
     centerIds: (user.client_centers || []).map((c) => c.client_center_id).filter(Boolean),
     canViewAllCenters: !!user.effective_permissions?.can_view_all_centers,
   };
