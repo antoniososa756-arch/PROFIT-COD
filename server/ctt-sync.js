@@ -230,25 +230,19 @@ async function cttFetchShipment(accessToken, idToken, trackingNumber, userData =
   return Array.isArray(json?.data) && json.data[0] ? json.data[0] : null;
 }
 
-// Mapea el estado de CTT al mismo vocabulario que ya usa ProfitCOD
-// (pendiente/en_preparacion/enviado/en_transito/entregado/devuelto/destruido/
-// cancelado) -- basado en los codigos de evento "WEBxxxx" vistos en la
-// respuesta real. Códigos no reconocidos caen en "en_transito" para no
-// bloquear el pedido en un estado viejo, igual que hace mapMRWStatus.
+// Mapea el estado de CTT a ProfitCOD. CTT tiene menos estados que MRW, así
+// que solo hay tres resultados: "devuelto", "entregado" y todo lo demás
+// "en_transito". Devuelto se comprueba ANTES que entregado: una devolución
+// puede acabar como "entregado al remitente" y no debe contar como entregada.
 function mapCTTStatus(shipment) {
   if (!shipment) return null;
-  if (shipment.is_nulled) return "cancelado";
-  const code = shipment.last_event_code || "";
-  const milestone = shipment.tracking_info?.text?.toLowerCase() || "";
-  if (code === "SHIPPING_DELIVERED" || milestone.includes("entregado")) return "entregado";
-  if (milestone.includes("devuel")) return "devuelto";
-  if (milestone.includes("destru")) return "destruido";
-  if (milestone.includes("anulad") || milestone.includes("cancelad")) return "cancelado";
   const events = shipment.events || [];
   const lastEvent = events[events.length - 1];
-  const evCode = lastEvent?.code || "";
-  if (evCode === "WEB0000") return "pendiente";
-  if (evCode === "WEB0500") return "en_preparacion";
+  const texto = [shipment.tracking_info?.text, lastEvent?.description, shipment.current_status_name]
+    .filter(Boolean).join(" ").toLowerCase();
+  const code = String(shipment.last_event_code || "").toUpperCase();
+  if (texto.includes("devuel") || texto.includes("devoluc") || texto.includes("remitente") || code.includes("RETURN")) return "devuelto";
+  if (code === "SHIPPING_DELIVERED" || texto.includes("entregado")) return "entregado";
   return "en_transito";
 }
 
