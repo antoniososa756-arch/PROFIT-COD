@@ -26,8 +26,8 @@ const {
 const CTT_REGION    = "eu-central-1";
 const CTT_POOL_ID   = "eu-central-1_F8jAzJtP0";
 const CTT_CLIENT_ID = "bmnqrafpvofp4i537u4stvkso";
-const CTT_SHIPPINGS_URL =
-  "https://ctt-pro-e-customer-web.de-c1.cloudhub.io/customer-web/item-history-api/private/v2/rpc-shippings";
+const CTT_API_BASE = "https://ctt-pro-e-customer-web.de-c1.cloudhub.io/customer-web";
+const CTT_SHIPPINGS_URL = `${CTT_API_BASE}/item-history-api/private/v2/rpc-shippings`;
 
 function getUserPool() {
   return new CognitoUserPool({ UserPoolId: CTT_POOL_ID, ClientId: CTT_CLIENT_ID });
@@ -102,38 +102,73 @@ async function cttGetValidSession(db, creds) {
   return { accessToken: session.accessToken, idToken: session.idToken };
 }
 
-// Pide la lista de envíos recientes (sin filtrar por tienda/cliente): la
-// petición real capturada en el navegador filtraba también por
-// "client_code" y "client_center_code", pero esos valores van CIFRADOS en
-// esa captura (ej. "CzFmvEDOVGM=") -- no son el 81391/8139100001 en claro
-// que ya tenemos, así que no se pueden reproducir desde aquí sin saber cómo
-// los cifra su frontend. En su lugar se pide la lista completa (el token de
-// Cognito ya identifica la cuenta, así que el propio backend de CTT debería
-// devolver solo lo suyo) y se filtra en este lado por número de seguimiento
-// -- además sirve para traer VARIOS envíos en una sola llamada en vez de
-// una por pedido (como sí hace que hacer MRW).
+function cttHeaders(accessToken, idToken) {
+  return {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    Id_token: idToken,
+  };
+}
+
+// Lee el payload del id token de Cognito (JWT) sin verificar la firma --
+// solo se usa para sacar el "cognito:username", que es lo que la web de CTT
+// usa como identificador en /web-user-data/{id}.
+function decodeJwtPayload(token) {
+  const part = String(token || "").split(".")[1] || "";
+  return JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
+}
+
+// Datos de la cuenta: el backend de CTT exige filtrar rpc-shippings por
+// "client_code" (si no, responde 500 "Client_Code not found"). Esos códigos
+// van cifrados (ej. "CzFmvEDOVGM=") pero la propia web no los cifra: los
+// recibe ya cifrados de este endpoint, igual que los ids de los centros
+// (client_center_id, el "hideId" de su frontend).
+async function cttGetUserData(accessToken, idToken) {
+  const cognitoId = decodeJwtPayload(idToken)["cognito:username"];
+  if (!cognitoId) throw new Error("El token de CTT no trae cognito:username");
+  const res = await fetch(`${CTT_API_BASE}/web-user-data/${encodeURIComponent(cognitoId)}`, {
+    method: "GET",
+    headers: cttHeaders(accessToken, idToken),
+    signal: AbortSignal.timeout(15000),
+  });
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); } catch (e) { throw new Error(`Respuesta no-JSON de CTT web-user-data (${res.status}): ${text.slice(0, 300)}`); }
+  if (!res.ok) throw new Error(`CTT web-user-data respondió ${res.status}: ${JSON.stringify(json).slice(0, 500)}`);
+  const user = Array.isArray(json?.data) ? json.data[0] : null;
+  if (!user?.client_code) throw new Error(`CTT web-user-data sin client_code: ${JSON.stringify(json).slice(0, 300)}`);
+  return {
+    clientCode: user.client_code,
+    centerIds: (user.client_centers || []).map((c) => c.client_center_id).filter(Boolean),
+    canViewAllCenters: !!user.effective_permissions?.can_view_all_centers,
+  };
+}
+
+// Pide la lista de envíos recientes de la cuenta con los mismos filtros que
+// manda la web de CTT, y se filtra en este lado por número de seguimiento --
+// así se traen VARIOS envíos en una sola llamada en vez de una por pedido.
 async function cttListShipments(accessToken, idToken, { pageLimit = 100, daysBack = 90 } = {}) {
+  const { clientCode, centerIds, canViewAllCenters } = await cttGetUserData(accessToken, idToken);
   const now = new Date();
   const from = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+  const filters = [
+    { field: "item_number", operation: "EQUALS", value: 1 },
+    { field: "current_status_code", operation: "IS_NOT_NULL" },
+    { field: "client_code", operation: "EQUALS", value: clientCode },
+  ];
+  if (!canViewAllCenters && centerIds.length) {
+    filters.push({ field: "client_center_code", operation: "IN", value: centerIds });
+  }
+  filters.push({ field: "manifest_datetime", operation: "RANGE", from_value: from.toISOString(), to_value: now.toISOString() });
   const body = {
     page: { page_offset: 0, page_limit: pageLimit },
     config: { view: "WEBCLIENT", language: "ES", show_items: false },
-    filter: {
-      group_operation: "AND",
-      filters: [
-        { field: "current_status_code", operation: "IS_NOT_NULL" },
-        { field: "manifest_datetime", operation: "RANGE", from_value: from.toISOString(), to_value: now.toISOString() },
-      ],
-    },
+    filter: { group_operation: "AND", filters },
   };
   const res = await fetch(CTT_SHIPPINGS_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      Id_token: idToken,
-    },
+    headers: cttHeaders(accessToken, idToken),
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(15000),
   });
@@ -180,4 +215,4 @@ function mapCTTStatus(shipment) {
   return "en_transito";
 }
 
-module.exports = { cttLogin, cttRefresh, cttGetValidSession, cttListShipments, cttFetchShipment, mapCTTStatus };
+module.exports = { cttLogin, cttRefresh, cttGetValidSession, cttGetUserData, cttListShipments, cttFetchShipment, mapCTTStatus };
