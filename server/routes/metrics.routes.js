@@ -2,6 +2,7 @@ const express = require("express");
 const auth = require("../middlewares/auth");
 const db = require("../db");
 const router = express.Router();
+const { carrierCond } = require("../utils/carrier");
 
 // GET /api/metrics  (endpoint legacy - resumen global)
 router.get("/metrics", auth, async (req, res) => {
@@ -21,19 +22,6 @@ router.get("/metrics", auth, async (req, res) => {
     res.json({ tiendas: row?.tiendas || 0, pedidos: row?.pedidos || 0, facturacion: row?.facturacion || 0 });
   } catch (e) { res.status(500).json({ error: "Error métricas" }); }
 });
-
-// Filtro por agencia de envío (?carrier=ctt|mrw). Usa SOLO orders.carrier
-// (nunca buscar dentro de raw_json aquí: es enorme y colgaba Métricas). La
-// rellena Shopify (trigger en db.js) o la primera agencia que encuentra el
-// envío. Los pedidos YA CERRADOS con seguimiento y sin agencia son históricos
-// de MRW (de antes de existir carrier; ahora toda agencia lo marca antes de
-// cerrar uno). Un pedido abierto sin agencia aún no cuenta en ninguna de las
-// dos hasta que se detecta (máx. 5 min) -- así nunca sale en la equivocada.
-function carrierCond(carrier) {
-  if (carrier === "ctt") return `AND o.carrier = 'ctt'`;
-  if (carrier === "mrw") return `AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND COALESCE(o.tracking_number,'') != '' AND o.fulfillment_status IN ('entregado','devuelto','destruido','cancelado')))`;
-  return "";
-}
 
 // GET /api/metrics/stats
 // Params: from, to, shops (coma-separado o array)

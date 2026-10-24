@@ -3423,6 +3423,11 @@ if (id === "pedidos") {
           <button onclick="ocultarFiltroIdsPedidos(true)" style="padding:5px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;">Quitar filtro</button>
         </div>
 
+        <div id="orders-carrier-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:8px 14px;margin-bottom:10px;">
+          <span id="orders-carrier-text" style="font-size:12.5px;color:var(--text);"></span>
+          <button onclick="quitarFiltroAgenciaPedidos()" style="padding:5px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;">Quitar filtro</button>
+        </div>
+
         <div id="orders-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
 
         <div id="orders-bulk-bar" style="display:none;align-items:center;gap:10px;background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.3);border-radius:8px;padding:8px 14px;margin-bottom:10px;flex-wrap:wrap;">
@@ -7766,6 +7771,7 @@ function irAPedidosDesdeMetricas(status) {
     status: Array.isArray(status) ? status.join(",") : (status || ""),
     shop: dominiosFiltro.length === 1 ? dominiosFiltro[0] : "",
     dateFrom, dateTo,
+    carrier: (window.__metCarrierFilter && window.__metCarrierFilter !== "all") ? window.__metCarrierFilter : "",
   };
   setSection("pedidos");
 }
@@ -7790,6 +7796,12 @@ function ocultarFiltroIdsPedidos(refrescar) {
   }
 }
 window.ocultarFiltroIdsPedidos = ocultarFiltroIdsPedidos;
+
+function quitarFiltroAgenciaPedidos() {
+  ordersState = { ...ordersState, carrier: "", page: 1 };
+  fetchOrdersFiltered();
+}
+window.quitarFiltroAgenciaPedidos = quitarFiltroAgenciaPedidos;
 
 // Banner "Actualmente tienes X pedidos en reparto" dentro de la tarjeta de
 // Tasa de entrega. A diferencia del resto de Estadísticas, no depende del
@@ -13584,6 +13596,15 @@ async function fetchOrdersFiltered() {
   if (ordersState.hasTracking) params.set("hasTracking", "1");
   if (ordersState.mrwRejected) params.set("mrwRejected", "1");
   if (ordersState.ids)         params.set("ids",         ordersState.ids);
+  if (ordersState.carrier)     params.set("carrier",     ordersState.carrier);
+  // Franja "Agencia: X" -- se pinta según ordersState, así desaparece sola
+  // cuando cualquier otro filtro reinicia el estado sin agencia.
+  {
+    const cb = document.getElementById("orders-carrier-banner");
+    const ct = document.getElementById("orders-carrier-text");
+    if (cb) cb.style.display = ordersState.carrier ? "flex" : "none";
+    if (ct) ct.textContent = ordersState.carrier ? `Mostrando solo pedidos de ${ordersState.carrier === "ctt" ? "CTT Express" : "MRW"}` : "";
+  }
 
   try {
     const res = await fetch(`${API_BASE}/api/orders?${params}`, {
@@ -13661,7 +13682,7 @@ async function fetchOrders() {
     if (sel) sel.value = pf.shop || "";
     window.__pendingOrdersShop = pf.shop || "";
 
-    ordersState = { q: "", status: pf.status || "", shop: pf.shop || "", dateFrom: pf.dateFrom || "", dateTo: pf.dateTo || "", page: 1, ids: "" };
+    ordersState = { q: "", status: pf.status || "", shop: pf.shop || "", dateFrom: pf.dateFrom || "", dateTo: pf.dateTo || "", page: 1, ids: "", carrier: pf.carrier || "" };
     await fetchOrdersFiltered();
     return;
   }
@@ -14027,6 +14048,7 @@ async function setupOrderNavContext(orderId) {
     }
     if (ordersState.hasTracking) params.set("hasTracking", "1");
     if (ordersState.mrwRejected) params.set("mrwRejected", "1");
+    if (ordersState.carrier)     params.set("carrier", ordersState.carrier);
 
     const res = await fetch(`${API_BASE}/api/orders/ids?${params}`, {
       headers: { Authorization: "Bearer " + getActiveToken() }

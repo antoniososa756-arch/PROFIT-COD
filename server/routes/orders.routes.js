@@ -2,6 +2,7 @@ const express = require("express");
 const auth = require("../middlewares/auth");
 const db = require("../db");
 const router = express.Router();
+const { carrierCond } = require("../utils/carrier");
 
 // Migración: añadir columna fecha_pago si no existe
 db.run(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS fecha_pago TEXT`).catch(() => {});
@@ -41,6 +42,9 @@ function buildOrdersWhere(req, userId) {
     params.push(`%${q}%`); i++;
   }
   if (hasTracking) { conditions.push(`o.tracking_number IS NOT NULL AND o.tracking_number != ''`); }
+  // Agencia (ctt|mrw): misma regla que Métricas, ver server/utils/carrier.js
+  const carrierSql = carrierCond(req.query.carrier);
+  if (carrierSql) conditions.push(carrierSql.replace(/^AND /, ""));
   if (mrwRejected) { conditions.push(`o.mrw_rejected = true AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')`); }
   if (ids) {
     // Lista explícita de ids internos (ej. "pedidos que MRW no reconoce" u
