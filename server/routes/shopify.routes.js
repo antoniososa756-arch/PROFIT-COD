@@ -1254,7 +1254,7 @@ async function detectManualCodScript(shopDomain) {
   }
 }
 
-router.get("/cod-script/status", auth, async (req, res) => {
+router.get("/cod-script/status", auth, require("../middlewares/leadsAccess"), async (req, res) => {
   const userId = req.user.id;
   const shops = await db.all(
     "SELECT shop_domain, access_token FROM shops WHERE user_id = $1 AND status = 'active'",
@@ -1276,7 +1276,7 @@ router.get("/cod-script/status", auth, async (req, res) => {
   res.json(result);
 });
 
-router.post("/cod-script/install/:shopDomain", auth, async (req, res) => {
+router.post("/cod-script/install/:shopDomain", auth, require("../middlewares/leadsAccess"), async (req, res) => {
   const shop = await getShopForUser(req.user.id, req.params.shopDomain);
   if (!shop) return res.status(404).json({ error: "Tienda no encontrada" });
 
@@ -1307,7 +1307,7 @@ router.post("/cod-script/install/:shopDomain", auth, async (req, res) => {
   res.status(500).json({ error: "Error al instalar", details: cd.errors });
 });
 
-router.delete("/cod-script/uninstall/:shopDomain", auth, async (req, res) => {
+router.delete("/cod-script/uninstall/:shopDomain", auth, require("../middlewares/leadsAccess"), async (req, res) => {
   const shop = await getShopForUser(req.user.id, req.params.shopDomain);
   if (!shop) return res.status(404).json({ error: "Tienda no encontrada" });
 

@@ -1049,7 +1049,8 @@ function loadApp(section) {
       </div>
 
       ${(() => {
-        const sections = ["metricas","leads","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
+        // "Leads" (tracker en vivo de Releasit) también es solo del admin y su apoyo.
+        const sections = ["metricas",...(puedeVerLeads() ? ["leads"] : []),"rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
         // "Contabilidad" es exclusiva del admin: solo se ofrece en el menú al
         // propio admin, o a sus cuentas de apoyo (nunca a las de un Cliente).
         if (currentUser.role === "Administrador" || currentUser.apoyoDeAdmin) sections.push("contabilidad");
@@ -2607,6 +2608,7 @@ if (id === "mi-equipo") {
 // SECCIÓN LEADS — vista en vivo por tienda + historial de sesiones
 // =========================
 if (id === "leads") {
+  if (!puedeVerLeads()) { setSection("metricas"); return; }
   if (t) t.textContent = "Leads";
   if (s) s.textContent = "Actividad en vivo y leads de Releasit COD, por tienda";
   if (c) c.textContent = "Leads";
@@ -2863,10 +2865,10 @@ if (id === "tiendas") {
         style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
         Reembolsos
       </button>
-      <button id="int-tab-btn-leads" onclick="switchIntegracionesTab('leads')"
+      ${puedeVerLeads() ? `<button id="int-tab-btn-leads" onclick="switchIntegracionesTab('leads')"
         style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
         Leads COD
-      </button>
+      </button>` : ""}
     </div>
     <div id="integraciones-content"></div>
   `;
@@ -2913,8 +2915,8 @@ if (id === "tiendas") {
                 </div>
                 <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
                   <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Alcances (Scopes)</span>
-                  <p style="margin-top:3px;color:var(--text);word-break:break-all;"><code style="background:var(--input);padding:1px 6px;border-radius:4px;font-size:12px;">read_fulfillments,write_fulfillments,read_orders,write_orders,read_products,write_products,write_script_tags</code></p>
-                  <p style="margin-top:6px;color:var(--muted);font-size:12px;">El último permiso (<code style="background:var(--input);padding:1px 4px;border-radius:4px;">write_script_tags</code>) es opcional, solo hace falta si quieres usar "Leads COD" para ver en vivo quién está llenando el formulario de pago contra reembolso.</p>
+                  <p style="margin-top:3px;color:var(--text);word-break:break-all;"><code style="background:var(--input);padding:1px 6px;border-radius:4px;font-size:12px;">read_fulfillments,write_fulfillments,read_orders,write_orders,read_products,write_products${puedeVerLeads() ? ",write_script_tags" : ""}</code></p>
+                  ${puedeVerLeads() ? `<p style="margin-top:6px;color:var(--muted);font-size:12px;">El último permiso (<code style="background:var(--input);padding:1px 4px;border-radius:4px;">write_script_tags</code>) es opcional, solo hace falta si quieres usar "Leads COD" para ver en vivo quién está llenando el formulario de pago contra reembolso.</p>` : ""}
                 </div>
                 <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
                   <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">URLs de redireccionamiento</span>
@@ -2951,7 +2953,7 @@ if (id === "tiendas") {
       renderReembolsoCards();
     }
 
-    if (tab === "leads") {
+    if (tab === "leads" && puedeVerLeads()) {
       loadLeadsCOD(content);
     }
 
@@ -7432,6 +7434,12 @@ window.toggleLeadRow = toggleLeadRow;
 // (deja de mandar cualquier evento) y el guardado en el servidor. Solo la
 // cuenta administrador puede cambiarlo -- un apoyo lo puede ver pero no
 // tocar, para que no se apague por accidente y el dueño pierda visibilidad.
+// Leads es solo del admin y de sus cuentas de apoyo (el servidor lo exige igual).
+function puedeVerLeads() {
+  return currentUser?.role === "Administrador" || !!currentUser?.apoyoDeAdmin;
+}
+window.puedeVerLeads = puedeVerLeads;
+
 async function renderLeadsTrackingToggle(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;

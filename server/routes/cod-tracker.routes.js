@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const auth = require("../middlewares/auth");
+const leadsAccess = require("../middlewares/leadsAccess");
 const sseManager = require("../sse");
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get("/script.js", async (req, res) => {
   if (!shop) return res.status(400).send("// falta ?shop=dominio");
 
   const shopRow = await db.get(
-    "SELECT s.user_id, u.leads_tracking_enabled FROM shops s JOIN users u ON u.id = s.user_id WHERE LOWER(s.shop_domain) = $1 AND s.status = 'active'",
+    "SELECT s.user_id, u.role, u.leads_tracking_enabled FROM shops s JOIN users u ON u.id = s.user_id WHERE LOWER(s.shop_domain) = $1 AND s.status = 'active'",
     [shop]
   ).catch(() => null);
   if (!shopRow) return res.status(404).send("// tienda no encontrada en PROFIT-COD");
@@ -18,7 +19,7 @@ router.get("/script.js", async (req, res) => {
   // Interruptor de Leads apagado -- se sirve un script vacío en vez del real,
   // así el navegador del cliente no manda ni un solo evento (ni heartbeat ni
   // nada) mientras esté así.
-  if (shopRow.leads_tracking_enabled === false) {
+  if (shopRow.leads_tracking_enabled === false || shopRow.role !== "admin") {
     res.setHeader("Content-Type", "application/javascript");
     res.setHeader("Cache-Control", "public, max-age=30");
     return res.send("// Leads desactivado");
@@ -178,7 +179,7 @@ router.post("/event", async (req, res) => {
 
   try {
     const shopRow = await db.get(
-      `SELECT s.id, s.user_id, s.shop_name, s.notification_color, u.leads_tracking_enabled
+      `SELECT s.id, s.user_id, s.shop_name, s.notification_color, u.role, u.leads_tracking_enabled
        FROM shops s JOIN users u ON u.id = s.user_id
        WHERE LOWER(s.shop_domain) = $1 AND s.status = 'active'`,
       [shop.toLowerCase()]
@@ -187,7 +188,7 @@ router.post("/event", async (req, res) => {
     // Por si el navegador del cliente todavía tiene en caché el script viejo
     // (hasta 30s, o más si algún proxy/CDN lo retiene) -- no guardar nada ni
     // emitir SSE mientras el interruptor esté apagado.
-    if (shopRow.leads_tracking_enabled === false) return;
+    if (shopRow.leads_tracking_enabled === false || shopRow.role !== "admin") return;
 
     // "En vivo" ya no depende del formulario: el estado ahora distingue
     // "browsing" (en la tienda, en cualquier página) de los pasos del
@@ -327,7 +328,7 @@ async function expireStaleSessions(userId) {
 }
 
 // ── Listar sesiones con su cronología completa (auth) ───────────────────────────
-router.get("/sessions", auth, async (req, res) => {
+router.get("/sessions", auth, leadsAccess, async (req, res) => {
   const userId = req.user.id;
   const { shop, status, limit = 100, hours } = req.query;
   try {
@@ -366,7 +367,7 @@ router.get("/sessions", auth, async (req, res) => {
 });
 
 // ── Estadísticas rápidas ───────────────────────────────────────────────────────
-router.get("/stats", auth, async (req, res) => {
+router.get("/stats", auth, leadsAccess, async (req, res) => {
   const userId = req.user.id;
   try {
     await expireStaleSessions(userId);
@@ -394,7 +395,7 @@ router.get("/stats", auth, async (req, res) => {
 // checkout_sessions (presencia en tiempo real). Ventas y pedidos de hoy salen
 // de orders -- mismo cálculo que ya usa Gastos Ads (facturación ya restando
 // cancelados del día, pedidos sin contar cancelados).
-router.get("/leads-dashboard", auth, async (req, res) => {
+router.get("/leads-dashboard", auth, leadsAccess, async (req, res) => {
   const userId = req.user.id;
   try {
     await expireStaleSessions(userId);
@@ -577,7 +578,7 @@ router.get("/leads-dashboard", auth, async (req, res) => {
 });
 
 // ── Orden guardado de las tarjetas de tienda en Leads (por usuario) ──────────
-router.get("/leads-order", auth, async (req, res) => {
+router.get("/leads-order", auth, leadsAccess, async (req, res) => {
   try {
     const row = await db.get("SELECT leads_order FROM users WHERE id = $1", [req.user.id]);
     let order = [];
@@ -588,7 +589,7 @@ router.get("/leads-order", auth, async (req, res) => {
   }
 });
 
-router.post("/leads-order", auth, async (req, res) => {
+router.post("/leads-order", auth, leadsAccess, async (req, res) => {
   const { order } = req.body || {};
   if (!Array.isArray(order)) return res.status(400).json({ error: "order debe ser un array" });
   try {
@@ -603,7 +604,7 @@ router.post("/leads-order", auth, async (req, res) => {
 // Visible para cualquiera con acceso a Leads (admin o apoyo), pero solo la
 // cuenta "admin" puede CAMBIARLO -- si un apoyo lo apagara sin querer, el
 // dueño del negocio se queda ciego de la actividad de sus tiendas.
-router.get("/tracking-enabled", auth, async (req, res) => {
+router.get("/tracking-enabled", auth, leadsAccess, async (req, res) => {
   try {
     const row = await db.get("SELECT leads_tracking_enabled FROM users WHERE id = $1", [req.user.id]);
     res.json({ enabled: row?.leads_tracking_enabled !== false });
