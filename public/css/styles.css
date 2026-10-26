@@ -828,6 +828,7 @@
     2fr      /* Email */
     1fr      /* Contraseña */
     1fr      /* Rol */
+    130px    /* Plan */
     70px     /* Ver (ojo) */
     120px    /* Días gratis */
     80px;    /* Estado */
@@ -1137,14 +1138,14 @@ body.dark .sidebar .toggle span { color: #9ca3af; }
 .client-row.client-head {
   display: grid;
   grid-template-columns:
-    2fr 1fr 1fr 70px 120px 80px;
+    2fr 1fr 1fr 130px 70px 120px 80px;
   align-items: center;
 }
 
 /* Centrado fino de columnas pequeñas */
-.client-row > div:nth-child(4),
 .client-row > div:nth-child(5),
-.client-row > div:nth-child(6) {
+.client-row > div:nth-child(6),
+.client-row > div:nth-child(7) {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2027,14 +2028,16 @@ input:focus {
 
   .client-table { overflow: visible; }
   .client-row {
-    grid-template-columns: 1fr auto auto !important;
+    grid-template-columns: 1fr auto auto auto !important;
     font-size: 11px !important;
     padding: 7px 8px !important;
     min-width: 0 !important;
   }
+  /* En móvil: Email, Plan, Días gratis y Estado */
   .client-row > div:nth-child(2),
   .client-row > div:nth-child(3),
-  .client-row > div:nth-child(4) { display: none !important; }
+  .client-row > div:nth-child(5) { display: none !important; }
+  .clientes-plan-cards { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important; }
 
   .stores-grid { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
@@ -2113,3 +2116,29 @@ input:focus {
   color: var(--muted);
   border: 1px solid rgba(107,114,128,.25);
 }
+
+
+/* Gestión de clientes: tarjetas por plan encima de la tabla (Todos, Starter,
+   Growth...). La activa se resalta con el color de su plan. */
+.clientes-plan-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.clientes-plan-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--plan-color);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s;
+}
+.clientes-plan-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.clientes-plan-card.active {
+  border-color: var(--plan-color);
+  box-shadow: 0 0 0 1px var(--plan-color);
+}
+.clientes-plan-card-name { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.clientes-plan-card-num { font-size: 24px; font-weight: 800; color: var(--text); margin-top: 4px; }

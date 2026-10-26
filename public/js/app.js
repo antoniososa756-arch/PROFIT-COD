@@ -2218,12 +2218,14 @@ if (id === "gestion-clientes") {
   box.className = "card";
   if (box) {
     box.innerHTML = `
+      <div id="clientes-plan-cards" class="clientes-plan-cards"></div>
       <div class="client-table">
 
         <div class="client-row client-head">
           <div>Email</div>
           <div>Contraseña</div>
           <div>Rol</div>
+          <div>Plan</div>
           <div>Ver</div>
           <div>Días gratis</div>
           <div>Estado</div>
@@ -2253,7 +2255,62 @@ if (id === "gestion-clientes") {
           return;
         }
 
-        table.innerHTML = users.map(u => `
+        // Plan de cada cuenta y su "sección" (tarjetas de arriba). Las cuentas de
+        // admin/apoyo no tienen plan propio: solo aparecen en "Todos".
+        const PLAN_INFO = {
+          starter:  { name: "Starter",  color: "#22c55e" },
+          growth:   { name: "Growth",   color: "#3b82f6" },
+          pro:      { name: "Pro",      color: "#8b5cf6" },
+          business: { name: "Business", color: "#f59e0b" },
+        };
+        const seccionPlan = (u) => {
+          if (u.role !== "cliente") return "otros";
+          if (u.plan_status === "trial") return "trial";
+          if (["active", "suspended"].includes(u.plan_status) && PLAN_INFO[u.plan]) return u.plan;
+          return "sin_plan";
+        };
+        const fmtFecha = (d) => d ? new Date(d).toLocaleDateString("es-ES") : "";
+        const planBadge = (u) => {
+          const sec = seccionPlan(u);
+          const pill = (txt, color) => `<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;color:${color};background:${color}1f;border:1px solid ${color}55;white-space:nowrap;">${txt}</span>`;
+          if (sec === "otros") return `<span style="color:#9ca3af;font-size:12px;">—</span>`;
+          if (sec === "trial") return `<div style="display:flex;flex-direction:column;gap:2px;">${pill("Prueba", "#06b6d4")}${u.plan_expires_at ? `<span style="font-size:10.5px;color:#9ca3af;">hasta ${fmtFecha(u.plan_expires_at)}</span>` : ""}</div>`;
+          if (sec === "sin_plan") return pill("Sin plan", "#6b7280");
+          const info = PLAN_INFO[sec];
+          const extra = u.plan_status === "suspended"
+            ? `<span style="font-size:10.5px;color:#ef4444;font-weight:600;">Pago fallido</span>`
+            : u.subscription_cancel_at ? `<span style="font-size:10.5px;color:#f59e0b;">Cancela el ${fmtFecha(u.subscription_cancel_at)}</span>` : "";
+          return `<div style="display:flex;flex-direction:column;gap:2px;">${pill(info.name, info.color)}${extra}</div>`;
+        };
+
+        // Tarjetas de arriba: una por plan con su número de cuentas. Al pulsar
+        // una, la tabla muestra solo esas cuentas.
+        const SECCIONES = [
+          { key: "todos",    name: "Todos",     color: "#e5e7eb" },
+          { key: "starter",  ...PLAN_INFO.starter },
+          { key: "growth",   ...PLAN_INFO.growth },
+          { key: "pro",      ...PLAN_INFO.pro },
+          { key: "business", ...PLAN_INFO.business },
+          { key: "trial",    name: "En prueba", color: "#06b6d4" },
+          { key: "sin_plan", name: "Sin plan",  color: "#6b7280" },
+        ];
+        const contar = (key) => key === "todos" ? users.length : users.filter(u => seccionPlan(u) === key).length;
+        const pintarClientes = () => {
+          const sel = window.__clientesSeccion || "todos";
+          const cards = document.getElementById("clientes-plan-cards");
+          if (cards) cards.innerHTML = SECCIONES.map(sx => `
+            <div class="clientes-plan-card${sx.key === sel ? " active" : ""}" style="--plan-color:${sx.color};" onclick="window.__clientesSeccion='${sx.key}';window.__pintarClientes()">
+              <div class="clientes-plan-card-name">${sx.name}</div>
+              <div class="clientes-plan-card-num">${contar(sx.key)}</div>
+            </div>`).join("");
+          const lista = sel === "todos" ? users : users.filter(u => seccionPlan(u) === sel);
+          table.innerHTML = lista.length
+            ? lista.map(rowHtml).join("")
+            : `<div style="padding:18px;color:#9ca3af;font-size:13px;text-align:center;">No hay cuentas en esta sección</div>`;
+        };
+        window.__pintarClientes = pintarClientes;
+
+        const rowHtml = (u) => `
           <div class="client-row">
 
             <div>${u.email}</div>
@@ -2290,6 +2347,8 @@ if (id === "gestion-clientes") {
               })()}
             </div>
 
+            <div>${planBadge(u)}</div>
+
             <div class="view-eye" onclick="viewClient('${u.id}')">
               <svg viewBox="0 0 24 24">
                 <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
@@ -2313,7 +2372,8 @@ if (id === "gestion-clientes") {
             ` : `<div style="color:#9ca3af;font-size:12px;text-align:center;">—</div>`}
 
           </div>
-        `).join("");
+        `;
+        pintarClientes();
       })
       .catch(() => {
         table.innerHTML = `
