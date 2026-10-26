@@ -3104,7 +3104,8 @@ if (id === "tiendas") {
   // hace el cron de las 8:00 y 20:00, pero mirando más atrás.
   window.sincronizarReembolsosAgencia = async function(ag) {
     const btn = document.getElementById("ree-sync-btn-" + ag);
-    if (btn) { btn.disabled = true; btn.textContent = "Sincronizando..."; }
+    if (btn) { btn.disabled = true; btn.textContent = "⏳ Leyendo correos..."; }
+    showToast("⏳ Leyendo el correo", "Buscando justificantes de pago… puede tardar un poco.", "#3b82f6");
     const h = { Authorization: "Bearer " + getActiveToken() };
     const con = window.__reeConectados || {};
     let procesados = 0, correos = 0, detalle = [], carpetas = [];
@@ -3131,6 +3132,14 @@ if (id === "tiendas") {
       const nombre = ag === "mrw" ? "MRW" : "CTT";
       if (errores.length) showToast(`⚠️ Reembolsos ${nombre}`, errores.join(" · "), "#dc2626");
       else showToast(`✓ Reembolsos ${nombre}`, `${procesados} pedidos marcados como cobrados · ${correos} correos leídos`, "#22c55e");
+      // Resumen que se queda en pantalla (el aviso de la esquina se pasaba por
+      // alto). Si no enlazó nada, ya sale el diagnóstico de abajo en su lugar.
+      if (!errores.length && procesados > 0) {
+        alert(`✓ Reembolsos ${nombre} sincronizados\n\n` +
+          `${procesados} pedidos marcados como cobrados\n` +
+          `${correos} ${ag === "ctt" ? "justificantes de pago" : "correos"} leídos` +
+          (carpetas.length ? `\nCarpetas: ${carpetas.map(c => `${c.carpeta} (${c.correos})`).join(", ")}` : ""));
+      }
       // Leyó correos pero no enlazó ningún pedido: mostrar qué encontró en
       // cada uno para ver dónde falla (albarán sin pedido, sin números, etc.).
       if (!errores.length && procesados === 0 && detalle.length) {
