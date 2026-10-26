@@ -1,0 +1,76 @@
+// server/routes/imap.routes.js — Correo por IMAP para reembolsos (Titan,
+// Gmail, Outlook...). Ver server/imap-reembolsos.js.
+const express = require("express");
+const { ensureImapTable, imapHostFor, probarConexionIMAP, syncIMAPForUser } = require("../imap-reembolsos");
+const router = express.Router();
+
+router.use(async (req, res, next) => {
+  try { await ensureImapTable(req.db); } catch (e) {}
+  next();
+});
+
+// GET /api/imap/config — nunca devuelve la contraseña
+router.get("/config", async (req, res) => {
+  try {
+    const row = await req.db.get(
+      "SELECT email, host, port, last_sync, last_result FROM mail_imap_config WHERE user_id = $1",
+      [req.user.id]
+    );
+    if (!row) return res.json({ connected: false });
+    let last = null;
+    try { last = row.last_result ? JSON.parse(row.last_result) : null; } catch (e) {}
+    res.json({ connected: true, email: row.email, host: row.host, port: row.port, last_sync: row.last_sync, last_result: last });
+  } catch (e) {
+    res.json({ connected: false });
+  }
+});
+
+// POST /api/imap/config { email, password, host? } — prueba la conexión antes de guardar
+router.post("/config", async (req, res) => {
+  const email = String(req.body?.email || "").trim();
+  const password = String(req.body?.password || "");
+  const host = String(req.body?.host || "").trim() || imapHostFor(email);
+  const port = parseInt(req.body?.port, 10) || 993;
+  if (!email || !password) return res.status(400).json({ error: "Correo y contraseña obligatorios" });
+  try {
+    await probarConexionIMAP({ email, password, host, port });
+  } catch (e) {
+    const gmailHint = host === "imap.gmail.com"
+      ? " En Gmail tienes que usar una \"contraseña de aplicación\" (no tu contraseña normal)."
+      : "";
+    return res.status(400).json({ error: `No se pudo entrar al correo (${host}): ${e.responseText || e.message}.${gmailHint}` });
+  }
+  try {
+    await req.db.run(
+      `INSERT INTO mail_imap_config (user_id, email, password, host, port)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id) DO UPDATE SET email = EXCLUDED.email, password = EXCLUDED.password, host = EXCLUDED.host, port = EXCLUDED.port`,
+      [req.user.id, email, password, host, port]
+    );
+    res.json({ ok: true, host });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete("/config", async (req, res) => {
+  try {
+    await req.db.run("DELETE FROM mail_imap_config WHERE user_id = $1", [req.user.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/imap/sync — importar ahora (mira el último año, el cron solo 40 días)
+router.post("/sync", async (req, res) => {
+  try {
+    const cfg = await req.db.get("SELECT * FROM mail_imap_config WHERE user_id = $1", [req.user.id]);
+    if (!cfg) return res.status(400).json({ error: "No hay correo conectado" });
+    res.json({ ok: true, ...(await syncIMAPForUser(req.db, cfg, { dias: 365 })) });
+  } catch (e) {
+    res.status(500).json({ error: e.responseText || e.message });
+  }
+});
+
+module.exports = router;

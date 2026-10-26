@@ -228,6 +228,21 @@ async function syncAllCTT() {
   finally { global.__cronCTTRunning = false; }
 }
 
+// ── Función: reembolsos CTT/MRW por IMAP (Titan, Gmail, Outlook...) ─────────
+async function syncAllIMAP() {
+  try {
+    const { ensureImapTable, syncIMAPForUser } = require("./imap-reembolsos");
+    await ensureImapTable(db);
+    const configs = await db.all(`SELECT * FROM mail_imap_config`);
+    for (const cfg of configs) {
+      try {
+        const r = await syncIMAPForUser(db, cfg, { dias: 40 });
+        console.log(`✅ [CRON] IMAP user ${cfg.user_id}: ${r.procesados} reembolsos marcados cobrados (CTT ${r.correosCTT} correos, MRW ${r.correosMRW})`);
+      } catch(e) { console.error(`[CRON] IMAP error user ${cfg.user_id}:`, e.message); }
+    }
+  } catch(e) { console.error("[CRON] Error sync IMAP:", e.message); }
+}
+
 // ── Función: sincronizar PDFs de MRW via Gmail para todos los usuarios ───────
 async function syncAllGmailPDF() {
   console.log("⏰ [CRON] Iniciando sync Gmail PDF MRW...");
@@ -471,6 +486,7 @@ function startCrons() {
     const horaEspaña = parseInt(new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", hour: "numeric", hour12: false }).format(now));
     if (horaEspaña !== 8 && horaEspaña !== 20) return;
     await syncAllGmailPDF();
+    await syncAllIMAP();
   }, 60 * 60 * 1000); // comprueba cada hora
 
   // Keep-alive: ping cada 10 min para que Render no duerma el servidor

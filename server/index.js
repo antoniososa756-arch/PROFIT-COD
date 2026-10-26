@@ -94,6 +94,7 @@ app.use("/api/pfactura/emisores", auth, planCheck, require("./routes/pfactura-em
 app.use("/api/pfactura/clientes", auth, planCheck, require("./routes/pfactura-clientes.routes"));
 app.use("/api/pfactura",     auth, planCheck, require("./routes/pfactura.routes"));
 app.use("/api/reclamos-mrw", auth, planCheck, require("./routes/reclamos.routes"));
+app.use("/api/imap",         auth, planCheck, require("./routes/imap.routes"));
 // Contabilidad es exclusiva del admin (y su apoyo delegado) — no lleva planCheck
 // porque no depende del plan de ningún cliente, la propia ruta filtra el acceso.
 app.use("/api/contabilidad", auth, require("./routes/contabilidad.routes"));
