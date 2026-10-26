@@ -264,16 +264,34 @@ router.post("/stripe/create-session", auth, async (req, res) => {
         }
 
         const upgrade = (PLANS[plan]?.order_limit ?? 0) > (PLANS[currentPlan]?.order_limit ?? 0);
+
+        // Bajada de plan con más pedidos este ciclo que el límite del plan nuevo:
+        // planCheck.js bloquearía la cuenta en cuanto la use (y el bloqueo se
+        // mantiene hasta volver a subir de plan). Se avisa ANTES de confirmar.
+        let excede = false, pedidosCiclo = 0;
+        if (!upgrade) {
+          const u = await db.get(
+            "SELECT billing_cycle_start, trial_started_at, plan_status FROM users WHERE id = $1", [req.user.id]
+          );
+          pedidosCiclo = await getMonthlyOrders(req.user.id, u?.billing_cycle_start, plan, u?.trial_started_at, u?.plan_status);
+          excede = pedidosCiclo > PLANS[plan].order_limit;
+        }
+
         // Primero se pide confirmación en el navegador: este paso cobra.
         if (!req.body.confirm) {
+          const fromName = PLANS[currentPlan]?.name || currentPlan;
+          const aviso = excede
+            ? `\n\n⚠️ ATENCIÓN: este mes llevas ${pedidosCiclo.toLocaleString("es-ES")} pedidos y el plan ${PLANS[plan].name} permite ${PLANS[plan].order_limit.toLocaleString("es-ES")}. Si cambias, las funciones de la app se BLOQUEARÁN al momento y seguirán bloqueadas hasta que vuelvas a un plan superior.`
+            : "";
           return res.json({
             needs_confirm: true,
-            from: PLANS[currentPlan]?.name || currentPlan,
+            from: fromName,
             to: PLANS[plan].name,
             upgrade,
-            message: upgrade
-              ? `Vas a cambiar de ${PLANS[currentPlan]?.name || currentPlan} a ${PLANS[plan].name} (${PLANS[plan].base_price}€/mes). Se cobra ahora solo la diferencia proporcional de los días que quedan de este mes y el cambio es inmediato.`
-              : `Vas a cambiar de ${PLANS[currentPlan]?.name || currentPlan} a ${PLANS[plan].name} (${PLANS[plan].base_price}€/mes). La diferencia queda como saldo a tu favor para las próximas facturas.`,
+            excede,
+            message: (upgrade
+              ? `Vas a cambiar de ${fromName} a ${PLANS[plan].name} (${PLANS[plan].base_price}€/mes). Se cobra ahora solo la diferencia proporcional de los días que quedan de este mes y el cambio es inmediato.`
+              : `Vas a cambiar de ${fromName} a ${PLANS[plan].name} (${PLANS[plan].base_price}€/mes). La diferencia queda como saldo a tu favor para las próximas facturas.`) + aviso,
           });
         }
 
@@ -298,12 +316,15 @@ router.post("/stripe/create-session", auth, async (req, res) => {
           return res.status(402).json({ error: "No se pudo cobrar la diferencia. Revisa tu método de pago e inténtalo de nuevo." });
         }
 
+        // Subida: se levanta el bloqueo por exceso. Bajada que ya excede el nuevo
+        // límite: se bloquea ya (el cliente lo aceptó en la confirmación).
+        const lockSql = upgrade ? ", plan_overage_locked = false" : excede ? ", plan_overage_locked = true" : "";
         await db.run(
-          `UPDATE users SET plan = $1, plan_status = 'active', subscription_cancel_at = NULL${upgrade ? ", plan_overage_locked = false" : ""} WHERE id = $2`,
+          `UPDATE users SET plan = $1, plan_status = 'active', subscription_cancel_at = NULL${lockSql} WHERE id = $2`,
           [plan, req.user.id]
         );
-        console.log(`[STRIPE] Cambio de plan: user ${req.user.id} ${currentPlan} → ${plan}`);
-        return res.json({ ok: true, changed: true, plan });
+        console.log(`[STRIPE] Cambio de plan: user ${req.user.id} ${currentPlan} → ${plan}${excede ? " (excede límite: bloqueado)" : ""}`);
+        return res.json({ ok: true, changed: true, plan, locked: excede });
       }
     }
 

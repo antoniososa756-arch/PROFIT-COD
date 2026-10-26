@@ -5251,7 +5251,9 @@ if (id === "plan") {
         return;
       }
       if (d.changed) {
-        showToast("✅ Plan actualizado", `Ya estás en el plan ${d.plan.charAt(0).toUpperCase() + d.plan.slice(1)}.`, "#22c55e");
+        const nombrePlan = d.plan.charAt(0).toUpperCase() + d.plan.slice(1);
+        if (d.locked) showToast("⚠️ Plan cambiado — cuenta bloqueada", `Estás en ${nombrePlan}, pero este mes superas su límite de pedidos. Vuelve a un plan superior para desbloquear.`, "#dc2626");
+        else showToast("✅ Plan actualizado", `Ya estás en el plan ${nombrePlan}.`, "#22c55e");
         setTimeout(() => window.location.reload(), 1200);
         return;
       }
