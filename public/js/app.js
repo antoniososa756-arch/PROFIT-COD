@@ -10436,6 +10436,31 @@ async function loadAdsTable() {
         });
         showToast?.("📋 Copiado", `${selected.length} celda${selected.length === 1 ? "" : "s"} lista${selected.length === 1 ? "" : "s"} para pegar en Excel`, "#22c55e");
       }
+      // Supr / Retroceso con varias celdas seleccionadas: vaciar los gastos
+      // (Meta/TikTok) de toda la selección, como en Excel. Con una sola celda y
+      // el cursor dentro de su casilla se deja el comportamiento normal
+      // (borrar caracteres mientras se escribe).
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const selected = [...table.querySelectorAll("td.ads-sel")];
+        const enInput = document.activeElement?.tagName === "INPUT";
+        if (!selected.length || (selected.length === 1 && enInput)) return;
+        const inputs = selected.map(td => td.querySelector("input[data-type]")).filter(inp => inp && inp.value !== "" && parseFloat(inp.value) !== 0);
+        if (!inputs.length) return;
+        e.preventDefault();
+        inputs.forEach(inp => { inp.value = ""; });
+        // Guardar todo de una vez y recargar la tabla UNA sola vez (saveAdsSpend
+        // recarga tras cada celda, lo que con muchas celdas era lentísimo).
+        Promise.all(inputs.map(inp => fetch(`${API_BASE}/api/ads`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+          body: JSON.stringify({ shop: inp.dataset.shop, date: inp.dataset.date, type: inp.dataset.type, spend: 0 }),
+        }))).then(() => {
+          invalidateCache("ads");
+          showToast?.("🗑️ Borrado", `${inputs.length} gasto${inputs.length === 1 ? "" : "s"} borrado${inputs.length === 1 ? "" : "s"}`, "#6b7280");
+          loadAdsTable();
+        }).catch(() => showToast?.("❌ Error", "No se pudieron borrar todos los gastos", "#dc2626"));
+        return;
+      }
       if (e.key === "Escape") clearAdsSelection(table);
     };
     document.addEventListener("keydown", wrap._adsKeydown);
