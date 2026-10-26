@@ -100,6 +100,42 @@ router.get("/", auth, async (req, res) => {
 
     const { where, params, nextIndex: i } = buildOrdersWhere(req, userId);
 
+    if (!paginate && req.query.compact === "1") {
+      // Modo compacto (Rentabilidad / balance): todos los pedidos del rango,
+      // pero de raw_json solo lo que usan esos cálculos (estado de pago y
+      // productos). Antes se mandaba el raw_json entero de Shopify: con rangos
+      // de varios meses (miles de pedidos) eran cientos de MB, el servidor no
+      // lo aguantaba y la pantalla se quedaba todo a 0. Se lee por tandas para
+      // no tener todos los raw_json completos en memoria a la vez.
+      const LOTE = 500;
+      const out = [];
+      for (let off = 0; ; off += LOTE) {
+        const lote = await db.all(
+          `SELECT ${fields}
+           FROM orders o
+           LEFT JOIN shops s ON s.id = o.shop_id
+           WHERE ${where}
+           ORDER BY o.created_at DESC, o.id DESC
+           LIMIT ${LOTE} OFFSET ${off}`,
+          params
+        );
+        for (const row of lote) {
+          let raw = null;
+          try { raw = row.raw_json ? JSON.parse(row.raw_json) : null; } catch (e) {}
+          row.raw_json = raw ? JSON.stringify({
+            financial_status: raw.financial_status,
+            line_items: (raw.line_items || []).map((li) => ({
+              product_id: li.product_id, variant_id: li.variant_id, quantity: li.quantity,
+              title: li.title, variant_title: li.variant_title, price: li.price, sku: li.sku, name: li.name,
+            })),
+          }) : null;
+          out.push(row);
+        }
+        if (lote.length < LOTE) break;
+      }
+      return res.json(out);
+    }
+
     if (!paginate) {
       // Compatibilidad: devuelve array plano sin raw_json para reducir payload
       const rows = await db.all(

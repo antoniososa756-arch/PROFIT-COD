@@ -8488,7 +8488,7 @@ async function loadMetricas() {
 
   // Actualizar filtro con todas las tiendas que tuvieron pedidos en el período
   {
-    const _ordParamsMet = new URLSearchParams();
+    const _ordParamsMet = new URLSearchParams({ light: "1" }); // solo usa shop_domain: sin raw_json
     if (dateFrom) _ordParamsMet.set("from", dateFrom);
     if (dateTo)   _ordParamsMet.set("to",   dateTo);
     Promise.all([
@@ -8621,7 +8621,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   try {
     const token = getActiveToken();
     const h = { Authorization: "Bearer " + token };
-    const _balParams = new URLSearchParams();
+    const _balParams = new URLSearchParams({ compact: "1" }); // raw_json reducido (ver orders.routes.js)
     if (dateFrom) _balParams.set("from", dateFrom);
     if (dateTo)   _balParams.set("to",   dateTo);
     [stores, orders] = await Promise.all([
@@ -9266,7 +9266,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
   try {
     const token = getActiveToken();
     const h = { Authorization: "Bearer " + token };
-    const _balParams = new URLSearchParams();
+    const _balParams = new URLSearchParams({ compact: "1" }); // raw_json reducido (ver orders.routes.js)
     if (dateFrom) _balParams.set("from", dateFrom);
     if (dateTo)   _balParams.set("to",   dateTo);
     [stores, orders] = await Promise.all([
