@@ -1,20 +1,24 @@
 // server/routes/imap.routes.js — Correo por IMAP para reembolsos (Titan,
-// Gmail, Outlook...). Ver server/imap-reembolsos.js.
+// Gmail, Outlook...), uno por agencia (?agencia=mrw|ctt). Ver
+// server/imap-reembolsos.js.
 const express = require("express");
-const { ensureImapTable, imapHostFor, probarConexionIMAP, syncIMAPForUser } = require("../imap-reembolsos");
+const { AGENCIAS, ensureImapTable, imapHostFor, probarConexionIMAP, syncIMAPForUser } = require("../imap-reembolsos");
 const router = express.Router();
 
 router.use(async (req, res, next) => {
   try { await ensureImapTable(req.db); } catch (e) {}
+  const agencia = String(req.query.agencia || req.body?.agencia || "").toLowerCase();
+  if (!AGENCIAS.includes(agencia)) return res.status(400).json({ error: "Agencia no válida (mrw o ctt)" });
+  req.agencia = agencia;
   next();
 });
 
-// GET /api/imap/config — nunca devuelve la contraseña
+// GET /api/imap/config?agencia= — nunca devuelve la contraseña
 router.get("/config", async (req, res) => {
   try {
     const row = await req.db.get(
-      "SELECT email, host, port, last_sync, last_result FROM mail_imap_config WHERE user_id = $1",
-      [req.user.id]
+      "SELECT email, host, port, last_sync, last_result FROM mail_imap_cuentas WHERE user_id = $1 AND agencia = $2",
+      [req.user.id, req.agencia]
     );
     if (!row) return res.json({ connected: false });
     let last = null;
@@ -25,7 +29,7 @@ router.get("/config", async (req, res) => {
   }
 });
 
-// POST /api/imap/config { email, password, host? } — prueba la conexión antes de guardar
+// POST /api/imap/config { agencia, email, password, host? } — prueba la conexión antes de guardar
 router.post("/config", async (req, res) => {
   const email = String(req.body?.email || "").trim();
   const password = String(req.body?.password || "");
@@ -42,10 +46,10 @@ router.post("/config", async (req, res) => {
   }
   try {
     await req.db.run(
-      `INSERT INTO mail_imap_config (user_id, email, password, host, port)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (user_id) DO UPDATE SET email = EXCLUDED.email, password = EXCLUDED.password, host = EXCLUDED.host, port = EXCLUDED.port`,
-      [req.user.id, email, password, host, port]
+      `INSERT INTO mail_imap_cuentas (user_id, agencia, email, password, host, port)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (user_id, agencia) DO UPDATE SET email = EXCLUDED.email, password = EXCLUDED.password, host = EXCLUDED.host, port = EXCLUDED.port`,
+      [req.user.id, req.agencia, email, password, host, port]
     );
     res.json({ ok: true, host });
   } catch (e) {
@@ -55,17 +59,17 @@ router.post("/config", async (req, res) => {
 
 router.delete("/config", async (req, res) => {
   try {
-    await req.db.run("DELETE FROM mail_imap_config WHERE user_id = $1", [req.user.id]);
+    await req.db.run("DELETE FROM mail_imap_cuentas WHERE user_id = $1 AND agencia = $2", [req.user.id, req.agencia]);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// POST /api/imap/sync — importar ahora (mira el último año, el cron solo 40 días)
+// POST /api/imap/sync?agencia= — importar ahora (mira el último año, el cron solo 40 días)
 router.post("/sync", async (req, res) => {
   try {
-    const cfg = await req.db.get("SELECT * FROM mail_imap_config WHERE user_id = $1", [req.user.id]);
+    const cfg = await req.db.get("SELECT * FROM mail_imap_cuentas WHERE user_id = $1 AND agencia = $2", [req.user.id, req.agencia]);
     if (!cfg) return res.status(400).json({ error: "No hay correo conectado" });
     res.json({ ok: true, ...(await syncIMAPForUser(req.db, cfg, { dias: 365 })) });
   } catch (e) {

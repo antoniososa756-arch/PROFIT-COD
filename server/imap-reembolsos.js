@@ -4,7 +4,8 @@
 // Complementa a la integración de Gmail por OAuth (gmail.pdf.routes.js), que
 // solo sirve para cuentas Google: aquí basta con correo + contraseña, así que
 // funciona también con correos de empresa que solo se abren en Titan.
-// En el mismo buzón se procesan las dos agencias:
+// Cada usuario puede tener un correo por agencia (mail_imap_cuentas.agencia),
+// y cada correo solo lee los de su agencia:
 //  - CTT: el justificante de pago va en el CUERPO del correo (albaranes de 22
 //    dígitos) -- ver ctt-reembolsos.js.
 //  - MRW: la liquidación va en un PDF adjunto (Nº envío 04700X999999), igual
@@ -14,18 +15,31 @@ const { simpleParser } = require("mailparser");
 const pdfParse = require("pdf-parse");
 const { extraerAlbaranesCTT, marcarCobradosCTT } = require("./ctt-reembolsos");
 
+const AGENCIAS = ["mrw", "ctt"];
+
 async function ensureImapTable(db) {
   await db.run(`
-    CREATE TABLE IF NOT EXISTS mail_imap_config (
-      user_id INTEGER PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS mail_imap_cuentas (
+      user_id INTEGER NOT NULL,
+      agencia TEXT NOT NULL,
       email TEXT NOT NULL,
       password TEXT NOT NULL,
       host TEXT NOT NULL,
       port INTEGER NOT NULL DEFAULT 993,
       last_sync TEXT,
       last_result TEXT,
-      created_at TEXT DEFAULT now()::text
+      created_at TEXT DEFAULT now()::text,
+      PRIMARY KEY (user_id, agencia)
     )`);
+  // Primera versión (un solo correo por usuario, sin agencia): se conectaba
+  // desde la tarjeta de "correo de empresa" pensada para CTT -> pasa a CTT.
+  try {
+    await db.run(`
+      INSERT INTO mail_imap_cuentas (user_id, agencia, email, password, host, port, last_sync, last_result)
+      SELECT user_id, 'ctt', email, password, host, port, last_sync, last_result FROM mail_imap_config
+      ON CONFLICT DO NOTHING`);
+    await db.run(`DROP TABLE mail_imap_config`);
+  } catch (e) {} // ya migrada (la tabla vieja no existe)
 }
 
 // Servidor IMAP según el dominio del correo. Los dominios propios (correo de
@@ -60,8 +74,8 @@ async function probarConexionIMAP(cfg) {
 
 const MRW_ENVIO_RE = /04700[A-Z]\d{6}/g;
 
-// Lee los correos de CTT y MRW de los últimos `dias` días y marca como
-// cobrados los pedidos que aparezcan.
+// Lee los correos de la agencia de esta cuenta (cfg.agencia) de los últimos
+// `dias` días y marca como cobrados los pedidos que aparezcan.
 async function syncIMAPForUser(db, cfg, { dias = 40 } = {}) {
   const client = nuevoCliente(cfg);
   const toMadridDate = (d) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(d);
@@ -73,7 +87,9 @@ async function syncIMAPForUser(db, cfg, { dias = 40 } = {}) {
       const since = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
       const uids = await client.search({
         since,
-        or: [{ from: "cttexpress.com" }, { from: "mrw.es" }, { from: "grupomrw.com" }],
+        ...(cfg.agencia === "ctt"
+          ? { from: "cttexpress.com" }
+          : { or: [{ from: "mrw.es" }, { from: "grupomrw.com" }] }),
       }, { uid: true });
 
       for (const uid of uids || []) {
@@ -84,14 +100,14 @@ async function syncIMAPForUser(db, cfg, { dias = 40 } = {}) {
           const from = (mail.from?.text || "").toLowerCase();
           const fecha = toMadridDate(mail.date || new Date());
 
-          if (from.includes("cttexpress.com")) {
+          if (cfg.agencia === "ctt" && from.includes("cttexpress.com")) {
             const texto = `${mail.text || ""}\n${(mail.html || "").replace(/<[^>]+>/g, " ")}`;
             if (!/reembolso/i.test(texto)) continue; // solo justificantes de pago
             r.correosCTT++;
             const albaranes = extraerAlbaranesCTT(texto);
             r.albaranes += albaranes.length;
             r.procesados += await marcarCobradosCTT(db, cfg.user_id, albaranes, fecha);
-          } else {
+          } else if (cfg.agencia === "mrw") {
             const pdfs = (mail.attachments || []).filter((a) =>
               a.contentType === "application/pdf" || String(a.filename || "").toLowerCase().endsWith(".pdf"));
             if (!pdfs.length) continue;
@@ -114,10 +130,10 @@ async function syncIMAPForUser(db, cfg, { dias = 40 } = {}) {
     await client.logout().catch(() => {});
   }
   await db.run(
-    `UPDATE mail_imap_config SET last_sync = now()::text, last_result = $1 WHERE user_id = $2`,
-    [JSON.stringify({ ...r, errores: r.errores.length }), cfg.user_id]
+    `UPDATE mail_imap_cuentas SET last_sync = now()::text, last_result = $1 WHERE user_id = $2 AND agencia = $3`,
+    [JSON.stringify({ ...r, errores: r.errores.length }), cfg.user_id, cfg.agencia]
   ).catch(() => {});
   return r;
 }
 
-module.exports = { ensureImapTable, imapHostFor, probarConexionIMAP, syncIMAPForUser };
+module.exports = { AGENCIAS, ensureImapTable, imapHostFor, probarConexionIMAP, syncIMAPForUser };

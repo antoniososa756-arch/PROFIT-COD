@@ -2865,26 +2865,56 @@ if (id === "tiendas") {
     }
 
     if (tab === "reembolsos") {
-      content.innerHTML = `
-        <div class="card" style="padding:28px;max-width:560px;">
-          <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-            <div style="width:44px;height:44px;background:rgba(34,197,94,.08);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      // Bloque "conectar correo por IMAP" de una agencia (Titan, Gmail,
+      // Outlook...) -- ver server/imap-reembolsos.js.
+      const imapBlock = (ag) => `
+          <div id="imap-status-wrap-${ag}" style="margin-bottom:12px;"></div>
+          <div id="imap-form-wrap-${ag}" style="display:${ag === "ctt" ? "flex" : "none"};flex-direction:column;gap:12px;">
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Correo *</label>
+              <input type="email" id="imap-email-${ag}" placeholder="reembolsos@tuempresa.com" oninput="actualizarHostIMAP('${ag}')"
+                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
             </div>
             <div>
-              <div style="font-size:16px;font-weight:700;color:#f9fafb;">Correo de reembolsos MRW</div>
-              <div style="font-size:13px;color:#6b7280;margin-top:2px;">Conecta el correo donde MRW te envía los PDFs de liquidación COD para importarlos automáticamente</div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Contraseña *</label>
+              <input type="password" id="imap-password-${ag}" autocomplete="new-password"
+                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
+              <div id="imap-pass-hint-${ag}" style="font-size:12px;color:#9ca3af;margin-top:5px;">Titan: tu contraseña normal del correo.</div>
             </div>
-          </div>
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Servidor IMAP</label>
+              <input type="text" id="imap-host-${ag}" placeholder="imap.titan.email"
+                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
+              <div style="font-size:12px;color:#9ca3af;margin-top:5px;">Se rellena solo según el correo. Cámbialo solo si tu proveedor usa otro.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <button onclick="conectarIMAP('${ag}')" style="padding:10px 20px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🔗 Conectar correo</button>
+              <span id="imap-msg-${ag}" style="font-size:13px;"></span>
+            </div>
+          </div>`;
+      const cardHead = (color, titulo, sub) => `
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+            <div style="width:44px;height:44px;background:${color}14;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </div>
+            <div>
+              <div style="font-size:16px;font-weight:700;color:#f9fafb;">${titulo}</div>
+              <div style="font-size:13px;color:#6b7280;margin-top:2px;">${sub}</div>
+            </div>
+          </div>`;
+      content.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:16px;align-items:start;">
+        <div class="card" style="padding:28px;">
+          ${cardHead("#22c55e", "Correo para reembolsos MRW", "Donde MRW te envía los PDFs de liquidación COD")}
 
           <div id="gmail-status-wrap" style="margin-bottom:20px;"></div>
 
           <div id="gmail-form-wrap">
             <div style="margin-bottom:14px;">
-              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Correo donde recibes los PDFs de MRW *</label>
+              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Correo Gmail donde recibes los PDFs de MRW *</label>
               <input type="email" id="pdf-email-input" placeholder="ejemplo@gmail.com"
                 style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
-              <div style="font-size:12px;color:#9ca3af;margin-top:5px;">Debe ser una cuenta Gmail o Google Workspace.</div>
+              <div style="font-size:12px;color:#9ca3af;margin-top:5px;">Cuenta Gmail o Google Workspace.</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <button onclick="iniciarConexionGmail()"
@@ -2895,46 +2925,23 @@ if (id === "tiendas") {
               <span id="gmail-connect-msg" style="font-size:13px;"></span>
             </div>
           </div>
+
+          <div id="imap-toggle-mrw" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:12.5px;color:#9ca3af;">
+            ¿Tu correo de MRW no es Gmail (Titan, Outlook…)?
+            <a href="#" onclick="event.preventDefault();document.getElementById('imap-form-wrap-mrw').style.display='flex';this.parentElement.style.display='none';" style="color:#3b82f6;font-weight:600;">Conectar otro correo</a>
+          </div>
+          <div style="margin-top:12px;">${imapBlock("mrw")}</div>
         </div>
 
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-top:16px;">
-          <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-            <div style="width:44px;height:44px;background:rgba(59,130,246,.08);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </div>
-            <div>
-              <div style="font-size:16px;font-weight:700;color:#f9fafb;">Correo de empresa (Titan, Gmail, Outlook…)</div>
-              <div style="font-size:13px;color:#6b7280;margin-top:2px;">Lee los justificantes de reembolso de <b>CTT</b> y los PDFs de <b>MRW</b> directamente de tu buzón y marca esos pedidos como cobrados</div>
-            </div>
-          </div>
-          <div id="imap-status-wrap" style="margin-bottom:12px;"></div>
-          <div id="imap-form-wrap" style="max-width:480px;display:flex;flex-direction:column;gap:12px;">
-            <div>
-              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Correo *</label>
-              <input type="email" id="imap-email" placeholder="reembolsos@tuempresa.com" oninput="actualizarHostIMAP()"
-                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
-            </div>
-            <div>
-              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Contraseña *</label>
-              <input type="password" id="imap-password" autocomplete="new-password"
-                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
-              <div id="imap-pass-hint" style="font-size:12px;color:#9ca3af;margin-top:5px;">Titan: tu contraseña normal del correo.</div>
-            </div>
-            <div>
-              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Servidor IMAP</label>
-              <input type="text" id="imap-host" placeholder="imap.titan.email"
-                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
-              <div style="font-size:12px;color:#9ca3af;margin-top:5px;">Se rellena solo según el correo. Cámbialo solo si tu proveedor usa otro.</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-              <button onclick="conectarIMAP()" style="padding:10px 20px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🔗 Conectar correo</button>
-              <span id="imap-msg" style="font-size:13px;"></span>
-            </div>
-          </div>
+        <div class="card" style="padding:28px;">
+          ${cardHead("#3b82f6", "Correo para reembolsos CTT", "Donde CTT te envía los justificantes de pago de reembolso (notificaciones@contact.cttexpress.com). Titan, Gmail, Outlook…")}
+          ${imapBlock("ctt")}
         </div>
+      </div>
       `;
       cargarConfigGmail();
-      cargarConfigIMAP();
+      cargarConfigIMAP("mrw");
+      cargarConfigIMAP("ctt");
     }
 
     if (tab === "leads") {
@@ -3243,7 +3250,8 @@ if (id === "tiendas") {
     } catch(e) {}
   };
 
-  // Correo por IMAP (Titan, Gmail, Outlook...) -- ver server/imap-reembolsos.js
+  // Correo por IMAP (Titan, Gmail, Outlook...), uno por agencia ("mrw" |
+  // "ctt") -- ver server/imap-reembolsos.js.
   function hostIMAPPorCorreo(email) {
     const dom = String(email || "").split("@")[1]?.toLowerCase() || "";
     if (["gmail.com","googlemail.com"].includes(dom)) return "imap.gmail.com";
@@ -3252,23 +3260,24 @@ if (id === "tiendas") {
     if (["icloud.com","me.com"].includes(dom)) return "imap.mail.me.com";
     return "imap.titan.email";
   }
-  window.actualizarHostIMAP = function() {
-    const email = document.getElementById("imap-email")?.value || "";
+  window.actualizarHostIMAP = function(ag) {
+    const email = document.getElementById("imap-email-" + ag)?.value || "";
     const host = hostIMAPPorCorreo(email);
-    const hostInp = document.getElementById("imap-host");
+    const hostInp = document.getElementById("imap-host-" + ag);
     if (hostInp) hostInp.value = host;
-    const hint = document.getElementById("imap-pass-hint");
+    const hint = document.getElementById("imap-pass-hint-" + ag);
     if (hint) hint.innerHTML = host === "imap.gmail.com"
       ? 'Gmail: usa una <b>contraseña de aplicación</b> (Cuenta de Google → Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones), no tu contraseña normal.'
       : host === "imap.titan.email" ? "Titan: tu contraseña normal del correo." : "La contraseña de tu correo (si tienes verificación en 2 pasos, una contraseña de aplicación).";
   };
 
-  async function cargarConfigIMAP() {
-    const statusWrap = document.getElementById("imap-status-wrap");
-    const formWrap   = document.getElementById("imap-form-wrap");
+  async function cargarConfigIMAP(ag) {
+    const statusWrap = document.getElementById("imap-status-wrap-" + ag);
+    const formWrap   = document.getElementById("imap-form-wrap-" + ag);
+    const toggle     = document.getElementById("imap-toggle-" + ag);
     if (!statusWrap) return;
     try {
-      const res = await fetch(`${API_BASE}/api/imap/config`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+      const res = await fetch(`${API_BASE}/api/imap/config?agencia=${ag}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
       const data = await res.json();
       if (data?.connected) {
         const lr = data.last_result;
@@ -3283,70 +3292,74 @@ if (id === "tiendas") {
               <div style="font-size:12px;color:#9ca3af;margin-top:2px;">${ultima}</div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button onclick="sincronizarIMAP()" style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">↓ Importar ahora</button>
-              <button onclick="desconectarIMAP()" style="padding:7px 16px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Desconectar</button>
+              <button onclick="sincronizarIMAP('${ag}')" style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">↓ Importar ahora</button>
+              <button onclick="desconectarIMAP('${ag}')" style="padding:7px 16px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Desconectar</button>
             </div>
           </div>
-          <div id="imap-sync-result" style="font-size:13px;margin-top:8px;"></div>`;
+          <div id="imap-sync-result-${ag}" style="font-size:13px;margin-top:8px;"></div>`;
         if (formWrap) formWrap.style.display = "none";
+        if (toggle) toggle.style.display = "none";
       } else {
         statusWrap.innerHTML = "";
-        if (formWrap) formWrap.style.display = "flex";
+        // En MRW el formulario IMAP es secundario (lo normal es Gmail): se
+        // despliega con el enlace "Conectar otro correo".
+        if (formWrap) formWrap.style.display = ag === "ctt" ? "flex" : "none";
+        if (toggle) toggle.style.display = "";
       }
     } catch (e) {
       statusWrap.innerHTML = "";
-      if (formWrap) formWrap.style.display = "flex";
     }
   }
   window.cargarConfigIMAP = cargarConfigIMAP;
 
-  window.conectarIMAP = async function() {
-    const email = document.getElementById("imap-email")?.value.trim();
-    const password = document.getElementById("imap-password")?.value;
-    const host = document.getElementById("imap-host")?.value.trim();
-    const msg = document.getElementById("imap-msg");
+  window.conectarIMAP = async function(ag) {
+    const email = document.getElementById("imap-email-" + ag)?.value.trim();
+    const password = document.getElementById("imap-password-" + ag)?.value;
+    const host = document.getElementById("imap-host-" + ag)?.value.trim();
+    const msg = document.getElementById("imap-msg-" + ag);
     if (!email || !password) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = "Correo y contraseña obligatorios"; } return; }
     if (msg) { msg.style.color = "#6b7280"; msg.textContent = "Comprobando acceso al correo..."; }
     try {
       const res = await fetch(`${API_BASE}/api/imap/config`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-        body: JSON.stringify({ email, password, host })
+        body: JSON.stringify({ agencia: ag, email, password, host })
       });
       const data = await res.json();
       if (!res.ok) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = data.error || "Error"; } return; }
       if (msg) msg.textContent = "";
       // Vaciar el campo: el formulario solo se oculta, y la contraseña seguiría
       // en la página (visible con F12) hasta recargar.
-      const passInp = document.getElementById("imap-password");
+      const passInp = document.getElementById("imap-password-" + ag);
       if (passInp) passInp.value = "";
       showToast("✓ Correo conectado", "Importando reembolsos...", "#22c55e");
-      await cargarConfigIMAP();
-      window.sincronizarIMAP();
+      await cargarConfigIMAP(ag);
+      window.sincronizarIMAP(ag);
     } catch (e) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = "Error de conexión"; } }
   };
 
-  window.sincronizarIMAP = async function() {
-    const out = document.getElementById("imap-sync-result");
+  window.sincronizarIMAP = async function(ag) {
+    const out = document.getElementById("imap-sync-result-" + ag);
     if (out) { out.style.color = "#6b7280"; out.textContent = "Leyendo el correo (puede tardar un poco)..."; }
     try {
-      const res = await fetch(`${API_BASE}/api/imap/sync`, { method: "POST", headers: { Authorization: "Bearer " + getActiveToken() } });
+      const res = await fetch(`${API_BASE}/api/imap/sync?agencia=${ag}`, { method: "POST", headers: { Authorization: "Bearer " + getActiveToken() } });
       const data = await res.json();
       if (!res.ok) { if (out) { out.style.color = "#dc2626"; out.textContent = data.error || "Error"; } return; }
       if (out) {
+        const correos = (data.correosCTT || 0) + (data.correosMRW || 0);
         out.style.color = "#16a34a";
-        out.textContent = `✓ ${data.procesados} pedidos marcados como cobrados · ${data.correosCTT} correos CTT y ${data.correosMRW} de MRW leídos · ${data.albaranes} envíos encontrados${data.errores?.length ? ` · ${data.errores.length} correos con error` : ""}`;
+        out.textContent = `✓ ${data.procesados} pedidos marcados como cobrados · ${correos} correos leídos · ${data.albaranes} envíos encontrados${data.errores?.length ? ` · ${data.errores.length} correos con error` : ""}`;
       }
       if (window.loadSidebarReembolsos) window.loadSidebarReembolsos();
     } catch (e) { if (out) { out.style.color = "#dc2626"; out.textContent = "Error de conexión"; } }
   };
 
-  window.desconectarIMAP = async function() {
+  window.desconectarIMAP = async function(ag) {
     if (!confirm("¿Desconectar este correo? Dejarán de importarse los reembolsos desde él.")) return;
     try {
-      await fetch(`${API_BASE}/api/imap/config`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+      await fetch(`${API_BASE}/api/imap/config?agencia=${ag}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
       showToast("Desconectado", "Correo desconectado", "#6b7280");
-      cargarConfigIMAP();
+      cargarConfigIMAP(ag);
     } catch (e) {}
   };
 

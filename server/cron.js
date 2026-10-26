@@ -233,12 +233,12 @@ async function syncAllIMAP() {
   try {
     const { ensureImapTable, syncIMAPForUser } = require("./imap-reembolsos");
     await ensureImapTable(db);
-    const configs = await db.all(`SELECT * FROM mail_imap_config`);
+    const configs = await db.all(`SELECT * FROM mail_imap_cuentas`);
     for (const cfg of configs) {
       try {
         const r = await syncIMAPForUser(db, cfg, { dias: 40 });
-        console.log(`✅ [CRON] IMAP user ${cfg.user_id}: ${r.procesados} reembolsos marcados cobrados (CTT ${r.correosCTT} correos, MRW ${r.correosMRW})`);
-      } catch(e) { console.error(`[CRON] IMAP error user ${cfg.user_id}:`, e.message); }
+        console.log(`✅ [CRON] IMAP ${cfg.agencia} user ${cfg.user_id}: ${r.procesados} reembolsos marcados cobrados (${r.correosCTT + r.correosMRW} correos)`);
+      } catch(e) { console.error(`[CRON] IMAP ${cfg.agencia} error user ${cfg.user_id}:`, e.message); }
     }
   } catch(e) { console.error("[CRON] Error sync IMAP:", e.message); }
 }
