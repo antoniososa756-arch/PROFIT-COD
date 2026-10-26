@@ -843,8 +843,66 @@ function closeOnBackdropClick(el, closeFn) {
     localStorage.setItem(getNotifKey(), JSON.stringify(list || []));
   }
 
+  // Historial de notificaciones ya leídas ("Marcar todo como leído" o al
+  // abrir una): antes se borraban sin más. Solo se guardan las de los últimos
+  // 7 días (por la fecha de la notificación); las más viejas se descartan.
+  const NOTIF_LEIDAS_DIAS = 7;
+  function getNotifReadKey() {
+    return "notifications_read_" + (currentUser?.id || "anon");
+  }
+  function getNotifLeidas() {
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem(getNotifReadKey()) || "[]"); } catch (e) { list = []; }
+    if (!Array.isArray(list)) list = [];
+    const limite = Date.now() - NOTIF_LEIDAS_DIAS * 24 * 60 * 60 * 1000;
+    const vigentes = list.filter(n => new Date(n.date || n.readAt || 0).getTime() >= limite);
+    if (vigentes.length !== list.length) {
+      try { localStorage.setItem(getNotifReadKey(), JSON.stringify(vigentes)); } catch (e) {}
+    }
+    return vigentes;
+  }
+  function archivarNotifs(arr) {
+    if (!arr || !arr.length) return;
+    const ids = new Set(arr.map(n => n.id));
+    const ahora = new Date().toISOString();
+    const merged = [...arr.map(n => ({ ...n, readAt: ahora })), ...getNotifLeidas().filter(n => !ids.has(n.id))].slice(0, 300);
+    try { localStorage.setItem(getNotifReadKey(), JSON.stringify(merged)); } catch (e) {}
+  }
+  window.toggleNotifLeidas = function() {
+    window.__notifVerLeidas = !window.__notifVerLeidas;
+    const d = dict();
+    renderNotifPanel(document.getElementById("notifPanel"), getNotifications(d), d);
+  };
+
+  function notifRowHtml(n) {
+    let fechaLabel = "";
+    if (n.date) {
+      const d = new Date(n.date);
+      const hoy = new Date();
+      const mismodia = d.toDateString() === hoy.toDateString();
+      const hora = d.toLocaleString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" });
+      if (mismodia) {
+        fechaLabel = `Hoy ${hora}`;
+      } else {
+        const dia = d.toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit" });
+        fechaLabel = `${dia} ${hora}`;
+      }
+    }
+    return `
+      <div class="notif-row" style="cursor:pointer;margin-bottom:0;">
+        <div onclick="irAPedidoDesdeNotif('${escapeAttr(n.id)}')" style="flex:1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <strong>${escapeHtml(n.title)}</strong>
+            ${fechaLabel ? `<span style="font-size:10px;color:#9ca3af;white-space:nowrap;flex-shrink:0;">${escapeHtml(fechaLabel)}</span>` : ""}
+          </div>
+          <div>${n.html || escapeHtml(n.text)}</div>
+        </div>
+      </div>`;
+  }
+
   function renderNotifPanel(panelEl, list, d) {
     if (!panelEl) return;
+    const leidas = getNotifLeidas();
     panelEl.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 8px;">
         <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">${d.ui.notiTitle}</span>
@@ -853,38 +911,21 @@ function closeOnBackdropClick(el, closeFn) {
       ${
         list.length
           ? `<div style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-bottom:8px;">
-              ${list.map(n => {
-                const es7dias = n.id.startsWith("7dias__");
-                let fechaLabel = "";
-                if (n.date) {
-                  const d = new Date(n.date);
-                  const hoy = new Date();
-                  const mismodia = d.toDateString() === hoy.toDateString();
-                  const hora = d.toLocaleString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" });
-                  if (mismodia) {
-                    fechaLabel = `Hoy ${hora}`;
-                  } else {
-                    const dia = d.toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit" });
-                    fechaLabel = `${dia} ${hora}`;
-                  }
-                }
-                return `
-                  <div class="notif-row" style="cursor:pointer;margin-bottom:0;">
-                    <div onclick="irAPedidoDesdeNotif('${escapeAttr(n.id)}')" style="flex:1;">
-                      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                        <strong>${escapeHtml(n.title)}</strong>
-                        ${fechaLabel ? `<span style="font-size:10px;color:#9ca3af;white-space:nowrap;flex-shrink:0;">${escapeHtml(fechaLabel)}</span>` : ""}
-                      </div>
-                      <div>${n.html || escapeHtml(n.text)}</div>
-                    </div>
-                  </div>`;
-              }).join("")}
+              ${list.map(notifRowHtml).join("")}
             </div>
             <div class="drop-item" onclick="clearNotif()" style="justify-content:center;border-top:1px solid var(--border);margin-top:4px;padding-top:10px;color:#dc2626;font-weight:600;font-size:12px;">
               ✓ Marcar todo como leído
             </div>`
           : `<div class="notif-row"><strong>OK</strong><span>No hay notificaciones</span></div>`
       }
+      ${leidas.length ? `
+        <div class="drop-item" onclick="event.stopPropagation();toggleNotifLeidas()" style="justify-content:center;border-top:1px solid var(--border);margin-top:4px;padding-top:10px;color:var(--muted);font-weight:600;font-size:12px;">
+          🕘 ${window.__notifVerLeidas ? "Ocultar" : "Ver"} leídas (${leidas.length}) · últimos ${NOTIF_LEIDAS_DIAS} días
+        </div>
+        ${window.__notifVerLeidas ? `
+          <div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-top:6px;opacity:.6;">
+            ${leidas.map(notifRowHtml).join("")}
+          </div>` : ""}` : ""}
     `;
    
 
@@ -5375,6 +5416,7 @@ function openNotif(e, id) {
   const list = getNotifications(d);
   const next = list.filter(n => n.id !== id);
 
+  archivarNotifs(list.filter(n => n.id === id)); // pasa al historial de leídas
   setNotifications(next);
   updateNotifBadge(next.length);
 
@@ -5394,6 +5436,7 @@ function clearNotif() {
     localStorage.setItem(shownKey, JSON.stringify(newShown));
   }
 
+  archivarNotifs(currentList); // pasan al historial de leídas (últimos 7 días)
   setNotifications([]);
   updateNotifBadge(0);
 
@@ -16583,7 +16626,8 @@ function irAPedidoDesdeNotif(notiId) {
   // Buscar el orderNumber guardado en la notificación
   const notisKey = `notifications_${currentUser?.id || "anon"}`;
   const notis = JSON.parse(localStorage.getItem(notisKey) || "[]");
-  const noti = notis.find(n => n.id === notiId);
+  // También puede venir del historial de leídas
+  const noti = notis.find(n => n.id === notiId) || getNotifLeidas().find(n => n.id === notiId);
   const q = noti?.orderNumber || (notiId.includes("__") ? notiId.split("__")[1] : notiId.split("_").pop());
 
   const yaEnPedidos = document.getElementById("ordersBody");
