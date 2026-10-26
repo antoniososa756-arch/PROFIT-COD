@@ -3316,6 +3316,10 @@ if (id === "tiendas") {
       const data = await res.json();
       if (!res.ok) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = data.error || "Error"; } return; }
       if (msg) msg.textContent = "";
+      // Vaciar el campo: el formulario solo se oculta, y la contraseña seguiría
+      // en la página (visible con F12) hasta recargar.
+      const passInp = document.getElementById("imap-password");
+      if (passInp) passInp.value = "";
       showToast("✓ Correo conectado", "Importando reembolsos...", "#22c55e");
       await cargarConfigIMAP();
       window.sincronizarIMAP();
