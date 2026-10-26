@@ -8708,13 +8708,8 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   } catch {}
 
   // IVA desde base de datos
-  let ivaPorcentaje = 0.21;
-  try {
-    const impData = await cachedFetch(`${API_BASE}/api/impuestos`, { headers: h2 });
-    if (Array.isArray(impData) && impData.length > 0) {
-      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
-    }
-  } catch {}
+  // El IVA ya no se resta como gasto (quitado para todas las cuentas).
+  const ivaPorcentaje = 0;
 
   let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   try { preciosGlobales = await cachedFetch(`${API_BASE}/api/shopify/precios-globales`, { headers: h2 }) || preciosGlobales; } catch {}
@@ -8836,7 +8831,6 @@ async function loadMetricasBalance(dateFrom, dateTo) {
             <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Nómina<div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.nominaXTienda)} €</td></tr>
             <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Shopify</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.shopify)} €</td></tr>
             ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>`<tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">${escapeHtml(g.nombre||'Concepto extra')}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(g.valor)} €</td></tr>`).join("")}
-            <tr style="background:#fefce8;"><td style="padding:8px 14px;border:1px solid #fef08a;color:#854d0e;font-weight:600;">IVA (${(d.ivaPorcentaje*100).toFixed(0)}%)<div style="font-size:10px;color:#a16207;">${d.numCOD + d.numTarjeta} pedidos entregados × ${(d.ivaPorcentaje*100).toFixed(0)}%</div></td><td style="padding:8px 14px;border:1px solid #fef08a;text-align:right;color:#854d0e;font-weight:600;">${fmt(d.ivaTotal)} €</td></tr>
              <tr style="background:rgba(239,68,68,.1);"><td style="padding:8px 14px;border:1px solid #fecaca;font-weight:700;color:#dc2626;">Total Gastos</td><td style="padding:8px 14px;border:1px solid #fecaca;text-align:right;font-weight:700;color:#dc2626;">− ${fmt(d.totalGasto)} €</td></tr>
             <tr style="background:${resBg};"><td style="padding:12px 14px;border:1px solid ${resBorder};font-weight:700;color:${resColor};font-size:14px;">RESULTADO</td><td style="padding:12px 14px;border:1px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:16px;">${fmt(d.resultado)} €</td></tr>
           </tbody>
@@ -9389,13 +9383,8 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     nominaTotales.forEach(n => { nominaXTienda += (parseFloat(n.total) || 0) / numTiendas; });
   } catch {}
 
-  let ivaPorcentaje = 0.21;
-  try {
-    const impData = await cachedFetch(`${API_BASE}/api/impuestos`, { headers: h2 });
-    if (Array.isArray(impData) && impData.length > 0) {
-      ivaPorcentaje = (impData[0].porcentaje !== null && impData[0].porcentaje !== undefined ? parseFloat(impData[0].porcentaje) : 21) / 100;
-    }
-  } catch {}
+  // El IVA ya no se resta como gasto (quitado para todas las cuentas).
+  const ivaPorcentaje = 0;
 
   let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   try { preciosGlobales = await cachedFetch(`${API_BASE}/api/shopify/precios-globales`, { headers: h2 }) || preciosGlobales; } catch {}
@@ -9584,7 +9573,6 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
           ${tr('Nómina', d.porAgencia ? 'No se imputa al filtrar por agencia' : `Total nómina ÷ ${d.numTiendas} tiendas`, fmt(d.nominaXTienda)+' €')}
           ${tr('Shopify', '', fmt(d.shopify)+' €')}
           ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>tr(escapeHtml(g.nombre||'Concepto extra'),'',fmt(g.valor)+' €')).join('')}
-          ${tr(`IVA (${(d.ivaPorcentaje*100).toFixed(0)}%)`, `${d.numCOD+d.numTarjeta} pedidos entregados × ${(d.ivaPorcentaje*100).toFixed(0)}%`, fmt(d.ivaTotal)+' €')}
           ${tr('Total Gastos', '', '− '+fmt(d.totalGasto)+' €', {bold:true, valColor:'#374151'})}
           <tr style="background:${resBg};"><td style="padding:10px 12px;border-top:2px solid ${resBorder};font-weight:700;color:${resColor};font-size:13px;">RESULTADO</td><td style="padding:10px 12px;border-top:2px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:15px;">${fmt(d.resultado)} €</td></tr>
         </tbody>
@@ -9698,7 +9686,6 @@ function renderRentKpis(filtradas) {
       card('Gastos fijos', fmt(fijoTotal)+' €'),
       card('Nómina', fmt(nominaTotal)+' €'),
       card('Shopify', fmt(shopifyTotal)+' €'),
-      card('Impuestos (IVA)', fmt(ivaTotal)+' €'),
     ]) +
     section('Gastos logística', [
       card('Envíos', fmt(mrwTotal)+' €'),
@@ -10591,17 +10578,6 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
     impuestos = Array.isArray(data) ? data : [];
   } catch {}
 
-  if (impuestos.length === 0) {
-    try {
-      const r = await fetch(`${API_BASE}/api/impuestos`, {
-        method: "POST",
-        headers: { "Content-Type":"application/json", Authorization:"Bearer "+getActiveToken() },
-        body: JSON.stringify({ nombre:"IVA", porcentaje:21, fijo:1, orden:0 })
-      });
-      const saved = await r.json();
-      impuestos = [{ id: saved.id, nombre:"IVA", porcentaje:21, fijo:1 }];
-    } catch {}
-  }
 
   const fmt = n => (parseFloat(n)||0).toFixed(2);
   const inp = `width:100%;padding:6px 8px;border:1px solid #374151;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
@@ -11059,10 +11035,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
   const fijoXTienda    = totalOtrosFijos / numTiendas;
 
   // Calcular IVA y nómina desde datos ya cargados en paralelo
-  let ivaPorcentaje = 0.21;
-  if (impuestosData.length > 0) {
-    ivaPorcentaje = (impuestosData[0].porcentaje != null ? parseFloat(impuestosData[0].porcentaje) : 21) / 100;
-  }
+  const ivaPorcentaje = 0; // el IVA ya no se resta como gasto
   const nominaXTienda = (parseFloat(nominaData.total) || 0) / numTiendas;
 
   // Extras por tienda
@@ -11202,12 +11175,6 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
               <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Nómina</td>
               <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(nominaXTienda)} €
                 <div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${numTiendas} tiendas</div>
-              </td>
-            </tr>
-            <tr style="background:#fefce8;">
-              <td style="padding:10px 14px;border:1px solid #fef08a;font-weight:600;color:#854d0e;">IVA (${(ivaPorcentaje*100).toFixed(0)}%)</td>
-              <td style="padding:10px 14px;border:1px solid #fef08a;text-align:right;color:#854d0e;font-weight:600;">${fmt(ivaTotal)} €
-                <div style="font-size:10px;color:#a16207;">${entregadosTienda.length} pedidos entregados × ${(ivaPorcentaje*100).toFixed(0)}%</div>
               </td>
             </tr>
             <tr style="background:rgba(59,130,246,.08);">
@@ -11861,8 +11828,7 @@ async function calcularGastosPorTienda(mes, month, year, stores) {
   const totalOtrosFijos = gastosOtrosFijos.reduce((s,g) => s+(parseFloat(g.valor)||0), 0);
   const fijoXTienda = totalOtrosFijos / numTiendas;
 
-  let ivaPorcentaje = 0.21;
-  if (impuestosData.length > 0) ivaPorcentaje = (parseFloat(impuestosData[0].porcentaje)||21) / 100;
+  const ivaPorcentaje = 0; // el IVA ya no se resta como gasto
   const nominaXTienda = (parseFloat(nominaData.total)||0) / numTiendas;
 
   const gastosExtras = {};
