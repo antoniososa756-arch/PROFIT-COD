@@ -3011,17 +3011,21 @@ if (id === "tiendas") {
     ]);
     const ultima = (c) => c?.last_sync ? `Última importación: ${new Date(c.last_sync).toLocaleString("es-ES", { timeZone: "Europe/Madrid" })}` : "Se importa a las 8:00 y 20:00";
     const mrwOk = gm.connected || imMrw.connected;
+    // Última importación de MRW: la más reciente entre Gmail y el correo IMAP
+    const ultMrw = [gm.connected ? gm : null, imMrw.connected ? imMrw : null]
+      .filter(c => c?.last_sync).sort((x, y) => new Date(y.last_sync) - new Date(x.last_sync))[0] || null;
+    const btnSync = (ag) => `<button class="btn-secondary" id="ree-sync-btn-${ag}" onclick="sincronizarReembolsosAgencia('${ag}')">↓ Sincronizar ahora</button>`;
     grid.innerHTML =
       integCard({
         logo: INTEG_LOGOS.mrw, logo2: gm.connected ? INTEG_LOGOS.gmail : logoProveedorCorreo(imMrw.host),
         badge: "Correo de reembolsos", name: "Reembolsos MRW", sub: "PDFs de liquidación COD",
         estado: mrwOk ? { tipo: "ok", texto: "Conectado" } : { tipo: "off", texto: "Sin correo" },
         meta: [
-          gm.connected ? `Gmail: <b>${escapeHtml(gm.email || "")}</b>` : "",
+          gm.connected ? (gm.email ? `Gmail: <b>${escapeHtml(gm.email)}</b>` : "Gmail conectado") : "",
           imMrw.connected ? `Correo: <b>${escapeHtml(imMrw.email || "")}</b>` : "",
-          mrwOk ? ultima(imMrw.connected ? imMrw : null) : "Conecta el correo donde te llegan",
+          mrwOk ? ultima(ultMrw) : "Conecta el correo donde te llegan",
         ],
-        actions: `<button class="btn-primary" onclick="gestionarReembolsos('mrw')">⚙ ${mrwOk ? "Gestionar" : "Conectar correo"}</button>`,
+        actions: `<button class="btn-primary" onclick="gestionarReembolsos('mrw')">⚙ ${mrwOk ? "Gestionar" : "Conectar correo"}</button>` + (mrwOk ? btnSync("mrw") : ""),
       }) +
       integCard({
         logo: INTEG_LOGOS.ctt, logo2: logoProveedorCorreo(imCtt.host),
@@ -3030,9 +3034,49 @@ if (id === "tiendas") {
         meta: imCtt.connected
           ? [`Correo: <b>${escapeHtml(imCtt.email || "")}</b>`, ultima(imCtt)]
           : ["Titan, Gmail, Outlook…"],
-        actions: `<button class="btn-primary" onclick="gestionarReembolsos('ctt')">⚙ ${imCtt.connected ? "Gestionar" : "Conectar correo"}</button>`,
+        actions: `<button class="btn-primary" onclick="gestionarReembolsos('ctt')">⚙ ${imCtt.connected ? "Gestionar" : "Conectar correo"}</button>` + (imCtt.connected ? btnSync("ctt") : ""),
       });
+    window.__reeConectados = { gmail: !!gm.connected, mrw: !!imMrw.connected, ctt: !!imCtt.connected };
   }
+
+  // Botón "Sincronizar ahora" de cada tarjeta: importa ya los correos de esa
+  // agencia (MRW: Gmail y/o correo IMAP; CTT: correo IMAP) -- lo mismo que
+  // hace el cron de las 8:00 y 20:00, pero mirando más atrás.
+  window.sincronizarReembolsosAgencia = async function(ag) {
+    const btn = document.getElementById("ree-sync-btn-" + ag);
+    if (btn) { btn.disabled = true; btn.textContent = "Sincronizando..."; }
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const con = window.__reeConectados || {};
+    let procesados = 0, correos = 0;
+    const errores = [];
+    try {
+      if (ag === "mrw" && con.gmail) {
+        const r = await fetch(`${API_BASE}/api/gmail/sync-pdf`, { method: "POST", headers: h });
+        const d = await r.json();
+        if (d.error === "GMAIL_RECONNECT" || r.status === 401) {
+          if (confirm("⚠️ La sesión de Gmail ha expirado. ¿Reconectar ahora?")) {
+            window.location.href = `${API_BASE}/api/gmail/auth?token=${getActiveToken()}`;
+            return;
+          }
+          errores.push("Gmail: sesión expirada");
+        } else if (!r.ok) errores.push("Gmail: " + (d.error || "error"));
+        else { procesados += d.procesados || 0; correos += d.emailsLeidos || 0; }
+      }
+      if ((ag === "mrw" && con.mrw) || ag === "ctt") {
+        const r = await fetch(`${API_BASE}/api/imap/sync?agencia=${ag}`, { method: "POST", headers: h });
+        const d = await r.json();
+        if (!r.ok) errores.push("Correo: " + (d.error || "error"));
+        else { procesados += d.procesados || 0; correos += (d.correosCTT || 0) + (d.correosMRW || 0); }
+      }
+      const nombre = ag === "mrw" ? "MRW" : "CTT";
+      if (errores.length) showToast(`⚠️ Reembolsos ${nombre}`, errores.join(" · "), "#dc2626");
+      else showToast(`✓ Reembolsos ${nombre}`, `${procesados} pedidos marcados como cobrados · ${correos} correos leídos`, "#22c55e");
+      if (window.loadSidebarReembolsos) window.loadSidebarReembolsos();
+    } catch (e) {
+      showToast("❌ Error", "No se pudo sincronizar", "#dc2626");
+    }
+    renderReembolsoCards();
+  };
   window.gestionarReembolsos = function(ag) {
     abrirModalIntegracion({
       logo: INTEG_LOGOS[ag],

@@ -19,6 +19,10 @@ async function initTable(db) {
       connected   INTEGER DEFAULT 0
     )
   `);
+  // Última importación (cron 8:00/20:00 o botón) -- la muestra la tarjeta de
+  // Integraciones > Reembolsos, igual que la del correo IMAP.
+  await db.query(`ALTER TABLE gmail_config ADD COLUMN IF NOT EXISTS last_sync TEXT`);
+  await db.query(`ALTER TABLE gmail_config ADD COLUMN IF NOT EXISTS last_result TEXT`);
 }
 
 // ─── GET /api/gmail/config ───────────────────────────────────────────────────
@@ -27,10 +31,12 @@ router.get("/config", async (req, res) => {
   try {
     await initTable(req.db);
     const row = await req.db.get(
-      "SELECT email, connected FROM gmail_config WHERE user_id = ?",
+      "SELECT email, connected, last_sync, last_result FROM gmail_config WHERE user_id = ?",
       [req.user.id]
     );
-    res.json({ connected: !!(row?.connected), email: row?.email || "" });
+    let last_result = null;
+    try { last_result = row?.last_result ? JSON.parse(row.last_result) : null; } catch (e) {}
+    res.json({ connected: !!(row?.connected), email: row?.email || "", last_sync: row?.last_sync || null, last_result });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

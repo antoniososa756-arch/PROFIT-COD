@@ -319,6 +319,8 @@ async function syncAllGmailPDF() {
         const r = await syncCTTReembolsosGmail(db, user_id, (url) => gmailFetch(user_id, url), "newer_than:40d");
         if (r.emailsLeidos) console.log(`✅ [CRON] Gmail CTT user ${user_id}: ${r.procesados} reembolsos marcados cobrados (${r.emailsLeidos} correos)`);
       } catch(e) { console.error(`[CRON] Gmail CTT error user ${user_id}:`, e.message); }
+      // Hora de esta importación automática (la muestra la tarjeta de Reembolsos)
+      await db.run("UPDATE gmail_config SET last_sync = now()::text WHERE user_id = $1", [user_id]).catch(() => {});
 
       try {
         const query = encodeURIComponent(

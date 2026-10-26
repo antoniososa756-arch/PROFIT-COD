@@ -105,7 +105,13 @@ router.post("/sync-pdf", async (req, res) => {
       ctt.errores.push({ error: e.message });
     }
 
+    const guardarUltima = (procesados) => db.run(
+      "UPDATE gmail_config SET last_sync = now()::text, last_result = $1 WHERE user_id = $2",
+      [JSON.stringify({ procesados }), userId]
+    ).catch(() => {});
+
     if (messages.length === 0) {
+      await guardarUltima(ctt.procesados);
       return res.json({ ok: true, procesados: ctt.procesados, emailsLeidos: ctt.emailsLeidos, pdfsProcesados: 0, enviosEncontrados: ctt.albaranes, ctt });
     }
 
@@ -199,6 +205,7 @@ router.post("/sync-pdf", async (req, res) => {
       debugEmails.push(debugEmail);
     }
 
+    await guardarUltima(totalMarcados + ctt.procesados);
     res.json({
       ok: true,
       emailsLeidos: messages.length + ctt.emailsLeidos,
