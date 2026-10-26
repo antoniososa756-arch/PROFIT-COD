@@ -15910,7 +15910,14 @@ async function addGastoExtra(shop, mes) {
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ shop_domain: shop, mes, nombre: "", valor: 0 })
     });
+    // Sin esto loadGastosVarios() leía la caché (cachedFetch) de antes de crear
+    // el concepto y no aparecía hasta recargar la página.
+    invalidateCache("gastos-varios");
     await loadGastosVarios();
+    // Dejar el cursor en el nombre del concepto recién creado (el último vacío de esa tienda)
+    const vacios = [...document.querySelectorAll(`input[type='text'][data-id][data-shop='${CSS.escape(shop)}']`)].filter(i => !i.value);
+    const nuevo = vacios[vacios.length - 1] || [...document.querySelectorAll("input[type='text'][data-id]")].filter(i => !i.value).pop();
+    nuevo?.focus();
   } catch(e) { console.error(e); }
 }
 
@@ -15924,6 +15931,8 @@ async function updateGastoExtraNombre(input) {
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
       body: JSON.stringify({ nombre: input.value, valor: val })
     });
+    // Que el nombre nuevo no se pierda en la próxima recarga desde caché
+    invalidateCache("gastos-varios");
   } catch(e) { console.error(e); }
 }
 
