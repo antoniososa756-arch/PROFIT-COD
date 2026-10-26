@@ -74,59 +74,91 @@ async function probarConexionIMAP(cfg) {
 
 const MRW_ENVIO_RE = /04700[A-Z]\d{6}/g;
 
+// Remitente exacto de los justificantes de pago de CTT. Antes se buscaba
+// cualquier "cttexpress.com" y entraban también los correos de los
+// comerciales de CTT (respuestas, contactos...), que no traen albaranes.
+const CTT_REMITENTE = "notificaciones@contact.cttexpress.com";
+const CTT_JUSTIFICANTE_RE = /justificante de pago de reembolso|transferencia de reembolsos/i;
+
+// Carpetas que NO se leen (enviados, papelera, spam, borradores). El resto sí:
+// los justificantes no siempre están en la bandeja de entrada (reglas,
+// archivados, carpetas propias...).
+const CARPETAS_EXCLUIDAS_USE = ["\\Sent", "\\Trash", "\\Junk", "\\Drafts"];
+const CARPETAS_EXCLUIDAS_RE = /sent|enviad|trash|papelera|spam|junk|draft|borrador|deleted|eliminad/i;
+
+async function carpetasALeer(client) {
+  const lista = await client.list();
+  return lista
+    .filter((m) => !(m.flags && (m.flags.has ? m.flags.has("\\Noselect") : false)))
+    .filter((m) => !CARPETAS_EXCLUIDAS_USE.includes(m.specialUse))
+    .filter((m) => m.specialUse === "\\Inbox" || m.path.toUpperCase() === "INBOX" || !CARPETAS_EXCLUIDAS_RE.test(m.path))
+    .map((m) => m.path);
+}
+
 // Lee los correos de la agencia de esta cuenta (cfg.agencia) de los últimos
-// `dias` días y marca como cobrados los pedidos que aparezcan.
+// `dias` días, en todas las carpetas útiles, y marca como cobrados los
+// pedidos que aparezcan.
 async function syncIMAPForUser(db, cfg, { dias = 40 } = {}) {
   const client = nuevoCliente(cfg);
   const toMadridDate = (d) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(d);
-  const r = { correosCTT: 0, correosMRW: 0, albaranes: 0, procesados: 0, errores: [], detalle: [] };
+  const r = { correosCTT: 0, correosMRW: 0, albaranes: 0, procesados: 0, errores: [], detalle: [], carpetas: [] };
+  const vistos = new Set(); // Message-ID: el mismo correo puede estar en varias carpetas
   await client.connect();
   try {
-    const lock = await client.getMailboxLock("INBOX");
-    try {
-      const since = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
-      const uids = await client.search({
-        since,
-        ...(cfg.agencia === "ctt"
-          ? { from: "cttexpress.com" }
-          : { or: [{ from: "mrw.es" }, { from: "grupomrw.com" }] }),
-      }, { uid: true });
+    const since = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+    const criterio = cfg.agencia === "ctt"
+      ? { since, from: CTT_REMITENTE }
+      : { since, or: [{ from: "mrw.es" }, { from: "grupomrw.com" }] };
 
-      for (const uid of uids || []) {
-        try {
-          const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
-          if (!msg?.source) continue;
-          const mail = await simpleParser(msg.source);
-          const from = (mail.from?.text || "").toLowerCase();
-          const fecha = toMadridDate(mail.date || new Date());
-
-          if (cfg.agencia === "ctt" && from.includes("cttexpress.com")) {
-            const texto = `${mail.text || ""}\n${(mail.html || "").replace(/<[^>]+>/g, " ")}`;
-            if (!/reembolso/i.test(texto)) continue; // solo justificantes de pago
-            r.correosCTT++;
-            const d = await procesarJustificanteCTT(db, cfg.user_id, texto, fecha);
-            r.albaranes += d.albaranes.length;
-            r.procesados += d.encontrados;
-            // Detalle por correo para el diagnóstico de la pantalla
-            r.detalle.push({ asunto: mail.subject || "", fecha, ...d });
-          } else if (cfg.agencia === "mrw") {
-            const pdfs = (mail.attachments || []).filter((a) =>
-              a.contentType === "application/pdf" || String(a.filename || "").toLowerCase().endsWith(".pdf"));
-            if (!pdfs.length) continue;
-            r.correosMRW++;
-            for (const a of pdfs) {
-              const parsed = await pdfParse(a.content);
-              const envios = [...new Set(parsed.text.match(MRW_ENVIO_RE) || [])];
-              r.albaranes += envios.length;
-              r.procesados += await marcarCobradosCTT(db, cfg.user_id, envios, fecha);
+    for (const carpeta of await carpetasALeer(client)) {
+      let lock;
+      try { lock = await client.getMailboxLock(carpeta); } catch (e) { continue; }
+      try {
+        const uids = (await client.search(criterio, { uid: true })) || [];
+        if (uids.length) r.carpetas.push({ carpeta, correos: uids.length });
+        for (const uid of uids) {
+          try {
+            const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
+            if (!msg?.source) continue;
+            const mail = await simpleParser(msg.source);
+            if (mail.messageId) {
+              if (vistos.has(mail.messageId)) continue;
+              vistos.add(mail.messageId);
             }
+            const from = (mail.from?.text || "").toLowerCase();
+            const fecha = toMadridDate(mail.date || new Date());
+
+            if (cfg.agencia === "ctt") {
+              if (!from.includes(CTT_REMITENTE)) continue;
+              const texto = `${mail.subject || ""}
+${mail.text || ""}
+${(mail.html || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ")}`;
+              if (!CTT_JUSTIFICANTE_RE.test(texto)) continue; // solo justificantes de pago
+              r.correosCTT++;
+              const d = await procesarJustificanteCTT(db, cfg.user_id, texto, fecha);
+              r.albaranes += d.albaranes.length;
+              r.procesados += d.encontrados;
+              // Detalle por correo para el diagnóstico de la pantalla
+              r.detalle.push({ asunto: mail.subject || "", fecha, carpeta, ...d });
+            } else {
+              const pdfs = (mail.attachments || []).filter((a) =>
+                a.contentType === "application/pdf" || String(a.filename || "").toLowerCase().endsWith(".pdf"));
+              if (!pdfs.length) continue;
+              r.correosMRW++;
+              for (const a of pdfs) {
+                const parsed = await pdfParse(a.content);
+                const envios = [...new Set(parsed.text.match(MRW_ENVIO_RE) || [])];
+                r.albaranes += envios.length;
+                r.procesados += await marcarCobradosCTT(db, cfg.user_id, envios, fecha);
+              }
+            }
+          } catch (e) {
+            r.errores.push({ carpeta, uid, error: e.message });
           }
-        } catch (e) {
-          r.errores.push({ uid, error: e.message });
         }
+      } finally {
+        lock.release();
       }
-    } finally {
-      lock.release();
     }
   } finally {
     await client.logout().catch(() => {});

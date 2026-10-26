@@ -8,7 +8,8 @@
 // importe. Se extraen esos albaranes y se marcan los pedidos como cobrados,
 // igual que hace la integración de MRW.
 
-const CTT_GMAIL_QUERY = "from:contact.cttexpress.com reembolso";
+// Solo el remitente de los justificantes (no los comerciales de CTT).
+const CTT_GMAIL_QUERY = "from:notificaciones@contact.cttexpress.com";
 
 // Albaranes CTT: exactamente 22 dígitos seguidos (sin más dígitos pegados).
 function extraerAlbaranesCTT(texto) {
@@ -141,7 +142,7 @@ async function syncCTTReembolsosGmail(db, userId, gmailFetch, extraQuery = "newe
       const msgData = await msgRes.json();
       const texto = textoDeMensajeGmail(msgData);
       // Solo los justificantes de pago (CTT manda más tipos de aviso).
-      if (!/reembolso/i.test(texto)) continue;
+      if (!/justificante de pago de reembolso|transferencia de reembolsos/i.test(texto)) continue;
       const fecha = msgData.internalDate ? toMadridDate(new Date(parseInt(msgData.internalDate))) : toMadridDate(new Date());
       const d = await procesarJustificanteCTT(db, userId, texto, fecha);
       albaranesTotal += d.albaranes.length;
