@@ -13,7 +13,7 @@
 const { ImapFlow } = require("imapflow");
 const { simpleParser } = require("mailparser");
 const pdfParse = require("pdf-parse");
-const { extraerAlbaranesCTT, marcarCobradosCTT } = require("./ctt-reembolsos");
+const { procesarJustificanteCTT, marcarCobradosCTT } = require("./ctt-reembolsos");
 
 const AGENCIAS = ["mrw", "ctt"];
 
@@ -79,7 +79,7 @@ const MRW_ENVIO_RE = /04700[A-Z]\d{6}/g;
 async function syncIMAPForUser(db, cfg, { dias = 40 } = {}) {
   const client = nuevoCliente(cfg);
   const toMadridDate = (d) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(d);
-  const r = { correosCTT: 0, correosMRW: 0, albaranes: 0, procesados: 0, errores: [] };
+  const r = { correosCTT: 0, correosMRW: 0, albaranes: 0, procesados: 0, errores: [], detalle: [] };
   await client.connect();
   try {
     const lock = await client.getMailboxLock("INBOX");
@@ -104,9 +104,11 @@ async function syncIMAPForUser(db, cfg, { dias = 40 } = {}) {
             const texto = `${mail.text || ""}\n${(mail.html || "").replace(/<[^>]+>/g, " ")}`;
             if (!/reembolso/i.test(texto)) continue; // solo justificantes de pago
             r.correosCTT++;
-            const albaranes = extraerAlbaranesCTT(texto);
-            r.albaranes += albaranes.length;
-            r.procesados += await marcarCobradosCTT(db, cfg.user_id, albaranes, fecha);
+            const d = await procesarJustificanteCTT(db, cfg.user_id, texto, fecha);
+            r.albaranes += d.albaranes.length;
+            r.procesados += d.encontrados;
+            // Detalle por correo para el diagnóstico de la pantalla
+            r.detalle.push({ asunto: mail.subject || "", fecha, ...d });
           } else if (cfg.agencia === "mrw") {
             const pdfs = (mail.attachments || []).filter((a) =>
               a.contentType === "application/pdf" || String(a.filename || "").toLowerCase().endsWith(".pdf"));
@@ -131,7 +133,7 @@ async function syncIMAPForUser(db, cfg, { dias = 40 } = {}) {
   }
   await db.run(
     `UPDATE mail_imap_cuentas SET last_sync = now()::text, last_result = $1 WHERE user_id = $2 AND agencia = $3`,
-    [JSON.stringify({ ...r, errores: r.errores.length }), cfg.user_id, cfg.agencia]
+    [JSON.stringify({ ...r, errores: r.errores.length, detalle: undefined }), cfg.user_id, cfg.agencia]
   ).catch(() => {});
   return r;
 }

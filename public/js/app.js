@@ -3047,7 +3047,7 @@ if (id === "tiendas") {
     if (btn) { btn.disabled = true; btn.textContent = "Sincronizando..."; }
     const h = { Authorization: "Bearer " + getActiveToken() };
     const con = window.__reeConectados || {};
-    let procesados = 0, correos = 0;
+    let procesados = 0, correos = 0, detalle = [];
     const errores = [];
     try {
       if (ag === "mrw" && con.gmail) {
@@ -3066,11 +3066,23 @@ if (id === "tiendas") {
         const r = await fetch(`${API_BASE}/api/imap/sync?agencia=${ag}`, { method: "POST", headers: h });
         const d = await r.json();
         if (!r.ok) errores.push("Correo: " + (d.error || "error"));
-        else { procesados += d.procesados || 0; correos += (d.correosCTT || 0) + (d.correosMRW || 0); }
+        else { procesados += d.procesados || 0; correos += (d.correosCTT || 0) + (d.correosMRW || 0); detalle = d.detalle || []; }
       }
       const nombre = ag === "mrw" ? "MRW" : "CTT";
       if (errores.length) showToast(`⚠️ Reembolsos ${nombre}`, errores.join(" · "), "#dc2626");
       else showToast(`✓ Reembolsos ${nombre}`, `${procesados} pedidos marcados como cobrados · ${correos} correos leídos`, "#22c55e");
+      // Leyó correos pero no enlazó ningún pedido: mostrar qué encontró en
+      // cada uno para ver dónde falla (albarán sin pedido, sin números, etc.).
+      if (!errores.length && procesados === 0 && detalle.length) {
+        const lineas = detalle.slice(0, 10).map(x =>
+          `📧 ${x.asunto || "(sin asunto)"} (${x.fecha})\n` +
+          `   Albaranes: ${x.albaranes.length ? x.albaranes.join(", ") : "ninguno"}\n` +
+          `   Referencias: ${x.refs.length ? x.refs.join(", ") : "ninguna"}\n` +
+          (x.albaranesSinPedido?.length ? `   Sin pedido con ese seguimiento: ${x.albaranesSinPedido.join(", ")}\n` : "") +
+          (x.muestra ? `   Texto: ${x.muestra.slice(0, 200)}…\n` : "")
+        ).join("\n");
+        alert(`Diagnóstico — se leyeron ${correos} correos pero ningún pedido coincide:\n\n${lineas}`);
+      }
       if (window.loadSidebarReembolsos) window.loadSidebarReembolsos();
     } catch (e) {
       showToast("❌ Error", "No se pudo sincronizar", "#dc2626");
