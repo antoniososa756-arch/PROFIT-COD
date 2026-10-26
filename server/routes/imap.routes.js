@@ -39,10 +39,17 @@ router.post("/config", async (req, res) => {
   try {
     await probarConexionIMAP({ email, password, host, port });
   } catch (e) {
-    const gmailHint = host === "imap.gmail.com"
-      ? " En Gmail tienes que usar una \"contraseña de aplicación\" (no tu contraseña normal)."
-      : "";
-    return res.status(400).json({ error: `No se pudo entrar al correo (${host}): ${e.responseText || e.message}.${gmailHint}` });
+    const detalle = e.responseText || e.message || "";
+    let hint = "";
+    if (host === "imap.gmail.com") {
+      hint = " En Gmail tienes que usar una \"contraseña de aplicación\" (no tu contraseña normal).";
+    } else if (/auth not allowed/i.test(detalle)) {
+      // Titan: el buzón tiene desactivado el acceso desde apps externas (IMAP).
+      hint = " Tu correo tiene bloqueado el acceso desde aplicaciones externas (IMAP): actívalo en la configuración de Titan y vuelve a intentarlo.";
+    } else if (/authenticat|invalid credentials|login failed/i.test(detalle)) {
+      hint = " Revisa el correo y la contraseña.";
+    }
+    return res.status(400).json({ error: `No se pudo entrar al correo (${host}): ${detalle}.${hint}` });
   }
   try {
     await req.db.run(
