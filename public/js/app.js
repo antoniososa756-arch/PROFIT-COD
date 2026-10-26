@@ -2837,54 +2837,138 @@ if (id === "tiendas") {
       fetchStores();
     }
 
+    // Cualquier ventana "Gestionar" abierta pertenece a la vista anterior.
+    document.querySelectorAll(".integ-modal").forEach(m => m.remove());
+
     if (tab === "agencia") {
-      content.innerHTML = `
-        <div class="card" style="padding:24px;margin-bottom:20px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-            <div>
-              <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">🚚 Integración MRW</div>
-              <div style="font-size:13px;color:#6b7280;">Conecta tu cuenta MRW para sincronizar estados de envío automáticamente</div>
-            </div>
-            <div id="mrw-status-badge"></div>
-          </div>
-          <div id="mrw-config-wrap"></div>
-        </div>
-        <div class="card" style="padding:24px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-            <div>
-              <div style="font-size:15px;font-weight:700;color:#f9fafb;margin-bottom:4px;">📦 Integración CTT Express</div>
-              <div style="font-size:13px;color:#6b7280;">Guarda tus credenciales de CTT -- la sincronización automática de estados se activará en cuanto esté lista</div>
-            </div>
-            <div id="ctt-status-badge"></div>
-          </div>
-          <div id="ctt-config-wrap"></div>
-        </div>
-      `;
-      cargarConfigMRW();
-      cargarConfigCTT();
+      content.innerHTML = `<div class="stores-grid" id="agencias-grid"><div class="muted">Cargando...</div></div>`;
+      renderAgenciaCards();
     }
 
     if (tab === "reembolsos") {
-      // Bloque "conectar correo por IMAP" de una agencia (Titan, Gmail,
-      // Outlook...) -- ver server/imap-reembolsos.js.
-      const imapBlock = (ag) => `
+      content.innerHTML = `<div class="stores-grid" id="reembolsos-grid"><div class="muted">Cargando...</div></div>`;
+      renderReembolsoCards();
+    }
+
+    if (tab === "leads") {
+      loadLeadsCOD(content);
+    }
+
+  };
+
+  // ── Tarjetas de integración (mismo estilo que las de tiendas) ──
+  // Logos en public/img/logos (iconos oficiales de cada web).
+  const INTEG_LOGOS = { mrw: "/img/logos/mrw.png", ctt: "/img/logos/ctt.jpg", gmail: "/img/logos/gmail.png", titan: "/img/logos/titan.png" };
+  function logoProveedorCorreo(host) {
+    if (!host) return null;
+    if (host.includes("gmail")) return INTEG_LOGOS.gmail;
+    if (host.includes("titan")) return INTEG_LOGOS.titan;
+    return null;
+  }
+  function integCard({ logo, logo2, badge, name, sub, estado, meta = [], actions }) {
+    const cls = estado.tipo === "ok" ? "active" : estado.tipo === "warn" ? "warn" : "inactive";
+    return `
+    <div class="store-card">
+      <div class="store-header"><div class="integ-badge">${badge}</div></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <div class="integ-logo"><img src="${logo}" alt="">${logo2 ? `<img class="integ-logo-mini" src="${logo2}" alt="">` : ""}</div>
+        <div style="min-width:0;">
+          <div class="store-name" style="margin:0;">${name}</div>
+          <div class="muted" style="font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;">${sub}</div>
+        </div>
+      </div>
+      <div class="store-meta">
+        <div>Estado: <span class="status ${cls}">${estado.texto}</span></div>
+        ${meta.filter(Boolean).map(m => `<div class="sync">${m}</div>`).join("")}
+      </div>
+      <div class="store-actions" style="display:flex;gap:8px;flex-wrap:wrap;">${actions}</div>
+    </div>`;
+  }
+  // Ventana con la configuración completa. Al cerrarla se refresca la pestaña
+  // para que las tarjetas muestren el estado nuevo.
+  function abrirModalIntegracion({ logo, title, sub, bodyHtml, onOpen, tab }) {
+    document.querySelectorAll(".integ-modal").forEach(m => m.remove());
+    const overlay = document.createElement("div");
+    overlay.className = "integ-modal";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3500;display:flex;align-items:center;justify-content:center;padding:16px;";
+    overlay.innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;width:640px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+        <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:1;">
+          <div class="integ-logo" style="width:36px;height:36px;"><img src="${logo}" alt=""></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:15px;color:var(--text);">${title}</div>
+            <div style="font-size:12px;color:var(--muted);">${sub}</div>
+          </div>
+          <button class="integ-modal-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;padding:4px;">✕</button>
+        </div>
+        <div style="padding:20px;">${bodyHtml}</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const cerrar = () => { overlay.remove(); if (tab) switchIntegracionesTab(tab); };
+    overlay.querySelector(".integ-modal-close").onclick = cerrar;
+    closeOnBackdropClick(overlay, cerrar);
+    if (onOpen) onOpen();
+  }
+
+  // Pestaña "Agencia de envío"
+  async function renderAgenciaCards() {
+    const grid = document.getElementById("agencias-grid");
+    if (!grid) return;
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const [mrw, ctt] = await Promise.all([
+      fetch(`${API_BASE}/api/tracking/mrw-credentials`, { headers: h }).then(r => r.json()).catch(() => ({})),
+      fetch(`${API_BASE}/api/tracking/ctt-credentials`, { headers: h }).then(r => r.json()).catch(() => ({})),
+    ]);
+    const cttEstado = ctt.integrated && ctt.area_conectada ? { tipo: "ok", texto: "Conectado" }
+      : ctt.integrated ? { tipo: "warn", texto: "Falta Área de Clientes" } : { tipo: "off", texto: "No conectado" };
+    grid.innerHTML =
+      integCard({
+        logo: INTEG_LOGOS.mrw, badge: "Agencia de envío", name: "MRW", sub: "mrw.es",
+        estado: mrw.integrated ? { tipo: "ok", texto: "Conectado" } : { tipo: "off", texto: "No conectado" },
+        meta: mrw.integrated
+          ? [`Login: <b>${escapeHtml(mrw.login || "—")}</b>${mrw.franquicia ? ` · Franquicia ${escapeHtml(mrw.franquicia)}` : ""}`, "Estados sincronizados cada 5 min"]
+          : ["Conecta tus credenciales SAGEC"],
+        actions: `<button class="btn-primary" onclick="gestionarAgencia('mrw')">⚙ ${mrw.integrated ? "Gestionar" : "Conectar"}</button>`
+          + (mrw.integrated ? `<button class="btn-secondary" onclick="if(confirm('¿Desconectar MRW?')){desintegrarMRW();setTimeout(()=>switchIntegracionesTab('agencia'),500);}">Desconectar</button>` : ""),
+      }) +
+      integCard({
+        logo: INTEG_LOGOS.ctt, badge: "Agencia de envío", name: "CTT Express", sub: "cttexpress.com",
+        estado: cttEstado,
+        meta: ctt.integrated
+          ? [ctt.area_conectada ? `Área de Clientes: <b>${escapeHtml(ctt.area_usuario || "")}</b>` : "Conecta el Área de Clientes para sincronizar", ctt.area_conectada ? "Estados sincronizados cada 5 min" : ""]
+          : ["Conecta tus credenciales de CTT"],
+        actions: `<button class="btn-primary" onclick="gestionarAgencia('ctt')">⚙ ${ctt.integrated ? "Gestionar" : "Conectar"}</button>`
+          + (ctt.integrated ? `<button class="btn-secondary" onclick="if(confirm('¿Eliminar la integración de CTT?')){desintegrarCTT();setTimeout(()=>switchIntegracionesTab('agencia'),500);}">Desconectar</button>` : ""),
+      });
+  }
+  window.gestionarAgencia = function(ag) {
+    abrirModalIntegracion({
+      logo: INTEG_LOGOS[ag],
+      title: ag === "mrw" ? "MRW" : "CTT Express",
+      sub: "Sincronización automática de estados de envío",
+      bodyHtml: `<div id="${ag}-status-badge" style="display:none;"></div><div id="${ag}-config-wrap"></div>`,
+      onOpen: () => (ag === "mrw" ? cargarConfigMRW() : cargarConfigCTT()),
+      tab: "agencia",
+    });
+  };
+
+  // Pestaña "Reembolsos": un correo por agencia
+  function htmlImapBlock(ag) {
+    return `
           <div id="imap-status-wrap-${ag}" style="margin-bottom:12px;"></div>
           <div id="imap-form-wrap-${ag}" style="display:${ag === "ctt" ? "flex" : "none"};flex-direction:column;gap:12px;">
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Correo *</label>
-              <input type="email" id="imap-email-${ag}" placeholder="reembolsos@tuempresa.com" oninput="actualizarHostIMAP('${ag}')"
-                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
+              <input type="email" id="imap-email-${ag}" placeholder="reembolsos@tuempresa.com" oninput="actualizarHostIMAP('${ag}')" style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
             </div>
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Contraseña *</label>
-              <input type="password" id="imap-password-${ag}" autocomplete="new-password"
-                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
+              <input type="password" id="imap-password-${ag}" autocomplete="new-password" style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
               <div id="imap-pass-hint-${ag}" style="font-size:12px;color:#9ca3af;margin-top:5px;">Titan: tu contraseña normal del correo.</div>
             </div>
             <div>
               <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Servidor IMAP</label>
-              <input type="text" id="imap-host-${ag}" placeholder="imap.titan.email"
-                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
+              <input type="text" id="imap-host-${ag}" placeholder="imap.titan.email" style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
               <div style="font-size:12px;color:#9ca3af;margin-top:5px;">Se rellena solo según el correo. Cámbialo solo si tu proveedor usa otro.</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
@@ -2892,62 +2976,73 @@ if (id === "tiendas") {
               <span id="imap-msg-${ag}" style="font-size:13px;"></span>
             </div>
           </div>`;
-      const cardHead = (color, titulo, sub) => `
-          <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-            <div style="width:44px;height:44px;background:${color}14;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            </div>
-            <div>
-              <div style="font-size:16px;font-weight:700;color:#f9fafb;">${titulo}</div>
-              <div style="font-size:13px;color:#6b7280;margin-top:2px;">${sub}</div>
-            </div>
-          </div>`;
-      content.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:16px;align-items:start;">
-        <div class="card" style="padding:28px;">
-          ${cardHead("#22c55e", "Correo para reembolsos MRW", "Donde MRW te envía los PDFs de liquidación COD")}
-
+  }
+  function htmlGmailMRW() {
+    return `
           <div id="gmail-status-wrap" style="margin-bottom:20px;"></div>
-
           <div id="gmail-form-wrap">
             <div style="margin-bottom:14px;">
               <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Correo Gmail donde recibes los PDFs de MRW *</label>
-              <input type="email" id="pdf-email-input" placeholder="ejemplo@gmail.com"
-                style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
+              <input type="email" id="pdf-email-input" placeholder="ejemplo@gmail.com" style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
               <div style="font-size:12px;color:#9ca3af;margin-top:5px;">Cuenta Gmail o Google Workspace.</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <button onclick="iniciarConexionGmail()"
-                style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#111827;border:1.5px solid #374151;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:#e5e7eb;box-shadow:0 1px 3px rgba(0,0,0,.08);">
-                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                Conectar con Google
+                style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#111827;border:1.5px solid #374151;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:#e5e7eb;">
+                <img src="${INTEG_LOGOS.gmail}" alt="" style="width:18px;height:18px;"> Conectar con Google
               </button>
               <span id="gmail-connect-msg" style="font-size:13px;"></span>
             </div>
           </div>
-
           <div id="imap-toggle-mrw" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:12.5px;color:#9ca3af;">
             ¿Tu correo de MRW no es Gmail (Titan, Outlook…)?
             <a href="#" onclick="event.preventDefault();document.getElementById('imap-form-wrap-mrw').style.display='flex';this.parentElement.style.display='none';" style="color:#3b82f6;font-weight:600;">Conectar otro correo</a>
           </div>
-          <div style="margin-top:12px;">${imapBlock("mrw")}</div>
-        </div>
-
-        <div class="card" style="padding:28px;">
-          ${cardHead("#3b82f6", "Correo para reembolsos CTT", "Donde CTT te envía los justificantes de pago de reembolso (notificaciones@contact.cttexpress.com). Titan, Gmail, Outlook…")}
-          ${imapBlock("ctt")}
-        </div>
-      </div>
-      `;
-      cargarConfigGmail();
-      cargarConfigIMAP("mrw");
-      cargarConfigIMAP("ctt");
-    }
-
-    if (tab === "leads") {
-      loadLeadsCOD(content);
-    }
-
+          <div style="margin-top:12px;">${htmlImapBlock("mrw")}</div>`;
+  }
+  async function renderReembolsoCards() {
+    const grid = document.getElementById("reembolsos-grid");
+    if (!grid) return;
+    const h = { Authorization: "Bearer " + getActiveToken() };
+    const [gm, imMrw, imCtt] = await Promise.all([
+      fetch(`${API_BASE}/api/gmail/config`, { headers: h }).then(r => r.json()).catch(() => ({})),
+      fetch(`${API_BASE}/api/imap/config?agencia=mrw`, { headers: h }).then(r => r.json()).catch(() => ({})),
+      fetch(`${API_BASE}/api/imap/config?agencia=ctt`, { headers: h }).then(r => r.json()).catch(() => ({})),
+    ]);
+    const ultima = (c) => c?.last_sync ? `Última importación: ${new Date(c.last_sync).toLocaleString("es-ES", { timeZone: "Europe/Madrid" })}` : "Se importa a las 8:00 y 20:00";
+    const mrwOk = gm.connected || imMrw.connected;
+    grid.innerHTML =
+      integCard({
+        logo: INTEG_LOGOS.mrw, logo2: gm.connected ? INTEG_LOGOS.gmail : logoProveedorCorreo(imMrw.host),
+        badge: "Correo de reembolsos", name: "Reembolsos MRW", sub: "PDFs de liquidación COD",
+        estado: mrwOk ? { tipo: "ok", texto: "Conectado" } : { tipo: "off", texto: "Sin correo" },
+        meta: [
+          gm.connected ? `Gmail: <b>${escapeHtml(gm.email || "")}</b>` : "",
+          imMrw.connected ? `Correo: <b>${escapeHtml(imMrw.email || "")}</b>` : "",
+          mrwOk ? ultima(imMrw.connected ? imMrw : null) : "Conecta el correo donde te llegan",
+        ],
+        actions: `<button class="btn-primary" onclick="gestionarReembolsos('mrw')">⚙ ${mrwOk ? "Gestionar" : "Conectar correo"}</button>`,
+      }) +
+      integCard({
+        logo: INTEG_LOGOS.ctt, logo2: logoProveedorCorreo(imCtt.host),
+        badge: "Correo de reembolsos", name: "Reembolsos CTT", sub: "Justificantes de pago de reembolso",
+        estado: imCtt.connected ? { tipo: "ok", texto: "Conectado" } : { tipo: "off", texto: "Sin correo" },
+        meta: imCtt.connected
+          ? [`Correo: <b>${escapeHtml(imCtt.email || "")}</b>`, ultima(imCtt)]
+          : ["Titan, Gmail, Outlook…"],
+        actions: `<button class="btn-primary" onclick="gestionarReembolsos('ctt')">⚙ ${imCtt.connected ? "Gestionar" : "Conectar correo"}</button>`,
+      });
+  }
+  window.gestionarReembolsos = function(ag) {
+    abrirModalIntegracion({
+      logo: INTEG_LOGOS[ag],
+      title: ag === "mrw" ? "Correo para reembolsos MRW" : "Correo para reembolsos CTT",
+      sub: ag === "mrw" ? "Donde MRW te envía los PDFs de liquidación COD"
+        : "Donde CTT te envía los justificantes de pago (notificaciones@contact.cttexpress.com)",
+      bodyHtml: ag === "mrw" ? htmlGmailMRW() : htmlImapBlock("ctt"),
+      onOpen: () => { if (ag === "mrw") { cargarConfigGmail(); cargarConfigIMAP("mrw"); } else cargarConfigIMAP("ctt"); },
+      tab: "reembolsos",
+    });
   };
 
   window.cargarConfigMRW = async function() {
