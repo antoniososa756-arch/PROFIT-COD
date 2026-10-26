@@ -1067,7 +1067,9 @@ function loadApp(section) {
       <div style="margin:0 8px 14px;border-top:1px solid var(--border);padding-top:12px;">
         <div style="display:flex;align-items:center;gap:6px;padding:0 4px 10px;">
           <span style="display:inline-block;width:3px;height:14px;background:#22c55e;border-radius:2px;flex-shrink:0;"></span>
-          <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;">Pendiente MRW</span>
+          <span id="sidebar-ree-title" style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;flex:1;">Pendiente MRW</span>
+          <button onclick="cambiarAgenciaSidebarRee(-1)" title="Agencia anterior" style="background:none;border:none;padding:0 4px;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;">‹</button>
+          <button onclick="cambiarAgenciaSidebarRee(1)" title="Siguiente agencia" style="background:none;border:none;padding:0 4px;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;">›</button>
         </div>
         <div style="background:var(--input);border-radius:10px;padding:4px 2px;overflow:hidden;">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;gap:8px;">
@@ -15706,11 +15708,35 @@ window.filterReeByTab         = filterReeByTab;
 // =========================
 // SIDEBAR CONTADOR REEMBOLSOS
 // =========================
+// El widget va por agencia: "Pendiente MRW" por defecto y con las flechas
+// ‹ › se pasa a la siguiente (CTT...). La elegida se recuerda.
+const SIDEBAR_REE_AGENCIAS = [["mrw", "MRW"], ["ctt", "CTT"]];
+function sidebarReeIdx() {
+  let i = 0;
+  try { i = parseInt(localStorage.getItem("sidebar_ree_agencia") || "0", 10) || 0; } catch (e) {}
+  return ((i % SIDEBAR_REE_AGENCIAS.length) + SIDEBAR_REE_AGENCIAS.length) % SIDEBAR_REE_AGENCIAS.length;
+}
+function cambiarAgenciaSidebarRee(delta) {
+  const i = sidebarReeIdx() + delta;
+  try { localStorage.setItem("sidebar_ree_agencia", String(i)); } catch (e) {}
+  const countEl = document.getElementById("sidebar-ree-count");
+  const totalEl = document.getElementById("sidebar-ree-total");
+  if (countEl) countEl.textContent = "—";
+  if (totalEl) totalEl.textContent = "—";
+  loadSidebarReembolsos();
+}
+window.cambiarAgenciaSidebarRee = cambiarAgenciaSidebarRee;
+
 async function loadSidebarReembolsos() {
   try {
     const h = { Authorization: "Bearer " + getActiveToken() };
+    const [carrier, nombre] = SIDEBAR_REE_AGENCIAS[sidebarReeIdx()];
+    const titleEl = document.getElementById("sidebar-ree-title");
+    if (titleEl) titleEl.textContent = `Pendiente ${nombre}`;
     // Pedir solo 1 fila — solo necesitamos total y total_amount de los pendientes
-    const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=1&page=1&estado=pendiente`, { headers: h }).then(r => r.json());
+    const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=1&page=1&estado=pendiente&carrier=${carrier}`, { headers: h }).then(r => r.json());
+    // Si mientras tanto se cambió de agencia con las flechas, ignorar esta respuesta
+    if (SIDEBAR_REE_AGENCIAS[sidebarReeIdx()][0] !== carrier) return;
 
     const countEl = document.getElementById("sidebar-ree-count");
     const totalEl = document.getElementById("sidebar-ree-total");

@@ -174,6 +174,9 @@ router.get("/reembolsos", auth, async (req, res) => {
     if (shop) { conditions.push(`COALESCE(o.shop_domain, s.shop_domain) = $${i++}`); params.push(shop); }
     if (from) { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
     if (to)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
+    // Agencia (ctt|mrw) -- widget "Pendiente MRW / CTT" del menú lateral
+    const carrierSql = carrierCond(req.query.carrier);
+    if (carrierSql) conditions.push(carrierSql.replace(/^AND /, ""));
 
     // Filtro por estado de pago (JOIN con reembolsos_estado)
     let estadoJoin = `LEFT JOIN reembolsos_estado re ON re.order_id = o.id::text AND re.user_id = $1`;
