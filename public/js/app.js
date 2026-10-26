@@ -15769,6 +15769,11 @@ async function checkNotificaciones() {
       const fechaPedidoHecho = o.created_at
         ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric" })
         : null;
+      // Agencia de envío para mostrar en la notificación (misma detección que
+      // trackingUrl: orders.carrier o, si falta, el formato del seguimiento).
+      const _trk = String(o.tracking_number || "").trim();
+      const agenciaNoti = (o.carrier || (_trk ? (/^[0-9]{18,26}$/.test(_trk) ? "ctt" : "mrw") : "")).toUpperCase();
+      const agenciaTxt = agenciaNoti ? ` · Agencia: ${agenciaNoti}` : "";
 
       // 1. Entregado — solo UNA VEZ para siempre (usa registro permanente)
       if (estado === "entregado") {
@@ -15776,8 +15781,8 @@ async function checkNotificaciones() {
         if (!permShown.has(notiId)) {
           if (estadoAnterior && estadoAnterior !== "entregado") {
             // Transición detectada: mostrar notificación
-            const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Entregado a las ${horaDetectada}`;
-            const html = `<div style="font-weight:500;color:var(--text);font-size:12.5px;margin-bottom:1px;">${escapeHtml(nombre)}</div><div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 8px;"><span>Pedido <b style="color:#4169e1;">${fechaPedidoHecho || "-"}</b></span><span>Entregado <b style="color:#16a34a;">${horaDetectada}</b></span></div>`;
+            const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Entregado a las ${horaDetectada}${agenciaTxt}`;
+            const html = `<div style="font-weight:500;color:var(--text);font-size:12.5px;margin-bottom:1px;">${escapeHtml(nombre)}</div><div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 8px;"><span>Pedido <b style="color:#4169e1;">${fechaPedidoHecho || "-"}</b></span>${agenciaNoti ? `<span>Agencia <b style="color:var(--text);">${agenciaNoti}</b></span>` : ""}<span>Entregado <b style="color:#16a34a;">${horaDetectada}</b></span></div>`;
             nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, html, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("✅ Pedido entregado", txt, "#22c55e");
@@ -15794,8 +15799,8 @@ async function checkNotificaciones() {
         if (!permShown.has(notiId)) {
           if (estadoAnterior && estadoAnterior !== "franquicia") {
             // Transición detectada: mostrar notificación
-            const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.`;
-            const html = `<div style="font-weight:500;color:var(--text);font-size:12.5px;margin-bottom:1px;">${escapeHtml(nombre)}</div><div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 8px;"><span>Pedido <b style="color:#4169e1;">${fechaPedidoHecho || "-"}</b></span><span>Franquicia <b style="color:#f59e0b;">${horaDetectada}</b></span><span>Llamar al cliente</span></div>`;
+            const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.${agenciaTxt}`;
+            const html = `<div style="font-weight:500;color:var(--text);font-size:12.5px;margin-bottom:1px;">${escapeHtml(nombre)}</div><div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 8px;"><span>Pedido <b style="color:#4169e1;">${fechaPedidoHecho || "-"}</b></span>${agenciaNoti ? `<span>Agencia <b style="color:var(--text);">${agenciaNoti}</b></span>` : ""}<span>Franquicia <b style="color:#f59e0b;">${horaDetectada}</b></span><span>Llamar al cliente</span></div>`;
             nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, html, date: ahoraISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
@@ -15817,7 +15822,7 @@ async function checkNotificaciones() {
           const shownKey = `notis_shown_${currentUser?.id || "anon"}_${hoy}`;
           const shownHoy = JSON.parse(localStorage.getItem(shownKey) || "[]");
           if (!notisIds.has(notiId) && !shownHoy.includes(notiId)) {
-            const txt = `${nombre} — ${o.customer_name || ""} (${estado})`;
+            const txt = `${nombre} — ${o.customer_name || ""} (${estado})${agenciaTxt}`;
             nuevasNotis.unshift({ id: notiId, title: `⚠️ ${diasTranscurridos} días sin resolver`, text: txt, date: ahoraISO });
             notisIds.add(notiId);
             shownHoy.push(notiId);
