@@ -242,15 +242,68 @@ router.post("/stripe/create-session", auth, async (req, res) => {
       await db.run("UPDATE users SET stripe_customer_id = $1 WHERE id = $2", [customerId, req.user.id]);
     }
 
-    // Si ya tiene suscripción activa, redirigir al portal de cliente
+    // Si ya tiene suscripción activa: CAMBIAR el precio de esa misma suscripción
+    // (no crear otra). Antes se le mandaba al Portal de Stripe, que solo mostraba
+    // su plan actual y no le dejaba subir de plan. Así Stripe cobra ahora solo la
+    // diferencia proporcional de los días que quedan del ciclo y, desde la
+    // próxima renovación, el plan nuevo completo -- sin dobles cobros.
     if (user?.stripe_subscription_id) {
       const sub = await stripe.subscriptions.retrieve(user.stripe_subscription_id).catch(() => null);
-      if (sub && sub.status === "active") {
-        const portal = await stripe.billingPortal.sessions.create({
-          customer: customerId,
-          return_url: `${process.env.APP_URL}/?section=plan`,
+      if (sub && ["active", "trialing", "past_due"].includes(sub.status)) {
+        const item = sub.items?.data?.[0];
+        const currentRow = await db.get("SELECT plan FROM users WHERE id = $1", [req.user.id]);
+        const currentPlan = currentRow?.plan;
+
+        // Mismo plan (o suscripción rara sin item): gestionar desde el portal
+        if (!item || item.price?.id === priceId) {
+          const portal = await stripe.billingPortal.sessions.create({
+            customer: customerId,
+            return_url: `${process.env.APP_URL}/?section=plan`,
+          });
+          return res.json({ url: portal.url });
+        }
+
+        const upgrade = (PLANS[plan]?.order_limit ?? 0) > (PLANS[currentPlan]?.order_limit ?? 0);
+        // Primero se pide confirmación en el navegador: este paso cobra.
+        if (!req.body.confirm) {
+          return res.json({
+            needs_confirm: true,
+            from: PLANS[currentPlan]?.name || currentPlan,
+            to: PLANS[plan].name,
+            upgrade,
+            message: upgrade
+              ? `Vas a cambiar de ${PLANS[currentPlan]?.name || currentPlan} a ${PLANS[plan].name} (${PLANS[plan].base_price}€/mes). Se cobra ahora solo la diferencia proporcional de los días que quedan de este mes y el cambio es inmediato.`
+              : `Vas a cambiar de ${PLANS[currentPlan]?.name || currentPlan} a ${PLANS[plan].name} (${PLANS[plan].base_price}€/mes). La diferencia queda como saldo a tu favor para las próximas facturas.`,
+          });
+        }
+
+        const updated = await stripe.subscriptions.update(sub.id, {
+          items: [{ id: item.id, price: priceId }],
+          // Subida: factura la diferencia ya. Bajada: crédito a favor.
+          proration_behavior: upgrade ? "always_invoice" : "create_prorations",
+          // Si el cobro falla o pide verificación (3D Secure), el cambio queda
+          // pendiente y NO se aplica hasta que se pague.
+          payment_behavior: "pending_if_incomplete",
+          cancel_at_period_end: false,
+          metadata: { userId: String(req.user.id), plan },
+          expand: ["latest_invoice"],
         });
-        return res.json({ url: portal.url });
+
+        if (updated.pending_update) {
+          // Falta pagar (tarjeta rechazada o requiere verificación): abrir la
+          // factura de Stripe para que la pague; al pagarla se aplica el cambio
+          // y el webhook customer.subscription.updated actualiza el plan.
+          const invoiceUrl = updated.latest_invoice?.hosted_invoice_url;
+          if (invoiceUrl) return res.json({ url: invoiceUrl, pending_payment: true });
+          return res.status(402).json({ error: "No se pudo cobrar la diferencia. Revisa tu método de pago e inténtalo de nuevo." });
+        }
+
+        await db.run(
+          `UPDATE users SET plan = $1, plan_status = 'active', subscription_cancel_at = NULL${upgrade ? ", plan_overage_locked = false" : ""} WHERE id = $2`,
+          [plan, req.user.id]
+        );
+        console.log(`[STRIPE] Cambio de plan: user ${req.user.id} ${currentPlan} → ${plan}`);
+        return res.json({ ok: true, changed: true, plan });
       }
     }
 

@@ -5176,14 +5176,28 @@ if (id === "plan") {
     });
   }
 
-  window.pagarStripe = async function(plan) {
+  window.pagarStripe = async function(plan, confirm) {
     try {
       const r = await fetch(`${API_BASE}/api/billing/stripe/create-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, confirm: !!confirm }),
       });
       const d = await r.json();
+      // Ya tiene suscripción: el servidor cambia el plan de esa misma
+      // suscripción, previa confirmación (ese paso cobra la diferencia).
+      if (d.needs_confirm) {
+        if (window.confirm(d.message + "\n\n¿Confirmas el cambio de plan?")) return window.pagarStripe(plan, true);
+        return;
+      }
+      if (d.changed) {
+        showToast("✅ Plan actualizado", `Ya estás en el plan ${d.plan.charAt(0).toUpperCase() + d.plan.slice(1)}.`, "#22c55e");
+        setTimeout(() => window.location.reload(), 1200);
+        return;
+      }
+      if (d.pending_payment) {
+        alert("Para completar el cambio de plan hay que pagar la diferencia. Te llevamos a la factura de Stripe.");
+      }
       if (d.url) {
         window.location.href = d.url;
       } else {
