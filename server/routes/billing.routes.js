@@ -75,9 +75,21 @@ async function getMonthlyOrders(userId, billingCycleStart, plan, trialStartedAt,
 router.get("/plan", auth, async (req, res) => {
   try {
     const user = await db.get(
-      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start, subscription_cancel_at, plan_overage_locked, plan_overage_grace_until FROM users WHERE id = $1",
+      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start, subscription_cancel_at, plan_overage_locked, plan_overage_grace_until, pending_plan, pending_plan_at FROM users WHERE id = $1",
       [req.user.id]
     );
+    // Bajada programada cuya fecha ya pasó (por si el webhook de renovación no
+    // llegó): aplicarla aquí.
+    if (user?.pending_plan && PLANS[user.pending_plan] && user.pending_plan_at && new Date(user.pending_plan_at) <= new Date()) {
+      await db.run(
+        "UPDATE users SET plan = $1, pending_plan = NULL, pending_plan_at = NULL, billing_cycle_start = $2 WHERE id = $3",
+        [user.pending_plan, user.pending_plan_at, req.user.id]
+      );
+      user.plan = user.pending_plan;
+      user.billing_cycle_start = user.pending_plan_at;
+      user.pending_plan = null;
+      user.pending_plan_at = null;
+    }
     const planKey = user?.plan || "free";
     const planInfo = PLANS[planKey] || null;
 
@@ -153,6 +165,8 @@ router.get("/plan", auth, async (req, res) => {
       variable_cost:    variableCost,
       estimated_total:       planInfo ? +(planInfo.base_price + variableCost).toFixed(2) : null,
       subscription_cancel_at: user?.subscription_cancel_at || null,
+      pending_plan:     user?.pending_plan || null,
+      pending_plan_at:  user?.pending_plan_at || null,
     });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -242,17 +256,60 @@ router.post("/stripe/create-session", auth, async (req, res) => {
       await db.run("UPDATE users SET stripe_customer_id = $1 WHERE id = $2", [customerId, req.user.id]);
     }
 
-    // Si ya tiene suscripción activa: CAMBIAR el precio de esa misma suscripción
-    // (no crear otra). Antes se le mandaba al Portal de Stripe, que solo mostraba
-    // su plan actual y no le dejaba subir de plan. Así Stripe cobra ahora solo la
-    // diferencia proporcional de los días que quedan del ciclo y, desde la
-    // próxima renovación, el plan nuevo completo -- sin dobles cobros.
+    // Si ya tiene suscripción activa, se cambia el precio de ESA suscripción
+    // (no se crea otra; antes se le mandaba al Portal de Stripe, que no le
+    // dejaba cambiar de plan):
+    //  - SUBIR de plan: inmediato, cobrando ahora la diferencia proporcional de
+    //    los días que quedan del ciclo.
+    //  - BAJAR de plan: PROGRAMADO para la renovación. El plan superior ya está
+    //    pagado, así que lo mantiene hasta fin de ciclo, sin devolver nada; en
+    //    la renovación pasa al plan menor y paga ese precio. (Antes se aplicaba
+    //    al momento con saldo a favor: subir y volver a bajar le salía gratis.)
+    //    Además, al aplicarse con el ciclo nuevo (contador de pedidos a 0), ya
+    //    no puede quedar bloqueado por exceso al bajar.
     if (user?.stripe_subscription_id) {
       const sub = await stripe.subscriptions.retrieve(user.stripe_subscription_id).catch(() => null);
       if (sub && ["active", "trialing", "past_due"].includes(sub.status)) {
-        const item = sub.items?.data?.[0];
-        const currentRow = await db.get("SELECT plan FROM users WHERE id = $1", [req.user.id]);
+        let item = sub.items?.data?.[0];
+        const currentRow = await db.get("SELECT plan, pending_plan, pending_plan_at FROM users WHERE id = $1", [req.user.id]);
         const currentPlan = currentRow?.plan;
+        const pendingPlan = currentRow?.pending_plan || null;
+        const fmtFecha = (iso) => iso ? new Date(iso).toLocaleDateString("es-ES") : "la próxima renovación";
+        // Fin del ciclo pagado (API nueva de Stripe: en el item; antigua: en la suscripción)
+        const periodEnd = item?.current_period_end || sub.current_period_end || null;
+        const periodEndIso = periodEnd ? new Date(periodEnd * 1000).toISOString() : null;
+
+        // Ya tiene programada la bajada a este mismo plan
+        if (pendingPlan && pendingPlan === plan) {
+          return res.json({ info: `Ya tienes programado el cambio a ${PLANS[plan].name} el ${fmtFecha(currentRow.pending_plan_at)}. Hasta entonces sigues en ${PLANS[currentPlan]?.name || currentPlan}.` });
+        }
+
+        // Con una bajada programada, Stripe ya tiene el precio del plan menor.
+        // Si elige otra cosa, primero se deshace (precio del plan actual, sin
+        // prorrateo) para que cualquier subida se calcule desde lo que pagó.
+        if (pendingPlan && item) {
+          if (!req.body.confirm && plan === currentPlan) {
+            return res.json({
+              needs_confirm: true,
+              message: `Tienes programado pasar a ${PLANS[pendingPlan]?.name || pendingPlan} el ${fmtFecha(currentRow.pending_plan_at)}. ¿Quieres anular ese cambio y seguir en ${PLANS[currentPlan]?.name || currentPlan}? No se cobra nada.`,
+            });
+          }
+          if (req.body.confirm) {
+            const priceActual = getPriceId(cfg, currentPlan);
+            if (priceActual) {
+              const restored = await stripe.subscriptions.update(sub.id, {
+                items: [{ id: item.id, price: priceActual }],
+                proration_behavior: "none",
+              });
+              item = restored.items?.data?.[0] || item;
+            }
+            await db.run("UPDATE users SET pending_plan = NULL, pending_plan_at = NULL WHERE id = $1", [req.user.id]);
+            if (plan === currentPlan) {
+              console.log(`[STRIPE] Bajada programada anulada: user ${req.user.id} sigue en ${currentPlan}`);
+              return res.json({ ok: true, changed: true, plan, msg: "Cambio programado anulado" });
+            }
+          }
+        }
 
         // Mismo plan (o suscripción rara sin item): gestionar desde el portal
         if (!item || item.price?.id === priceId) {
@@ -264,41 +321,43 @@ router.post("/stripe/create-session", auth, async (req, res) => {
         }
 
         const upgrade = (PLANS[plan]?.order_limit ?? 0) > (PLANS[currentPlan]?.order_limit ?? 0);
+        const fromName = PLANS[currentPlan]?.name || currentPlan;
 
-        // Bajada de plan con más pedidos este ciclo que el límite del plan nuevo:
-        // planCheck.js bloquearía la cuenta en cuanto la use (y el bloqueo se
-        // mantiene hasta volver a subir de plan). Se avisa ANTES de confirmar.
-        let excede = false, pedidosCiclo = 0;
-        if (!upgrade) {
-          const u = await db.get(
-            "SELECT billing_cycle_start, trial_started_at, plan_status FROM users WHERE id = $1", [req.user.id]
-          );
-          pedidosCiclo = await getMonthlyOrders(req.user.id, u?.billing_cycle_start, plan, u?.trial_started_at, u?.plan_status);
-          excede = pedidosCiclo > PLANS[plan].order_limit;
-        }
-
-        // Primero se pide confirmación en el navegador: este paso cobra.
+        // Primero se pide confirmación en el navegador (la subida cobra).
         if (!req.body.confirm) {
-          const fromName = PLANS[currentPlan]?.name || currentPlan;
-          const aviso = excede
-            ? `\n\n⚠️ ATENCIÓN: este mes llevas ${pedidosCiclo.toLocaleString("es-ES")} pedidos y el plan ${PLANS[plan].name} permite ${PLANS[plan].order_limit.toLocaleString("es-ES")}. Si cambias, las funciones de la app se BLOQUEARÁN al momento y seguirán bloqueadas hasta que vuelvas a un plan superior.`
-            : "";
           return res.json({
             needs_confirm: true,
-            from: fromName,
-            to: PLANS[plan].name,
             upgrade,
-            excede,
-            message: (upgrade
+            message: upgrade
               ? `Vas a cambiar de ${fromName} a ${PLANS[plan].name} (${PLANS[plan].base_price}€/mes). Se cobra ahora solo la diferencia proporcional de los días que quedan de este mes y el cambio es inmediato.`
-              : `Vas a cambiar de ${fromName} a ${PLANS[plan].name} (${PLANS[plan].base_price}€/mes). La diferencia queda como saldo a tu favor para las próximas facturas.`) + aviso,
+              : `Vas a cambiar de ${fromName} a ${PLANS[plan].name} (${PLANS[plan].base_price}€/mes).\n\nComo ${fromName} ya está pagado, seguirás en ${fromName} hasta el ${fmtFecha(periodEndIso)}. Desde esa fecha pasarás a ${PLANS[plan].name} y se te cobrará ${PLANS[plan].base_price}€/mes. Ahora no se cobra ni se devuelve nada.`,
           });
+        }
+
+        if (!upgrade) {
+          // Bajada programada: en Stripe se pone ya el precio nuevo SIN
+          // prorrateo (ni cargo ni saldo a favor ahora; la próxima factura sale
+          // con el precio menor). En ProfitCOD sigue en el plan actual hasta la
+          // renovación -- la aplica el webhook invoice.payment_succeeded (o
+          // /plan si el webhook no llega).
+          await stripe.subscriptions.update(sub.id, {
+            items: [{ id: item.id, price: priceId }],
+            proration_behavior: "none",
+            cancel_at_period_end: false,
+            metadata: { userId: String(req.user.id), plan },
+          });
+          await db.run(
+            "UPDATE users SET pending_plan = $1, pending_plan_at = $2, subscription_cancel_at = NULL WHERE id = $3",
+            [plan, periodEndIso, req.user.id]
+          );
+          console.log(`[STRIPE] Bajada programada: user ${req.user.id} ${currentPlan} → ${plan} el ${periodEndIso}`);
+          return res.json({ ok: true, scheduled: true, plan, at: periodEndIso });
         }
 
         const updated = await stripe.subscriptions.update(sub.id, {
           items: [{ id: item.id, price: priceId }],
-          // Subida: factura la diferencia ya. Bajada: crédito a favor.
-          proration_behavior: upgrade ? "always_invoice" : "create_prorations",
+          // Factura la diferencia proporcional ya
+          proration_behavior: "always_invoice",
           // Si el cobro falla o pide verificación (3D Secure), el cambio queda
           // pendiente y NO se aplica hasta que se pague.
           payment_behavior: "pending_if_incomplete",
@@ -316,15 +375,13 @@ router.post("/stripe/create-session", auth, async (req, res) => {
           return res.status(402).json({ error: "No se pudo cobrar la diferencia. Revisa tu método de pago e inténtalo de nuevo." });
         }
 
-        // Subida: se levanta el bloqueo por exceso. Bajada que ya excede el nuevo
-        // límite: se bloquea ya (el cliente lo aceptó en la confirmación).
-        const lockSql = upgrade ? ", plan_overage_locked = false" : excede ? ", plan_overage_locked = true" : "";
+        // Subida: se levanta el bloqueo por exceso
         await db.run(
-          `UPDATE users SET plan = $1, plan_status = 'active', subscription_cancel_at = NULL${lockSql} WHERE id = $2`,
+          `UPDATE users SET plan = $1, plan_status = 'active', subscription_cancel_at = NULL, plan_overage_locked = false WHERE id = $2`,
           [plan, req.user.id]
         );
-        console.log(`[STRIPE] Cambio de plan: user ${req.user.id} ${currentPlan} → ${plan}${excede ? " (excede límite: bloqueado)" : ""}`);
-        return res.json({ ok: true, changed: true, plan, locked: excede });
+        console.log(`[STRIPE] Subida de plan: user ${req.user.id} ${currentPlan} → ${plan}`);
+        return res.json({ ok: true, changed: true, plan });
       }
     }
 
@@ -405,24 +462,27 @@ router.post("/stripe/webhook", async (req, res) => {
       // Renovación mensual pagada
       const invoice = event.data.object;
       if (invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create") {
-        const subId = invoice.subscription;
-        const user = await db.get("SELECT id, plan FROM users WHERE stripe_subscription_id = $1", [subId]);
+        const subId = invoice.subscription || invoice.parent?.subscription_details?.subscription;
+        const user = await db.get("SELECT id, plan, pending_plan FROM users WHERE stripe_subscription_id = $1", [subId]);
         if (user) {
           const now = new Date();
           const expiresAt = new Date(now.getTime() + 35 * 24 * 60 * 60 * 1000).toISOString();
           const cycleStart = now.toISOString();
+          // Bajada programada: se aplica con el ciclo nuevo (que ya se cobró al
+          // precio del plan menor). El contador de pedidos empieza de 0.
+          const aplicarBajada = invoice.billing_reason === "subscription_cycle" && user.pending_plan && PLANS[user.pending_plan];
           await db.run(
-            `UPDATE users SET plan_status = 'active', plan_expires_at = $1, billing_cycle_start = $2 WHERE id = $3`,
-            [expiresAt, cycleStart, user.id]
+            `UPDATE users SET plan_status = 'active', plan_expires_at = $1, billing_cycle_start = $2${aplicarBajada ? ", plan = $4, pending_plan = NULL, pending_plan_at = NULL" : ""} WHERE id = $3`,
+            aplicarBajada ? [expiresAt, cycleStart, user.id, user.pending_plan] : [expiresAt, cycleStart, user.id]
           );
-          console.log(`[STRIPE] Renovación pagada: user ${user.id} → ${user.plan}`);
+          console.log(`[STRIPE] Renovación pagada: user ${user.id} → ${aplicarBajada ? user.pending_plan + " (bajada programada aplicada)" : user.plan}`);
         }
       }
 
     } else if (event.type === "invoice.payment_failed") {
       // Pago fallido — suspender plan
       const invoice = event.data.object;
-      const subId = invoice.subscription;
+      const subId = invoice.subscription || invoice.parent?.subscription_details?.subscription;
       if (subId) {
         const user = await db.get("SELECT id FROM users WHERE stripe_subscription_id = $1", [subId]);
         if (user) {
@@ -433,7 +493,7 @@ router.post("/stripe/webhook", async (req, res) => {
 
     } else if (event.type === "customer.subscription.updated") {
       const sub = event.data.object;
-      const user = await db.get("SELECT id, plan FROM users WHERE stripe_subscription_id = $1", [sub.id]);
+      const user = await db.get("SELECT id, plan, pending_plan FROM users WHERE stripe_subscription_id = $1", [sub.id]);
       if (user) {
         if (sub.cancel_at_period_end) {
           // Guardar fecha de cancelación para mostrarla en la app
@@ -462,7 +522,7 @@ router.post("/stripe/webhook", async (req, res) => {
             [cfg.stripePriceBusiness]: "business",
           };
           const newPlan = priceToPlan[priceId];
-          if (newPlan && newPlan !== user.plan) {
+          if (newPlan && newPlan !== user.plan && newPlan !== user.pending_plan) {
             const upgraded = (PLANS[newPlan]?.order_limit ?? 0) > (PLANS[user.plan]?.order_limit ?? 0);
             await db.run(
               `UPDATE users SET plan = $1${upgraded ? ", plan_overage_locked = false" : ""} WHERE id = $2`,

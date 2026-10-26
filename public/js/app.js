@@ -5029,6 +5029,7 @@ if (id === "plan") {
         <span style="font-weight:700;color:${planColors[currentPlan] || "#6b7280"};font-size:14px;">${planNames[currentPlan] || currentPlan}</span>
         ${statusLabel}
         ${expStr ? `<span style="font-size:12px;color:#9ca3af;margin-left:4px;">· Vence el ${expStr}</span>` : ""}
+        ${d.pending_plan ? `<span style="font-size:12px;color:#f59e0b;font-weight:600;margin-left:4px;">· Cambia a ${planNames[d.pending_plan] || d.pending_plan} el ${d.pending_plan_at ? new Date(d.pending_plan_at).toLocaleDateString("es-ES") : "la próxima renovación"}</span>` : ""}
         ${d.monthly_orders > 0 ? `<span style="font-size:12px;color:#6b7280;margin-left:auto;">${d.monthly_orders}${d.order_limit ? "/" + d.order_limit : ""} pedidos este mes</span>` : ""}
       </div>`;
     }
@@ -5118,11 +5119,16 @@ if (id === "plan") {
             style="width:100%;padding:9px;background:rgba(34,197,94,.08);color:#22c55e;border:1.5px solid #86efac;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
             🎁 Probar gratis 7 días
           </button>` : ""}
+          ${isCurrent && d.status === "active" && d.pending_plan ? `<button onclick="pagarStripe('${p}')" title="Anular el cambio programado a ${planNames[d.pending_plan] || d.pending_plan}"
+            style="width:100%;padding:9px;background:rgba(245,158,11,.08);color:#f59e0b;border:1px solid #f59e0b;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
+            ↩ Seguir en ${planNames[p] || p} (anular cambio)
+          </button>` : ""}
+          ${p === d.pending_plan ? `<div style="text-align:center;padding:7px;background:rgba(245,158,11,.08);border-radius:8px;font-size:12px;font-weight:700;color:#f59e0b;">📅 Desde el ${d.pending_plan_at ? new Date(d.pending_plan_at).toLocaleDateString("es-ES") : "próximo ciclo"}</div>` : ""}
           ${isCurrent && d.status === "active" ? `<button onclick="gestionarSuscripcion()"
             style="width:100%;padding:9px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
             ⚙️ Gestionar suscripción
           </button>` : ""}
-          ${(!PLAN_DEFS[p].free && !(isCurrent && d.status === "active") && !uselessIfBlocked) ? `<button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
+          ${(!PLAN_DEFS[p].free && !(isCurrent && d.status === "active") && !uselessIfBlocked && p !== d.pending_plan) ? `<button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
             style="width:100%;padding:10px;background:#635bff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             Suscribirse
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -5250,9 +5256,17 @@ if (id === "plan") {
         if (window.confirm(d.message + "\n\n¿Confirmas el cambio de plan?")) return window.pagarStripe(plan, true);
         return;
       }
+      if (d.info) { alert(d.info); return; }
+      if (d.scheduled) {
+        const nombrePlan = d.plan.charAt(0).toUpperCase() + d.plan.slice(1);
+        const fecha = d.at ? new Date(d.at).toLocaleDateString("es-ES") : "la próxima renovación";
+        showToast("📅 Cambio de plan programado", `Pasarás a ${nombrePlan} el ${fecha}. Hasta entonces sigues con tu plan actual.`, "#f59e0b");
+        setTimeout(() => window.location.reload(), 1800);
+        return;
+      }
       if (d.changed) {
         const nombrePlan = d.plan.charAt(0).toUpperCase() + d.plan.slice(1);
-        if (d.locked) showToast("⚠️ Plan cambiado — cuenta bloqueada", `Estás en ${nombrePlan}, pero este mes superas su límite de pedidos. Vuelve a un plan superior para desbloquear.`, "#dc2626");
+        if (d.msg) showToast("✅ " + d.msg, `Sigues en el plan ${nombrePlan}.`, "#22c55e");
         else showToast("✅ Plan actualizado", `Ya estás en el plan ${nombrePlan}.`, "#22c55e");
         setTimeout(() => window.location.reload(), 1200);
         return;

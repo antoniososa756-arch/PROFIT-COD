@@ -420,6 +420,11 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_overage_locked
 // temporal a propósito — al vencer, si sigue por encima del límite, vuelve a
 // bloquearse solo (plan_overage_locked no se toca al conceder la gracia).
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_overage_grace_until TEXT`);
+// Bajada de plan programada: el cliente sigue en su plan (ya pagado) hasta la
+// renovación (pending_plan_at) y entonces pasa a pending_plan -- ver
+// stripe/create-session y el webhook invoice.payment_succeeded en billing.routes.js.
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan TEXT`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan_at TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda","reembolsos_widget"]'`);
 await pool.query(`
   CREATE TABLE IF NOT EXISTS billing_invoices (
