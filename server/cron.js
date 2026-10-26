@@ -296,6 +296,15 @@ async function syncAllGmailPDF() {
     }
 
     for (const { user_id } of usuarios) {
+      // CTT: justificantes de pago de reembolso (van en el cuerpo del correo,
+      // sin PDF) -- ver server/ctt-reembolsos.js. Antes que MRW porque el
+      // bloque de MRW hace "continue" si no hay correos suyos.
+      try {
+        const { syncCTTReembolsosGmail } = require("./ctt-reembolsos");
+        const r = await syncCTTReembolsosGmail(db, user_id, (url) => gmailFetch(user_id, url), "newer_than:40d");
+        if (r.emailsLeidos) console.log(`✅ [CRON] Gmail CTT user ${user_id}: ${r.procesados} reembolsos marcados cobrados (${r.emailsLeidos} correos)`);
+      } catch(e) { console.error(`[CRON] Gmail CTT error user ${user_id}:`, e.message); }
+
       try {
         const query = encodeURIComponent(
           '{from:mrw.es from:grupomrw.com} has:attachment filename:pdf newer_than:40d'

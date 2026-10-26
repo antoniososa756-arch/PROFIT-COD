@@ -2,6 +2,7 @@ const express  = require("express");
 const router   = express.Router();
 const fetch    = (...a) => import("node-fetch").then(({ default: f }) => f(...a));
 const pdfParse = require("pdf-parse");
+const { syncCTTReembolsosGmail } = require("../ctt-reembolsos");
 
 const CLIENT_ID     = process.env.GMAIL_CLIENT_ID;
 const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
@@ -94,8 +95,18 @@ router.post("/sync-pdf", async (req, res) => {
     const listData = await listRes.json();
     const messages = listData.messages || [];
 
+    // CTT: justificantes de pago de reembolso (en el cuerpo, sin PDF) -- ver
+    // server/ctt-reembolsos.js. Se suma al resultado de MRW.
+    let ctt = { emailsLeidos: 0, albaranes: 0, procesados: 0, errores: [] };
+    try {
+      ctt = await syncCTTReembolsosGmail(db, userId, (url) => gmailFetch(db, userId, url), "after:2025/1/1");
+    } catch (e) {
+      if (e.message === "GMAIL_RECONNECT") throw e;
+      ctt.errores.push({ error: e.message });
+    }
+
     if (messages.length === 0) {
-      return res.json({ ok: true, procesados: 0, emailsLeidos: 0, pdfsProcesados: 0, enviosEncontrados: 0 });
+      return res.json({ ok: true, procesados: ctt.procesados, emailsLeidos: ctt.emailsLeidos, pdfsProcesados: 0, enviosEncontrados: ctt.albaranes, ctt });
     }
 
     let totalMarcados = 0;
@@ -190,11 +201,12 @@ router.post("/sync-pdf", async (req, res) => {
 
     res.json({
       ok: true,
-      emailsLeidos: messages.length,
+      emailsLeidos: messages.length + ctt.emailsLeidos,
       pdfsProcesados: totalPDFs,
-      enviosEncontrados: totalEnvios,
-      procesados: totalMarcados,
-      errores,
+      enviosEncontrados: totalEnvios + ctt.albaranes,
+      procesados: totalMarcados + ctt.procesados,
+      ctt,
+      errores: [...errores, ...ctt.errores],
       debug: debugEmails,
     });
 

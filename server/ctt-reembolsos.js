@@ -1,0 +1,94 @@
+// server/ctt-reembolsos.js — Reembolsos COD pagados por CTT Express, leídos
+// de Gmail.
+//
+// A diferencia de MRW (que adjunta un PDF), CTT manda el "JUSTIFICANTE DE
+// PAGO DE REEMBOLSO" desde notificaciones@contact.cttexpress.com con el
+// detalle EN EL CUERPO del correo: una fila por albarán (nº de seguimiento de
+// 22 dígitos, ej. 0050040050049700884424), destinatario, referencia e
+// importe. Se extraen esos albaranes y se marcan los pedidos como cobrados,
+// igual que hace la integración de MRW.
+
+const CTT_GMAIL_QUERY = "from:contact.cttexpress.com reembolso";
+
+// Albaranes CTT: exactamente 22 dígitos seguidos (sin más dígitos pegados).
+function extraerAlbaranesCTT(texto) {
+  const set = new Set();
+  const re = /(?<!\d)\d{22}(?!\d)/g;
+  let m;
+  while ((m = re.exec(texto || "")) !== null) set.add(m[0]);
+  return [...set];
+}
+
+// Texto plano de un mensaje de Gmail (format=full): junta todas las partes
+// text/plain y text/html (decodificadas, sin etiquetas HTML).
+function textoDeMensajeGmail(msgData) {
+  const trozos = [];
+  (function recorrer(part) {
+    if (!part) return;
+    const mime = part.mimeType || "";
+    if ((mime === "text/plain" || mime === "text/html") && part.body?.data) {
+      let t = Buffer.from(part.body.data, "base64url").toString("utf8");
+      if (mime === "text/html") t = t.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ");
+      trozos.push(t);
+    }
+    (part.parts || []).forEach(recorrer);
+  })(msgData.payload);
+  return trozos.join("\n");
+}
+
+// Marca como cobrados los pedidos del usuario con esos albaranes. Devuelve
+// cuántos pedidos encontró. Mismo filtro de tienda "por shop_id O por
+// dominio" que usa MRW para no perder pedidos de tiendas reconectadas.
+async function marcarCobradosCTT(db, userId, albaranes, fecha) {
+  let marcados = 0;
+  for (const albaran of albaranes) {
+    const order = await db.get(
+      `SELECT o.id FROM orders o
+       WHERE btrim(o.tracking_number) = $1
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+      [albaran, userId]
+    );
+    if (!order) continue;
+    await db.run(
+      `INSERT INTO reembolsos_estado (user_id, order_id, tracking_number, estado, fecha_pago)
+       VALUES ($1, $2, $3, 'cobrado', $4)
+       ON CONFLICT (user_id, order_id) DO UPDATE SET estado = 'cobrado', fecha_pago = COALESCE(reembolsos_estado.fecha_pago, EXCLUDED.fecha_pago)`,
+      [userId, String(order.id), albaran, fecha]
+    );
+    marcados++;
+  }
+  return marcados;
+}
+
+// Recorre los correos de reembolsos de CTT en Gmail del usuario.
+// gmailFetch(url) -> Response ya autenticada (cada llamador pasa la suya).
+// extraQuery: ej. "newer_than:40d" (cron) o "after:2025/1/1" (botón manual).
+async function syncCTTReembolsosGmail(db, userId, gmailFetch, extraQuery = "newer_than:40d") {
+  const q = encodeURIComponent(`${CTT_GMAIL_QUERY} ${extraQuery}`.trim());
+  const listRes = await gmailFetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${q}&maxResults=100`);
+  const listData = await listRes.json();
+  const messages = listData.messages || [];
+  const toMadridDate = (d) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(d);
+
+  let albaranesTotal = 0, marcados = 0;
+  const errores = [];
+  for (const msg of messages) {
+    try {
+      const msgRes = await gmailFetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`);
+      const msgData = await msgRes.json();
+      const texto = textoDeMensajeGmail(msgData);
+      // Solo los justificantes de pago (CTT manda más tipos de aviso).
+      if (!/reembolso/i.test(texto)) continue;
+      const fecha = msgData.internalDate ? toMadridDate(new Date(parseInt(msgData.internalDate))) : toMadridDate(new Date());
+      const albaranes = extraerAlbaranesCTT(texto);
+      albaranesTotal += albaranes.length;
+      marcados += await marcarCobradosCTT(db, userId, albaranes, fecha);
+    } catch (e) {
+      errores.push({ msgId: msg.id, error: e.message });
+    }
+  }
+  return { emailsLeidos: messages.length, albaranes: albaranesTotal, procesados: marcados, errores };
+}
+
+module.exports = { extraerAlbaranesCTT, marcarCobradosCTT, syncCTTReembolsosGmail, CTT_GMAIL_QUERY };
