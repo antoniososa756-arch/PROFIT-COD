@@ -846,7 +846,10 @@ function closeOnBackdropClick(el, closeFn) {
   // Historial de notificaciones ya leídas ("Marcar todo como leído" o al
   // abrir una): antes se borraban sin más. Solo se guardan las de los últimos
   // 7 días (por la fecha de la notificación); las más viejas se descartan.
+  // Solo se guardan las de "Pedido entregado": los avisos de "X días sin
+  // resolver" se repiten cada día y solo llenaban el historial de ruido.
   const NOTIF_LEIDAS_DIAS = 7;
+  const esNotifEntregado = n => String(n?.id || "").startsWith("entregado_");
   function getNotifReadKey() {
     return "notifications_read_" + (currentUser?.id || "anon");
   }
@@ -855,14 +858,15 @@ function closeOnBackdropClick(el, closeFn) {
     try { list = JSON.parse(localStorage.getItem(getNotifReadKey()) || "[]"); } catch (e) { list = []; }
     if (!Array.isArray(list)) list = [];
     const limite = Date.now() - NOTIF_LEIDAS_DIAS * 24 * 60 * 60 * 1000;
-    const vigentes = list.filter(n => new Date(n.date || n.readAt || 0).getTime() >= limite);
+    const vigentes = list.filter(n => esNotifEntregado(n) && new Date(n.date || n.readAt || 0).getTime() >= limite);
     if (vigentes.length !== list.length) {
       try { localStorage.setItem(getNotifReadKey(), JSON.stringify(vigentes)); } catch (e) {}
     }
     return vigentes;
   }
   function archivarNotifs(arr) {
-    if (!arr || !arr.length) return;
+    arr = (arr || []).filter(esNotifEntregado);
+    if (!arr.length) return;
     const ids = new Set(arr.map(n => n.id));
     const ahora = new Date().toISOString();
     const merged = [...arr.map(n => ({ ...n, readAt: ahora })), ...getNotifLeidas().filter(n => !ids.has(n.id))].slice(0, 300);
@@ -920,7 +924,7 @@ function closeOnBackdropClick(el, closeFn) {
       }
       ${leidas.length ? `
         <div class="drop-item" onclick="event.stopPropagation();toggleNotifLeidas()" style="justify-content:center;border-top:1px solid var(--border);margin-top:4px;padding-top:10px;color:var(--muted);font-weight:600;font-size:12px;">
-          🕘 ${window.__notifVerLeidas ? "Ocultar" : "Ver"} leídas (${leidas.length}) · últimos ${NOTIF_LEIDAS_DIAS} días
+          🕘 ${window.__notifVerLeidas ? "Ocultar" : "Ver"} leídas · últimos ${NOTIF_LEIDAS_DIAS} días
         </div>
         ${window.__notifVerLeidas ? `
           <div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-top:6px;opacity:.6;">
