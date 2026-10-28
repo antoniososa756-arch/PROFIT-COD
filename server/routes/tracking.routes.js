@@ -162,6 +162,18 @@ router.use(async (req, res, next) => {
   next();
 });
 
+// ── Agencias de envío conectadas (registro en utils/carrier.js) ──
+// Lo usan Reembolsos, Métricas, Rentabilidad y el widget del menú para
+// mostrar solo las agencias que la cuenta tiene conectadas.
+router.get("/agencias", auth, async (req, res) => {
+  try {
+    const { agenciasConectadas } = require("../utils/carrier");
+    res.json({ agencias: await agenciasConectadas(req.db, req.user.id) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── GET credenciales MRW del usuario ─────────────────────────
 router.get("/mrw-credentials", auth, async (req, res) => {
   try {

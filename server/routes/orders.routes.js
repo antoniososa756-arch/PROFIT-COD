@@ -210,7 +210,7 @@ router.get("/reembolsos", auth, async (req, res) => {
     if (shop) { conditions.push(`COALESCE(o.shop_domain, s.shop_domain) = $${i++}`); params.push(shop); }
     if (from) { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
     if (to)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
-    // Agencia (ctt|mrw) -- widget "Pendiente MRW / CTT" del menú lateral
+    // Agencia (id del registro de utils/carrier.js) -- Reembolsos y widget del menú
     const carrierSql = carrierCond(req.query.carrier);
     if (carrierSql) conditions.push(carrierSql.replace(/^AND /, ""));
 
@@ -231,7 +231,7 @@ router.get("/reembolsos", auth, async (req, res) => {
         `SELECT o.id, o.order_number, o.created_at, o.tracking_number,
                 o.fulfillment_status, o.financial_status, o.customer_name,
                 o.total_price, o.currency, COALESCE(o.shop_domain, s.shop_domain) as shop_domain,
-                re.estado as estado_pago, re.fecha_pago
+                re.estado as estado_pago, re.fecha_pago, o.carrier
          ${baseQuery}
          ORDER BY o.created_at DESC
          LIMIT $${i} OFFSET $${i+1}`,

@@ -1113,9 +1113,9 @@ function loadApp(section) {
       <div style="margin:0 8px 14px;border-top:1px solid var(--border);padding-top:12px;">
         <div style="display:flex;align-items:center;gap:6px;padding:0 4px 10px;">
           <span style="display:inline-block;width:3px;height:14px;background:#22c55e;border-radius:2px;flex-shrink:0;"></span>
-          <span id="sidebar-ree-title" style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;flex:1;">Pendiente MRW</span>
-          <button onclick="cambiarAgenciaSidebarRee(-1)" title="Agencia anterior" style="background:none;border:none;padding:0 4px;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;">‹</button>
-          <button onclick="cambiarAgenciaSidebarRee(1)" title="Siguiente agencia" style="background:none;border:none;padding:0 4px;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;">›</button>
+          <span id="sidebar-ree-title" style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;flex:1;">Pendiente</span>
+          <button class="sidebar-ree-arrow" onclick="cambiarAgenciaSidebarRee(-1)" title="Agencia anterior" style="display:none;background:none;border:none;padding:0 4px;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;">‹</button>
+          <button class="sidebar-ree-arrow" onclick="cambiarAgenciaSidebarRee(1)" title="Siguiente agencia" style="display:none;background:none;border:none;padding:0 4px;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;">›</button>
         </div>
         <div style="background:var(--input);border-radius:10px;padding:4px 2px;overflow:hidden;">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;gap:8px;">
@@ -1605,7 +1605,7 @@ const now = new Date();
             <input type="date" id="metrics-date-to" value="${savedTo}" style="display:none;">
             <select id="metrics-shop" style="display:none;"><option value="">Todas las tiendas</option></select>
           </div>
-          <div id="met-carrier-wrap" style="position:relative;" onmouseleave="window.__metCT=setTimeout(function(){var p=document.getElementById('met-carrier-panel');if(p)p.style.display='none';},250)" onmouseenter="clearTimeout(window.__metCT)">
+          <div id="met-carrier-wrap" style="position:relative;display:none;" onmouseleave="window.__metCT=setTimeout(function(){var p=document.getElementById('met-carrier-panel');if(p)p.style.display='none';},250)" onmouseenter="clearTimeout(window.__metCT)">
             <button id="met-carrier-trigger" onclick="toggleMetCarrierFilter()"
               style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
               onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
@@ -1984,12 +1984,10 @@ const now = new Date();
   window.setMetCarrierFilter = function(k, silent) {
     window.__metCarrierFilter = k;
     try { localStorage.setItem("met_carrier", k); } catch (e) {}
-    const labels = { all: "Agencia: Todas", mrw: "Agencia: MRW", ctt: "Agencia: CTT" };
     const lbl = document.getElementById("met-carrier-label");
-    if (lbl) lbl.textContent = labels[k] || labels.all;
-    ["all","mrw","ctt"].forEach(o => {
-      const el = document.getElementById("met-carrier-opt-" + o);
-      if (el) el.style.color = o === k ? "#22c55e" : "";
+    if (lbl) lbl.textContent = etiquetaFiltroAgencia(k);
+    document.querySelectorAll('[id^="met-carrier-opt-"]').forEach(el => {
+      el.style.color = el.id === "met-carrier-opt-" + k ? "#22c55e" : "";
     });
     const p = document.getElementById("met-carrier-panel");
     if (p) p.style.display = "none";
@@ -1999,6 +1997,7 @@ const now = new Date();
     let saved = "all";
     try { saved = localStorage.getItem("met_carrier") || "all"; } catch (e) {}
     window.setMetCarrierFilter(saved, true);
+    pintarFiltroAgencia("met", "setMetCarrierFilter");
   })();
 
   window.setMetPaymentFilter = function(type) {
@@ -2690,7 +2689,7 @@ if (id === "rentabilidad") {
             ${window.__DPF.triggerBtn('rent', savedRentLabel)}
             <input type="date" id="rent-date-from" value="${savedFromR}" style="display:none;">
             <input type="date" id="rent-date-to" value="${savedToR}" style="display:none;">
-            <div id="rent-carrier-wrap" style="position:relative;" onmouseleave="window.__rentCT=setTimeout(function(){var p=document.getElementById('rent-carrier-panel');if(p)p.style.display='none';},250)" onmouseenter="clearTimeout(window.__rentCT)">
+            <div id="rent-carrier-wrap" style="position:relative;display:none;" onmouseleave="window.__rentCT=setTimeout(function(){var p=document.getElementById('rent-carrier-panel');if(p)p.style.display='none';},250)" onmouseenter="clearTimeout(window.__rentCT)">
               <button onclick="var p=document.getElementById('rent-carrier-panel');if(p)p.style.display=p.style.display==='block'?'none':'block';"
                 style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
                 onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
@@ -2733,12 +2732,10 @@ if (id === "rentabilidad") {
   window.setRentCarrierFilter = function(k, silent) {
     window.__rentCarrierFilter = k;
     try { localStorage.setItem("rent_carrier", k); } catch (e) {}
-    const labels = { all: "Agencia: Todas", mrw: "Agencia: MRW", ctt: "Agencia: CTT" };
     const lbl = document.getElementById("rent-carrier-label");
-    if (lbl) lbl.textContent = labels[k] || labels.all;
-    ["all","mrw","ctt"].forEach(o => {
-      const el = document.getElementById("rent-carrier-opt-" + o);
-      if (el) el.style.color = o === k ? "#22c55e" : "";
+    if (lbl) lbl.textContent = etiquetaFiltroAgencia(k);
+    document.querySelectorAll('[id^="rent-carrier-opt-"]').forEach(el => {
+      el.style.color = el.id === "rent-carrier-opt-" + k ? "#22c55e" : "";
     });
     const p = document.getElementById("rent-carrier-panel");
     if (p) p.style.display = "none";
@@ -2748,6 +2745,7 @@ if (id === "rentabilidad") {
     let saved = "all";
     try { saved = localStorage.getItem("rent_carrier") || "all"; } catch (e) {}
     window.setRentCarrierFilter(saved, true);
+    pintarFiltroAgencia("rent", "setRentCarrierFilter");
   })();
 
   window.toggleRentShopFilter = function() {
@@ -5817,6 +5815,7 @@ function switchFacturasTab(key) {
               <span class="tab" onclick="filterReeByTab(this,'pendiente')">Pendiente</span>
               <span class="tab" onclick="filterReeByTab(this,'cobrado')">Pagado</span>
             </div>
+            <div id="ree-agencias" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                 ${window.__DPF.triggerBtn('ree', 'Período')}
                 <input type="date" id="ree-date-from" value="" style="display:none;">
@@ -11282,6 +11281,7 @@ async function switchInformesTab(tab) {
               <span class="tab" onclick="filterReeByTab(this,'pendiente')">Pendiente</span>
               <span class="tab" onclick="filterReeByTab(this,'cobrado')">Pagado</span>
             </div>
+            <div id="ree-agencias" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <input type="text" id="ree-q" placeholder="Buscar pedido..." oninput="renderReembolsos()"
                 style="padding:7px 10px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;color:#f9fafb;background:#1f2937;width:160px;"/>
@@ -16026,8 +16026,36 @@ async function loadReembolsos() {
     }
   } catch(e) { /* ignore */ }
   reembolsosState.page = 1;
+  await pintarAgenciasReembolsos();
   await fetchReembolsosFiltered();
 }
+
+// Agencias de la vista de Reembolsos: solo las conectadas. Con una sola, se
+// muestra fija (sin "Todas"); con varias, "Todas" + una por agencia.
+async function pintarAgenciasReembolsos() {
+  const ags = await getAgenciasConectadas();
+  const ids = ags.map(a => a.id);
+  let sel = "";
+  try { sel = localStorage.getItem("ree_carrier") || ""; } catch (e) {}
+  if (ags.length === 1) sel = ids[0];
+  else if (!ids.includes(sel)) sel = "";
+  window.__reeCarrier = sel;
+  const box = document.getElementById("ree-agencias");
+  if (!box) return;
+  const opciones = ags.length > 1 ? [["", "Todas"], ...ags.map(a => [a.id, a.nombre])] : ags.map(a => [a.id, a.nombre]);
+  box.innerHTML = opciones.map(([id, nombre]) => {
+    const on = id === sel;
+    return `<button onclick="setReeCarrier('${id}')" style="padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:${ags.length > 1 ? "pointer" : "default"};font-family:inherit;border:1.5px solid ${on ? "#22c55e" : "var(--border)"};background:${on ? "rgba(34,197,94,.1)" : "transparent"};color:${on ? "#16a34a" : "var(--muted)"};">${escapeHtml(nombre)}</button>`;
+  }).join("");
+}
+
+function setReeCarrier(id) {
+  if (window.__reeCarrier === id) return;
+  try { localStorage.setItem("ree_carrier", id); } catch (e) {}
+  reembolsosState.page = 1;
+  pintarAgenciasReembolsos().then(fetchReembolsosFiltered);
+}
+window.setReeCarrier = setReeCarrier;
 
 function renderReembolsos() {
   reembolsosState = {
@@ -16052,6 +16080,7 @@ async function fetchReembolsosFiltered() {
   // Pasar filtro de tab al servidor para que pagine correctamente
   const tabFilter = window.__reeTabFilter || "";
   if (tabFilter) params.set("estado", tabFilter);
+  if (window.__reeCarrier) params.set("carrier", window.__reeCarrier);
 
   const body       = document.getElementById("reeBody");
   const pagination = document.getElementById("reePagination");
@@ -16155,7 +16184,7 @@ function clearReembolsosFilters() {
 }
 
 function filterReeByTab(el, estado) {
-  document.querySelectorAll(".tabs .tab").forEach(t => t.classList.remove("active"));
+  el.parentElement.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
   window.__reeTabFilter = estado;
   renderReembolsos();
@@ -16173,9 +16202,57 @@ window.filterReeByTab         = filterReeByTab;
 // =========================
 // SIDEBAR CONTADOR REEMBOLSOS
 // =========================
-// El widget va por agencia: "Pendiente MRW" por defecto y con las flechas
-// ‹ › se pasa a la siguiente (CTT...). La elegida se recuerda.
-const SIDEBAR_REE_AGENCIAS = [["mrw", "MRW"], ["ctt", "CTT"]];
+// Agencias de envío conectadas por la cuenta (registro en server/utils/
+// carrier.js). Una sola petición aunque la pidan varias vistas a la vez; no
+// se guarda más allá de eso para que conectar/desconectar se vea al momento.
+function getAgenciasConectadas() {
+  if (window.__agenciasInflight) return window.__agenciasInflight;
+  window.__agenciasInflight = fetch(`${API_BASE}/api/tracking/agencias`, { headers: { Authorization: "Bearer " + getActiveToken() } })
+    .then(r => r.json())
+    .then(d => {
+      const ags = (d.agencias || []).filter(a => a.conectada);
+      window.__agenciasNombres = Object.fromEntries((d.agencias || []).map(a => [a.id, a.nombre]));
+      return ags;
+    })
+    .catch(() => [])
+    .finally(() => setTimeout(() => { window.__agenciasInflight = null; }, 3000));
+  return window.__agenciasInflight;
+}
+window.getAgenciasConectadas = getAgenciasConectadas;
+
+function etiquetaFiltroAgencia(k) {
+  if (!k || k === "all") return "Agencia: Todas";
+  return "Agencia: " + ((window.__agenciasNombres || {})[k] || String(k).toUpperCase());
+}
+
+// Desplegable "Agencia" de Métricas / Rentabilidad: Todas + las conectadas.
+// Con una o ninguna no tiene sentido filtrar -> se oculta y queda en Todas.
+async function pintarFiltroAgencia(prefix, setterName) {
+  const ags = await getAgenciasConectadas();
+  const wrap  = document.getElementById(prefix + "-carrier-wrap");
+  const panel = document.getElementById(prefix + "-carrier-panel");
+  const setter = window[setterName];
+  if (!wrap || !panel || !setter) return;
+  const actual = prefix === "met" ? window.__metCarrierFilter : window.__rentCarrierFilter;
+  if (ags.length <= 1) {
+    wrap.style.display = "none";
+    if (actual && actual !== "all") setter("all");
+    return;
+  }
+  panel.innerHTML = [["all", "Todas"], ...ags.map(a => [a.id, "Solo " + a.nombre])].map(([k, l]) => `
+    <div id="${prefix}-carrier-opt-${k}" onclick="${setterName}('${k}')"
+      style="padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"
+      onmouseover="this.style.background='var(--pk-input)'" onmouseout="this.style.background=''">${escapeHtml(l)}</div>`).join("");
+  wrap.style.display = "";
+  if (actual && actual !== "all" && !ags.some(a => a.id === actual)) setter("all");
+  else setter(actual || "all", true);
+}
+window.pintarFiltroAgencia = pintarFiltroAgencia;
+
+// El widget va por agencia: "Pendiente MRW" y con las flechas ‹ › se pasa a
+// la siguiente agencia conectada. La elegida se recuerda. Sin ninguna
+// conectada muestra todos los pendientes.
+let SIDEBAR_REE_AGENCIAS = [["", ""]];
 function sidebarReeIdx() {
   let i = 0;
   try { i = parseInt(localStorage.getItem("sidebar_ree_agencia") || "0", 10) || 0; } catch (e) {}
@@ -16195,11 +16272,14 @@ window.cambiarAgenciaSidebarRee = cambiarAgenciaSidebarRee;
 async function loadSidebarReembolsos() {
   try {
     const h = { Authorization: "Bearer " + getActiveToken() };
+    const ags = await getAgenciasConectadas();
+    SIDEBAR_REE_AGENCIAS = ags.length ? ags.map(a => [a.id, a.nombre]) : [["", ""]];
+    document.querySelectorAll(".sidebar-ree-arrow").forEach(b => { b.style.display = SIDEBAR_REE_AGENCIAS.length > 1 ? "" : "none"; });
     const [carrier, nombre] = SIDEBAR_REE_AGENCIAS[sidebarReeIdx()];
     const titleEl = document.getElementById("sidebar-ree-title");
-    if (titleEl) titleEl.textContent = `Pendiente ${nombre}`;
+    if (titleEl) titleEl.textContent = nombre ? `Pendiente ${nombre}` : "Pendiente";
     // Pedir solo 1 fila — solo necesitamos total y total_amount de los pendientes
-    const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=1&page=1&estado=pendiente&carrier=${carrier}`, { headers: h }).then(r => r.json());
+    const reeData = await fetch(`${API_BASE}/api/orders/reembolsos?limit=1&page=1&estado=pendiente${carrier ? "&carrier=" + carrier : ""}`, { headers: h }).then(r => r.json());
     // Si mientras tanto se cambió de agencia con las flechas, ignorar esta respuesta
     if (SIDEBAR_REE_AGENCIAS[sidebarReeIdx()][0] !== carrier) return;
 
