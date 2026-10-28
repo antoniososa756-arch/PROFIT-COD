@@ -206,6 +206,9 @@ await pool.query(`
       precio_logistica NUMERIC(10,2) DEFAULT 0
     )
   `);
+  // Precio por envío del resto de agencias, JSON { ctt: 3.9, ... } (MRW sigue
+  // en precio_mrw por compatibilidad).
+  await pool.query(`ALTER TABLE gastos_fijos_precios_globales ADD COLUMN IF NOT EXISTS precios_agencia TEXT`).catch(() => {});
 
 await pool.query(`
     CREATE TABLE IF NOT EXISTS informes_ingresos_manuales (

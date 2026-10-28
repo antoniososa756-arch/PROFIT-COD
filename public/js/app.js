@@ -8760,6 +8760,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   const totalPedidosGlobales = pedidosBase.filter(o=>estadosEnvioMRW.includes(o.fulfillment_status)).length;
 
   const pedidosTarjeta = ordersRango.filter(o => o.fulfillment_status !== "cancelado");
+  const _agsEnvio = await getAgenciasConectadas();
 
   const balanceData = stores.map(store => {
     const ads = adsSpends[store.domain] || { meta:0, tiktok:0 };
@@ -8784,7 +8785,9 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     // Precio unitario directo × pedidos del rango (no división del mes)
     const precioMRW      = preciosGlobales.precio_mrw      || 0;
     const precioLogistica = preciosGlobales.precio_logistica || 0;
-     const mrw      = precioMRW      * (envTienda.length + devTienda);
+    // Envíos: cada pedido al precio de SU agencia (Gastos fijos > precio unit. envío)
+    const _env = costeEnviosPorAgencia(envTienda, preciosGlobales, _agsEnvio);
+    const mrw      = _env.total;
     const logistica = precioLogistica * envTienda.length;
     const ivaTotal = pedEnt.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
     const extrasTotal = (gastosExtrasMetricas[store.domain]||[]).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
@@ -8799,7 +8802,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
       meta: ads.meta, tiktok: ads.tiktok, costoProductos, mrw, logistica, shopify,
       fijoXTienda, nominaXTienda, totalOtrosFijos, numTiendas,
       precioMRW, precioLog: precioLogistica,
-      enviosMRW: envTienda.length, devMRW: devTienda,
+      enviosMRW: envTienda.length, devMRW: devTienda, enviosTexto: _env.texto,
       extras: gastosExtrasMetricas[store.domain] || []
     };
   });
@@ -8828,7 +8831,7 @@ async function loadMetricasBalance(dateFrom, dateTo) {
             <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Gasto Meta</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.meta)} €</td></tr>
             <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Gasto TikTok</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.tiktok)} €</td></tr>
             <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Productos<div style="font-size:10px;color:#9ca3af;">costo × uds × qty</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.costoProductos)} €</td></tr>
-            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">MRW<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.mrw)} €</td></tr>
+            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Envíos<div style="font-size:10px;color:#9ca3af;">${d.enviosTexto}</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.mrw)} €</td></tr>
             <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Logística<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.logistica)} €</td></tr>
             <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Gastos Fijos<div style="font-size:10px;color:#9ca3af;">${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.fijoXTienda)} €</td></tr>
             <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Nómina<div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.nominaXTienda)} €</td></tr>
@@ -9252,6 +9255,37 @@ function carrierDePedido(o) {
   return null;
 }
 
+// Precio por envío de una agencia (Gastos fijos > Precio unit. envío). MRW
+// vive en precio_mrw; el resto en precios_agencia { id: precio }.
+function precioEnvioAgencia(precios, id) {
+  if (id === "mrw") return parseFloat(precios?.precio_mrw) || 0;
+  return parseFloat((precios?.precios_agencia || {})[id]) || 0;
+}
+
+// Coste de envíos de una lista de pedidos, cada uno al precio de su agencia
+// (los devueltos cuentan doble: ida y vuelta). Los pedidos aún sin agencia
+// detectada van a la primera agencia conectada (o MRW si no hay ninguna).
+function costeEnviosPorAgencia(envios, precios, agencias) {
+  const porDefecto = agencias?.[0]?.id || "mrw";
+  const nombres = window.__agenciasNombres || {};
+  const grupos = {};
+  envios.forEach(o => {
+    const id = carrierDePedido(o) || porDefecto;
+    const g = grupos[id] || (grupos[id] = { id, nombre: nombres[id] || id.toUpperCase(), envios: 0, dev: 0 });
+    g.envios++;
+    if (o.fulfillment_status === "devuelto") g.dev++;
+  });
+  const detalle = Object.values(grupos).map(g => {
+    const precio = precioEnvioAgencia(precios, g.id);
+    return { ...g, precio, coste: precio * (g.envios + g.dev) };
+  });
+  const f = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const texto = detalle.length === 1
+    ? `${f(detalle[0].precio)}€/ud × ${detalle[0].envios} envíos + ${detalle[0].dev} dev.`
+    : detalle.map(g => `${g.nombre} ${f(g.precio)}€ × ${g.envios}${g.dev ? ` + ${g.dev} dev.` : ""}`).join(" · ");
+  return { total: detalle.reduce((s, g) => s + g.coste, 0), detalle, texto: texto || "0 envíos" };
+}
+
 async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
   const wrap = document.getElementById("rent-balance-wrap");
   if (!wrap) return;
@@ -9453,6 +9487,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
   const estadosEnvioMRW = ["enviado","en_transito","entregado","franquicia","en_preparacion","devuelto","destruido"];
   const pedidosBase = ordersRango.filter(o => o.fulfillment_status !== "cancelado");
   const pedidosTarjeta = ordersRango.filter(o => o.fulfillment_status !== "cancelado");
+  const _agsEnvio = await getAgenciasConectadas();
 
   const balanceData = stores.map(store => {
     const ads = adsSpends[store.domain] || { meta:0, tiktok:0 };
@@ -9484,7 +9519,9 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     const devTienda = envTienda.filter(o=>o.fulfillment_status==="devuelto").length;
     const precioMRW      = preciosGlobales.precio_mrw      || 0;
     const precioLogistica = preciosGlobales.precio_logistica || 0;
-    const mrw      = precioMRW      * (envTienda.length + devTienda);
+    // Envíos: cada pedido al precio de SU agencia (Gastos fijos > precio unit. envío)
+    const _env = costeEnviosPorAgencia(envTienda, preciosGlobales, _agsEnvio);
+    const mrw      = _env.total;
     const logistica = precioLogistica * envTienda.length;
     const ivaTotal = pedEnt.reduce((s,o) => s + (parseFloat(o.total_price)||0) * ivaPorcentaje, 0);
     const extrasTienda = _porAgencia ? [] : (gastosExtrasRent[store.domain]||[]);
@@ -9535,7 +9572,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       meta: ads.meta, tiktok: ads.tiktok, costoProductos, costoRecuperado, numDevueltosProd, mrw, logistica, shopify,
       fijoXTienda: fijoTienda, nominaXTienda: nominaTienda, totalOtrosFijos, numTiendas, porAgencia: _porAgencia,
       precioMRW, precioLog: precioLogistica,
-      enviosMRW: envTienda.length, devMRW: devTienda,
+      enviosMRW: envTienda.length, devMRW: devTienda, enviosTexto: _env.texto,
       extras: extrasTienda,
       productosDetalle
     };
@@ -9570,7 +9607,7 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
           ${tr('Gasto Meta', d.porAgencia ? 'Proporcional a los pedidos de la agencia cada día' : '', fmt(d.meta)+' €')}
           ${tr('Gasto TikTok', d.porAgencia ? 'Proporcional a los pedidos de la agencia cada día' : '', fmt(d.tiktok)+' €')}
           ${tr('Productos <span style="font-size:10px;color:#3b82f6;">▶ ver detalle</span>', `${fmt(d.costoProductos)}€ bruto${d.costoRecuperado>0?` − ${fmt(d.costoRecuperado)}€ recuperado (${d.numDevueltosProd} dev.)`:''}`, fmt(d.costoProductos-(d.costoRecuperado||0))+' €', {cursor:true, onclick:`verDetalleProductosRent('${d.domain}')`})}
-          ${tr('Envíos', `${fmt(d.precioMRW)}€/ud × ${d.enviosMRW} envíos + ${d.devMRW} dev.`, fmt(d.mrw)+' €')}
+          ${tr('Envíos', d.enviosTexto, fmt(d.mrw)+' €')}
           ${tr('Logística', `${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos`, fmt(d.logistica)+' €')}
           ${tr('Gastos Fijos', d.porAgencia ? 'No se imputan al filtrar por agencia' : `${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas`, fmt(d.fijoXTienda)+' €')}
           ${tr('Nómina', d.porAgencia ? 'No se imputa al filtrar por agencia' : `Total nómina ÷ ${d.numTiendas} tiendas`, fmt(d.nominaXTienda)+' €')}
@@ -10664,6 +10701,19 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
     </div>
   `;
 
+  window.__preciosGF = preciosGlobales;
+  const _agsPrecio = await getAgenciasConectadas();
+  const _filasAgencia = (_agsPrecio.length ? _agsPrecio : [{ id: "mrw", nombre: "MRW" }]).map(a => `
+          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">${escapeHtml(a.nombre)}</td>
+            <td style="padding:10px 14px;border:1px solid #374151;text-align:right;">
+              <input type="number" min="0" step="0.01" value="${fmt(precioEnvioAgencia(preciosGlobales, a.id))}"
+                id="precio-global-${a.id}" data-agencia="${a.id}"
+                onchange="guardarPreciosGlobales()"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
+                style="${inp}text-align:right;">
+            </td>
+          </tr>`).join("");
   const tablaPreciosEnvio = `
     <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -10674,16 +10724,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
           </tr>
         </thead>
         <tbody>
-          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-            <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">MRW</td>
-            <td style="padding:10px 14px;border:1px solid #374151;text-align:right;">
-              <input type="number" min="0" step="0.01" value="${fmt(preciosGlobales.precio_mrw)}"
-                id="precio-global-mrw"
-                onchange="guardarPreciosGlobales()"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
-                style="${inp}text-align:right;">
-            </td>
-          </tr>
+          ${_filasAgencia}
           <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
             <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">LOGÍSTICA</td>
             <td style="padding:10px 14px;border:1px solid #374151;text-align:right;">
@@ -10820,14 +10861,21 @@ async function updateGastoFijoPrecio(input) {
 window.updateGastoFijoPrecio = updateGastoFijoPrecio;
 
 async function guardarPreciosGlobales() {
-  const mrw = parseFloat(document.getElementById("precio-global-mrw")?.value) || 0;
   const log = parseFloat(document.getElementById("precio-global-logistica")?.value) || 0;
+  // MRW en precio_mrw; si su fila no está (no conectada) se conserva el guardado
+  const mrwEl = document.getElementById("precio-global-mrw");
+  const mrw = mrwEl ? (parseFloat(mrwEl.value) || 0) : (parseFloat(window.__preciosGF?.precio_mrw) || 0);
+  const precios_agencia = { ...(window.__preciosGF?.precios_agencia || {}) };
+  document.querySelectorAll("input[data-agencia]").forEach(el => {
+    if (el.dataset.agencia !== "mrw") precios_agencia[el.dataset.agencia] = parseFloat(el.value) || 0;
+  });
   try {
     await fetch(`${API_BASE}/api/shopify/precios-globales`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
-      body: JSON.stringify({ precio_mrw: mrw, precio_logistica: log })
+      body: JSON.stringify({ precio_mrw: mrw, precio_logistica: log, precios_agencia })
     });
+    window.__preciosGF = { ...(window.__preciosGF || {}), precio_mrw: mrw, precio_logistica: log, precios_agencia };
     // Actualizar automáticamente el P.UNIT de MRW y LOGÍSTICA en la tabla
     const items = document.querySelectorAll("tr[data-id]");
     items.forEach(row => {
@@ -14146,7 +14194,7 @@ async function fetchOrdersFiltered() {
     const cb = document.getElementById("orders-carrier-banner");
     const ct = document.getElementById("orders-carrier-text");
     if (cb) cb.style.display = ordersState.carrier ? "flex" : "none";
-    if (ct) ct.textContent = ordersState.carrier ? `Mostrando solo pedidos de ${ordersState.carrier === "ctt" ? "CTT Express" : "MRW"}` : "";
+    if (ct) ct.textContent = ordersState.carrier ? `Mostrando solo pedidos de ${(window.__agenciasNombres || {})[ordersState.carrier] || String(ordersState.carrier).toUpperCase()}` : "";
   }
 
   try {

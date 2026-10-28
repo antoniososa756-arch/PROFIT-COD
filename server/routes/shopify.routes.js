@@ -909,18 +909,27 @@ router.post("/informes-ingresos", auth, async (req, res) => {
 router.get("/precios-globales", auth, async (req, res) => {
   try {
     const row = await db.get("SELECT * FROM gastos_fijos_precios_globales WHERE user_id = $1", [req.user.id]);
-    res.json(row || { precio_mrw: 0, precio_logistica: 0 });
+    let precios_agencia = {};
+    try { precios_agencia = row?.precios_agencia ? JSON.parse(row.precios_agencia) : {}; } catch (e) {}
+    res.json({ ...(row || { precio_mrw: 0, precio_logistica: 0 }), precios_agencia });
   } catch(e) { res.status(500).json({ error: "Error" }); }
 });
 
 router.post("/precios-globales", auth, async (req, res) => {
-  const { precio_mrw, precio_logistica } = req.body;
+  const { precio_mrw, precio_logistica, precios_agencia } = req.body;
+  // precios_agencia es opcional: si no viene, se conservan los guardados.
+  let pa = null;
+  if (precios_agencia && typeof precios_agencia === "object") {
+    pa = {};
+    for (const [k, v] of Object.entries(precios_agencia)) if (/^[a-z0-9_]{1,20}$/.test(k)) pa[k] = parseFloat(v) || 0;
+  }
   try {
     await db.run(
-      `INSERT INTO gastos_fijos_precios_globales (user_id, precio_mrw, precio_logistica)
-       VALUES ($1, $2, $3)
-       ON CONFLICT(user_id) DO UPDATE SET precio_mrw=EXCLUDED.precio_mrw, precio_logistica=EXCLUDED.precio_logistica`,
-      [req.user.id, parseFloat(precio_mrw)||0, parseFloat(precio_logistica)||0]
+      `INSERT INTO gastos_fijos_precios_globales (user_id, precio_mrw, precio_logistica, precios_agencia)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT(user_id) DO UPDATE SET precio_mrw=EXCLUDED.precio_mrw, precio_logistica=EXCLUDED.precio_logistica,
+         precios_agencia=COALESCE(EXCLUDED.precios_agencia, gastos_fijos_precios_globales.precios_agencia)`,
+      [req.user.id, parseFloat(precio_mrw)||0, parseFloat(precio_logistica)||0, pa ? JSON.stringify(pa) : null]
     );
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: "Error" }); }
