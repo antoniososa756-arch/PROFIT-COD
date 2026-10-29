@@ -50,6 +50,17 @@ app.use((req, res, next) => {
   });
   next();
 });
+// GET a /api cuyo cliente se va antes de recibir la respuesta (el navegador
+// la cancela al cambiar de sección): se cancelan sus consultas en Postgres
+// (ver q() en db.js). Solo GET: nunca se corta una escritura a medias.
+app.use((req, res, next) => {
+  if (req.method !== "GET" || !req.path.startsWith("/api/")) return next();
+  const st = { pids: new Set(), cancels: new Map(), cancelled: false };
+  res.on("close", () => {
+    if (!res.writableFinished) db.cancelarConsultasPeticion(st);
+  });
+  db.reqStore.run(st, next);
+});
 setInterval(() => {
   const entries = Object.entries(reqCounts).sort((a, b) => b[1] - a[1]);
   const total = entries.reduce((acc, [, n]) => acc + n, 0);

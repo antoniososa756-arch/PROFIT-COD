@@ -14,6 +14,28 @@ function getActiveToken() {
 
 console.log("🟢 app.js cargado");
 
+// Cargas pesadas de una sección (pedidos, métricas, anuncios): al cambiar de
+// sección se cancelan (setSection aborta __seccionAbort) en vez de seguir
+// ocupando la conexión y la base de datos mientras carga la sección nueva --
+// el servidor también cancela sus consultas (ver q() en server/db.js). La
+// promesa cancelada se queda sin resolver a propósito: el código de la sección
+// que ya se dejó simplemente no sigue, sin errores ni avisos.
+(function () {
+  const fetchOriginal = window.fetch.bind(window);
+  const PESADAS = /\/api\/(orders(\?|$)|metrics\/|ads\?)/;
+  window.fetch = function (url, opts = {}) {
+    const ctl = window.__seccionAbort;
+    const u = typeof url === "string" ? url : (url && url.url) || "";
+    if (!ctl || opts.signal || (opts.method && opts.method.toUpperCase() !== "GET") || !PESADAS.test(u)) {
+      return fetchOriginal(url, opts);
+    }
+    const signal = ctl.signal;
+    return new Promise((ok, ko) => {
+      fetchOriginal(url, { ...opts, signal }).then(ok, (e) => { if (!signal.aborted) ko(e); });
+    });
+  };
+})();
+
 // Estilo para selección de celdas tipo Excel
 if (!document.getElementById("__ads-sel-style")) {
   const s = document.createElement("style");
@@ -1413,6 +1435,9 @@ function setSection(id) {
     }
   }
   const d = dict();
+  // Cancelar las cargas pesadas de la sección anterior (ver window.fetch arriba)
+  try { window.__seccionAbort?.abort(); } catch {}
+  window.__seccionAbort = new AbortController();
   localStorage.setItem("section", id);
   window.__currentRoute = { type: "section", id };
   _syncUrlForRoute("/" + id);

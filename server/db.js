@@ -11,15 +11,48 @@ const pool = new Pool({
   max: 20,
 });
 
+// Consultas de una petición GET que el navegador abandona (cambió de sección
+// a mitad de carga): se cancelan en Postgres en vez de seguir ocupando la base
+// de datos y dejar en cola a la sección nueva. index.js abre el contexto por
+// petición; sin contexto (crons, webhooks, POST...) va directo al pool.
+const { AsyncLocalStorage } = require("async_hooks");
+const reqStore = new AsyncLocalStorage();
+
+async function q(text, params) {
+  const st = reqStore.getStore();
+  if (!st) return pool.query(text, params);
+  if (st.cancelled) throw new Error("Petición abandonada por el cliente");
+  const client = await pool.connect();
+  const pid = client.processID;
+  st.pids.add(pid);
+  try {
+    return await client.query(text, params);
+  } finally {
+    st.pids.delete(pid);
+    // No devolver la conexión al pool hasta que la cancelación haya llegado,
+    // para que no le caiga a la consulta de otra petición.
+    const c = st.cancels.get(pid);
+    if (c) await c.catch(() => {});
+    client.release();
+  }
+}
+
+function cancelarConsultasPeticion(st) {
+  st.cancelled = true;
+  for (const pid of st.pids) {
+    st.cancels.set(pid, pool.query("SELECT pg_cancel_backend($1)", [pid]));
+  }
+}
+
 // Helper para compatibilidad con el código existente (que usa db.run, db.get, db.all)
 const db = {
-  query: (text, params) => pool.query(text, params),
+  query: (text, params) => q(text, params),
 
   run: (text, params = []) => {
     // Convertir ? a $1, $2... (SQLite → PostgreSQL)
     let i = 0;
     const pgText = text.replace(/\?/g, () => `$${++i}`);
-    return pool.query(pgText, params).then(res => ({
+    return q(pgText, params).then(res => ({
       lastID: res.rows[0]?.id,
       changes: res.rowCount,
     }));
@@ -28,14 +61,17 @@ const db = {
   get: (text, params = []) => {
     let i = 0;
     const pgText = text.replace(/\?/g, () => `$${++i}`);
-    return pool.query(pgText, params).then(res => res.rows[0] || null);
+    return q(pgText, params).then(res => res.rows[0] || null);
   },
 
   all: (text, params = []) => {
     let i = 0;
     const pgText = text.replace(/\?/g, () => `$${++i}`);
-    return pool.query(pgText, params).then(res => res.rows);
+    return q(pgText, params).then(res => res.rows);
   },
+
+  reqStore,
+  cancelarConsultasPeticion,
 
   serialize: (fn) => fn(),
 };
