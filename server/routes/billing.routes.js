@@ -52,6 +52,55 @@ function getPriceId(cfg, plan) {
   }[plan] || "";
 }
 
+// Fecha hasta la que hay acceso según la suscripción de Stripe: fin del ciclo
+// pagado + 3 días de margen (por si la renovación tarda en confirmarse).
+function expiryFromStripeSub(sub) {
+  const periodEnd = sub?.items?.data?.[0]?.current_period_end || sub?.current_period_end || null;
+  return periodEnd ? new Date((periodEnd + 3 * 24 * 60 * 60) * 1000).toISOString() : null;
+}
+
+// Si la app cree que el plan caducó (o no está activo) pero el cliente tiene una
+// suscripción de Stripe al día, se toma Stripe como la verdad: plan, estado y
+// fecha. Cubre webhooks que no llegaron (renovación, subida de plan...) -- sin
+// esto un cliente que ya pagó se queda en "Plan requerido".
+async function syncPlanFromStripe(userId, user) {
+  if (!user?.stripe_subscription_id) return false;
+  const expired = !user.plan_expires_at || new Date(user.plan_expires_at) < new Date();
+  if (user.plan_status === "active" && user.plan !== "free" && !expired) return false;
+  const cfg = await getPaymentConfig();
+  if (!cfg.stripeSecretKey) return false;
+  try {
+    const stripe = require("stripe")(cfg.stripeSecretKey);
+    const sub = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
+    if (!sub || !["active", "trialing"].includes(sub.status)) return false;
+    const expiresAt = expiryFromStripeSub(sub);
+    if (!expiresAt || new Date(expiresAt) < new Date()) return false;
+    const priceId = sub.items?.data?.[0]?.price?.id;
+    const priceToPlan = {
+      [cfg.stripePriceStarter]:  "starter",
+      [cfg.stripePriceGrowth]:   "growth",
+      [cfg.stripePricePro]:      "pro",
+      [cfg.stripePriceBusiness]: "business",
+    };
+    // Con una bajada programada Stripe ya tiene el precio menor: se queda el plan actual
+    let plan = (priceId && priceToPlan[priceId]) || user.plan;
+    if (user.pending_plan && plan === user.pending_plan && PLANS[user.plan]) plan = user.plan;
+    if (!PLANS[plan]) return false;
+    await db.run(
+      "UPDATE users SET plan = $1, plan_status = 'active', plan_expires_at = $2 WHERE id = $3",
+      [plan, expiresAt, userId]
+    );
+    user.plan = plan;
+    user.plan_status = "active";
+    user.plan_expires_at = expiresAt;
+    console.log(`[STRIPE] Plan resincronizado desde Stripe: user ${userId} → ${plan} hasta ${expiresAt}`);
+    return true;
+  } catch (e) {
+    console.error("[STRIPE] syncPlanFromStripe:", e.message);
+    return false;
+  }
+}
+
 // Contar pedidos desde que arrancó el ciclo de facturación actual (no desde el día 1 del mes,
 // así los pedidos del período de prueba no cuentan contra el límite del plan de pago).
 // Starter SOLO es un tope de por vida (sus primeros 120 pedidos) MIENTRAS está en
@@ -75,9 +124,10 @@ async function getMonthlyOrders(userId, billingCycleStart, plan, trialStartedAt,
 router.get("/plan", auth, async (req, res) => {
   try {
     const user = await db.get(
-      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start, subscription_cancel_at, plan_overage_locked, plan_overage_grace_until, pending_plan, pending_plan_at FROM users WHERE id = $1",
+      "SELECT plan, plan_status, plan_expires_at, trial_started_at, billing_cycle_start, subscription_cancel_at, plan_overage_locked, plan_overage_grace_until, pending_plan, pending_plan_at, stripe_subscription_id FROM users WHERE id = $1",
       [req.user.id]
     );
+    if (req.user.role === "cliente") await syncPlanFromStripe(req.user.id, user);
     // Bajada programada cuya fecha ya pasó (por si el webhook de renovación no
     // llegó): aplicarla aquí.
     if (user?.pending_plan && PLANS[user.pending_plan] && user.pending_plan_at && new Date(user.pending_plan_at) <= new Date()) {
@@ -375,10 +425,13 @@ router.post("/stripe/create-session", auth, async (req, res) => {
           return res.status(402).json({ error: "No se pudo cobrar la diferencia. Revisa tu método de pago e inténtalo de nuevo." });
         }
 
-        // Subida: se levanta el bloqueo por exceso
+        // Subida: se levanta el bloqueo por exceso y la fecha de acceso pasa a
+        // ser la del ciclo de Stripe (antes no se tocaba y, si estaba vencida o
+        // era la del fin de la prueba, el cliente quedaba bloqueado tras pagar)
+        const upExpires = expiryFromStripeSub(updated);
         await db.run(
-          `UPDATE users SET plan = $1, plan_status = 'active', subscription_cancel_at = NULL, plan_overage_locked = false WHERE id = $2`,
-          [plan, req.user.id]
+          `UPDATE users SET plan = $1, plan_status = 'active', subscription_cancel_at = NULL, plan_overage_locked = false${upExpires ? ", plan_expires_at = $3" : ""} WHERE id = $2`,
+          upExpires ? [plan, req.user.id, upExpires] : [plan, req.user.id]
         );
         console.log(`[STRIPE] Subida de plan: user ${req.user.id} ${currentPlan} → ${plan}`);
         return res.json({ ok: true, changed: true, plan });
@@ -505,6 +558,18 @@ router.post("/stripe/webhook", async (req, res) => {
         } else {
           // Reactivó la suscripción (deshizo la cancelación)
           await db.run(`UPDATE users SET subscription_cancel_at = NULL WHERE id = $1`, [user.id]);
+        }
+
+        // Suscripción al día: la fecha de acceso sigue al ciclo pagado de Stripe
+        // (solo se alarga, nunca se acorta).
+        if (sub.status === "active" || sub.status === "trialing") {
+          const exp = expiryFromStripeSub(sub);
+          if (exp) {
+            await db.run(
+              `UPDATE users SET plan_status = 'active', plan_expires_at = $1 WHERE id = $2 AND (plan_expires_at IS NULL OR plan_expires_at < $1)`,
+              [exp, user.id]
+            );
+          }
         }
 
         // Cambio de plan hecho desde el Portal de cliente de Stripe (no pasa por
