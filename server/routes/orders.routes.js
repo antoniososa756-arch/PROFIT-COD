@@ -107,37 +107,6 @@ router.get("/", auth, async (req, res) => {
       // de varios meses (miles de pedidos) eran cientos de MB, el servidor no
       // lo aguantaba y la pantalla se quedaba todo a 0. Se lee por tandas para
       // no tener todos los raw_json completos en memoria a la vez.
-      // Primero se intenta recortar el raw_json DENTRO de Postgres: así el
-      // JSON enorme de Shopify ni viaja al servidor ni se parsea en Node, y va
-      // en una sola consulta (sin OFFSET por tandas, que cada vez re-lee todo
-      // lo anterior). Si falla (algún raw_json que no es JSON válido), se usa
-      // el método por tandas de siempre.
-      try {
-        const compactFields = fields.replace("o.raw_json,", `CASE WHEN COALESCE(o.raw_json, '') = '' THEN NULL ELSE (
-            SELECT json_build_object(
-              'financial_status', x.j->>'financial_status',
-              'line_items', COALESCE((
-                SELECT json_agg(json_build_object(
-                  'product_id', li->'product_id', 'variant_id', li->'variant_id', 'quantity', li->'quantity',
-                  'title', li->'title', 'variant_title', li->'variant_title', 'price', li->'price',
-                  'sku', li->'sku', 'name', li->'name'))
-                FROM json_array_elements(CASE WHEN json_typeof(x.j->'line_items') = 'array' THEN x.j->'line_items' ELSE '[]'::json END) li
-              ), '[]'::json)
-            )::text
-            FROM (SELECT o.raw_json::json AS j) x
-          ) END AS raw_json,`);
-        const rows = await db.all(
-          `SELECT ${compactFields}
-           FROM orders o
-           LEFT JOIN shops s ON s.id = o.shop_id
-           WHERE ${where}
-           ORDER BY o.created_at DESC, o.id DESC`,
-          params
-        );
-        return res.json(rows || []);
-      } catch (e) {
-        console.error("Orders compact SQL fallback:", e.message);
-      }
       const LOTE = 500;
       const out = [];
       for (let off = 0; ; off += LOTE) {
