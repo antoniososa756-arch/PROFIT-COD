@@ -364,6 +364,59 @@ await pool.query(`CREATE TRIGGER trg_orders_carrier BEFORE INSERT OR UPDATE ON o
 await pool.query(`UPDATE orders SET carrier = 'ctt' WHERE carrier IS NULL AND btrim(tracking_number) ~ '^[0-9]{18,26}$'`);
 await pool.query(`UPDATE orders SET carrier = 'mrw' WHERE carrier IS NULL AND btrim(tracking_number) ~ '^[0-9A-Za-z]{8,15}$'`);
 } catch (e) { console.warn("Trigger carrier:", e.message); }
+// raw_compact: lo poco de raw_json que usan Rentabilidad / balances (estado
+// de pago + productos), calculado UNA vez al grabar el pedido. Leer el
+// raw_json entero de Shopify de miles de pedidos en cada carga tardaba >20 s.
+// 'null' = raw_json que no es JSON válido (no se reintenta).
+try {
+await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS raw_compact TEXT`);
+await pool.query(`
+  CREATE OR REPLACE FUNCTION profit_raw_compact(t TEXT) RETURNS TEXT AS $fn$
+  DECLARE j JSON;
+  BEGIN
+    IF t IS NULL OR t = '' THEN RETURN NULL; END IF;
+    j := t::json;
+    RETURN json_build_object(
+      'financial_status', j->>'financial_status',
+      'line_items', COALESCE((
+        SELECT json_agg(json_build_object(
+          'product_id', li->'product_id', 'variant_id', li->'variant_id', 'quantity', li->'quantity',
+          'title', li->'title', 'variant_title', li->'variant_title', 'price', li->'price',
+          'sku', li->'sku', 'name', li->'name'))
+        FROM json_array_elements(CASE WHEN json_typeof(j->'line_items') = 'array' THEN j->'line_items' ELSE '[]'::json END) li
+      ), '[]'::json)
+    )::text;
+  EXCEPTION WHEN others THEN RETURN 'null';
+  END $fn$ LANGUAGE plpgsql IMMUTABLE
+`);
+await pool.query(`
+  CREATE OR REPLACE FUNCTION orders_set_raw_compact() RETURNS trigger AS $fn$
+  BEGIN
+    IF TG_OP = 'INSERT' OR NEW.raw_json IS DISTINCT FROM OLD.raw_json OR NEW.raw_compact IS NULL THEN
+      NEW.raw_compact := profit_raw_compact(NEW.raw_json);
+    END IF;
+    RETURN NEW;
+  END $fn$ LANGUAGE plpgsql
+`);
+await pool.query(`DROP TRIGGER IF EXISTS trg_orders_raw_compact ON orders`);
+await pool.query(`CREATE TRIGGER trg_orders_raw_compact BEFORE INSERT OR UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_raw_compact()`);
+// Pedidos ya existentes: se rellenan en segundo plano, por tandas pequeñas y
+// con pausa, para no frenar el arranque ni el resto de la app.
+(async function rellenarRawCompact() {
+  let total = 0;
+  for (;;) {
+    try {
+      const r = await pool.query(`
+        UPDATE orders SET raw_compact = profit_raw_compact(raw_json)
+        WHERE id IN (SELECT id FROM orders WHERE raw_compact IS NULL AND raw_json IS NOT NULL AND raw_json <> '' LIMIT 300)`);
+      total += r.rowCount;
+      if (r.rowCount === 0) break;
+    } catch (e) { console.warn("raw_compact relleno:", e.message); break; }
+    await new Promise((ok) => setTimeout(ok, 1500));
+  }
+  if (total) console.log(`✅ raw_compact rellenado en ${total} pedidos`);
+})();
+} catch (e) { console.warn("raw_compact:", e.message); }
 await pool.query(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS tracking_number TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_name TEXT`);
