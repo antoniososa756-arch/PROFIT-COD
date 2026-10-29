@@ -9290,6 +9290,10 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
   const wrap = document.getElementById("rent-balance-wrap");
   if (!wrap) return;
   window.__showLoadingBar?.("Cargando rentabilidad...");
+  // Diagnóstico de lentitud (temporal): al terminar se imprime en la consola
+  // (F12) cuánto tardó cada petición de esta carga.
+  const _diagT0 = performance.now();
+  try { performance.setResourceTimingBufferSize(2000); } catch {}
 
   const fmt = n => (parseFloat(n)||0).toLocaleString("es-ES", { minimumFractionDigits:2, maximumFractionDigits:2 });
   const MRW_COMISION = 0.67;
@@ -9645,6 +9649,25 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
   `;
   recalcRentabilidadBalance();
   window.__hideLoadingBar?.();
+  try {
+    const _fin = performance.now();
+    const _reqs = performance.getEntriesByType("resource")
+      .filter(e => e.startTime >= _diagT0 - 5 && e.name.includes("/api/"))
+      .map(e => ({
+        peticion: e.name.replace(/^https?:\/\/[^/]+/, "").slice(0, 90),
+        empieza_ms: Math.round(e.startTime - _diagT0),
+        total_ms: Math.round(e.duration),
+        espera_servidor_ms: e.responseStart ? Math.round(e.responseStart - e.requestStart) : "?",
+        descarga_ms: e.responseStart ? Math.round(e.responseEnd - e.responseStart) : "?",
+        KB: e.transferSize ? Math.round(e.transferSize / 1024) : (e.encodedBodySize ? Math.round(e.encodedBodySize / 1024) : "?"),
+      }))
+      .sort((a, b) => b.total_ms - a.total_ms);
+    const _ultimaResp = performance.getEntriesByType("resource")
+      .filter(e => e.startTime >= _diagT0 - 5 && e.name.includes("/api/"))
+      .reduce((m, e) => Math.max(m, e.responseEnd), _diagT0);
+    console.log(`%c[Rentabilidad] total ${Math.round(_fin - _diagT0)} ms · peticiones ${_reqs.length} · cálculo/pintado en el navegador ≈ ${Math.round(_fin - _ultimaResp)} ms · pedidos ${(typeof orders !== "undefined" && orders.length) || "?"} · tiendas ${stores.length}`, "color:#16a34a;font-weight:bold");
+    console.table(_reqs);
+  } catch (e) { console.warn("diag rentabilidad", e); }
 }
 window.loadRentabilidadBalance = loadRentabilidadBalance;
 

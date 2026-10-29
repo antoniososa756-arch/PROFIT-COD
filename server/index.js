@@ -37,6 +37,19 @@ app.use((req, res, next) => {
   reqCounts[key] = (reqCounts[key] || 0) + 1;
   next();
 });
+// Diagnóstico de lentitud (temporal): toda petición a /api que tarde más de
+// 1 s sale en los Logs de Render como [Lento]. Timing-Allow-Origin deja que
+// el navegador mida espera vs. descarga aunque la API vaya en otro dominio.
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/api/")) return next();
+  res.setHeader("Timing-Allow-Origin", "*");
+  const t0 = process.hrtime.bigint();
+  res.on("finish", () => {
+    const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+    if (ms > 1000) console.log(`[Lento] ${Math.round(ms)} ms  ${req.method} ${req.originalUrl.slice(0, 160)}  (${res.getHeader("content-length") || "?"} bytes)`);
+  });
+  next();
+});
 setInterval(() => {
   const entries = Object.entries(reqCounts).sort((a, b) => b[1] - a[1]);
   const total = entries.reduce((acc, [, n]) => acc + n, 0);
