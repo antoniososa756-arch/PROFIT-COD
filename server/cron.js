@@ -2,18 +2,33 @@
 const db = require("./db");
 
 // ── Función: sincronizar pedidos de Shopify ──────────────────────────────────
+// Inicio de la última vuelta completa por tienda (en memoria; tras reiniciar
+// el servidor se vuelve a mirar 72h). Antes CADA minuto se reescribían todos
+// los pedidos de las últimas 72h de todas las tiendas (raw_json entero
+// incluido) aunque no hubieran cambiado: la base de datos iba saturada y hasta
+// las consultas más pequeñas de la app tardaban segundos.
+const shopifyLastSync = {};
+
 async function syncAllShopifyOrders() {
+  // Si una vuelta tarda más de 1 min no se monta otra encima
+  if (global.__cronShopifyRunning) { console.log("[CRON] Shopify ya en curso, saltando"); return; }
+  global.__cronShopifyRunning = true;
   console.log("⏰ [CRON] Iniciando sync Shopify...");
   try {
     const shops = await db.all(`SELECT id, shop_domain, access_token FROM shops WHERE status = 'active'`);
     let total = 0;
     for (const shop of shops) {
       try {
-        const since = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(); // últimas 72h
+        const vueltaInicio = new Date().toISOString();
+        // Solo lo cambiado desde la última vuelta buena (10 min de margen); la primera, 72h
+        const since = shopifyLastSync[shop.id]
+          ? new Date(new Date(shopifyLastSync[shop.id]).getTime() - 10 * 60 * 1000).toISOString()
+          : new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
         let url = `https://${shop.shop_domain}/admin/api/2024-10/orders.json?status=any&limit=250&updated_at_min=${since}`;
+        let completa = true;
         while (url) {
           const r = await fetch(url, { headers: { "X-Shopify-Access-Token": shop.access_token } });
-          if (!r.ok) break;
+          if (!r.ok) { completa = false; break; }
           const { orders } = await r.json();
           for (const o of orders) {
             const customerName = o.customer
@@ -47,7 +62,9 @@ async function syncAllShopifyOrders() {
                  tracking_number    = COALESCE(EXCLUDED.tracking_number, orders.tracking_number),
                  total_price        = EXCLUDED.total_price,
                  cancelled_at       = EXCLUDED.cancelled_at,
-                 raw_json           = EXCLUDED.raw_json`,
+                 raw_json           = EXCLUDED.raw_json
+               -- Pedido idéntico al guardado: no se reescribe la fila
+               WHERE orders.raw_json IS DISTINCT FROM EXCLUDED.raw_json`,
               [shop.id, String(o.id), o.name || String(o.order_number), customerName,
                fStatus, o.financial_status || null,
                o.fulfillments?.[0]?.tracking_number || null,
@@ -59,10 +76,12 @@ async function syncAllShopifyOrders() {
           const next = link.match(/<([^>]+)>;\s*rel="next"/);
           url = next ? next[1] : null;
         }
+        if (completa) shopifyLastSync[shop.id] = vueltaInicio;
       } catch(e) { console.error(`[CRON] Error shop ${shop.shop_domain}:`, e.message); }
     }
     console.log(`✅ [CRON] Shopify sync: ${total} pedidos procesados`);
   } catch(e) { console.error("[CRON] Error sync Shopify:", e.message); }
+  finally { global.__cronShopifyRunning = false; }
 }
 
 function mapStatus(o) {
