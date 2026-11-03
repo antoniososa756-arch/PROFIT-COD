@@ -2145,6 +2145,7 @@ window.toggleAllMetricasFiltro = toggleAllMetricasFiltro;
   if (window.__metricasInterval) clearInterval(window.__metricasInterval);
   window.__metricasInterval = setInterval(() => {
     if (window.__currentRoute?.id !== "metricas") { clearInterval(window.__metricasInterval); return; }
+    if (document.hidden) return;
     loadMetricas();
   }, 60000);
 
@@ -2705,6 +2706,7 @@ if (id === "leads") {
   if (window.__leadsPageInterval) clearInterval(window.__leadsPageInterval);
   window.__leadsPageInterval = setInterval(() => {
     if (window.__currentRoute?.id !== "leads") { clearInterval(window.__leadsPageInterval); return; }
+    if (document.hidden) return;
     loadLeadsPage();
   }, 20000);
   closeAllDrops();
@@ -4007,12 +4009,18 @@ if (id === "pedidos") {
     // Auto-refresh cada 5 minutos
     if (window.__ordersInterval) clearInterval(window.__ordersInterval);
     window.__ordersInterval = setInterval(() => {
+      if (window.__currentRoute?.id !== "pedidos") { clearInterval(window.__ordersInterval); return; }
+      if (document.hidden) return;
       syncAndRefreshOrders();
     }, 5 * 60 * 1000);
 
     // Auto-sincronizar MRW cada 1 minuto si está integrado (con lock para no apilar)
     if (window.__mrwInterval) clearInterval(window.__mrwInterval);
     window.__mrwInterval = setInterval(async () => {
+      // Solo con Pedidos abierto y visible: antes seguía cada minuto en
+      // cualquier sección (y el servidor ya sincroniza MRW cada 5 min).
+      if (window.__currentRoute?.id !== "pedidos") { clearInterval(window.__mrwInterval); return; }
+      if (document.hidden) return;
       try {
         const creds = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
           headers: { Authorization: "Bearer " + getActiveToken() }
@@ -6340,7 +6348,7 @@ window.openAddTrabajador = openAddTrabajador;
 
   async function checkUnread() {
     const token = getChatToken();
-    if (!token) return;
+    if (!token || document.hidden) return;
     try {
       const r = await fetch(`${API_BASE}/api/chat/unread`, { headers: { Authorization: "Bearer " + token } });
       const d = await r.json();
@@ -14241,7 +14249,9 @@ window.contaGuardarYGenerarFacturaPdf = async function (movId, btn) {
 // ===== ACTUALIZACIÓN EN SEGUNDO PLANO =====
 async function refreshCacheBackground() {
   const token = getActiveToken();
-  if (!token) return;
+  // Pestaña en segundo plano: no se descarga nada (es ancho de banda que
+  // Render cobra por GB y nadie está mirando).
+  if (!token || document.hidden) return;
   const h = { Authorization: "Bearer " + token };
   const now = new Date();
   const mes = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
@@ -14261,8 +14271,9 @@ async function refreshCacheBackground() {
     `${API_BASE}/api/orders/reembolso-estado`,
   ];
 
-  // Actualiza en paralelo sin bloquear nada
-  Promise.all(urls.map(async url => {
+  // Actualiza en paralelo sin bloquear nada -- solo lo que ya se usó en esta
+  // sesión (está en caché); lo demás se pide al abrir su sección.
+  Promise.all(urls.filter(url => __cache[url]).map(async url => {
     try {
       const r = await fetch(url, { headers: h });
       const data = await r.json();
@@ -14271,8 +14282,13 @@ async function refreshCacheBackground() {
     } catch {}
   }));
 
-  // Comprobar notificaciones de entregas en cualquier sección activa
-  checkNotificaciones().catch(() => {});
+  // Comprobar notificaciones de entregas en cualquier sección activa. Cada
+  // 5 min y no cada 55 s: descarga 60 días de pedidos y los estados de
+  // entrega solo cambian cuando el servidor sincroniza MRW/CTT (cada 5 min).
+  if (Date.now() - (window.__lastNotiCheck || 0) >= 5 * 60 * 1000 - 5000) {
+    window.__lastNotiCheck = Date.now();
+    checkNotificaciones().catch(() => {});
+  }
 }
 
 // Arrancar refresco en segundo plano cada 55 segundos

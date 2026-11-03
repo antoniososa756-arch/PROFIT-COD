@@ -74,6 +74,13 @@ app.use("/api/shopify/webhooks", shopifyWebhooks);
 // Stripe webhook necesita raw body también
 app.use("/api/billing/stripe/webhook", express.raw({ type: "application/json" }));
 
+// Comprimir respuestas (JSON de pedidos, app.js...): Render cobra el ancho de
+// banda de salida por GB y el JSON se reduce 5-10x. El canal SSE (/api/events)
+// queda fuera: comprimido se quedaría en el buffer y los avisos no llegarían.
+app.use(require("compression")({
+  filter: (req, res) => !req.path.startsWith("/api/events") && require("compression").filter(req, res),
+}));
+
 // Middlewares normales
 app.use(cors());
 // 12mb para admitir facturas/comprobantes subidos como base64 en Contabilidad
