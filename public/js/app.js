@@ -2558,21 +2558,43 @@ if (id === "mi-equipo") {
 
   const wrap = document.getElementById("equipo-wrap");
 
+  // Botón de cambiar contraseña (mismo icono que en Gestión de clientes)
+  const btnPass = (onclick) => `
+    <div class="password-cell">
+      <span>••••••••</span>
+      <button class="reset-icon" onclick="${onclick}" title="Cambiar contraseña">
+        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>`;
+  const COLS_EQ = "grid-template-columns:2fr 1fr 1fr 1.2fr;";
+
   const renderEquipo = async () => {
     const users = await fetch(`${API_BASE}/api/admin/my-apoyo`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json()).catch(() => []);
+    const miCuenta = `
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;">Mi cuenta</div>
+      <div class="client-table" style="margin-bottom:24px;">
+        <div class="client-row client-head" style="${COLS_EQ}"><div>Email</div><div>Contraseña</div><div></div><div></div></div>
+        <div class="client-row" style="${COLS_EQ}">
+          <div style="font-size:13px;">${escapeHtml(currentUser.email || "")}</div>
+          ${btnPass("cambiarMiPassword()")}
+          <div></div><div></div>
+        </div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;">Cuentas de apoyo</div>`;
     if (!Array.isArray(users) || users.length === 0) {
-      wrap.innerHTML = `<div style="color:#6b7280;font-size:13px;padding:20px 0;">No tienes cuentas de apoyo creadas aún. Usa <strong>Crear cuenta</strong> para añadir trabajadores.</div>`;
+      wrap.innerHTML = miCuenta + `<div style="color:#6b7280;font-size:13px;padding:20px 0;">No tienes cuentas de apoyo creadas aún. Usa <strong>Crear cuenta</strong> para añadir trabajadores.</div>`;
       return;
     }
-    wrap.innerHTML = `
+    wrap.innerHTML = miCuenta + `
       <div class="client-table">
-        <div class="client-row client-head"><div>Email</div><div>Estado</div><div>Permisos</div></div>
+        <div class="client-row client-head" style="${COLS_EQ}"><div>Email</div><div>Contraseña</div><div>Estado</div><div>Permisos</div></div>
         ${users.map(u => {
           let perms = ALL_PERMS_EQ;
           try { if (u.permissions) perms = JSON.parse(u.permissions); } catch {}
           return `
-          <div class="client-row">
+          <div class="client-row" style="${COLS_EQ}">
             <div style="font-size:13px;">${escapeHtml(u.email)}</div>
+            ${btnPass(`resetPassword('${u.id}', 'apoyo')`)}
             <div><span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${u.active!==0?'rgba(34,197,94,.12)':'rgba(239,68,68,.12)'};color:${u.active!==0?'#16a34a':'#dc2626'};">${u.active!==0?"Activa":"Inactiva"}</span></div>
             <div><button onclick="openEquipoPermisos(${u.id},'${escapeHtml(u.email)}')" style="padding:5px 12px;font-size:12px;border-radius:6px;border:1px solid #374151;background:var(--card);color:var(--text);cursor:pointer;font-family:inherit;">✏️ Editar permisos</button></div>
           </div>`;
@@ -6919,7 +6941,12 @@ function generatePassword() {
   return pass;
 }
 
-function resetPassword(userId) {
+// tipo "apoyo": un cliente cambiando la de su cuenta apoyo (Mi equipo);
+// sin tipo: admin desde Gestión de clientes
+function resetPassword(userId, tipo) {
+  window.__resetPassUrl = tipo === "apoyo"
+    ? `${API_BASE}/api/admin/my-apoyo/${userId}/password`
+    : `${API_BASE}/api/admin/reset-password/${userId}`;
   // eliminar modal anterior si existe
   const old = document.querySelector(".modal-bg");
   if (old) old.remove();
@@ -6964,7 +6991,7 @@ async function confirmReset(userId) {
   }
 
   const res = await fetch(
-    `${API_BASE}/api/admin/reset-password/${userId}`,
+    window.__resetPassUrl || `${API_BASE}/api/admin/reset-password/${userId}`,
     {
       method: "POST",
       headers: {
@@ -6985,6 +7012,47 @@ async function confirmReset(userId) {
   closeModal();
   alert("Contraseña actualizada correctamente");
 }
+
+// Mi equipo > Mi cuenta: el cliente cambia su propia contraseña (pide la actual)
+function cambiarMiPassword() {
+  const old = document.querySelector(".modal-bg");
+  if (old) old.remove();
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.innerHTML = `
+    <div class="modal">
+      <h3>Cambiar mi contraseña</h3>
+      <p class="muted">Escribe tu contraseña actual y la nueva (mínimo 6 caracteres).</p>
+      <input id="mi-pass-actual" type="password" placeholder="Contraseña actual" autocomplete="current-password" style="width:100%;margin:10px 0 0;padding:8px;" />
+      <input id="mi-pass-nueva" type="text" value="${generatePassword()}" placeholder="Contraseña nueva" autocomplete="new-password" style="width:100%;margin:10px 0;padding:8px;" />
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarMiPassword()">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  document.getElementById("mi-pass-actual")?.focus();
+}
+
+async function confirmarMiPassword() {
+  const current  = document.getElementById("mi-pass-actual")?.value || "";
+  const password = (document.getElementById("mi-pass-nueva")?.value || "").trim();
+  if (!current) { alert("Escribe tu contraseña actual"); return; }
+  if (password.length < 6) { alert("La contraseña nueva debe tener al menos 6 caracteres"); return; }
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/my-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ current, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(data.error || "Error al cambiar la contraseña"); return; }
+    closeModal();
+    alert("Contraseña actualizada correctamente");
+  } catch { alert("Error de conexión"); }
+}
+window.cambiarMiPassword = cambiarMiPassword;
+window.confirmarMiPassword = confirmarMiPassword;
 
 function abrirModalDiasGratis(userId, email) {
   const old = document.querySelector(".modal-bg");

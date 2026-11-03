@@ -135,6 +135,38 @@ router.patch("/users/:id/permissions", auth, async (req, res) => {
 });
 
 // Listar apoyo de un cliente (para Mi equipo)
+// Cambiar la contraseña de la propia cuenta (cliente o admin). Pide la actual.
+// Una cuenta apoyo no: su req.user.id es el del cliente padre (ver auth.js),
+// así que cambiaría la contraseña del cliente.
+router.post("/my-password", auth, async (req, res) => {
+  if (req.user.role !== "cliente" && req.user.role !== "admin") return res.status(403).json({ error: "Sin permisos" });
+  const { current, password } = req.body || {};
+  if (!password || password.length < 6) return res.status(400).json({ error: "La contraseña nueva debe tener al menos 6 caracteres" });
+  try {
+    const row = await db.get("SELECT password_hash FROM users WHERE id = ?", [req.user.id]);
+    const ok = row && current && await bcrypt.compare(current, row.password_hash);
+    if (!ok) return res.status(401).json({ error: "La contraseña actual no es correcta" });
+    const hash = await bcrypt.hash(password, 12);
+    await db.run("UPDATE users SET password_hash = ? WHERE id = ?", [hash, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error servidor" }); }
+});
+
+// Un cliente cambia la contraseña de una de SUS cuentas apoyo
+router.post("/my-apoyo/:id/password", auth, async (req, res) => {
+  if (req.user.role !== "cliente") return res.status(403).json({ error: "Sin permisos" });
+  const { password } = req.body || {};
+  if (!password || password.length < 6) return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+  try {
+    const target = await db.get("SELECT id, role, parent_user_id FROM users WHERE id = ?", [req.params.id]);
+    if (!target || target.role !== "apoyo" || Number(target.parent_user_id) !== Number(req.user.id))
+      return res.status(403).json({ error: "No es tu cuenta de apoyo" });
+    const hash = await bcrypt.hash(password, 12);
+    await db.run("UPDATE users SET password_hash = ? WHERE id = ?", [hash, target.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error servidor" }); }
+});
+
 router.get("/my-apoyo", auth, async (req, res) => {
   const isAdmin  = req.user.role === "admin";
   const isClient = req.user.role === "cliente";
