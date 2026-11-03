@@ -2,7 +2,11 @@ const { Pool } = require("pg");
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+  // SSL solo con la URL externa (host con dominio, p.ej. dpg-xxx.oregon-postgres.render.com).
+  // La "Internal Database URL" de Render (host sin dominio, dpg-xxx-a) va por la
+  // red privada: sin SSL y sin contar como ancho de banda facturable.
+  ssl: process.env.NODE_ENV === "production" && /@[^/:]+\.[^/:]+/.test(process.env.DATABASE_URL || "")
+    ? { rejectUnauthorized: false } : false,
   // Por defecto pg solo abre 10 conexiones a la vez. La página de Leads
   // dispara muchas consultas de golpe cada 20s (más con las tarjetas nuevas
   // de hoy) y las llenaba todas, dejando a CUALQUIER otra parte de la app
