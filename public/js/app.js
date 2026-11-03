@@ -4006,28 +4006,17 @@ if (id === "pedidos") {
       }
     }).catch(() => {});
 
-    // Auto-refresh cada 5 minutos
+    // Auto-refresh cada 5 minutos: solo recarga la lista. Shopify (cada 1 min)
+    // y MRW/CTT (cada 5 min) ya los sincroniza el servidor; lanzarlos también
+    // desde el navegador repetía cada consulta a MRW (ancho de banda de pago).
+    // El botón de sincronizar sigue haciéndolo todo a mano.
     if (window.__ordersInterval) clearInterval(window.__ordersInterval);
+    if (window.__mrwInterval) clearInterval(window.__mrwInterval);
     window.__ordersInterval = setInterval(() => {
       if (window.__currentRoute?.id !== "pedidos") { clearInterval(window.__ordersInterval); return; }
       if (document.hidden) return;
-      syncAndRefreshOrders();
+      fetchOrdersFiltered();
     }, 5 * 60 * 1000);
-
-    // Auto-sincronizar MRW cada 1 minuto si está integrado (con lock para no apilar)
-    if (window.__mrwInterval) clearInterval(window.__mrwInterval);
-    window.__mrwInterval = setInterval(async () => {
-      // Solo con Pedidos abierto y visible: antes seguía cada minuto en
-      // cualquier sección (y el servidor ya sincroniza MRW cada 5 min).
-      if (window.__currentRoute?.id !== "pedidos") { clearInterval(window.__mrwInterval); return; }
-      if (document.hidden) return;
-      try {
-        const creds = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
-          headers: { Authorization: "Bearer " + getActiveToken() }
-        }).then(r => r.json());
-        if (creds.integrated) await sincronizarMRW();
-      } catch(e) {}
-    }, 60 * 1000);
 
   closeAllDrops();
   closeSearchDrop();

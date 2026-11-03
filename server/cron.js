@@ -156,6 +156,9 @@ async function syncAllMRW() {
              -- Solo pedidos de MRW o aún sin agencia conocida (ver orders.carrier
              -- en db.js) -- los de CTT los sincroniza syncCTTForUser.
              AND (o.carrier IS NULL OR o.carrier = 'mrw')
+             -- No volver a preguntar a MRW por un envío mirado hace <15 min
+             -- (cada consulta SOAP es ancho de banda que Render cobra).
+             AND COALESCE(NULLIF(o.last_mrw_check, '')::timestamptz, 'epoch') < now() - interval '15 minutes'
            ORDER BY o.last_mrw_check ASC NULLS FIRST
            LIMIT 170`,
           [creds.user_id]
