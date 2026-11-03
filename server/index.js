@@ -7,6 +7,9 @@ const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
 
+// Medidor temporal de ancho de banda (antes que nada abra conexiones)
+require("./bandwidth-meter");
+
 // DB
 const db = require("./db");
 
