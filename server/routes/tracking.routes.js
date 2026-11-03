@@ -578,9 +578,11 @@ router.post("/mrw-sync", auth, async (req, res) => {
         AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
         -- Solo pedidos de MRW o aún sin agencia (los de CTT van por /ctt-sync).
         AND (o.carrier IS NULL OR o.carrier = 'mrw')
+        -- Límite común a todas las agencias (ver tracking-config.js)
+        AND o.created_at >= $2
     ORDER BY o.last_mrw_check ASC NULLS FIRST
     LIMIT 170
-    `, [req.user.id]);
+    `, [req.user.id, require("../tracking-config").trackingDesde()]);
 
     if (!orders.length) return res.json({ ok: true, updated: 0, total: 0 });
 

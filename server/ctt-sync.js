@@ -278,9 +278,8 @@ async function syncCTTForUser(db, creds) {
        -- MRW (orders.carrier) no se vuelven a consultar aquí.
        AND (o.carrier IS NULL OR o.carrier = 'ctt')
      ORDER BY o.last_ctt_check ASC NULLS FIRST`,
-    // created_at es TEXT ISO (de Shopify): comparar como texto evita que un
-    // valor raro rompa toda la consulta con un cast a timestamptz.
-    [creds.user_id, new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)]
+    // Límite común a todas las agencias (ver tracking-config.js)
+    [creds.user_id, require("./tracking-config").trackingDesde()]
   );
 
   // Pedidos con seguimiento que no salen en la lista (ej. sin manifestar
