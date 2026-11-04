@@ -15018,11 +15018,11 @@ function renderDetallePedido(order) {
         )}
 
         ${order.tracking_number ? _dpCard(
-          `🚚 Seguimiento MRW`,
+          `🚚 Seguimiento ${agenciaSeguimiento(order)}`,
           `<div id="dp-mrw-history">
             <div style="padding:16px 18px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;">
               <div style="width:14px;height:14px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
-              Consultando MRW...
+              Consultando ${agenciaSeguimiento(order)}...
             </div>
           </div>`,
           "mrw"
@@ -15107,22 +15107,32 @@ function renderDetallePedido(order) {
     </div>
   `;
 
-  if (order.tracking_number) cargarSeguimientoMRW(order.id);
+  if (order.tracking_number) cargarSeguimientoMRW(order.id, agenciaSeguimiento(order));
   renderOrderNavControls();
 }
 
-async function cargarSeguimientoMRW(orderId) {
+// Agencia del pedido para su tarjeta de seguimiento: orders.carrier o, si
+// falta, el formato del número (CTT 18-26 dígitos, MRW el resto) -- la misma
+// detección que trackingUrl y las notificaciones.
+function agenciaSeguimiento(order) {
+  const c = String(order.carrier || "").toLowerCase();
+  if (c === "ctt" || c === "mrw") return c.toUpperCase();
+  return /^[0-9]{18,26}$/.test(String(order.tracking_number || "").trim()) ? "CTT" : "MRW";
+}
+
+async function cargarSeguimientoMRW(orderId, agencia = "MRW") {
   const box = document.getElementById("dp-mrw-history");
   if (!box) return;
   try {
-    const res = await fetch(`${API_BASE}/api/tracking/mrw-history/${orderId}`, {
+    const ruta = agencia === "CTT" ? "ctt-history" : "mrw-history";
+    const res = await fetch(`${API_BASE}/api/tracking/${ruta}/${orderId}`, {
       headers: { Authorization: "Bearer " + getActiveToken() }
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Error");
 
     if (!data.history || !data.history.length) {
-      box.innerHTML = `<div class="muted" style="padding:14px 18px;font-size:13px;">${data.mrwError ? escapeHtml(data.mrwError) : "MRW aún no tiene información de seguimiento para este envío."}</div>`;
+      box.innerHTML = `<div class="muted" style="padding:14px 18px;font-size:13px;">${data.mrwError ? escapeHtml(data.mrwError) : `${agencia} aún no tiene información de seguimiento para este envío.`}</div>`;
       return;
     }
 
@@ -15134,7 +15144,7 @@ async function cargarSeguimientoMRW(orderId) {
       </tr>`).join("");
 
     box.innerHTML = `
-      ${data.stale ? `<div style="padding:9px 18px;font-size:12px;color:#d97706;background:rgba(245,158,11,.08);border-bottom:1px solid var(--border);">⚠️ MRW ya no tiene este envío en su sistema — se muestra el último histórico guardado.</div>` : ""}
+      ${data.stale ? `<div style="padding:9px 18px;font-size:12px;color:#d97706;background:rgba(245,158,11,.08);border-bottom:1px solid var(--border);">⚠️ ${agencia} ya no tiene este envío en su sistema — se muestra el último histórico guardado.</div>` : ""}
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;">
           <thead>
@@ -15148,7 +15158,7 @@ async function cargarSeguimientoMRW(orderId) {
         </table>
       </div>`;
   } catch (e) {
-    box.innerHTML = `<div style="padding:14px 18px;font-size:13px;color:#dc2626;">No se pudo consultar el seguimiento MRW.</div>`;
+    box.innerHTML = `<div style="padding:14px 18px;font-size:13px;color:#dc2626;">No se pudo consultar el seguimiento ${agencia}.</div>`;
   }
 }
 

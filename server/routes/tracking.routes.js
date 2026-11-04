@@ -356,6 +356,69 @@ router.post("/ctt-sync", auth, async (req, res) => {
   }
 });
 
+// ── GET historial de movimientos CTT de un pedido (ficha del pedido) ──
+// Misma forma de respuesta que /mrw-history ({ history: [{estado, fecha,
+// hora, personaEntrega}], stale, mrwError }) para pintarlo con la misma
+// tabla. El último histórico bueno se guarda en mrw_history_json (la columna
+// es genérica pese al nombre) por si CTT deja de tener el envío.
+// Los nombres de campo de los eventos de CTT no están documentados: se
+// prueban varios y, la primera vez, se escriben sus claves en el log.
+const cttFecha = e => e.event_datetime || e.event_date_time || e.datetime || e.date_time || e.event_date || e.date || e.created_at || null;
+const cttTexto = e => e.description || e.event_description || e.status_name || e.event_name || e.name || e.text || null;
+router.get("/ctt-history/:orderId", auth, async (req, res) => {
+  try {
+    const creds = await req.db.get("SELECT * FROM ctt_credentials WHERE user_id = $1", [req.user.id]);
+    if (!creds?.area_usuario) return res.status(400).json({ error: "CTT no integrado" });
+
+    const order = await req.db.get(
+      `SELECT o.id, o.tracking_number, o.mrw_history_json
+       FROM orders o
+       WHERE o.id = $1
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+      [req.params.orderId, req.user.id]
+    );
+    if (!order?.tracking_number) return res.status(404).json({ error: "Pedido no encontrado o sin tracking" });
+
+    let cachedHistory = [];
+    try { cachedHistory = order.mrw_history_json ? JSON.parse(order.mrw_history_json) : []; } catch (e) { cachedHistory = []; }
+
+    const { accessToken, idToken } = await cttGetValidSession(req.db, creds);
+    const shipment = await cttFetchShipment(accessToken, idToken, order.tracking_number);
+    const events = Array.isArray(shipment?.events) ? shipment.events : [];
+    if (events.length && !global.__cttEventKeysLogged) {
+      global.__cttEventKeysLogged = true;
+      console.log("[CTT] claves de evento:", JSON.stringify(Object.keys(events[0])), JSON.stringify(events[0]).slice(0, 400));
+    }
+
+    const history = events.map(e => {
+      const estado = cttTexto(e);
+      if (!estado) return null;
+      const d = cttFecha(e) ? new Date(cttFecha(e)) : null;
+      const ok = d && !isNaN(d);
+      const opts = { timeZone: "Europe/Madrid" };
+      return {
+        estado: String(estado).trim(),
+        fecha: ok ? d.toLocaleDateString("es-ES", { ...opts, day: "2-digit", month: "2-digit", year: "numeric" }) : "",
+        hora: ok ? d.toLocaleTimeString("es-ES", { ...opts, hour: "2-digit", minute: "2-digit" }) : "",
+        personaEntrega: e.receiver_name || e.signer_name || null,
+        _t: ok ? d.getTime() : 0,
+      };
+    }).filter(Boolean).sort((a, b) => a._t - b._t).map(({ _t, ...h }) => h);
+
+    if (!history.length) {
+      const msg = shipment ? "CTT aún no tiene movimientos para este envío." : "CTT no encuentra este envío.";
+      if (cachedHistory.length) return res.json({ history: cachedHistory, stale: true, mrwError: msg });
+      return res.json({ history: [], mrwError: msg });
+    }
+
+    await req.db.run("UPDATE orders SET mrw_history_json = $1 WHERE id = $2", [JSON.stringify(history), order.id]).catch(() => {});
+    res.json({ history });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── DELETE eliminar integración CTT Express ───────────────────
 router.delete("/ctt-credentials", auth, async (req, res) => {
   try {
