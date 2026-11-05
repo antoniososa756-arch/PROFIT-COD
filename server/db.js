@@ -440,6 +440,24 @@ await pool.query(`
 `);
 await pool.query(`DROP TRIGGER IF EXISTS trg_orders_raw_compact ON orders`);
 await pool.query(`CREATE TRIGGER trg_orders_raw_compact BEFORE INSERT OR UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_raw_compact()`);
+
+// Momento real en que cambió el estado del envío (lo detectó el servidor:
+// cron de MRW/CTT, webhooks, sync manual...). Las notificaciones de la app
+// usan esta hora y no la de cuando el navegador lo ve -- con la app cerrada
+// una entrega de las 18:47 salía como de las 00:41 al volver a abrirla.
+// Va en un trigger para cubrir cualquier ruta (y agencias futuras).
+await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS estado_cambiado_at TEXT`);
+await pool.query(`
+  CREATE OR REPLACE FUNCTION orders_set_estado_cambiado() RETURNS trigger AS $fn$
+  BEGIN
+    IF NEW.fulfillment_status IS DISTINCT FROM OLD.fulfillment_status THEN
+      NEW.estado_cambiado_at := now()::text;
+    END IF;
+    RETURN NEW;
+  END $fn$ LANGUAGE plpgsql
+`);
+await pool.query(`DROP TRIGGER IF EXISTS trg_orders_estado_cambiado ON orders`);
+await pool.query(`CREATE TRIGGER trg_orders_estado_cambiado BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_estado_cambiado()`);
 // Pedidos ya existentes: se rellenan en segundo plano, por tandas pequeñas y
 // con pausa, para no frenar el arranque ni el resto de la app.
 (async function rellenarRawCompact() {

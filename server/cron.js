@@ -233,9 +233,6 @@ async function syncAllMRW() {
             if (nuevoStatus !== pedido.fulfillment_status) {
               await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
               updated++;
-              require("./routes/push.routes").notificarEstadoEnvio(creds.user_id, {
-                orderId: pedido.id, orderNumber: pedido.order_number, estado: nuevoStatus, carrier: "mrw", createdAt: pedido.created_at,
-              });
             }
           } catch(e) { console.error(`[CRON] MRW pedido ${pedido.tracking_number}:`, e.message); }
         }

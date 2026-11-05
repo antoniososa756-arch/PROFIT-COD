@@ -318,10 +318,6 @@ async function syncCTTForUser(db, creds) {
     if (nuevoStatus && nuevoStatus !== pedido.fulfillment_status) {
       await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
       updated++;
-      // Notificación del sistema aunque la app esté cerrada (ver push.routes.js)
-      require("./routes/push.routes").notificarEstadoEnvio(creds.user_id, {
-        orderId: pedido.id, orderNumber: pedido.order_number, estado: nuevoStatus, carrier: "ctt", createdAt: pedido.created_at,
-      });
     }
   }
   // Aviso al momento a las pestañas abiertas (ver syncAllMRW en cron.js)

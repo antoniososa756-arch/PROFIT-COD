@@ -16505,6 +16505,15 @@ async function checkNotificaciones() {
     const permShown = new Set(JSON.parse(localStorage.getItem(permKey) || "[]"));
     const permNuevos = [];
 
+    // Última comprobación de este navegador: un cambio de estado posterior
+    // (hecho por el servidor mientras la app estaba cerrada) también se
+    // notifica al abrir, con su hora real. Primera vez: desde ahora (sin
+    // avalancha de avisos antiguos). 5 min de margen por desfase de reloj;
+    // los duplicados los evita el registro permanente.
+    const lastCheckKey = `notis_lastcheck_${currentUser?.id || "anon"}`;
+    const inicioCheck = Date.now();
+    const lastCheck = Number(localStorage.getItem(lastCheckKey)) || inicioCheck;
+
     for (const o of orders) {
       const id = String(o.id || o.order_id);
       const estado = o.fulfillment_status;
@@ -16514,8 +16523,17 @@ async function checkNotificaciones() {
       const estadoAnterior = estadosGuardados[id];
 
       const ahoraISO = new Date().toISOString();
-      const ahoraMadrid = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-      const horaDetectada = ahoraMadrid; // "20/03/2026, 14:35"
+      // Hora real del cambio de estado (orders.estado_cambiado_at, la pone el
+      // servidor al detectarlo) -- no la de cuando este navegador lo ve.
+      // Viene como texto de Postgres ("2026-11-05 18:47:12.123456+00").
+      let cambio = null;
+      if (o.estado_cambiado_at) {
+        const d = new Date(String(o.estado_cambiado_at).replace(" ", "T").replace(/(\.\d{3})\d+/, "$1").replace(/([+-]\d{2})$/, "$1:00"));
+        if (!isNaN(d)) cambio = d;
+      }
+      const eventoISO = (cambio || new Date()).toISOString();
+      const cambioReciente = !!cambio && cambio.getTime() > lastCheck - 5 * 60 * 1000;
+      const horaDetectada = (cambio || new Date()).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); // "20/03/2026, 14:35"
       const fechaPedidoHecho = o.created_at
         ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric" })
         : null;
@@ -16529,11 +16547,11 @@ async function checkNotificaciones() {
       if (estado === "entregado") {
         const notiId = `entregado_${id}`;
         if (!permShown.has(notiId)) {
-          if (estadoAnterior && estadoAnterior !== "entregado") {
+          if ((estadoAnterior && estadoAnterior !== "entregado") || (!estadoAnterior && cambioReciente)) {
             // Transición detectada: mostrar notificación
             const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Entregado a las ${horaDetectada}${agenciaTxt}`;
             const html = `<div style="font-weight:500;color:var(--text);font-size:12.5px;margin-bottom:1px;">${escapeHtml(nombre)}</div><div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 8px;"><span>Pedido <b style="color:#4169e1;">${fechaPedidoHecho || "-"}</b></span>${agenciaNoti ? `<span>Agencia <b style="color:var(--text);">${agenciaNoti}</b></span>` : ""}<span>Entregado <b style="color:#16a34a;">${horaDetectada}</b></span></div>`;
-            nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, html, date: ahoraISO, orderNumber: nombre });
+            nuevasNotis.unshift({ id: notiId, title: "✅ Pedido entregado", text: txt, html, date: eventoISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("✅ Pedido entregado", txt, "#22c55e");
           }
@@ -16547,11 +16565,11 @@ async function checkNotificaciones() {
       if (estado === "franquicia") {
         const notiId = `franquicia_${id}`;
         if (!permShown.has(notiId)) {
-          if (estadoAnterior && estadoAnterior !== "franquicia") {
+          if ((estadoAnterior && estadoAnterior !== "franquicia") || (!estadoAnterior && cambioReciente)) {
             // Transición detectada: mostrar notificación
             const txt = `${nombre} · Pedido realizado el ${fechaPedidoHecho || "-"} · Dejado en franquicia a las ${horaDetectada}. Llamar al cliente.${agenciaTxt}`;
             const html = `<div style="font-weight:500;color:var(--text);font-size:12.5px;margin-bottom:1px;">${escapeHtml(nombre)}</div><div style="font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 8px;"><span>Pedido <b style="color:#4169e1;">${fechaPedidoHecho || "-"}</b></span>${agenciaNoti ? `<span>Agencia <b style="color:var(--text);">${agenciaNoti}</b></span>` : ""}<span>Franquicia <b style="color:#f59e0b;">${horaDetectada}</b></span><span>Llamar al cliente</span></div>`;
-            nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, html, date: ahoraISO, orderNumber: nombre });
+            nuevasNotis.unshift({ id: notiId, title: "🏪 Pedido en franquicia", text: txt, html, date: eventoISO, orderNumber: nombre });
             notisIds.add(notiId);
             showToast("🏪 Pedido en franquicia", txt, "#f59e0b");
           }
@@ -16584,6 +16602,10 @@ async function checkNotificaciones() {
     }
 
     localStorage.setItem("orders_estados_" + (currentUser?.id || "anon"), JSON.stringify(nuevosEstados));
+    localStorage.setItem(lastCheckKey, String(inicioCheck));
+    // Más reciente arriba por la hora real del evento (una entrega detectada
+    // al abrir la app puede ser anterior a otros avisos ya en la lista).
+    nuevasNotis.sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
     // Limitar a 300 notificaciones para no saturar localStorage
     localStorage.setItem("notifications_" + (currentUser?.id || "anon"), JSON.stringify(nuevasNotis.slice(0, 300)));
     // Guardar registro permanente de notificaciones ya enviadas (entregado/franquicia)

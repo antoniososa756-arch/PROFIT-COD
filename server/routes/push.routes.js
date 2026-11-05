@@ -204,35 +204,4 @@ router.post("/simulate", auth, async (req, res) => {
   res.json({ ok: true, shop: shopName, sseEmitted: true, pushSent });
 });
 
-// Notificación del sistema (llega con la app cerrada) cuando el servidor
-// detecta que un envío pasa a entregado o franquicia. Las suscripciones de
-// las cuentas apoyo se guardan con el id del cliente padre (ver auth.js), así
-// que les llega también. tag por pedido: si se repite, se reemplaza.
-const ESTADOS_PUSH = {
-  entregado:  { title: "✅ Pedido entregado", txt: "Entregado" },
-  franquicia: { title: "🏪 Pedido en franquicia", txt: "En franquicia · Llamar al cliente" },
-};
-async function notificarEstadoEnvio(userId, { orderId, orderNumber, estado, carrier, createdAt }) {
-  const e = ESTADOS_PUSH[estado];
-  if (!e || !process.env.VAPID_PUBLIC_KEY) return;
-  try {
-    const subs = await db.all("SELECT endpoint, subscription FROM push_subscriptions WHERE user_id = $1", [userId]);
-    if (!subs.length) return;
-    const madrid = { timeZone: "Europe/Madrid" };
-    const hora = new Date().toLocaleTimeString("es-ES", { ...madrid, hour: "2-digit", minute: "2-digit" });
-    const pedido = createdAt ? new Date(createdAt).toLocaleDateString("es-ES", { ...madrid, day: "2-digit", month: "2-digit" }) : null;
-    const payload = JSON.stringify({
-      title: e.title,
-      body: [orderNumber, pedido && `Pedido ${pedido}`, carrier && `Agencia ${String(carrier).toUpperCase()}`, `${e.txt} ${hora}`].filter(Boolean).join(" · "),
-      tag: `envio-${estado}-${orderId}`,
-    });
-    for (const sub of subs) {
-      try { await webpush.sendNotification(JSON.parse(sub.subscription), payload); }
-      catch (err) {
-        if (err.statusCode === 410 || err.statusCode === 404) await db.run("DELETE FROM push_subscriptions WHERE endpoint = $1", [sub.endpoint]).catch(() => {});
-      }
-    }
-  } catch (err) { console.warn("[Push] estado envío:", err.message); }
-}
-
-module.exports = { router, webpush, notificarEstadoEnvio };
+module.exports = { router, webpush };
