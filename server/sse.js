@@ -2,18 +2,21 @@
 const connections = new Map();
 
 function add(userId, res) {
+  userId = String(userId); // mismo tipo de clave venga del JWT o de la BD
   if (!connections.has(userId)) connections.set(userId, new Set());
   connections.get(userId).add(res);
   console.log(`[SSE] Usuario ${userId} conectado. Total: ${connections.get(userId).size}`);
 }
 
 function remove(userId, res) {
+  userId = String(userId);
   const set = connections.get(userId);
   if (set) { set.delete(res); if (set.size === 0) connections.delete(userId); }
   console.log(`[SSE] Usuario ${userId} desconectado`);
 }
 
 function emitToUser(userId, data) {
+  userId = String(userId);
   const set = connections.get(userId);
   if (!set || set.size === 0) {
     console.log(`[SSE] emitToUser(${userId}): sin conexiones activas`);

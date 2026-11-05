@@ -320,6 +320,8 @@ async function syncCTTForUser(db, creds) {
       updated++;
     }
   }
+  // Aviso al momento a las pestañas abiertas (ver syncAllMRW en cron.js)
+  if (updated) require("./sse").emitToUser(creds.user_id, { type: "envios_actualizados" });
   return { envios_ctt: shipments.length, pedidos_revisados: pedidos.length, encontrados: matched, actualizados: updated };
 }
 

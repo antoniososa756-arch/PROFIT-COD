@@ -158,7 +158,10 @@ async function syncAllMRW() {
              AND (o.carrier IS NULL OR o.carrier = 'mrw')
              -- Límite común a todas las agencias (ver tracking-config.js)
              AND o.created_at >= $2
-           ORDER BY o.last_mrw_check ASC NULLS FIRST
+           -- Los "en reparto" van primero en CADA vuelta: son los que se
+           -- entregan (o quedan en franquicia) hoy, y así el aviso llega en
+           -- minutos aunque haya cientos de envíos en la rotación.
+           ORDER BY (o.mrw_estado_texto ILIKE '%reparto%') DESC, o.last_mrw_check ASC NULLS FIRST
            LIMIT 170`,
           [creds.user_id, require("./tracking-config").trackingDesde()]
         );
@@ -224,6 +227,9 @@ async function syncAllMRW() {
           } catch(e) { console.error(`[CRON] MRW pedido ${pedido.tracking_number}:`, e.message); }
         }
         console.log(`✅ [CRON] MRW user ${creds.user_id}: ${updated} pedidos actualizados de ${pedidos.length}`);
+        // Aviso al momento a las pestañas abiertas (aunque estén en segundo
+        // plano) para que generen las notificaciones de entregado/franquicia.
+        if (updated) require("./sse").emitToUser(creds.user_id, { type: "envios_actualizados" });
       } catch(e) { console.error(`[CRON] MRW error user ${creds.user_id}:`, e.message); }
     }
   } catch(e) { console.error("[CRON] Error sync MRW:", e.message); }

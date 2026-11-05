@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const sseManager = require("../sse");
 const router = express.Router();
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const token = req.query.token;
   let userId;
   try {
@@ -14,6 +14,12 @@ router.get("/", (req, res) => {
     console.warn("[SSE] Token inválido:", e.message);
     return res.status(401).end();
   }
+  // Cuenta apoyo: escucha los avisos de su cliente padre (pedidos nuevos,
+  // estados de envío), igual que el resto de la app trabaja con sus datos.
+  try {
+    const row = await require("../db").get("SELECT role, parent_user_id FROM users WHERE id = $1", [userId]);
+    if (row?.role === "apoyo" && row.parent_user_id) userId = row.parent_user_id;
+  } catch {}
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");

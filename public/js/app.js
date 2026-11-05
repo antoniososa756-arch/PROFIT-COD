@@ -16848,6 +16848,14 @@ function connectOrderWebSocket(token) {
       const data = JSON.parse(e.data);
       if (data.type === "new_order") handleOrderEvent(data);
       if (data.type === "cod_event") handleCodEvent(data);
+      // El servidor acaba de cambiar estados de envío (MRW/CTT): notificar
+      // ya, sin esperar a la comprobación de cada 5 min. Llega también con
+      // la pestaña en segundo plano.
+      if (data.type === "envios_actualizados") {
+        window.__lastNotiCheck = Date.now();
+        checkNotificaciones().catch(() => {});
+        if (window.__currentRoute?.id === "pedidos" && !document.hidden) fetchOrdersFiltered();
+      }
     } catch {}
   };
 
