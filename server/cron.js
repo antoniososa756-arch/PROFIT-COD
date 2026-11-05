@@ -446,14 +446,21 @@ async function syncAllGmailPDF() {
 function startCrons() {
   // Sync Shopify cada 1 minuto
   setInterval(syncAllShopifyOrders, 1 * 60 * 1000);
-  // Sync MRW cada 5 minutos
-  setInterval(syncAllMRW, 5 * 60 * 1000);
   // Sync CTT cada 5 minutos
   setInterval(syncAllCTT, 5 * 60 * 1000);
 
   // También ejecutar una vez al arrancar (después de 30s para que la DB esté lista)
   setTimeout(syncAllShopifyOrders, 30 * 1000);
-  setTimeout(syncAllMRW, 60 * 1000);
+  // MRW: una vuelta empieza 5 min después de empezar la anterior, o nada
+  // más acabar si la vuelta tardó más. Con setInterval, una vuelta de 5 min
+  // y pico hacía saltar la siguiente y cada cuenta se revisaba cada 10 min.
+  (function bucleMRW() {
+    setTimeout(async function vuelta() {
+      const t0 = Date.now();
+      await syncAllMRW().catch(() => {});
+      setTimeout(vuelta, Math.max(15 * 1000, 5 * 60 * 1000 - (Date.now() - t0)));
+    }, 60 * 1000);
+  })();
   setTimeout(syncAllCTT, 90 * 1000);
 
   console.log("✅ [CRON] Crons iniciados — Shopify cada 1min, MRW y CTT cada 5min");
