@@ -133,11 +133,15 @@ async function syncAllMRW() {
   if (global.__cronMRWRunning) { console.log("[CRON] MRW ya en curso, saltando"); return; }
   global.__cronMRWRunning = true;
   console.log("⏰ [CRON] Iniciando sync MRW...");
+  const t0MRW = Date.now();
   try {
     const credsList = await db.all(`SELECT * FROM mrw_credentials`);
     if (!credsList.length) { console.log("[CRON] Sin credenciales MRW"); return; }
 
-    for (const creds of credsList) {
+    // Todas las cuentas a la vez (cada una con sus credenciales de MRW): en
+    // fila, 4 cuentas x 170 envíos tardaban ~30 min por vuelta y cada cuenta
+    // se revisaba cada media hora en vez de cada 5 min.
+    await Promise.all(credsList.map(async (creds) => {
       try {
         // OJO: el filtro de tienda tiene que ser el mismo "por shop_id O por dominio"
         // que usan mrw-sync/mrw-sync-one/mrw-history en tracking.routes.js. Antes
@@ -175,10 +179,13 @@ async function syncAllMRW() {
           [creds.user_id, desde, 170 - enReparto.length]
         );
         const pedidos = [...enReparto, ...resto];
-        if (!pedidos.length) continue;
+        if (!pedidos.length) return;
 
         let updated = 0;
-        for (const pedido of pedidos) {
+        // 4 consultas a MRW en paralelo por cuenta (cada una con su pausa)
+        let siguiente = 0;
+        const revisar = async () => { while (siguiente < pedidos.length) {
+          const pedido = pedidos[siguiente++];
           try {
             await new Promise(r => setTimeout(r, 140));
             const soapBody = `<?xml version="1.0" encoding="utf-8"?>
@@ -235,13 +242,15 @@ async function syncAllMRW() {
               updated++;
             }
           } catch(e) { console.error(`[CRON] MRW pedido ${pedido.tracking_number}:`, e.message); }
-        }
+        } };
+        await Promise.all([revisar(), revisar(), revisar(), revisar()]);
         console.log(`✅ [CRON] MRW user ${creds.user_id}: ${updated} pedidos actualizados de ${pedidos.length}`);
         // Aviso al momento a las pestañas abiertas (aunque estén en segundo
         // plano) para que generen las notificaciones de entregado/franquicia.
         if (updated) require("./sse").emitToUser(creds.user_id, { type: "envios_actualizados" });
       } catch(e) { console.error(`[CRON] MRW error user ${creds.user_id}:`, e.message); }
-    }
+    }));
+    console.log(`⏱️ [CRON] Vuelta MRW completa en ${Math.round((Date.now() - t0MRW) / 1000)} s (${credsList.length} cuentas)`);
   } catch(e) { console.error("[CRON] Error sync MRW:", e.message); }
   finally { global.__cronMRWRunning = false; }
 }
