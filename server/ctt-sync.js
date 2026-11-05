@@ -268,7 +268,7 @@ async function syncCTTForUser(db, creds) {
   }
 
   const pedidos = await db.all(
-    `SELECT o.id, o.order_number, o.tracking_number, o.fulfillment_status
+    `SELECT o.id, o.order_number, o.created_at, o.tracking_number, o.fulfillment_status
      FROM orders o
      WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
        OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
@@ -318,6 +318,10 @@ async function syncCTTForUser(db, creds) {
     if (nuevoStatus && nuevoStatus !== pedido.fulfillment_status) {
       await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
       updated++;
+      // Notificación del sistema aunque la app esté cerrada (ver push.routes.js)
+      require("./routes/push.routes").notificarEstadoEnvio(creds.user_id, {
+        orderId: pedido.id, orderNumber: pedido.order_number, estado: nuevoStatus, carrier: "ctt", createdAt: pedido.created_at,
+      });
     }
   }
   // Aviso al momento a las pestañas abiertas (ver syncAllMRW en cron.js)

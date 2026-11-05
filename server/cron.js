@@ -145,8 +145,7 @@ async function syncAllMRW() {
         // shop_id apuntara a una tienda duplicada/reconectada (mismo dominio, otro id)
         // nunca entraba en esta consulta y se quedaba con el estado de Shopify
         // ("enviado") para siempre, aunque el resto de la app sí lo encontrara.
-        const pedidos = await db.all(
-          `SELECT o.id, o.tracking_number, o.fulfillment_status
+        const FILTRO = `
            FROM orders o
            WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
@@ -157,14 +156,25 @@ async function syncAllMRW() {
              -- en db.js) -- los de CTT los sincroniza syncCTTForUser.
              AND (o.carrier IS NULL OR o.carrier = 'mrw')
              -- Límite común a todas las agencias (ver tracking-config.js)
-             AND o.created_at >= $2
-           -- Los "en reparto" van primero en CADA vuelta: son los que se
-           -- entregan (o quedan en franquicia) hoy, y así el aviso llega en
-           -- minutos aunque haya cientos de envíos en la rotación.
-           ORDER BY (o.mrw_estado_texto ILIKE '%reparto%') DESC, o.last_mrw_check ASC NULLS FIRST
-           LIMIT 170`,
-          [creds.user_id, require("./tracking-config").trackingDesde()]
+             AND o.created_at >= $2`;
+        const CAMPOS = "SELECT o.id, o.order_number, o.created_at, o.tracking_number, o.fulfillment_status";
+        const desde = require("./tracking-config").trackingDesde();
+        // Tanda de 170: hasta 100 huecos para los "en reparto" (los que se
+        // entregan o quedan en franquicia hoy -- así el aviso llega en minutos)
+        // y el resto, mínimo 70, para la rotación normal de los demás, que
+        // nunca se queda parada aunque haya cientos en reparto. Dentro de
+        // cada grupo, primero el que lleva más tiempo sin revisarse.
+        const enReparto = await db.all(
+          `${CAMPOS} ${FILTRO} AND o.mrw_estado_texto ILIKE '%reparto%'
+           ORDER BY o.last_mrw_check ASC NULLS FIRST LIMIT 100`,
+          [creds.user_id, desde]
         );
+        const resto = await db.all(
+          `${CAMPOS} ${FILTRO} AND (o.mrw_estado_texto IS NULL OR o.mrw_estado_texto NOT ILIKE '%reparto%')
+           ORDER BY o.last_mrw_check ASC NULLS FIRST LIMIT $3`,
+          [creds.user_id, desde, 170 - enReparto.length]
+        );
+        const pedidos = [...enReparto, ...resto];
         if (!pedidos.length) continue;
 
         let updated = 0;
@@ -223,6 +233,9 @@ async function syncAllMRW() {
             if (nuevoStatus !== pedido.fulfillment_status) {
               await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
               updated++;
+              require("./routes/push.routes").notificarEstadoEnvio(creds.user_id, {
+                orderId: pedido.id, orderNumber: pedido.order_number, estado: nuevoStatus, carrier: "mrw", createdAt: pedido.created_at,
+              });
             }
           } catch(e) { console.error(`[CRON] MRW pedido ${pedido.tracking_number}:`, e.message); }
         }
