@@ -454,11 +454,16 @@ function startCrons() {
   // MRW: una vuelta empieza 5 min después de empezar la anterior, o nada
   // más acabar si la vuelta tardó más. Con setInterval, una vuelta de 5 min
   // y pico hacía saltar la siguiente y cada cuenta se revisaba cada 10 min.
+  // De 20:00 a 8:00 (hora de España) MRW no reparte: cada 30 min, para no
+  // gastar consultas (ancho de banda) cuando no puede haber entregas.
   (function bucleMRW() {
+    const horaMadrid = () => Number(new Date().toLocaleString("en-GB", { timeZone: "Europe/Madrid", hour: "2-digit", hour12: false }));
     setTimeout(async function vuelta() {
       const t0 = Date.now();
       await syncAllMRW().catch(() => {});
-      setTimeout(vuelta, Math.max(15 * 1000, 5 * 60 * 1000 - (Date.now() - t0)));
+      const h = horaMadrid();
+      const cada = (h >= 20 || h < 8) ? 30 * 60 * 1000 : 5 * 60 * 1000;
+      setTimeout(vuelta, Math.max(15 * 1000, cada - (Date.now() - t0)));
     }, 60 * 1000);
   })();
   setTimeout(syncAllCTT, 90 * 1000);
