@@ -68,6 +68,12 @@ async function validateMrwCredentials(login, pass, sampleTracking) {
     if (fault && /usuario.*(password|contraseñ)|password.*usuario|no son correctos/i.test(fault)) {
       return { valid: false, reason: fault };
     }
+    // "Los usuarios encontrados no perteneces a SAGEC": el usuario existe en MRW
+    // pero no es de SAGEC (suelen ser los de la web de MRW o de otro servicio),
+    // así que nunca podrá consultar envíos -- no se puede dar por conectado.
+    if (fault && /SAGEC/i.test(fault)) {
+      return { valid: false, reason: `${fault} Estas no son credenciales SAGEC: pide a tu franquicia MRW el usuario y contraseña del WebService de seguimiento (SAGEC).` };
+    }
     return { valid: true };
   } catch (e) {
     return { valid: true, warning: "No se pudo verificar con MRW en este momento (puede estar caído). Se guardó igualmente." };
