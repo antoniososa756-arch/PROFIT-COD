@@ -141,6 +141,38 @@ async function syncAllMRW() {
     // Todas las cuentas a la vez (cada una con sus credenciales de MRW): en
     // fila, 4 cuentas x 170 envíos tardaban ~30 min por vuelta y cada cuenta
     // se revisaba cada media hora en vez de cada 5 min.
+    // Límite global de consultas simultáneas a MRW (entre todas las cuentas):
+    // con 4 por cuenta y todas las cuentas a la vez (~16) MRW dejaba de
+    // responder y salían muchos "operation was aborted due to timeout".
+    const MAX_MRW = 6;
+    let activos = 0;
+    const cola = [];
+    const conPermiso = async (fn) => {
+      if (activos >= MAX_MRW) await new Promise(r => cola.push(r));
+      activos++;
+      try { return await fn(); }
+      finally { activos--; const sig = cola.shift(); if (sig) sig(); }
+    };
+    const consultarMRW = async (body) => {
+      for (let intento = 1; ; intento++) {
+        try {
+          return await conPermiso(async () => {
+            const r = await fetch("https://trackingservice.mrw.es/TrackingService.svc/TrackingServices", {
+              method: "POST",
+              headers: { "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "http://tempuri.org/ITrackingService/GetEnvios" },
+              body,
+              signal: AbortSignal.timeout(20000)
+            });
+            return await r.text();
+          });
+        } catch (e) {
+          // Un reintento si MRW no contesta a tiempo
+          if (intento >= 2 || !/timeout|abort/i.test(e.message)) throw e;
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    };
+
     await Promise.all(credsList.map(async (creds) => {
       try {
         // OJO: el filtro de tienda tiene que ser el mismo "por shop_id O por dominio"
@@ -182,7 +214,8 @@ async function syncAllMRW() {
         if (!pedidos.length) return;
 
         let updated = 0;
-        // 4 consultas a MRW en paralelo por cuenta (cada una con su pausa)
+        // 4 consultas a MRW en paralelo por cuenta (cada una con su pausa),
+        // sin pasar del límite global MAX_MRW
         let siguiente = 0;
         const revisar = async () => { while (siguiente < pedidos.length) {
           const pedido = pedidos[siguiente++];
@@ -206,13 +239,7 @@ async function syncAllMRW() {
   </soapenv:Body>
 </soapenv:Envelope>`;
 
-            const res = await fetch("https://trackingservice.mrw.es/TrackingService.svc/TrackingServices", {
-              method: "POST",
-              headers: { "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "http://tempuri.org/ITrackingService/GetEnvios" },
-              body: soapBody,
-              signal: AbortSignal.timeout(10000)
-            });
-            const xml = await res.text();
+            const xml = await consultarMRW(soapBody);
             await db.run("UPDATE orders SET last_mrw_check = now()::text WHERE id = $1", [pedido.id]);
 
             // tipoInformacion=1: histórico completo, acotado a los eventos reales
