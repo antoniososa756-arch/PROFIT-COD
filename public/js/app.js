@@ -1,3 +1,17 @@
+// Abre el calendario hacia arriba SOLO si arriba cabe entero y abajo no; si
+// no cabe en ningún lado (ventana baja, p. ej. Mac con el Dock y la ventana
+// sin maximizar) se queda abajo con scroll interno en vez de salirse por
+// arriba de la pantalla.
+window.__ajustarVerticalPicker = function(panel, rect) {
+  const ancla = (panel.offsetParent || panel.parentElement).getBoundingClientRect();
+  const alto = rect.height;
+  const abajo = window.innerHeight - ancla.bottom - 14;
+  const arriba = ancla.top - 14;
+  if (alto <= abajo) return;
+  if (alto <= arriba) { panel.style.top='auto'; panel.style.bottom='calc(100% + 6px)'; return; }
+  panel.style.maxHeight = Math.max(260, abajo) + 'px';
+  panel.style.overflowY = 'auto';
+};
 const API_BASE = "https://profitcod.com";
 
 function shopLabel(s) {
@@ -111,7 +125,7 @@ window.__DPF = (function () {
     const rect = panel.getBoundingClientRect();
     if (rect.left < 8) { panel.style.right='auto'; panel.style.left='0'; }
     else if (rect.right > window.innerWidth - 8) { panel.style.left='auto'; panel.style.right='0'; }
-    if (rect.bottom > window.innerHeight - 8) { panel.style.top='auto'; panel.style.bottom='calc(100% + 6px)'; }
+    window.__ajustarVerticalPicker(panel, rect);
   }
   function render(p) {
     const panel = document.getElementById(`${p}-picker-panel`); if (!panel) return;
@@ -1949,7 +1963,7 @@ const now = new Date();
     const rect = panel.getBoundingClientRect();
     if (rect.left < 8) { panel.style.right='auto'; panel.style.left='0'; }
     else if (rect.right > window.innerWidth - 8) { panel.style.left='auto'; panel.style.right='0'; }
-    if (rect.bottom > window.innerHeight - 8) { panel.style.top='auto'; panel.style.bottom='calc(100% + 6px)'; }
+    window.__ajustarVerticalPicker(panel, rect);
   }
   function renderPicker() {
     const panel=document.getElementById('met-picker-panel'); if(!panel) return;
