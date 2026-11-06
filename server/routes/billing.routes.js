@@ -159,13 +159,16 @@ router.get("/plan", auth, async (req, res) => {
     // mes) siempre está en el futuro — y eso le apagaría el aviso de límite de
     // pedidos superado sin que en realidad esté en período de prueba.
     const trialStarted = user?.trial_started_at || null;
-    const trialEndsAt  = (trialStarted && user?.plan_status === "trial") ? user?.plan_expires_at || null : null;
-    const trialActive  = trialStarted && trialEndsAt && new Date() < new Date(trialEndsAt);
+    // Días regalados desde el admin (ver planCheck.js): cuentan como prueba
+    // activa y sin límite de pedidos hasta plan_expires_at.
+    const regalados    = !!user && require("../middlewares/planCheck").diasRegalados(user);
+    const trialEndsAt  = ((trialStarted || regalados) && user?.plan_status === "trial") ? user?.plan_expires_at || null : null;
+    const trialActive  = (trialStarted || regalados) && trialEndsAt && new Date() < new Date(trialEndsAt);
 
     // ¿Bloqueado por exceder pedidos? Durante el trial no hay límite de pedidos... salvo en
     // Starter, cuyo tope de 120 pedidos es de por vida MIENTRAS está en trial sin pagar
     // (igual que en planCheck). Un Starter ya pagado usa el límite mensual normal.
-    const isLifetimeLimit = planKey === "starter" && user?.plan_status === "trial";
+    const isLifetimeLimit = planKey === "starter" && user?.plan_status === "trial" && !regalados;
     const orderLimit = planInfo?.order_limit ?? null;
     const overLimitNow = orderLimit !== null && monthlyOrders > orderLimit && (isLifetimeLimit || !trialActive);
     // plan_overage_locked persiste el bloqueo aunque el ciclo actual ya haya
@@ -179,7 +182,7 @@ router.get("/plan", auth, async (req, res) => {
     // excedido, vuelve a bloquearse solo (plan_overage_locked no se toca).
     const overageGraceUntil = user?.plan_overage_grace_until || null;
     const inOverageGrace = !!(overageGraceUntil && new Date(overageGraceUntil) > new Date());
-    const isBlocked = !inOverageGrace && (!!user?.plan_overage_locked || overLimitNow);
+    const isBlocked = !inOverageGrace && !regalados && (!!user?.plan_overage_locked || overLimitNow);
 
     // Días para el reinicio del ciclo de facturación (un mes después de la última activación/renovación)
     const now = new Date();

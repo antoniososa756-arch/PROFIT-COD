@@ -9,6 +9,17 @@ const { getEffectiveCycleStart } = require("../utils/billingCycle");
 // Límites de pedidos por mes según plan
 const PLAN_ORDER_LIMITS = { starter: 120, growth: 420, pro: 1000, business: 3000 };
 
+// ¿Está en una prueba regalada desde el admin (y aún vigente)? La prueba normal
+// de /start-trial dura 7 días desde trial_started_at; si plan_expires_at va más
+// allá (o no hay trial_started_at), los días se los dio un admin.
+function diasRegalados(user) {
+  if (user.plan_status !== "trial" || !user.plan_expires_at) return false;
+  const fin = new Date(user.plan_expires_at);
+  if (fin <= new Date()) return false;
+  if (!user.trial_started_at) return true;
+  return fin - new Date(user.trial_started_at) > 8 * 24 * 60 * 60 * 1000;
+}
+
 module.exports = async (req, res, next) => {
   const user = req.user;
   if (!user) return res.status(401).json({ error: "NO_AUTH" });
@@ -32,6 +43,11 @@ module.exports = async (req, res, next) => {
   // Trial: sin límite de pedidos... salvo en Starter, cuyo tope de 120 pedidos es de
   // por vida (no un cupo mensual que se regala durante la prueba) y aplica siempre.
   if (status === "trial" && plan !== "starter") return next();
+
+  // Días regalados por un admin (prueba que dura más que los 7 días normales, o
+  // prueba sin trial_started_at porque nunca la pidió él): sin límite de
+  // pedidos mientras duren.
+  if (diasRegalados(user)) return next();
 
   // Gracia manual de 15 días concedida por un admin (botón "Desbloquear" en Gestión
   // de clientes): acceso completo sin importar cuántos pedidos tenga, mientras dure.
@@ -97,3 +113,5 @@ module.exports = async (req, res, next) => {
 
   next();
 };
+
+module.exports.diasRegalados = diasRegalados;
