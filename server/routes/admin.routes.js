@@ -76,9 +76,13 @@ router.post("/users/:id/grant-free-days", auth, admin, async (req, res) => {
     // se espera de "días gratis": acceso sin fricción, no forzar el tope de 120/420/...
     const newStatus = target.stripe_subscription_id ? "active" : "trial";
 
+    // Días regalados = sin límite de pedidos mientras duren: se usa la misma
+    // gracia que el botón "Desbloquear" (plan_overage_grace_until), que salta
+    // el tope de 120 de Starter en prueba y el bloqueo por exceso. Al vencer,
+    // si sigue por encima del límite, vuelve a bloquearse solo.
     await db.run(
-      "UPDATE users SET plan = ?, plan_status = ?, plan_expires_at = ? WHERE id = ?",
-      [newPlan, newStatus, newExpiry, target.id]
+      "UPDATE users SET plan = ?, plan_status = ?, plan_expires_at = ?, plan_overage_grace_until = ? WHERE id = ?",
+      [newPlan, newStatus, newExpiry, newExpiry, target.id]
     );
     res.json({ ok: true, plan: newPlan, status: newStatus, plan_expires_at: newExpiry });
   } catch (e) { res.status(500).json({ error: "Error servidor" }); }

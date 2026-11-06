@@ -1352,7 +1352,7 @@ function updateOrderLimitBanner() {
       const msLeft = new Date(up.trial_ends_at) - now;
       const daysTrialLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
       // El mes gratis termina por lo que ocurra primero: los días o los 120 pedidos.
-      const cupoTxt = (up.order_limit && up.is_lifetime_limit)
+      const cupoTxt = (up.order_limit && up.is_lifetime_limit && !up.overage_grace_active)
         ? ` o hasta ${up.order_limit.toLocaleString("es-ES")} pedidos (llevas ${(up.monthly_orders||0).toLocaleString("es-ES")}/${up.order_limit.toLocaleString("es-ES")})`
         : "";
       const textEl = document.getElementById("trial-countdown-text");
