@@ -460,12 +460,28 @@ function startCrons() {
   (function bucleMRW() {
     const horaMadrid = () => Number(new Date().toLocaleString("en-GB", { timeZone: "Europe/Madrid", hour: "2-digit", hour12: false }));
     const CADA = 5 * 60 * 1000;
+    let enPausa = null;
     setTimeout(async function vuelta() {
-      const h = horaMadrid();
-      if (h >= 20 || h < 8) return setTimeout(vuelta, CADA);
-      const t0 = Date.now();
-      await syncAllMRW().catch(() => {});
-      setTimeout(vuelta, Math.max(15 * 1000, CADA - (Date.now() - t0)));
+      let espera = CADA;
+      try {
+        const h = horaMadrid();
+        const noche = h >= 20 || h < 8;
+        if (noche !== enPausa) {
+          console.log(noche
+            ? `🌙 [CRON] MRW en pausa nocturna (hora España ${h}h) — vuelve a las 8:00`
+            : `☀️ [CRON] MRW activo (hora España ${h}h)`);
+          enPausa = noche;
+        }
+        if (!noche) {
+          const t0 = Date.now();
+          await syncAllMRW();
+          espera = Math.max(15 * 1000, CADA - (Date.now() - t0));
+        }
+      } catch (e) {
+        console.error("[CRON] Error en bucle MRW:", e.message);
+      } finally {
+        setTimeout(vuelta, espera);
+      }
     }, 60 * 1000);
   })();
   setTimeout(syncAllCTT, 90 * 1000);
