@@ -1518,19 +1518,33 @@ async function geIncColumnaCorreo(orderId) {
     const inc = d.incidencia;
     const yo = currentUser?.name || "Tú";
     const fmt = f => f ? new Date(f).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+    // Cada correo con su formato original (HTML) dentro de un iframe aislado
+    // (sin scripts). El correo anterior citado debajo se oculta, como Gmail.
+    const ESTILO_CORREO = `<base target="_blank"><style>
+      html,body{margin:0;padding:0;background:transparent;}
+      body{font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45;color:#1f1f1f;word-break:break-word;}
+      img{max-width:100%;height:auto;} table{max-width:100%!important;}
+      body:not(.citas) .gmail_quote, body:not(.citas) blockquote, body:not(.citas) #divRplyFwdMsg, body:not(.citas) #divRplyFwdMsg ~ *,
+      body:not(.citas) #appendonsend ~ *, body:not(.citas) div[style*="border-top:solid #E1E1E1"], body:not(.citas) div[style*="border-top:solid #E1E1E1"] ~ *,
+      body:not(.citas) div[style*="border-top: solid #E1E1E1"], body:not(.citas) div[style*="border-top: solid #E1E1E1"] ~ * {display:none!important;}
+    </style>`;
     const burbuja = m => {
       const mio = !!m.saliente;
-      const texto = escapeHtml(String(m.texto || "").trim());
-      const largo = texto.length > 600;
+      const caja = `max-width:94%;width:${m.html ? "94%" : "auto"};padding:10px 12px;border-radius:12px;${mio ? "border-top-right-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;" : `border-top-left-radius:4px;background:${m.manual ? "#fffbeb" : "#fafafa"};border:1px solid ${m.manual ? "#fde68a" : "var(--border)"};`}`;
+      const cuerpo = m.html
+        ? `<iframe sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="${escapeAttr(ESTILO_CORREO + m.html)}"
+             style="width:100%;height:60px;border:0;display:block;background:transparent;" onload="geIncAjustarCorreo(this)"></iframe>
+           <div class="ge-correo-acciones" style="display:none;gap:12px;margin-top:6px;font-size:12px;">
+             <a href="#" onclick="event.preventDefault();geIncVerCompleto(this)" style="color:#2563eb;">Ver correo completo</a>
+             <a href="#" onclick="event.preventDefault();geIncVerCitas(this)" style="color:#2563eb;">Mostrar correo anterior</a>
+           </div>`
+        : `<div style="font-size:12.5px;line-height:1.5;color:var(--text);white-space:pre-wrap;word-break:break-word;">${escapeHtml(String(m.texto || "").trim())}</div>`;
       return `
-        <div style="display:flex;flex-direction:column;align-items:${mio ? "flex-end" : "flex-start"};margin-bottom:12px;">
+        <div style="display:flex;flex-direction:column;align-items:${mio ? "flex-end" : "flex-start"};margin-bottom:14px;">
           <div style="font-size:11.5px;margin-bottom:4px;color:var(--muted);">
-            <b style="color:var(--text);">${mio ? escapeHtml(yo) : "MRW"}</b> · ${escapeHtml(mio ? (d.email || "") : (m.de || ""))} · ${fmt(m.fecha)}${m.manual ? ` · <span style="color:#b45309;font-weight:600;">escrito a mano</span>` : ""}
+            <b style="color:var(--text);">${mio ? escapeHtml(yo) : "MRW"}</b> · ${escapeHtml(mio ? (m.de || d.email || "") : (m.de || ""))} · ${fmt(m.fecha)}${m.manual ? ` · <span style="color:#b45309;font-weight:600;">escrito a mano</span>` : ""}
           </div>
-          <div style="max-width:92%;padding:10px 12px;border-radius:12px;${mio ? "border-top-right-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;" : `border-top-left-radius:4px;background:${m.manual ? "#fffbeb" : "#f7f7f7"};border:1px solid ${m.manual ? "#fde68a" : "var(--border)"};`}font-size:12.5px;line-height:1.5;color:var(--text);white-space:pre-wrap;word-break:break-word;">
-            <div style="${largo ? "max-height:180px;overflow:hidden;" : ""}" ${largo ? `id="dp-msg-${Number(m.id)}"` : ""}>${texto}</div>
-            ${largo ? `<a href="#" onclick="event.preventDefault();const e=document.getElementById('dp-msg-${Number(m.id)}');const ab=e.style.maxHeight!=='none';e.style.maxHeight=ab?'none':'180px';this.textContent=ab?'Ver menos':'Ver correo completo';" style="display:inline-block;margin-top:6px;font-size:12px;color:#2563eb;">Ver correo completo</a>` : ""}
-          </div>
+          <div style="${caja}">${cuerpo}</div>
         </div>`;
     };
     const estadoBtn = inc.estado === "resuelta"
@@ -1564,6 +1578,39 @@ async function geIncColumnaCorreo(orderId) {
     col.innerHTML = _dpCard(`${_dpIco("nota")}Correo con MRW`, `<div style="padding:14px 18px;color:#dc2626;font-size:13px;">Error cargando los correos</div>`, "cliente");
   }
 }
+
+// Alto del iframe de un correo: hasta 320 px; si es más largo, enlaces para
+// verlo entero y para mostrar el correo anterior citado.
+const GE_CORREO_MAX = 320;
+window.geIncAjustarCorreo = function(ifr) {
+  try {
+    const doc = ifr.contentDocument;
+    const alto = doc.documentElement.scrollHeight;
+    const hayCitas = !!doc.querySelector(".gmail_quote, blockquote, #divRplyFwdMsg, #appendonsend, div[style*='border-top:solid #E1E1E1'], div[style*='border-top: solid #E1E1E1']");
+    ifr.style.height = Math.min(alto, ifr.dataset.completo ? alto : GE_CORREO_MAX) + "px";
+    const acc = ifr.nextElementSibling;
+    if (acc) {
+      acc.style.display = (alto > GE_CORREO_MAX || hayCitas) ? "flex" : "none";
+      acc.firstElementChild.style.display = alto > GE_CORREO_MAX || ifr.dataset.completo ? "" : "none";
+      acc.lastElementChild.style.display = hayCitas ? "" : "none";
+    }
+  } catch (e) { ifr.style.height = GE_CORREO_MAX + "px"; }
+};
+window.geIncVerCompleto = function(a) {
+  const ifr = a.closest("div").previousElementSibling;
+  if (ifr.dataset.completo) { delete ifr.dataset.completo; a.textContent = "Ver correo completo"; }
+  else { ifr.dataset.completo = "1"; a.textContent = "Ver menos"; }
+  geIncAjustarCorreo(ifr);
+};
+window.geIncVerCitas = function(a) {
+  const ifr = a.closest("div").previousElementSibling;
+  const b = ifr.contentDocument?.body;
+  if (!b) return;
+  const ver = !b.classList.contains("citas");
+  b.classList.toggle("citas", ver);
+  a.textContent = ver ? "Ocultar correo anterior" : "Mostrar correo anterior";
+  geIncAjustarCorreo(ifr);
+};
 
 window.geIncResponderDetalle = async function(incId, orderId) {
   const ta = document.getElementById("dp-correo-resp");

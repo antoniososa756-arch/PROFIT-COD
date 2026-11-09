@@ -261,7 +261,7 @@ router.get("/incidencias/por-pedido/:orderId", auth, soloAdmin, async (req, res)
     );
     if (!i) return res.json({ incidencia: null, mensajes: [] });
     const mensajes = await db.all(
-      "SELECT id, de, asunto, texto, fecha, manual, saliente FROM incidencias_mrw_mensajes WHERE incidencia_id = $1 ORDER BY fecha ASC",
+      "SELECT id, de, asunto, texto, html, fecha, manual, saliente FROM incidencias_mrw_mensajes WHERE incidencia_id = $1 ORDER BY fecha ASC",
       [i.id]
     );
     const cfg = await db.get("SELECT email FROM incidencias_mrw_config WHERE user_id = $1", [req.user.id]);

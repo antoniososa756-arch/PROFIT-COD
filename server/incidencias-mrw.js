@@ -78,6 +78,10 @@ async function ensureTablas() {
     )`);
   await db.run(`CREATE INDEX IF NOT EXISTS idx_inc_mrw_user_estado ON incidencias_mrw (user_id, estado)`);
   await db.run(`ALTER TABLE incidencias_mrw_config ADD COLUMN IF NOT EXISTS version_lectura INTEGER DEFAULT 1`);
+  // HTML del correo (para verlo con su formato) y lectura de la carpeta Enviados
+  await db.run(`ALTER TABLE incidencias_mrw_mensajes ADD COLUMN IF NOT EXISTS html TEXT`);
+  await db.run(`ALTER TABLE incidencias_mrw_config ADD COLUMN IF NOT EXISTS ultimo_uid_enviados INTEGER DEFAULT 0`);
+  await db.run(`ALTER TABLE incidencias_mrw_config ADD COLUMN IF NOT EXISTS uid_validity_enviados TEXT`);
   global.__incMrwTablas = true;
 }
 
@@ -113,6 +117,63 @@ const textoDe = (parsed) => {
   return t.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n");
 };
 
+// HTML del correo para verlo con su formato en ProfitCOD. Se muestra dentro
+// de un iframe aislado (sin scripts), y además aquí se quitan scripts,
+// eventos on*, iframes/objetos, javascript: y las imágenes incrustadas cid:
+// (no se pueden mostrar fuera del correo).
+function htmlLimpio(parsed) {
+  let h = parsed.html ? String(parsed.html) : (parsed.textAsHtml ? String(parsed.textAsHtml) : "");
+  if (!h) return null;
+  h = h.replace(/<(script|iframe|object|embed|form)\b[\s\S]*?<\/\1\s*>/gi, "")
+       .replace(/<(script|iframe|object|embed|link|meta|base)\b[^>]*>/gi, "")
+       .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+       .replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, '$1="#"')
+       .replace(/<img\b[^>]*src\s*=\s*("|')cid:[^"']*\1[^>]*>/gi, "");
+  return h.slice(0, 300000);
+}
+
+// Correo NUESTRO de la carpeta Enviados dirigido a MRW (respondido desde
+// Gmail o desde ProfitCOD): se asocia a la incidencia por el envío del asunto.
+function analizarEnviado(parsed) {
+  const asunto = parsed.subject || "";
+  const envio = (asunto.match(ENVIO_RE) || [])[0] || null;
+  if (!envio) return null;
+  const texto = textoDe(parsed);
+  return {
+    envio, asunto,
+    texto: texto.split(/\n\s*(De|From|El .{5,80} escribió)\s*:?.*\n/i)[0].trim().slice(0, 20000),
+    html: htmlLimpio(parsed),
+    de: parsed.from?.value?.[0]?.address || "",
+    fecha: (parsed.date || new Date()).toISOString(),
+    message_id: parsed.messageId || `${envio}-${(parsed.date || new Date()).getTime()}`,
+  };
+}
+
+async function guardarEnviado(userId, a) {
+  const inc = await db.get("SELECT id, ultimo_mensaje_at FROM incidencias_mrw WHERE user_id = $1 AND envio = $2", [userId, a.envio]);
+  if (!inc) return false;
+  await db.run(
+    `INSERT INTO incidencias_mrw_mensajes (incidencia_id, message_id, de, asunto, texto, html, fecha, manual, saliente)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,false,true) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
+    [inc.id, a.message_id, a.de, a.asunto, a.texto, a.html, a.fecha]
+  );
+  // Si nuestra respuesta es lo último del hilo, la incidencia está respondida
+  if (!inc.ultimo_mensaje_at || a.fecha >= inc.ultimo_mensaje_at) {
+    await db.run(
+      `UPDATE incidencias_mrw SET ultimo_mensaje_at = $1, mrw_escribio = false,
+         estado = CASE WHEN estado = 'nueva' THEN 'respondida' ELSE estado END
+       WHERE id = $2`, [a.fecha, inc.id]);
+  }
+  return true;
+}
+
+// Carpeta "Enviados" de Gmail (su nombre cambia con el idioma: se busca por
+// su marca especial \Sent).
+async function carpetaEnviados(client) {
+  const lista = await client.list();
+  return (lista.find(m => m.specialUse === "\\Sent") || lista.find(m => /sent|enviados/i.test(m.path)))?.path || null;
+}
+
 // Solo cuentan los correos de ANOMALÍA (el asunto lo dice, también en las
 // respuestas a mano "RE: [AN2] G3 \ ... \ ANOMALÍA \ ..."). El mismo
 // remitente envía otros avisos (entregas, etc.) que no son incidencias.
@@ -142,6 +203,7 @@ function analizarCorreo(parsed) {
     fecha_anomalia: automatico ? [(texto.match(/Fecha de la Anomal[íi]a\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i) || [])[1], (texto.match(/Hora de la Anomal[íi]a\s*:?\s*(\d{1,2}:\d{2})/i) || [])[1]].filter(Boolean).join(" ") : "",
     asunto,
     texto: (automatico ? texto : soloNuevo).slice(0, 20000),
+    html: htmlLimpio(parsed),
     de: parsed.from?.value?.[0]?.address || "",
     fecha: (parsed.date || new Date()).toISOString(),
     message_id: parsed.messageId || `${envio}-${(parsed.date || new Date()).getTime()}`,
@@ -181,15 +243,15 @@ async function guardarCorreo(userId, a) {
     [userId, a.envio, orderId, a.referencia, a.tipo, a.destinatario, a.telefono, a.direccion, a.fecha_anomalia, a.manual, a.fecha]
   );
   await db.run(
-    `INSERT INTO incidencias_mrw_mensajes (incidencia_id, message_id, de, asunto, texto, fecha, manual)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
-    [inc.id, a.message_id, a.de, a.asunto, a.texto, a.fecha, a.manual]
+    `INSERT INTO incidencias_mrw_mensajes (incidencia_id, message_id, de, asunto, texto, html, fecha, manual)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
+    [inc.id, a.message_id, a.de, a.asunto, a.texto, a.html, a.fecha, a.manual]
   );
 }
 
 // Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
 // desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
-const VERSION_LECTURA = 3;
+const VERSION_LECTURA = 4; // v4: formato HTML + carpeta Enviados
 
 // Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
 // días. Una sola lectura a la vez por usuario.
@@ -210,8 +272,8 @@ async function _sincronizarUsuario(userId) {
   if (Number(cfg.version_lectura || 1) < VERSION_LECTURA) {
     estadosPrevios = await db.all("SELECT envio, estado FROM incidencias_mrw WHERE user_id = $1 AND estado <> 'nueva'", [userId]);
     await db.run("DELETE FROM incidencias_mrw WHERE user_id = $1", [userId]);
-    await db.run("UPDATE incidencias_mrw_config SET ultimo_uid = 0, version_lectura = $1 WHERE user_id = $2", [VERSION_LECTURA, userId]);
-    cfg = { ...cfg, ultimo_uid: 0, uid_validity: null };
+    await db.run("UPDATE incidencias_mrw_config SET ultimo_uid = 0, ultimo_uid_enviados = 0, version_lectura = $1 WHERE user_id = $2", [VERSION_LECTURA, userId]);
+    cfg = { ...cfg, ultimo_uid: 0, uid_validity: null, ultimo_uid_enviados: 0, uid_validity_enviados: null };
   }
   const client = clienteImap(cfg.email, descifrar(cfg.password_enc));
   let leidos = 0, guardados = 0, maxUid = Number(cfg.ultimo_uid || 0);
@@ -240,6 +302,32 @@ async function _sincronizarUsuario(userId) {
       }
       if (!uids.length) await db.run("UPDATE incidencias_mrw_config SET uid_validity = $1 WHERE user_id = $2", [validity, userId]);
     } finally { lock.release(); }
+    // Nuestras respuestas a MRW (carpeta Enviados): así el hilo se ve
+    // completo aunque se haya contestado desde Gmail.
+    try {
+      const enviados = await carpetaEnviados(client);
+      if (enviados) {
+        const lockE = await client.getMailboxLock(enviados);
+        try {
+          const valE = String(client.mailbox.uidValidity || "");
+          let maxE = cfg.uid_validity_enviados && cfg.uid_validity_enviados !== valE ? 0 : Number(cfg.ultimo_uid_enviados || 0);
+          const critE = { to: cfg.remitente };
+          if (maxE > 0) critE.uid = `${maxE + 1}:*`;
+          else critE.since = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+          const uidsE = ((await client.search(critE, { uid: true })) || []).filter(u => u > maxE);
+          for (let i = 0; i < uidsE.length; i += 50) {
+            for await (const msg of client.fetch(uidsE.slice(i, i + 50).join(","), { uid: true, source: true }, { uid: true })) {
+              if (msg?.source) {
+                const a = analizarEnviado(await simpleParser(msg.source));
+                if (a && await guardarEnviado(userId, a)) guardados++;
+              }
+              if (msg.uid > maxE) maxE = msg.uid;
+            }
+          }
+          await db.run("UPDATE incidencias_mrw_config SET ultimo_uid_enviados = $1, uid_validity_enviados = $2 WHERE user_id = $3", [maxE, valE, userId]);
+        } finally { lockE.release(); }
+      }
+    } catch (e) { console.warn("[Incidencias MRW] Enviados:", e.message); }
     await client.logout().catch(() => {});
     for (const p of estadosPrevios) {
       await db.run("UPDATE incidencias_mrw SET estado = $1, mrw_escribio = false WHERE user_id = $2 AND envio = $3", [p.estado, userId, p.envio]).catch(() => {});
