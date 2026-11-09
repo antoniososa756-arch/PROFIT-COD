@@ -5,8 +5,8 @@
   const st = document.createElement("style");
   st.textContent = `
     .nota-pedido{position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
-      width:24px;height:24px;border-radius:6px;color:#4b5563;cursor:default;transition:background .15s,color .15s;}
-    body.dark .nota-pedido{color:#d1d5db;}
+      width:24px;height:24px;border-radius:6px;color:#525252;cursor:default;transition:background .15s,color .15s;}
+    body.dark .nota-pedido{color:#d4d4d4;}
     .nota-pedido:hover{background:rgba(107,114,128,.15);color:#111827;}
     body.dark .nota-pedido:hover{color:#fff;}
     #nota-globo{position:fixed;z-index:5000;background:#1f2937;color:#fff;font-size:12px;font-weight:500;line-height:1.35;
@@ -829,7 +829,7 @@ function closeOnBackdropClick(el, closeFn) {
         <div onclick="irAPedidoDesdeNotif('${escapeAttr(n.id)}')" style="flex:1;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
             <strong>${escapeHtml(n.title)}</strong>
-            ${fechaLabel ? `<span style="font-size:10px;color:#9ca3af;white-space:nowrap;flex-shrink:0;">${escapeHtml(fechaLabel)}</span>` : ""}
+            ${fechaLabel ? `<span style="font-size:10px;color:#a1a1a1;white-space:nowrap;flex-shrink:0;">${escapeHtml(fechaLabel)}</span>` : ""}
           </div>
           <div>${n.html || escapeHtml(n.text)}</div>
         </div>
@@ -842,7 +842,7 @@ function closeOnBackdropClick(el, closeFn) {
     panelEl.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 8px;">
         <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">${d.ui.notiTitle}</span>
-        ${list.length ? `<span style="font-size:11px;color:#6b7280;">${list.length} notificaciones</span>` : ""}
+        ${list.length ? `<span style="font-size:11px;color:#6b6b6b;">${list.length} notificaciones</span>` : ""}
       </div>
       ${
         list.length
@@ -949,8 +949,8 @@ function loadApp(section) {
                 </linearGradient>
               </defs>
               <!-- Base -->
-              <rect x="1" y="28" width="46" height="4" rx="2" fill="#d1d5db"/>
-              <rect x="8" y="27" width="32" height="2" rx="1" fill="#e5e7eb"/>
+              <rect x="1" y="28" width="46" height="4" rx="2" fill="#d4d4d4"/>
+              <rect x="8" y="27" width="32" height="2" rx="1" fill="#e3e3e3"/>
               <!-- Tapa/cuerpo -->
               <rect x="5" y="3" width="38" height="26" rx="4" fill="#1e293b"/>
               <rect x="7" y="5" width="34" height="22" rx="3" fill="#0f172a"/>
@@ -999,7 +999,7 @@ function loadApp(section) {
         return `<div class="menu-item menu-item-disabled" title="Sin acceso"
           style="opacity:0.35;cursor:not-allowed;pointer-events:none;filter:grayscale(1);">
           ${icons[sec] || ""}${labels[sec] || sec}
-          <span style="margin-left:auto;font-size:10px;background:rgba(107,114,128,.15);color:#9ca3af;padding:1px 6px;border-radius:10px;font-weight:600;">🔒</span>
+          <span style="margin-left:auto;font-size:10px;background:rgba(107,114,128,.15);color:#a1a1a1;padding:1px 6px;border-radius:10px;font-weight:600;">🔒</span>
         </div>`;
       }).join("")}
 
@@ -1065,7 +1065,7 @@ function loadApp(section) {
           </div>
         </div>
       </div>` : ""}
-      <div style="padding:8px 4px;border-top:1px solid #f3f4f6;text-align:center;font-size:10px;color:#d1d5db;line-height:1.4;">
+      <div style="padding:8px 4px;border-top:1px solid #f3f3f3;text-align:center;font-size:10px;color:#d4d4d4;line-height:1.4;">
         © 2026 <a href="https://profitcod.com" style="color:#22c55e;text-decoration:none;font-weight:600;">ProfitCOD</a>
       </div>
     </div>
@@ -1106,7 +1106,7 @@ function loadApp(section) {
               </div>
             </div>
 
-            <div id="topbar-plan-chip" onclick="setSection('plan')" style="display:none;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:#1f2937;border:1px solid #374151;cursor:pointer;font-size:12px;font-weight:600;color:#e5e7eb;white-space:nowrap;flex-shrink:0;" title="Ver plan"></div>
+            <div id="topbar-plan-chip" onclick="setSection('plan')" style="display:none;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:#1f2937;border:1px solid #374151;cursor:pointer;font-size:12px;font-weight:600;color:#e3e3e3;white-space:nowrap;flex-shrink:0;" title="Ver plan"></div>
 
             <div class="topbar-right" style="position:relative;">
 
@@ -1225,7 +1225,7 @@ function updateOrderLimitBanner() {
     // Durante el período de prueba el plan real (ej. "starter") queda oculto detrás
     // de "Prueba" — así no se confunde con haber contratado ya ese plan de pago.
     const isTrial = up.trial_active && up.status !== "active";
-    const col   = isTrial ? "#f59e0b" : (planColors[up.plan] || "#6b7280");
+    const col   = isTrial ? "#f59e0b" : (planColors[up.plan] || "#6b6b6b");
     const label = isTrial ? "Prueba" : (planNames[up.plan] || up.plan);
     const price = isTrial ? 0 : (up.estimated_total ?? 0);
     chip.style.display = "flex";
@@ -1233,7 +1233,7 @@ function updateOrderLimitBanner() {
     chip.innerHTML = `
       <span style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0;"></span>
       <span style="color:${col};">${label}</span>
-      <span style="color:#9ca3af;font-weight:400;">· ${Number(price).toFixed(2).replace(".",",")}€</span>
+      <span style="color:#a1a1a1;font-weight:400;">· ${Number(price).toFixed(2).replace(".",",")}€</span>
     `;
   } else if (chip) {
     chip.style.display = "none";
@@ -1373,7 +1373,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
 
 // Si el plan aún no ha cargado, mostrar spinner y esperar
     if (!up.plan) {
-      if (box) { box.className = "card"; box.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:80px;"><div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#22c55e;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`; }
+      if (box) { box.className = "card"; box.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:80px;"><div style="width:32px;height:32px;border:3px solid #e3e3e3;border-top-color:#22c55e;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`; }
       // Reintentar hasta 10 veces (5 segundos) esperando que cargue el plan
       let retryCount = (window.__planRetryCount || 0) + 1;
       window.__planRetryCount = retryCount;
@@ -1410,8 +1410,8 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
             <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="#f59e0b" stroke-width="1.5">
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
-            <div style="font-size:20px;font-weight:800;color:#f9fafb;">Membresía inactiva</div>
-            <div style="font-size:14px;color:#6b7280;max-width:400px;line-height:1.7;">
+            <div style="font-size:20px;font-weight:800;color:#fafafa;">Membresía inactiva</div>
+            <div style="font-size:14px;color:#6b6b6b;max-width:400px;line-height:1.7;">
               La cuenta principal no tiene una membresía activa o ha caducado.<br>
               Contacta con el administrador de tu cuenta para que renueve su suscripción.
             </div>
@@ -1442,25 +1442,25 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
         : "Tu suscripción ha caducado o no tienes un plan activo. Tiendas ilimitadas en todos los planes.";
       box.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:20px;">
-          <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="${trialExpired ? "#f59e0b" : "#d1d5db"}" stroke-width="1.5">
+          <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="${trialExpired ? "#f59e0b" : "#d4d4d4"}" stroke-width="1.5">
             <rect x="3" y="11" width="18" height="11" rx="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
           <div>
-            <div style="font-size:20px;font-weight:800;color:#f9fafb;margin-bottom:8px;">${headline}</div>
-            <div style="font-size:14px;color:#6b7280;max-width:460px;">${subline}</div>
+            <div style="font-size:20px;font-weight:800;color:#fafafa;margin-bottom:8px;">${headline}</div>
+            <div style="font-size:14px;color:#6b6b6b;max-width:460px;">${subline}</div>
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
             ${planCards.map(p => `
               <div style="border:2px solid ${p.color};border-radius:12px;padding:16px 20px;min-width:140px;text-align:left;">
                 <div style="font-size:11px;font-weight:700;color:${p.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${p.name}</div>
-                <div style="font-size:22px;font-weight:800;color:#f9fafb;">${p.free ? "Gratis" : p.price+"€"}<span style="font-size:12px;font-weight:400;color:#6b7280;">${p.free ? "" : "/mes"}</span></div>
-                <div style="font-size:11px;color:#6b7280;margin-top:2px;">hasta ${p.limit} pedidos${p.lifetime ? " (de por vida)" : "/mes"}</div>
+                <div style="font-size:22px;font-weight:800;color:#fafafa;">${p.free ? "Gratis" : p.price+"€"}<span style="font-size:12px;font-weight:400;color:#6b6b6b;">${p.free ? "" : "/mes"}</span></div>
+                <div style="font-size:11px;color:#6b6b6b;margin-top:2px;">hasta ${p.limit} pedidos${p.lifetime ? " (de por vida)" : "/mes"}</div>
               </div>`).join("")}
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
             ${!up.had_trial ? `<button onclick="startTrialAndReload()" style="padding:12px 32px;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">🎁 Probar gratis 7 días</button>` : ""}
-            <button onclick="setSection('plan')" style="padding:12px 32px;background:${up.had_trial ? "#22c55e" : "#f9fafb"};color:${up.had_trial ? "#fff" : "#374151"};border:1px solid #374151;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">Ver planes y activar</button>
+            <button onclick="setSection('plan')" style="padding:12px 32px;background:${up.had_trial ? "#22c55e" : "#fafafa"};color:${up.had_trial ? "#fff" : "#374151"};border:1px solid #374151;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">Ver planes y activar</button>
           </div>
         </div>`;
     }
@@ -1484,8 +1484,8 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
         <div>
-          <div style="font-size:18px;font-weight:800;color:#f9fafb;margin-bottom:8px;">Has alcanzado el límite de pedidos</div>
-          <div style="font-size:14px;color:#6b7280;max-width:420px;">
+          <div style="font-size:18px;font-weight:800;color:#fafafa;margin-bottom:8px;">Has alcanzado el límite de pedidos</div>
+          <div style="font-size:14px;color:#6b6b6b;max-width:420px;">
             ${up.is_lifetime_limit
               ? `Has usado <strong>${(up.monthly_orders||0).toLocaleString("es-ES")}</strong> de tus <strong>${(up.order_limit||0).toLocaleString("es-ES")}</strong> pedidos gratuitos del plan <strong>${up.plan}</strong>.`
               : `Has usado <strong>${(up.monthly_orders||0).toLocaleString("es-ES")}</strong> pedidos este mes. Tu plan <strong>${up.plan}</strong> permite <strong>${(up.order_limit||0).toLocaleString("es-ES")}</strong>.`}
@@ -1495,7 +1495,7 @@ if (id !== "plan" && currentUser.role !== "Administrador") {
         </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;">
           <button onclick="setSection('plan')" style="padding:11px 28px;background:#22c55e;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;">Cambiar de plan</button>
-          <span style="font-size:13px;color:#9ca3af;">este bloqueo no se levanta solo al renovar el mes — necesitas actualizar de plan</span>
+          <span style="font-size:13px;color:#a1a1a1;">este bloqueo no se levanta solo al renovar el mes — necesitas actualizar de plan</span>
         </div>`;
       box.appendChild(overlay);
     }
@@ -1541,7 +1541,7 @@ const now = new Date();
             <button id="met-carrier-trigger" onclick="toggleMetCarrierFilter()"
               style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
               onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
               <span id="met-carrier-label">Agencia: Todas</span>
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
             </button>
@@ -1556,13 +1556,13 @@ const now = new Date();
             <button id="met-filter-trigger" onclick="toggleMetShopFilter()"
               style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
               onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
               <span id="met-filter-label">Filtrar tiendas</span>
               <svg id="met-filter-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
             </button>
             <div id="met-shop-filter-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:1500;background:var(--card);border:1px solid #374151;border-radius:12px;padding:12px;min-width:180px;" onmouseenter="clearTimeout(window.__metFT)" onmouseleave="window.__metFT=setTimeout(function(){var p=document.getElementById('met-shop-filter-panel');var c=document.getElementById('met-filter-chevron');if(p&&p.style.display==='block'){p.style.display='none';if(c)c.style.transform='';localStorage.setItem('met_filter_open','0');}},250)">
               <div id="met-filter-body">
-                <div style="color:#9ca3af;font-size:12px;">Cargando...</div>
+                <div style="color:#a1a1a1;font-size:12px;">Cargando...</div>
               </div>
             </div>
           </div>
@@ -1603,7 +1603,7 @@ const now = new Date();
             </div>
           </div>
           <div style="border-top:1px solid #1f2937;padding-top:6px;width:100%;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="irAPedidosDesdeMetricas(['en_preparacion','enviado','en_transito','entregado','devuelto','destruido','franquicia'])" title="Ver estos pedidos">
-            <span style="font-size:12px;color:#6b7280;display:flex;flex-direction:column;line-height:1.4;">Enviados<span style="font-size:10px;color:#9ca3af;">(excl. pendientes y cancelados)</span></span>
+            <span style="font-size:12px;color:#6b6b6b;display:flex;flex-direction:column;line-height:1.4;">Enviados<span style="font-size:10px;color:#a1a1a1;">(excl. pendientes y cancelados)</span></span>
             <span style="font-size:14px;font-weight:700;color:#22c55e;" id="stat-enviados">0</span>
           </div>
         </div>
@@ -1694,7 +1694,7 @@ const now = new Date();
         <div class="stat-card" id="donut-card" style="flex-direction:column;align-items:center;justify-content:center;gap:18px;flex:1;height:100%;box-sizing:border-box;padding:24px;">
           <div style="display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;">
             <span style="font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;">Tasa de entrega</span>
-            <span id="donut-base" style="font-size:12px;color:#6b7280;font-weight:500;letter-spacing:.2px;"></span>
+            <span id="donut-base" style="font-size:12px;color:#6b6b6b;font-weight:500;letter-spacing:.2px;"></span>
           </div>
           <div style="display:flex;align-items:center;gap:28px;width:100%;flex-wrap:wrap;justify-content:center;">
             <div style="position:relative;width:155px;height:155px;flex-shrink:0;">
@@ -1709,7 +1709,7 @@ const now = new Date();
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
                 <span style="font-size:24px;font-weight:900;letter-spacing:-.5px;line-height:1;" id="donut-pct">0%</span>
-                <span style="font-size:9px;font-weight:500;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;">entregado</span>
+                <span style="font-size:9px;font-weight:500;color:#6b6b6b;text-transform:uppercase;letter-spacing:.8px;">entregado</span>
               </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
@@ -2096,7 +2096,7 @@ if (id === "crear-cliente") {
 
         <div class="form-group" ${currentUser.role === "Cliente" ? 'style="display:none;"' : ''}>
           <label>Tipo de cuenta</label>
-          <select id="clientRole" onchange="toggleParentSelector()" style="width:100%;padding:9px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);cursor:pointer;">
+          <select id="clientRole" onchange="toggleParentSelector()" style="width:100%;padding:9px 12px;border:1px solid var(--border,#e3e3e3);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);cursor:pointer;">
             ${currentUser.role === "Cliente"
               ? `<option value="apoyo">Apoyo</option>`
               : `<option value="cliente">Cliente</option>
@@ -2108,7 +2108,7 @@ if (id === "crear-cliente") {
 
         <div class="form-group" id="parentSelectorWrap" style="display:none;">
           <label>Cliente al que pertenece</label>
-          <select id="clientParentId" style="width:100%;padding:9px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);cursor:pointer;">
+          <select id="clientParentId" style="width:100%;padding:9px 12px;border:1px solid var(--border,#e3e3e3);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);cursor:pointer;">
             <option value="">Cargando clientes…</option>
           </select>
         </div>
@@ -2251,9 +2251,9 @@ if (id === "gestion-clientes") {
         const planBadge = (u) => {
           const sec = seccionPlan(u);
           const pill = (txt, color) => `<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;color:${color};background:${color}1f;border:1px solid ${color}55;white-space:nowrap;">${txt}</span>`;
-          if (sec === "otros") return `<span style="color:#9ca3af;font-size:12px;">—</span>`;
-          if (sec === "trial") return `<div style="display:flex;flex-direction:column;gap:2px;">${pill("Prueba", "#06b6d4")}${u.plan_expires_at ? `<span style="font-size:10.5px;color:#9ca3af;">hasta ${fmtFecha(u.plan_expires_at)}</span>` : ""}</div>`;
-          if (sec === "sin_plan") return pill("Sin plan", "#6b7280");
+          if (sec === "otros") return `<span style="color:#a1a1a1;font-size:12px;">—</span>`;
+          if (sec === "trial") return `<div style="display:flex;flex-direction:column;gap:2px;">${pill("Prueba", "#06b6d4")}${u.plan_expires_at ? `<span style="font-size:10.5px;color:#a1a1a1;">hasta ${fmtFecha(u.plan_expires_at)}</span>` : ""}</div>`;
+          if (sec === "sin_plan") return pill("Sin plan", "#6b6b6b");
           const info = PLAN_INFO[sec];
           const extra = u.plan_status === "suspended"
             ? `<span style="font-size:10.5px;color:#ef4444;font-weight:600;">Pago fallido</span>`
@@ -2264,13 +2264,13 @@ if (id === "gestion-clientes") {
         // Tarjetas de arriba: una por plan con su número de cuentas. Al pulsar
         // una, la tabla muestra solo esas cuentas.
         const SECCIONES = [
-          { key: "todos",    name: "Todos",     color: "#e5e7eb" },
+          { key: "todos",    name: "Todos",     color: "#e3e3e3" },
           { key: "starter",  ...PLAN_INFO.starter },
           { key: "growth",   ...PLAN_INFO.growth },
           { key: "pro",      ...PLAN_INFO.pro },
           { key: "business", ...PLAN_INFO.business },
           { key: "trial",    name: "En prueba", color: "#06b6d4" },
-          { key: "sin_plan", name: "Sin plan",  color: "#6b7280" },
+          { key: "sin_plan", name: "Sin plan",  color: "#6b6b6b" },
         ];
         const contar = (key) => key === "todos" ? users.length : users.filter(u => seccionPlan(u) === key).length;
         const pintarClientes = () => {
@@ -2284,7 +2284,7 @@ if (id === "gestion-clientes") {
           const lista = sel === "todos" ? users : users.filter(u => seccionPlan(u) === sel);
           table.innerHTML = lista.length
             ? lista.map(rowHtml).join("")
-            : `<div style="padding:18px;color:#9ca3af;font-size:13px;text-align:center;">No hay cuentas en esta sección</div>`;
+            : `<div style="padding:18px;color:#a1a1a1;font-size:13px;text-align:center;">No hay cuentas en esta sección</div>`;
         };
         window.__pintarClientes = pintarClientes;
 
@@ -2310,7 +2310,7 @@ if (id === "gestion-clientes") {
             <div style="display:flex;flex-direction:column;gap:4px;">
               <div style="display:flex;align-items:center;gap:6px;">
                 ${u.role === "admin" ? "Administrador" : u.role === "apoyo" ? "Apoyo" : "Cliente"}
-                ${u.role === "apoyo" ? `<button onclick="openPermisosModal(${u.id},'${escapeHtml(u.email)}')" title="Editar permisos" style="padding:2px 8px;font-size:11px;border-radius:5px;border:1px solid #374151;background:var(--card);color:#6b7280;cursor:pointer;font-family:inherit;">Permisos</button>` : ""}
+                ${u.role === "apoyo" ? `<button onclick="openPermisosModal(${u.id},'${escapeHtml(u.email)}')" title="Editar permisos" style="padding:2px 8px;font-size:11px;border-radius:5px;border:1px solid #374151;background:var(--card);color:#6b6b6b;cursor:pointer;font-family:inherit;">Permisos</button>` : ""}
               </div>
               ${(() => {
                 if (!u.plan_overage_locked) return "";
@@ -2336,7 +2336,7 @@ if (id === "gestion-clientes") {
 
             <div style="text-align:center;">
               ${u.role === "cliente" ? `<button onclick="abrirModalDiasGratis(${u.id},'${escapeAttr(u.email)}')" title="Agregar 15 días gratis"
-                style="padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;border:1px solid #22c55e;background:transparent;color:#22c55e;cursor:pointer;font-family:inherit;white-space:nowrap;">+15 días</button>` : `<span style="color:#9ca3af;font-size:12px;">—</span>`}
+                style="padding:5px 10px;font-size:11px;font-weight:600;border-radius:6px;border:1px solid #22c55e;background:transparent;color:#22c55e;cursor:pointer;font-family:inherit;white-space:nowrap;">+15 días</button>` : `<span style="color:#a1a1a1;font-size:12px;">—</span>`}
             </div>
 
             ${u.role !== "admin" ? `
@@ -2347,7 +2347,7 @@ if (id === "gestion-clientes") {
                 <span class="user-slider"></span>
               </label>
             </div>
-            ` : `<div style="color:#9ca3af;font-size:12px;text-align:center;">—</div>`}
+            ` : `<div style="color:#a1a1a1;font-size:12px;text-align:center;">—</div>`}
 
           </div>
         `;
@@ -2398,7 +2398,7 @@ if (id === "gestion-clientes") {
     overlay.innerHTML = `
       <div style="background:var(--card);border:1px solid #374151;border-radius:14px;padding:28px;width:340px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.3);">
         <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">Permisos de acceso</div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:18px;">${escapeHtml(email)}</div>
+        <div style="font-size:12px;color:#6b6b6b;margin-bottom:18px;">${escapeHtml(email)}</div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
           ${ALL_PERMS.map(p => `
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px;color:var(--text);">
@@ -2462,7 +2462,7 @@ if (id === "mi-equipo") {
   };
   const ALL_PERMS_EQ = Object.keys(PERMS_LABELS_EQ);
 
-  box.innerHTML = `<div id="equipo-wrap"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>`;
+  box.innerHTML = `<div id="equipo-wrap"><div style="color:#6b6b6b;font-size:13px;">Cargando…</div></div>`;
 
   const wrap = document.getElementById("equipo-wrap");
 
@@ -2490,7 +2490,7 @@ if (id === "mi-equipo") {
       </div>
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;">Cuentas de apoyo</div>`;
     if (!Array.isArray(users) || users.length === 0) {
-      wrap.innerHTML = miCuenta + `<div style="color:#6b7280;font-size:13px;padding:20px 0;">No tienes cuentas de apoyo creadas aún. Usa <strong>Crear cuenta</strong> para añadir trabajadores.</div>`;
+      wrap.innerHTML = miCuenta + `<div style="color:#6b6b6b;font-size:13px;padding:20px 0;">No tienes cuentas de apoyo creadas aún. Usa <strong>Crear cuenta</strong> para añadir trabajadores.</div>`;
       return;
     }
     wrap.innerHTML = miCuenta + `
@@ -2523,7 +2523,7 @@ if (id === "mi-equipo") {
     overlay.innerHTML = `
       <div style="background:var(--card);border:1px solid #374151;border-radius:14px;padding:28px;width:340px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.3);">
         <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">Permisos de acceso</div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:18px;">${escapeHtml(email)}</div>
+        <div style="font-size:12px;color:#6b6b6b;margin-bottom:18px;">${escapeHtml(email)}</div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
           ${ALL_PERMS_EQ.map(p => `
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px;color:var(--text);">
@@ -2649,7 +2649,7 @@ if (id === "rentabilidad") {
               <button onclick="var p=document.getElementById('rent-carrier-panel');if(p)p.style.display=p.style.display==='block'?'none':'block';"
                 style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
                 onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                 <span id="rent-carrier-label">Agencia: Todas</span>
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
               </button>
@@ -2664,12 +2664,12 @@ if (id === "rentabilidad") {
               <button id="rent-filter-trigger" onclick="toggleRentShopFilter()"
                 style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--pk-bg);border:1.5px solid var(--pk-border2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--pk-text);transition:all .15s;"
                 onmouseover="this.style.borderColor='var(--pk-border)';this.style.background='var(--pk-input)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.background='var(--pk-bg)';">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
                 <span id="rent-filter-label">Filtrar tiendas</span>
                 <svg id="rent-filter-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--pk-text3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
               </button>
               <div id="rent-shop-filter-panel" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:1500;background:var(--card);border:1px solid #374151;border-radius:12px;padding:12px;min-width:180px;" onmouseenter="clearTimeout(window.__rentFT)" onmouseleave="window.__rentFT=setTimeout(function(){var p=document.getElementById('rent-shop-filter-panel');var c=document.getElementById('rent-filter-chevron');if(p&&p.style.display==='block'){p.style.display='none';if(c)c.style.transform='';localStorage.setItem('rent_filter_open','0');}},250)">
-                <div id="rent-filter-body"><div style="color:#9ca3af;font-size:12px;">Cargando...</div></div>
+                <div id="rent-filter-body"><div style="color:#a1a1a1;font-size:12px;">Cargando...</div></div>
               </div>
             </div>
           </div>
@@ -3019,18 +3019,18 @@ if (id === "tiendas") {
           <div id="imap-status-wrap-${ag}" style="margin-bottom:12px;"></div>
           <div id="imap-form-wrap-${ag}" style="display:${ag === "ctt" ? "flex" : "none"};flex-direction:column;gap:12px;">
             <div>
-              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Correo *</label>
+              <label style="display:block;font-size:13px;font-weight:600;color:#e3e3e3;margin-bottom:6px;">Correo *</label>
               <input type="email" id="imap-email-${ag}" placeholder="reembolsos@tuempresa.com" oninput="actualizarHostIMAP('${ag}')" style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
             </div>
             <div>
-              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Contraseña *</label>
+              <label style="display:block;font-size:13px;font-weight:600;color:#e3e3e3;margin-bottom:6px;">Contraseña *</label>
               <input type="password" id="imap-password-${ag}" autocomplete="new-password" style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
-              <div id="imap-pass-hint-${ag}" style="font-size:12px;color:#9ca3af;margin-top:5px;">Titan: tu contraseña normal del correo.</div>
+              <div id="imap-pass-hint-${ag}" style="font-size:12px;color:#a1a1a1;margin-top:5px;">Titan: tu contraseña normal del correo.</div>
             </div>
             <div>
-              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Servidor IMAP</label>
+              <label style="display:block;font-size:13px;font-weight:600;color:#e3e3e3;margin-bottom:6px;">Servidor IMAP</label>
               <input type="text" id="imap-host-${ag}" placeholder="imap.titan.email" style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
-              <div style="font-size:12px;color:#9ca3af;margin-top:5px;">Se rellena solo según el correo. Cámbialo solo si tu proveedor usa otro.</div>
+              <div style="font-size:12px;color:#a1a1a1;margin-top:5px;">Se rellena solo según el correo. Cámbialo solo si tu proveedor usa otro.</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <button onclick="conectarIMAP('${ag}')" style="padding:10px 20px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🔗 Conectar correo</button>
@@ -3043,19 +3043,19 @@ if (id === "tiendas") {
           <div id="gmail-status-wrap" style="margin-bottom:20px;"></div>
           <div id="gmail-form-wrap">
             <div style="margin-bottom:14px;">
-              <label style="display:block;font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:6px;">Correo Gmail donde recibes los PDFs de MRW *</label>
+              <label style="display:block;font-size:13px;font-weight:600;color:#e3e3e3;margin-bottom:6px;">Correo Gmail donde recibes los PDFs de MRW *</label>
               <input type="email" id="pdf-email-input" placeholder="ejemplo@gmail.com" style="width:100%;padding:10px 12px;border:1px solid #374151;border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:var(--card);box-sizing:border-box;"/>
-              <div style="font-size:12px;color:#9ca3af;margin-top:5px;">Cuenta Gmail o Google Workspace.</div>
+              <div style="font-size:12px;color:#a1a1a1;margin-top:5px;">Cuenta Gmail o Google Workspace.</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <button onclick="iniciarConexionGmail()"
-                style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#111827;border:1.5px solid #374151;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:#e5e7eb;">
+                style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#111827;border:1.5px solid #374151;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:#e3e3e3;">
                 <img src="${INTEG_LOGOS.gmail}" alt="" style="width:18px;height:18px;"> Conectar con Google
               </button>
               <span id="gmail-connect-msg" style="font-size:13px;"></span>
             </div>
           </div>
-          <div id="imap-toggle-mrw" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:12.5px;color:#9ca3af;">
+          <div id="imap-toggle-mrw" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:12.5px;color:#a1a1a1;">
             ¿Tu correo de MRW no es Gmail (Titan, Outlook…)?
             <a href="#" onclick="event.preventDefault();document.getElementById('imap-form-wrap-mrw').style.display='flex';this.parentElement.style.display='none';" style="color:#3b82f6;font-weight:600;">Conectar otro correo</a>
           </div>
@@ -3189,17 +3189,17 @@ if (id === "tiendas") {
           <div style="background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
             <div>
               <div style="font-weight:600;color:#16a34a;margin-bottom:4px;">MRW integrado correctamente</div>
-              <div style="font-size:13px;color:#6b7280;">Login: <strong>${data.login || "—"}</strong>${data.franquicia ? " · Franquicia: <strong>" + data.franquicia + "</strong>" : ""}${data.abonado ? " · Abonado: <strong>" + data.abonado + "</strong>" : ""}</div>
+              <div style="font-size:13px;color:#6b6b6b;">Login: <strong>${data.login || "—"}</strong>${data.franquicia ? " · Franquicia: <strong>" + data.franquicia + "</strong>" : ""}${data.abonado ? " · Abonado: <strong>" + data.abonado + "</strong>" : ""}</div>
             </div>
             <button onclick="desintegrarMRW();setTimeout(()=>switchIntegracionesTab('agencia'),500)" 
               style="padding:8px 18px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
               ✕ Desconectar MRW
             </button>
           </div>
-          <div style="font-size:13px;color:#6b7280;">La sincronización automática de estados está activa. Los pedidos se actualizan cada 5 minutos.</div>
+          <div style="font-size:13px;color:#6b6b6b;">La sincronización automática de estados está activa. Los pedidos se actualizan cada 5 minutos.</div>
         `;
       } else {
-        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#1f2937;color:#6b7280;border-radius:20px;font-size:13px;font-weight:700;">No conectado</span>`;
+        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#1f2937;color:#6b6b6b;border-radius:20px;font-size:13px;font-weight:700;">No conectado</span>`;
         const inp = `width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
         wrap.innerHTML = `
           <div style="max-width:480px;display:flex;flex-direction:column;gap:14px;">
@@ -3207,20 +3207,20 @@ if (id === "tiendas") {
               💡 Necesitas las credenciales SAGEC de MRW (Login y Contraseña del WebService TrackingServices)
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Login SAGEC *</label>
+              <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Login SAGEC *</label>
               <input id="mrw-login-int" type="text" placeholder="Ej: CD01234Ejemplo" style="${inp}">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
+              <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
               <input id="mrw-pass-int" type="password" placeholder="Contraseña" style="${inp}">
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div>
-                <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Franquicia</label>
+                <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Franquicia</label>
                 <input id="mrw-franquicia-int" type="text" placeholder="Ej: 01234" style="${inp}">
               </div>
               <div>
-                <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Abonado</label>
+                <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Abonado</label>
                 <input id="mrw-abonado-int" type="text" placeholder="Ej: 603835" style="${inp}">
               </div>
             </div>
@@ -3244,7 +3244,7 @@ if (id === "tiendas") {
     const abonado    = document.getElementById("mrw-abonado-int")?.value.trim();
     const msg = document.getElementById("mrw-int-msg");
     if (!login || !pass) { if (msg) { msg.style.color="#dc2626"; msg.textContent="Login y contraseña son obligatorios"; } return; }
-    if (msg) { msg.style.color="#6b7280"; msg.textContent="Guardando..."; }
+    if (msg) { msg.style.color="#6b6b6b"; msg.textContent="Guardando..."; }
     try {
       const res = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
         method: "POST",
@@ -3277,8 +3277,8 @@ if (id === "tiendas") {
           <div style="background:rgba(245,158,11,.08);border:1px solid #fcd34d;border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
             <div>
               <div style="font-weight:600;color:#d97706;margin-bottom:4px;">Credenciales CTT guardadas</div>
-              <div style="font-size:13px;color:#6b7280;">Código centro cliente: <strong>${data.codigo_centro_cliente || "—"}</strong> · Usuario WS: <strong>${data.usuario_ws || "—"}</strong></div>
-              <div style="font-size:13px;color:#6b7280;margin-top:2px;">Área de Clientes: ${data.area_conectada ? `<strong style="color:#16a34a;">✓ conectada (${data.area_usuario})</strong>` : `<strong style="color:#dc2626;">sin conectar</strong>`}</div>
+              <div style="font-size:13px;color:#6b6b6b;">Código centro cliente: <strong>${data.codigo_centro_cliente || "—"}</strong> · Usuario WS: <strong>${data.usuario_ws || "—"}</strong></div>
+              <div style="font-size:13px;color:#6b6b6b;margin-top:2px;">Área de Clientes: ${data.area_conectada ? `<strong style="color:#16a34a;">✓ conectada (${data.area_usuario})</strong>` : `<strong style="color:#dc2626;">sin conectar</strong>`}</div>
             </div>
             <button onclick="desintegrarCTT();setTimeout(()=>switchIntegracionesTab('agencia'),500)"
               style="padding:8px 18px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
@@ -3291,11 +3291,11 @@ if (id === "tiendas") {
               💡 Falta conectar el Área de Clientes (tu usuario/contraseña normal de webcliente.cttexpress.com) -- es lo que activa la sincronización automática.
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Usuario Área de Clientes *</label>
+              <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Usuario Área de Clientes *</label>
               <input id="ctt-area-usuario-int" type="text" style="${inp}">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Contraseña Área de Clientes *</label>
+              <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Contraseña Área de Clientes *</label>
               <input id="ctt-area-pass-int" type="password" style="${inp}">
             </div>
             <div id="ctt-area-msg" style="font-size:13px;min-height:18px;"></div>
@@ -3305,55 +3305,55 @@ if (id === "tiendas") {
             </button>
           </div>` : `
           <div style="max-width:480px;display:flex;flex-direction:column;gap:10px;">
-            <label style="font-size:12px;font-weight:600;color:#e5e7eb;">Probar con un número de seguimiento real</label>
+            <label style="font-size:12px;font-weight:600;color:#e3e3e3;">Probar con un número de seguimiento real</label>
             <div style="display:flex;gap:8px;">
               <input id="ctt-test-tracking" type="text" placeholder="Ej: 0050040050049700886865" style="${inp}">
               <button onclick="probarCTT()" style="padding:9px 18px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Probar</button>
             </div>
             <div id="ctt-test-result" style="font-size:13px;min-height:18px;"></div>
-            <label style="font-size:12px;font-weight:600;color:#e5e7eb;margin-top:6px;">Sincronización de pedidos</label>
-            <div style="font-size:12px;color:#6b7280;">Los estados de tus pedidos CTT se actualizan solos cada 5 minutos. Puedes forzarlo ahora:</div>
+            <label style="font-size:12px;font-weight:600;color:#e3e3e3;margin-top:6px;">Sincronización de pedidos</label>
+            <div style="font-size:12px;color:#6b6b6b;">Los estados de tus pedidos CTT se actualizan solos cada 5 minutos. Puedes forzarlo ahora:</div>
             <button onclick="sincronizarCTT()" style="padding:9px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;align-self:flex-start;">🔄 Sincronizar pedidos ahora</button>
             <div id="ctt-sync-result" style="font-size:13px;min-height:18px;"></div>
           </div>`}
         `;
       } else {
-        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#1f2937;color:#6b7280;border-radius:20px;font-size:13px;font-weight:700;">No conectado</span>`;
+        if (badge) badge.innerHTML = `<span style="padding:6px 14px;background:#1f2937;color:#6b6b6b;border-radius:20px;font-size:13px;font-weight:700;">No conectado</span>`;
         wrap.innerHTML = `
           <div style="max-width:480px;display:flex;flex-direction:column;gap:14px;">
             <div style="background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#93c5fd;">
               💡 Necesitas los 5 datos que te da CTT Express para su WebService de integración.
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Código centro cliente *</label>
+              <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Código centro cliente *</label>
               <input id="ctt-codigo-int" type="text" style="${inp}">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">ID Cliente *</label>
+              <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">ID Cliente *</label>
               <input id="ctt-idcliente-int" type="text" style="${inp}">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Secreto Cliente *</label>
+              <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Secreto Cliente *</label>
               <input id="ctt-secreto-int" type="password" style="${inp}">
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div>
-                <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Usuario de WS *</label>
+                <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Usuario de WS *</label>
                 <input id="ctt-usuario-int" type="text" style="${inp}">
               </div>
               <div>
-                <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Contraseña de WS *</label>
+                <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Contraseña de WS *</label>
                 <input id="ctt-pass-int" type="password" style="${inp}">
               </div>
             </div>
             <div style="border-top:1px solid #374151;margin:4px 0;"></div>
-            <div style="font-size:12px;color:#9ca3af;">Opcional ahora, pero necesario para la sincronización automática:</div>
+            <div style="font-size:12px;color:#a1a1a1;">Opcional ahora, pero necesario para la sincronización automática:</div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Usuario Área de Clientes</label>
+              <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Usuario Área de Clientes</label>
               <input id="ctt-area-usuario-int" type="text" style="${inp}">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Contraseña Área de Clientes</label>
+              <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Contraseña Área de Clientes</label>
               <input id="ctt-area-pass-int" type="password" style="${inp}">
             </div>
             <div id="ctt-int-msg" style="font-size:13px;min-height:18px;"></div>
@@ -3382,7 +3382,7 @@ if (id === "tiendas") {
       if (msg) { msg.style.color="#dc2626"; msg.textContent="Los 5 campos del WebService son obligatorios"; }
       return;
     }
-    if (msg) { msg.style.color="#6b7280"; msg.textContent="Guardando..."; }
+    if (msg) { msg.style.color="#6b6b6b"; msg.textContent="Guardando..."; }
     try {
       const res = await fetch(`${API_BASE}/api/tracking/ctt-credentials`, {
         method: "POST",
@@ -3407,7 +3407,7 @@ if (id === "tiendas") {
       if (msg) { msg.style.color="#dc2626"; msg.textContent="Usuario y contraseña son obligatorios"; }
       return;
     }
-    if (msg) { msg.style.color="#6b7280"; msg.textContent="Conectando..."; }
+    if (msg) { msg.style.color="#6b6b6b"; msg.textContent="Conectando..."; }
     try {
       // No hace falta reenviar los 5 datos del WebService -- el backend los
       // rellena solo con lo que ya tenía guardado si no vienen en esta llamada.
@@ -3430,7 +3430,7 @@ if (id === "tiendas") {
     const tracking_number = document.getElementById("ctt-test-tracking")?.value.trim();
     const result = document.getElementById("ctt-test-result");
     if (!tracking_number) { if (result) { result.style.color="#dc2626"; result.textContent="Escribe un número de seguimiento"; } return; }
-    if (result) { result.style.color="#6b7280"; result.textContent="Consultando..."; }
+    if (result) { result.style.color="#6b6b6b"; result.textContent="Consultando..."; }
     try {
       const res = await fetch(`${API_BASE}/api/tracking/ctt-test`, {
         method: "POST",
@@ -3449,7 +3449,7 @@ if (id === "tiendas") {
 
   window.sincronizarCTT = async function() {
     const result = document.getElementById("ctt-sync-result");
-    if (result) { result.style.color="#6b7280"; result.textContent="Sincronizando con CTT..."; }
+    if (result) { result.style.color="#6b6b6b"; result.textContent="Sincronizando con CTT..."; }
     try {
       const res = await fetch(`${API_BASE}/api/tracking/ctt-sync`, {
         method: "POST",
@@ -3470,7 +3470,7 @@ if (id === "tiendas") {
         method: "DELETE",
         headers: { Authorization: "Bearer " + getActiveToken() }
       });
-      showToast("Desconectado", "Credenciales CTT eliminadas", "#6b7280");
+      showToast("Desconectado", "Credenciales CTT eliminadas", "#6b6b6b");
     } catch(e) {}
   };
 
@@ -3512,8 +3512,8 @@ if (id === "tiendas") {
           <div style="background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
             <div>
               <div style="font-weight:600;color:#16a34a;font-size:14px;">✓ Correo conectado</div>
-              <div style="font-size:13px;color:#6b7280;">${escapeHtml(data.email || "")} · ${escapeHtml(data.host || "")}</div>
-              <div style="font-size:12px;color:#9ca3af;margin-top:2px;">${ultima}</div>
+              <div style="font-size:13px;color:#6b6b6b;">${escapeHtml(data.email || "")} · ${escapeHtml(data.host || "")}</div>
+              <div style="font-size:12px;color:#a1a1a1;margin-top:2px;">${ultima}</div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button onclick="sincronizarIMAP('${ag}')" style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">↓ Importar ahora</button>
@@ -3542,7 +3542,7 @@ if (id === "tiendas") {
     const host = document.getElementById("imap-host-" + ag)?.value.trim();
     const msg = document.getElementById("imap-msg-" + ag);
     if (!email || !password) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = "Correo y contraseña obligatorios"; } return; }
-    if (msg) { msg.style.color = "#6b7280"; msg.textContent = "Comprobando acceso al correo..."; }
+    if (msg) { msg.style.color = "#6b6b6b"; msg.textContent = "Comprobando acceso al correo..."; }
     try {
       const res = await fetch(`${API_BASE}/api/imap/config`, {
         method: "POST",
@@ -3564,7 +3564,7 @@ if (id === "tiendas") {
 
   window.sincronizarIMAP = async function(ag) {
     const out = document.getElementById("imap-sync-result-" + ag);
-    if (out) { out.style.color = "#6b7280"; out.textContent = "Leyendo el correo (puede tardar un poco)..."; }
+    if (out) { out.style.color = "#6b6b6b"; out.textContent = "Leyendo el correo (puede tardar un poco)..."; }
     try {
       const res = await fetch(`${API_BASE}/api/imap/sync?agencia=${ag}`, { method: "POST", headers: { Authorization: "Bearer " + getActiveToken() } });
       const data = await res.json();
@@ -3582,7 +3582,7 @@ if (id === "tiendas") {
     if (!confirm("¿Desconectar este correo? Dejarán de importarse los reembolsos desde él.")) return;
     try {
       await fetch(`${API_BASE}/api/imap/config?agencia=${ag}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
-      showToast("Desconectado", "Correo desconectado", "#6b7280");
+      showToast("Desconectado", "Correo desconectado", "#6b6b6b");
       cargarConfigIMAP(ag);
     } catch (e) {}
   };
@@ -3601,14 +3601,14 @@ if (id === "tiendas") {
               <span style="font-size:18px;">✓</span>
               <div>
                 <div style="font-weight:600;color:#16a34a;font-size:14px;">Gmail conectado</div>
-                <div style="font-size:13px;color:#6b7280;">${data.email || ""}</div>
+                <div style="font-size:13px;color:#6b6b6b;">${data.email || ""}</div>
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button onclick="sincronizarPDFsMRW()" style="padding:7px 16px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
                 ↓ Importar PDFs ahora
               </button>
-              <button onclick="diagnosticarMRW()" style="padding:7px 16px;background:transparent;color:#9ca3af;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">
+              <button onclick="diagnosticarMRW()" style="padding:7px 16px;background:transparent;color:#a1a1a1;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">
                 🔍 Diagnóstico
               </button>
               <button onclick="desconectarGmail()" style="padding:7px 16px;background:rgba(239,68,68,.1);color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Desconectar</button>
@@ -3632,7 +3632,7 @@ if (id === "tiendas") {
     const email = document.getElementById("pdf-email-input")?.value?.trim();
     const msg   = document.getElementById("gmail-connect-msg");
     if (!email) { if (msg) { msg.textContent = "❌ Escribe el correo antes de conectar"; msg.style.color = "#dc2626"; } return; }
-    if (msg) { msg.textContent = "Guardando..."; msg.style.color = "#6b7280"; }
+    if (msg) { msg.textContent = "Guardando..."; msg.style.color = "#6b6b6b"; }
     try {
       const res = await fetch(`${API_BASE}/api/gmail/config`, {
         method: "POST",
@@ -3847,7 +3847,7 @@ if (id === "pedidos") {
           <button onclick="quitarFiltroAgenciaPedidos()" style="padding:5px 12px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;">Quitar filtro</button>
         </div>
 
-        <div id="orders-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
+        <div id="orders-counter" style="font-size:13px;color:#6b6b6b;margin-bottom:8px;padding:0 4px;"></div>
 
         <div id="orders-bulk-bar" style="display:none;align-items:center;gap:10px;background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.3);border-radius:8px;padding:8px 14px;margin-bottom:10px;flex-wrap:wrap;">
           <span id="orders-bulk-count" style="font-size:12.5px;font-weight:700;color:var(--text);"></span>
@@ -3981,7 +3981,7 @@ if (id === "reclamos") {
           <span class="tab" onclick="filterReclamosByTab(this, 'cancelado')">Cancelado</span>
         </div>
 
-        <div id="reclamos-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
+        <div id="reclamos-counter" style="font-size:13px;color:#6b6b6b;margin-bottom:8px;padding:0 4px;"></div>
 
         <div class="orders-table">
           <div class="orders-row head" style="display:grid;grid-template-columns:30px 18% 15% 18% 15% 1fr;gap:0;">
@@ -4049,7 +4049,7 @@ if (id === "facturas") {
           ["nomina","Nómina"]
         ].map(([key, label]) => `
           <button id="tab-btn-${key}" onclick="switchFacturasTab('${key}')"
-            style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;transition:all .15s;">
+            style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e3e3e3;transition:all .15s;">
             ${label}
           </button>
         `).join("")}
@@ -4154,11 +4154,11 @@ if (id === "informes") {
         Reembolsos
       </button>
       <button id="inf-tab-btn-ingresos" onclick="switchInformesTab('ingresos')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;">
+        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e3e3e3;">
         Ingresos
       </button>
       <button id="inf-tab-btn-balance" onclick="switchInformesTab('balance')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e5e7eb;">
+        style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e3e3e3;">
         Balance Final
       </button>
     </div>
@@ -4261,7 +4261,7 @@ if (id === "pfactura") {
       ${pfTabBtn("emisores", "Emisores")}
       ${pfTabBtn("clientes", "Clientes")}
     </div>
-    <div id="pfactura-tab-content"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>
+    <div id="pfactura-tab-content"><div style="color:#6b6b6b;font-size:13px;">Cargando…</div></div>
   `;
   pfacturaSwitchTab("facturas");
   closeAllDrops();
@@ -4281,7 +4281,7 @@ if (id === "contabilidad") {
   if (s) s.textContent = "Contabilidad interna de PROFITCOD";
   if (c) c.textContent = "Contabilidad";
   box.className = "card";
-  box.innerHTML = `<div style="color:#6b7280;font-size:13px;">Cargando…</div>`;
+  box.innerHTML = `<div style="color:#6b6b6b;font-size:13px;">Cargando…</div>`;
   contaInit();
   closeAllDrops();
   closeSearchDrop();
@@ -4300,22 +4300,22 @@ if (id === "ayuda") {
     .hc-wrap { max-width:860px; }
     /* Nav cards */
     .hc-nav { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-bottom:32px; }
-    .hc-nav-card { display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:12px;border:1.5px solid var(--border,#e5e7eb);background:var(--card,#fff);cursor:pointer;transition:all .15s;font-size:12px;font-weight:600;color:var(--muted,#6b7280);text-align:center; }
+    .hc-nav-card { display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:12px;border:1.5px solid var(--border,#e3e3e3);background:var(--card,#fff);cursor:pointer;transition:all .15s;font-size:12px;font-weight:600;color:var(--muted,#6b6b6b);text-align:center; }
     .hc-nav-card:hover,.hc-nav-card.active { border-color:#22c55e;background:rgba(34,197,94,.07);color:#16a34a; }
     .hc-nav-card .hc-icon { font-size:24px;line-height:1; }
     /* Panels */
     .hc-panel { display:none; }
     .hc-panel.active { display:block; }
     /* Accordion */
-    .hc-accordion { border:1px solid var(--border,#e5e7eb);border-radius:12px;overflow:hidden;margin-bottom:12px; }
+    .hc-accordion { border:1px solid var(--border,#e3e3e3);border-radius:12px;overflow:hidden;margin-bottom:12px; }
     .hc-acc-head { display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;background:var(--card,#fff);user-select:none;gap:12px; }
     .hc-acc-head:hover { background:rgba(34,197,94,.04); }
     .hc-acc-title { font-size:14px;font-weight:700;color:var(--text,#111827); }
     .hc-acc-arrow { font-size:12px;color:var(--muted);transition:transform .2s;flex-shrink:0; }
     .hc-accordion.open .hc-acc-arrow { transform:rotate(180deg); }
-    .hc-acc-body { display:none;padding:0 20px 18px 20px;border-top:1px solid var(--border,#e5e7eb); }
+    .hc-acc-body { display:none;padding:0 20px 18px 20px;border-top:1px solid var(--border,#e3e3e3); }
     .hc-accordion.open .hc-acc-body { display:block; }
-    .hc-acc-body p,.hc-acc-body li { font-size:13.5px;color:var(--muted,#4b5563);line-height:1.75;margin:8px 0 0 0; }
+    .hc-acc-body p,.hc-acc-body li { font-size:13.5px;color:var(--muted,#525252);line-height:1.75;margin:8px 0 0 0; }
     .hc-acc-body ul { padding-left:18px;margin:8px 0 0 0; }
     .hc-acc-body ul li { margin:4px 0; }
     /* Badges */
@@ -4326,10 +4326,10 @@ if (id === "ayuda") {
     .hc-steps { display:flex;flex-direction:column;gap:10px;margin-top:12px; }
     .hc-step { display:flex;gap:12px;align-items:flex-start; }
     .hc-step-num { width:24px;height:24px;border-radius:50%;background:#22c55e;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px; }
-    .hc-step-text { font-size:13.5px;color:var(--muted,#4b5563);line-height:1.7; }
+    .hc-step-text { font-size:13.5px;color:var(--muted,#525252);line-height:1.7; }
     /* Status pills */
     .hc-pill { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;margin:2px 3px; }
-    .hc-pill-gray { background:rgba(107,114,128,.12);color:#6b7280; }
+    .hc-pill-gray { background:rgba(107,114,128,.12);color:#6b6b6b; }
     .hc-pill-blue { background:rgba(59,130,246,.12);color:#3b82f6; }
     .hc-pill-green { background:rgba(34,197,94,.12);color:#16a34a; }
     .hc-pill-red { background:rgba(239,68,68,.12);color:#dc2626; }
@@ -4503,7 +4503,7 @@ if (id === "ayuda") {
         </div>
         <div class="hc-acc-body">
           <p>El stock se calcula como:</p>
-          <p style="background:var(--input,#f9fafb);padding:10px 14px;border-radius:8px;font-family:monospace;margin-top:10px;">
+          <p style="background:var(--input,#fafafa);padding:10px 14px;border-radius:8px;font-family:monospace;margin-top:10px;">
             Stock inicial + Entradas − Ventas + Devoluciones
           </p>
           <p>Cada vez que se marca un pedido como <strong>enviado o entregado</strong>, el sistema descuenta las unidades automáticamente. Las <strong>devoluciones</strong> vuelven a sumarse al stock.</p>
@@ -4816,20 +4816,20 @@ if (id === "pagos-config") {
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div>
-          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Clave pública (pk_live_...)</label>
+          <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Clave pública (pk_live_...)</label>
           ${inp("cfg-stripe-pk","pk_live_...")}
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Clave secreta (sk_live_...)</label>
+          <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Clave secreta (sk_live_...)</label>
           ${inp("cfg-stripe-sk","sk_live_...","password")}
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Webhook secret (whsec_...)</label>
+          <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Webhook secret (whsec_...)</label>
           ${inp("cfg-stripe-wh","whsec_...","password")}
         </div>
       </div>
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f3f4f6;">
-        <div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:10px;">Price IDs de suscripciones mensuales</div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f3f3f3;">
+        <div style="font-size:12px;font-weight:700;color:#e3e3e3;margin-bottom:10px;">Price IDs de suscripciones mensuales</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:12px;color:#10b981;font-weight:700;width:72px;">Starter</span>
@@ -4852,22 +4852,22 @@ if (id === "pagos-config") {
     </div>
     </div>
 
-    <div style="margin-bottom:28px;padding-top:20px;border-top:1px solid #f3f4f6;">
+    <div style="margin-bottom:28px;padding-top:20px;border-top:1px solid #f3f3f3;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#003087" stroke-width="2"><path d="M6.5 8h5a4 4 0 0 1 0 8H8l-1 5H5l2-13z"/><path d="M13 8h3a4 4 0 0 1 0 8h-1"/></svg>
         <span style="font-weight:700;font-size:15px;color:#003087;">PayPal</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div>
-          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Client ID</label>
+          <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Client ID</label>
           ${inp("cfg-pp-client","AXxx...")}
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Secret</label>
+          <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Secret</label>
           ${inp("cfg-pp-secret","EXxx...","password")}
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Entorno</label>
+          <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Entorno</label>
           <select id="cfg-pp-env" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;">
             <option value="live">Producción (live)</option>
             <option value="sandbox">Sandbox (pruebas)</option>
@@ -4902,17 +4902,17 @@ if (id === "pagos-config") {
         const el = document.getElementById(id);
         if (!el) continue;
         el.value = val;
-        if (val) { el.readOnly = true; el.style.background = "#f9fafb"; el.style.color = "#6b7280"; alguno = true; }
+        if (val) { el.readOnly = true; el.style.background = "#fafafa"; el.style.color = "#6b6b6b"; alguno = true; }
       }
       document.getElementById("cfg-pp-env").value = d.paypal_env || "live";
       if (alguno) {
         document.getElementById("cfg-pp-env").disabled = true;
-        document.getElementById("cfg-pp-env").style.background = "#f9fafb";
-        document.getElementById("cfg-pp-env").style.color = "#6b7280";
+        document.getElementById("cfg-pp-env").style.background = "#fafafa";
+        document.getElementById("cfg-pp-env").style.color = "#6b6b6b";
         // Mostrar botón Editar
         const btnEdit = document.createElement("button");
         btnEdit.textContent = "✏️ Editar configuración";
-        btnEdit.style.cssText = "padding:10px 20px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-left:10px;";
+        btnEdit.style.cssText = "padding:10px 20px;background:#1f2937;color:#e3e3e3;border:1px solid #374151;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-left:10px;";
         btnEdit.onclick = () => {
           for (const id of Object.keys(campos)) {
             const el = document.getElementById(id);
@@ -4931,7 +4931,7 @@ if (id === "pagos-config") {
   window.guardarPagosConfig = async function() {
     const msg = document.getElementById("pagos-cfg-msg");
     msg.textContent = "Guardando...";
-    msg.style.color = "#6b7280";
+    msg.style.color = "#6b6b6b";
     try {
       const res = await fetch(`${API_BASE}/api/admin/payment-config`, {
         method: "PUT",
@@ -4991,24 +4991,24 @@ if (id === "plan") {
     <div id="plan-cancel-banner" style="display:none;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:10px;padding:12px 18px;margin-bottom:12px;font-size:13px;color:#fde047;font-weight:600;"></div>
     <div id="plan-trial-banner" style="display:none;background:rgba(34,197,94,.08);border:1px solid #86efac;border-radius:10px;padding:12px 18px;margin-bottom:20px;font-size:13px;color:#16a34a;font-weight:600;"></div>
     <h3 style="font-size:15px;font-weight:700;margin:0 0 6px;">Elige tu plan</h3>
-    <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Tiendas ilimitadas en todos los planes. Precio fijo mensual, sin coste adicional por pedido.</p>
+    <p style="font-size:13px;color:#6b6b6b;margin:0 0 18px;">Tiendas ilimitadas en todos los planes. Precio fijo mensual, sin coste adicional por pedido.</p>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;" id="plan-cards">
       ${Object.entries(PLAN_DEFS).map(([p, info]) => `
         <div id="plan-card-${p}" style="border:2px solid #374151;border-radius:14px;padding:20px;display:flex;flex-direction:column;position:relative;transition:border-color .2s;">
           <div style="font-size:12px;font-weight:700;color:${info.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${info.name}</div>
           <div style="display:flex;align-items:baseline;gap:3px;margin-bottom:2px;">
-            <span style="font-size:26px;font-weight:800;color:#f9fafb;">${info.free ? "Gratis" : info.price+"€"}</span>
-            <span style="font-size:12px;color:#6b7280;">${info.free ? "" : "/mes"}</span>
+            <span style="font-size:26px;font-weight:800;color:#fafafa;">${info.free ? "Gratis" : info.price+"€"}</span>
+            <span style="font-size:12px;color:#6b6b6b;">${info.free ? "" : "/mes"}</span>
           </div>
-          <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">hasta ${info.limit} pedidos/mes</div>
+          <div style="font-size:11px;color:#a1a1a1;margin-bottom:14px;">hasta ${info.limit} pedidos/mes</div>
           <ul style="list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:6px;flex:1;">
-            ${info.features.map(f => `<li style="display:flex;align-items:center;gap:6px;font-size:11px;color:#e5e7eb;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
+            ${info.features.map(f => `<li style="display:flex;align-items:center;gap:6px;font-size:11px;color:#e3e3e3;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${info.color}" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>${f}</li>`).join("")}
           </ul>
           <div id="plan-actions-${p}" style="margin-top:auto;"></div>
         </div>`).join("")}
     </div>
     <div id="plan-invoice-preview" style="display:none;"></div>
-    <div style="border-top:1px solid #f3f4f6;padding-top:14px;font-size:12px;color:#9ca3af;text-align:center;">
+    <div style="border-top:1px solid #f3f3f3;padding-top:14px;font-size:12px;color:#a1a1a1;text-align:center;">
       Los pagos se procesan de forma segura. Cada pago activa el plan por 30 días. 30 días gratis en tu primera suscripción.
     </div>
   </div>`;
@@ -5025,7 +5025,7 @@ if (id === "plan") {
     const expiresAt   = d.expires_at;
 
     const planNames = { free: "Sin plan activo", starter: "Starter", growth: "Growth", pro: "Pro", business: "Business" };
-    const planColors = { free: "#6b7280", starter: "#10b981", growth: "#3b82f6", pro: "#8b5cf6", business: "#f59e0b" };
+    const planColors = { free: "#6b6b6b", starter: "#10b981", growth: "#3b82f6", pro: "#8b5cf6", business: "#f59e0b" };
 
     // Banner plan actual
     const banner = document.getElementById("plan-current-banner");
@@ -5033,12 +5033,12 @@ if (id === "plan") {
       const expStr = expiresAt ? new Date(expiresAt).toLocaleDateString("es-ES") : null;
       const statusLabel = (d.status === "trial" && d.status !== "active") ? " · <span style='color:#f59e0b;font-weight:700;'>Período de prueba</span>" : "";
       banner.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;background:#1f2937;border:1px solid #374151;border-radius:10px;flex-wrap:wrap;">
-        <span style="font-size:13px;color:#e5e7eb;">Plan actual:</span>
-        <span style="font-weight:700;color:${planColors[currentPlan] || "#6b7280"};font-size:14px;">${planNames[currentPlan] || currentPlan}</span>
+        <span style="font-size:13px;color:#e3e3e3;">Plan actual:</span>
+        <span style="font-weight:700;color:${planColors[currentPlan] || "#6b6b6b"};font-size:14px;">${planNames[currentPlan] || currentPlan}</span>
         ${statusLabel}
-        ${expStr ? `<span style="font-size:12px;color:#9ca3af;margin-left:4px;">· Vence el ${expStr}</span>` : ""}
+        ${expStr ? `<span style="font-size:12px;color:#a1a1a1;margin-left:4px;">· Vence el ${expStr}</span>` : ""}
         ${d.pending_plan ? `<span style="font-size:12px;color:#f59e0b;font-weight:600;margin-left:4px;">· Cambia a ${planNames[d.pending_plan] || d.pending_plan} el ${d.pending_plan_at ? new Date(d.pending_plan_at).toLocaleDateString("es-ES") : "la próxima renovación"}</span>` : ""}
-        ${d.monthly_orders > 0 ? `<span style="font-size:12px;color:#6b7280;margin-left:auto;">${d.monthly_orders}${d.order_limit ? "/" + d.order_limit : ""} pedidos este mes</span>` : ""}
+        ${d.monthly_orders > 0 ? `<span style="font-size:12px;color:#6b6b6b;margin-left:auto;">${d.monthly_orders}${d.order_limit ? "/" + d.order_limit : ""} pedidos este mes</span>` : ""}
       </div>`;
     }
 
@@ -5068,7 +5068,7 @@ if (id === "plan") {
 
     // Resaltar card del plan actual
     document.querySelectorAll("[id^='plan-card-']").forEach(card => {
-      card.style.borderColor = "#e5e7eb";
+      card.style.borderColor = "#e3e3e3";
       card.style.boxShadow = "none";
     });
     const activeCard = document.getElementById("plan-card-" + currentPlan);
@@ -5088,8 +5088,8 @@ if (id === "plan") {
           invoiceDiv.style.display = "block";
           invoiceDiv.innerHTML = `
             <div style="background:#1f2937;border:1px solid #374151;border-radius:10px;padding:16px 20px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-              <span style="font-size:13px;color:#e5e7eb;">Ciclo actual: ${inv.cycle_start} → ${inv.cycle_end}</span>
-              <span style="font-weight:800;font-size:15px;color:#f9fafb;">${inv.total.toFixed(2)}€</span>
+              <span style="font-size:13px;color:#e3e3e3;">Ciclo actual: ${inv.cycle_start} → ${inv.cycle_end}</span>
+              <span style="font-weight:800;font-size:15px;color:#fafafa;">${inv.total.toFixed(2)}€</span>
             </div>`;
         } else {
           invoiceDiv.style.display = "none";
@@ -5112,7 +5112,7 @@ if (id === "plan") {
       const actDiv = document.getElementById("plan-actions-" + p);
       if (!actDiv) return;
       if (isAdmin) {
-        actDiv.innerHTML = `<div style="text-align:center;font-size:12px;color:#9ca3af;padding:8px 0;">Sin restricciones (admin)</div>`;
+        actDiv.innerHTML = `<div style="text-align:center;font-size:12px;color:#a1a1a1;padding:8px 0;">Sin restricciones (admin)</div>`;
         return;
       }
       const isCurrent = p === currentPlan;
@@ -5133,7 +5133,7 @@ if (id === "plan") {
           </button>` : ""}
           ${p === d.pending_plan ? `<div style="text-align:center;padding:7px;background:rgba(245,158,11,.08);border-radius:8px;font-size:12px;font-weight:700;color:#f59e0b;">📅 Desde el ${d.pending_plan_at ? new Date(d.pending_plan_at).toLocaleDateString("es-ES") : "próximo ciclo"}</div>` : ""}
           ${isCurrent && d.status === "active" ? `<button onclick="gestionarSuscripcion()"
-            style="width:100%;padding:9px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+            style="width:100%;padding:9px;background:#1f2937;color:#e3e3e3;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
             ⚙️ Gestionar suscripción
           </button>` : ""}
           ${(!PLAN_DEFS[p].free && !(isCurrent && d.status === "active") && !uselessIfBlocked && p !== d.pending_plan) ? `<button id="subscribe-btn-${p}" onclick="togglePaymentMenu('${p}')"
@@ -5141,10 +5141,10 @@ if (id === "plan") {
             Suscribirse
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>` : ""}
-          ${uselessIfBlocked ? `<div style="text-align:center;font-size:11px;color:#9ca3af;padding:6px 0;">No te desbloquea (límite igual o menor)</div>` : ""}
+          ${uselessIfBlocked ? `<div style="text-align:center;font-size:11px;color:#a1a1a1;padding:6px 0;">No te desbloquea (límite igual o menor)</div>` : ""}
           <div id="payment-menu-${p}" style="display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#111827;border:1px solid #374151;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;z-index:100;">
             <button onclick="pagarStripe('${p}')"
-              style="width:100%;padding:9px 12px;background:#1f2937;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;color:#f9fafb;margin-bottom:6px;">
+              style="width:100%;padding:9px 12px;background:#1f2937;border:1px solid #374151;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;color:#fafafa;margin-bottom:6px;">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#635bff" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
               Pago con tarjeta
             </button>
@@ -5299,7 +5299,7 @@ if (id === "plan") {
     showToast("✅ Pago completado", "Tu plan ha sido activado. Puede tardar unos segundos en reflejarse.", "#22c55e");
   } else if (urlParams.get("payment") === "cancelled") {
     history.replaceState({}, "", "/");
-    showToast("ℹ️ Pago cancelado", "No se realizó ningún cargo.", "#6b7280");
+    showToast("ℹ️ Pago cancelado", "No se realizó ningún cargo.", "#6b6b6b");
   }
 
   loadPlanUI();
@@ -5533,7 +5533,7 @@ function _renderSearchDrop(drop, results, loading) {
     franquicia:     { bg: "rgba(139,92,246,.15)",   color: dark ? "#c4b5fd" : "#5b21b6", border: dark ? "rgba(139,92,246,.3)"   : "rgba(139,92,246,.45)" },
     entregado:      { bg: "rgba(34,197,94,.15)",    color: dark ? "#4ade80" : "#15803d", border: dark ? "rgba(34,197,94,.3)"    : "rgba(34,197,94,.4)" },
     devuelto:       { bg: "rgba(239,68,68,.15)",    color: dark ? "#fca5a5" : "#991b1b", border: dark ? "rgba(239,68,68,.3)"    : "rgba(239,68,68,.45)" },
-    destruido:      { bg: "rgba(107,114,128,.15)",  color: dark ? "#9ca3af" : "#374151", border: dark ? "rgba(107,114,128,.3)"  : "rgba(107,114,128,.45)" },
+    destruido:      { bg: "rgba(107,114,128,.15)",  color: dark ? "#a1a1a1" : "#374151", border: dark ? "rgba(107,114,128,.3)"  : "rgba(107,114,128,.45)" },
     cancelado:      { bg: "rgba(239,68,68,.15)",    color: dark ? "#fca5a5" : "#991b1b", border: dark ? "rgba(239,68,68,.3)"    : "rgba(239,68,68,.45)" },
   };
   const statusNames = {
@@ -5544,7 +5544,7 @@ function _renderSearchDrop(drop, results, loading) {
 
   let html = results.map(r => {
     if (r.type === "pedido" && r.status) {
-      const sc = statusColors[r.status] || { bg: "rgba(107,114,128,.15)", color: "#9ca3af", border: "rgba(107,114,128,.3)" };
+      const sc = statusColors[r.status] || { bg: "rgba(107,114,128,.15)", color: "#a1a1a1", border: "rgba(107,114,128,.3)" };
       const sn = statusNames[r.status] || r.status;
       return `<div class="search-item" onclick="goToSearch('${escapeAttr(r.section)}','${escapeAttr(r.orderNumber || "")}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <span>${escapeHtml(r.label)}</span>
@@ -5565,7 +5565,7 @@ function _renderSearchDrop(drop, results, loading) {
   }
 
   if (loading) {
-    html += `<div class="search-item" style="color:#9ca3af;font-size:12px;pointer-events:none;display:flex;align-items:center;gap:8px;">
+    html += `<div class="search-item" style="color:#a1a1a1;font-size:12px;pointer-events:none;display:flex;align-items:center;gap:8px;">
       <span style="width:13px;height:13px;border:2px solid rgba(156,163,175,.35);border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></span>
       Buscando pedidos...
     </div>`;
@@ -5745,7 +5745,7 @@ function switchFacturasTab(key) {
     } else {
       btn.style.background = "#fff";
       btn.style.color = "#374151";
-      btn.style.borderColor = "#e5e7eb";
+      btn.style.borderColor = "#e3e3e3";
     }
   });
 
@@ -5780,7 +5780,7 @@ function switchFacturasTab(key) {
           </div>
           <div style="border-bottom:1px solid #1f2937;margin-bottom:12px;"></div>
 
-          <div id="ree-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
+          <div id="ree-counter" style="font-size:13px;color:#6b6b6b;margin-bottom:8px;padding:0 4px;"></div>
 
           <div class="orders-table">
             <div class="orders-row head" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
@@ -5933,7 +5933,7 @@ async function loadNominaData() {
     ]);
 
     if (!Array.isArray(trabajadores) || trabajadores.length === 0) {
-      content.innerHTML = `<div style="padding:24px;color:#6b7280;font-size:14px;">No hay trabajadores. Pulsa <strong>+ Trabajador</strong> para añadir.</div>`;
+      content.innerHTML = `<div style="padding:24px;color:#6b6b6b;font-size:14px;">No hay trabajadores. Pulsa <strong>+ Trabajador</strong> para añadir.</div>`;
       return;
     }
 
@@ -6005,7 +6005,7 @@ async function saveNominaPago(input) {
     window.__hideLoadingBar?.();
     invalidateCache("nomina");
     input.style.borderColor = "#22c55e";
-    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
+    setTimeout(() => { input.style.borderColor = "#e3e3e3"; }, 1500);
     await loadNominaData();
   } catch(e) { window.__hideLoadingBar?.(); console.error(e); }
 }
@@ -6127,16 +6127,16 @@ window.openAddTrabajador = openAddTrabajador;
 
         <!-- Formulario de identificación (clientes sin display_name) -->
         <div id="chat-info-form" style="display:none;flex:1;padding:20px;display:none;flex-direction:column;gap:14px;justify-content:center;">
-          <p style="font-size:13px;color:#6b7280;margin:0;">Antes de continuar, indícanos cómo contactarte:</p>
+          <p style="font-size:13px;color:#6b6b6b;margin:0;">Antes de continuar, indícanos cómo contactarte:</p>
           <div style="display:flex;flex-direction:column;gap:6px;">
-            <label style="font-size:12px;font-weight:600;color:#e5e7eb;">Nombre *</label>
+            <label style="font-size:12px;font-weight:600;color:#e3e3e3;">Nombre *</label>
             <input id="chat-info-name" type="text" placeholder="Tu nombre completo"
               style="padding:9px 12px;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;outline:none;" />
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;">
-            <label style="font-size:12px;font-weight:600;color:#e5e7eb;">Email</label>
+            <label style="font-size:12px;font-weight:600;color:#e3e3e3;">Email</label>
             <input id="chat-info-email" type="email"
-              style="padding:9px 12px;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;background:#1f2937;color:#e5e7eb;outline:none;" readonly />
+              style="padding:9px 12px;border:1.5px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;background:#1f2937;color:#e3e3e3;outline:none;" readonly />
           </div>
           <div id="chat-info-error" style="font-size:12px;color:#dc2626;display:none;"></div>
           <button onclick="window.__submitChatInfo()"
@@ -6163,10 +6163,10 @@ window.openAddTrabajador = openAddTrabajador;
     const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("es-ES", { hour:"2-digit", minute:"2-digit" }) : "";
     return `<div style="display:flex;flex-direction:column;align-items:${isMe ? "flex-end" : "flex-start"};">
       <div style="max-width:80%;padding:8px 12px;border-radius:${isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px"};
-        background:${isMe ? "#22c55e" : "#f3f4f6"};color:${isMe ? "#fff" : "#111827"};font-size:13px;line-height:1.5;">
+        background:${isMe ? "#22c55e" : "#f3f3f3"};color:${isMe ? "#fff" : "#111827"};font-size:13px;line-height:1.5;">
         ${escapeHtml ? escapeHtml(m.content) : m.content}
       </div>
-      <span style="font-size:10px;color:#9ca3af;margin-top:2px;">${time}</span>
+      <span style="font-size:10px;color:#a1a1a1;margin-top:2px;">${time}</span>
     </div>`;
   }
 
@@ -6185,7 +6185,7 @@ window.openAddTrabajador = openAddTrabajador;
       if (!box) return;
       box.innerHTML = msgs.length
         ? msgs.map(renderMsg).join("")
-        : `<div style="text-align:center;color:#9ca3af;font-size:13px;margin-top:40px;">Aún no hay mensajes.<br>¡Escríbenos para ayudarte!</div>`;
+        : `<div style="text-align:center;color:#a1a1a1;font-size:13px;margin-top:40px;">Aún no hay mensajes.<br>¡Escríbenos para ayudarte!</div>`;
       box.scrollTop = box.scrollHeight;
     } catch {}
   }
@@ -6211,7 +6211,7 @@ window.openAddTrabajador = openAddTrabajador;
       ].sort((a, b) => (b.last_message || "").localeCompare(a.last_message || ""));
 
       if (!all.length) {
-        list.innerHTML = `<div style="text-align:center;color:#9ca3af;font-size:13px;padding:30px 10px;">No hay conversaciones aún</div>`;
+        list.innerHTML = `<div style="text-align:center;color:#a1a1a1;font-size:13px;padding:30px 10px;">No hay conversaciones aún</div>`;
         return;
       }
 
@@ -6219,8 +6219,8 @@ window.openAddTrabajador = openAddTrabajador;
       all.forEach(c => {
         const convId = c.type === "user" ? c.user_id : c.guest_id;
         const div = document.createElement("div");
-        div.style.cssText = "padding:10px 12px;border-radius:10px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px;";
-        div.addEventListener("mouseover", () => div.style.background = "#f9fafb");
+        div.style.cssText = "padding:10px 12px;border-radius:10px;cursor:pointer;border-bottom:1px solid #f3f3f3;display:flex;align-items:center;justify-content:space-between;gap:8px;";
+        div.addEventListener("mouseover", () => div.style.background = "#fafafa");
         div.addEventListener("mouseout",  () => div.style.background = "");
         div.addEventListener("click",     () => window.__selectChatConv(c.type, convId, c.label, c.email || c.guest_email || ""));
         const unread = parseInt(c.unread) > 0
@@ -6228,8 +6228,8 @@ window.openAddTrabajador = openAddTrabajador;
           : "";
         div.innerHTML = `
           <div>
-            <div style="font-size:13px;font-weight:600;color:#f9fafb;">${c.label}</div>
-            <div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${c.last_content || ""}</div>
+            <div style="font-size:13px;font-weight:600;color:#fafafa;">${c.label}</div>
+            <div style="font-size:11px;color:#a1a1a1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${c.last_content || ""}</div>
           </div>${unread}`;
         frag.appendChild(div);
       });
@@ -6435,7 +6435,7 @@ function openUserSection(type) {
       <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px;">
         <div style="position:relative;cursor:pointer;" onclick="document.getElementById('avatar-input').click()">
           <div id="avatar-circle" style="width:96px;height:96px;border-radius:50%;background:#1f2937;border:2px solid #374151;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-            <svg id="avatar-placeholder-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <svg id="avatar-placeholder-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#a1a1a1" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <img id="avatar-img" style="display:none;width:100%;height:100%;object-fit:cover;" />
           </div>
           <div style="position:absolute;bottom:2px;right:2px;background:#22c55e;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">
@@ -6447,12 +6447,12 @@ function openUserSection(type) {
           <input id="display-name-input" type="text"
             value="${escapeHtml(currentUser.display_name)}"
             placeholder="Tu nombre o empresa..."
-            style="border:none;border-bottom:2px solid #e5e7eb;padding:4px 6px;font-size:17px;font-weight:700;color:#f9fafb;text-align:center;background:transparent;font-family:inherit;width:220px;outline:none;transition:border-color .2s;"
+            style="border:none;border-bottom:2px solid #e3e3e3;padding:4px 6px;font-size:17px;font-weight:700;color:#fafafa;text-align:center;background:transparent;font-family:inherit;width:220px;outline:none;transition:border-color .2s;"
             onfocus="this.style.borderBottomColor='#22c55e'"
-            onblur="this.style.borderBottomColor='#e5e7eb';guardarDisplayName(this.value)"
+            onblur="this.style.borderBottomColor='#e3e3e3';guardarDisplayName(this.value)"
             onkeydown="if(event.key==='Enter'){this.blur();}">
         </div>
-        <div style="margin-top:4px;font-size:12px;color:#9ca3af;">${escapeHtml(currentUser.email)}</div>
+        <div style="margin-top:4px;font-size:12px;color:#a1a1a1;">${escapeHtml(currentUser.email)}</div>
         <span style="margin-top:6px;padding:3px 14px;background:rgba(34,197,94,.12);color:#22c55e;border-radius:20px;font-size:12px;font-weight:600;">${escapeHtml(currentUser.role)}</span>
       </div>
 
@@ -6507,7 +6507,7 @@ function openUserSection(type) {
 
     box.innerHTML = `<div style="max-width:520px;">
       <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Datos de facturación</div>
-      <div style="color:#6b7280;font-size:13px;margin-bottom:20px;">Información de tu empresa para la facturación</div>
+      <div style="color:#6b6b6b;font-size:13px;margin-bottom:20px;">Información de tu empresa para la facturación</div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         ${inp("bill-name","Nombre o razón social")}
         ${inp("bill-nif","NIF / CIF")}
@@ -6523,7 +6523,7 @@ function openUserSection(type) {
 
       <div style="border-top:1px solid #fee2e2;margin-top:36px;padding-top:24px;">
         <div style="font-weight:700;font-size:14px;color:#dc2626;margin-bottom:6px;">Zona de peligro</div>
-        <div style="color:#6b7280;font-size:13px;margin-bottom:16px;">Al cancelar tu cuenta se eliminarán permanentemente todos tus datos y no podrás recuperarlos.</div>
+        <div style="color:#6b6b6b;font-size:13px;margin-bottom:16px;">Al cancelar tu cuenta se eliminarán permanentemente todos tus datos y no podrás recuperarlos.</div>
         <button onclick="showCancelAccount()" style="padding:9px 22px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancelar cuenta</button>
       </div>
     </div>`;
@@ -6603,14 +6603,14 @@ function abrirEditorAvatar(srcUrl) {
     modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;";
     modal.innerHTML = `
       <div style="background:#111827;border-radius:16px;padding:28px 24px;width:320px;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 24px 64px rgba(0,0,0,0.4);">
-        <div style="font-size:15px;font-weight:700;color:#f9fafb;align-self:flex-start;">Ajustar foto de perfil</div>
+        <div style="font-size:15px;font-weight:700;color:#fafafa;align-self:flex-start;">Ajustar foto de perfil</div>
         <!-- Círculo de preview con canvas -->
         <div style="width:${PREVIEW}px;height:${PREVIEW}px;border-radius:50%;overflow:hidden;border:3px solid #22c55e;cursor:grab;flex-shrink:0;touch-action:none;">
           <canvas id="avatar-crop-canvas" width="${PREVIEW}" height="${PREVIEW}" style="display:block;"></canvas>
         </div>
         <!-- Slider zoom -->
         <div style="width:100%;display:flex;flex-direction:column;gap:6px;">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b6b6b;">
             <span>Zoom</span><span id="avatar-zoom-label">1.0×</span>
           </div>
           <input id="avatar-zoom-slider" type="range" min="50" max="300" value="100"
@@ -6781,12 +6781,12 @@ function showCancelAccount() {
     <div id="cancel-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
       <div style="background:var(--card);border-radius:14px;padding:32px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
         <div style="font-weight:700;font-size:16px;color:#dc2626;margin-bottom:8px;">¿Cancelar tu cuenta?</div>
-        <div style="color:#6b7280;font-size:13px;margin-bottom:20px;">Esta acción es irreversible. Se eliminarán todos tus datos. Escribe tu contraseña para confirmar.</div>
+        <div style="color:#6b6b6b;font-size:13px;margin-bottom:20px;">Esta acción es irreversible. Se eliminarán todos tus datos. Escribe tu contraseña para confirmar.</div>
         <input type="password" id="cancel-pass" placeholder="Tu contraseña" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);font-family:inherit;box-sizing:border-box;margin-bottom:8px;">
         <div id="cancel-msg" style="font-size:12px;color:#dc2626;min-height:16px;margin-bottom:14px;"></div>
         <div style="display:flex;gap:10px;">
           <button onclick="confirmCancelAccount()" style="flex:1;padding:9px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Sí, cancelar mi cuenta</button>
-          <button onclick="document.getElementById('cancel-overlay').remove()" style="flex:1;padding:9px;background:#e5e7eb;color:#e5e7eb;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Volver</button>
+          <button onclick="document.getElementById('cancel-overlay').remove()" style="flex:1;padding:9px;background:#e3e3e3;color:#e3e3e3;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Volver</button>
         </div>
       </div>
     </div>`;
@@ -7116,7 +7116,7 @@ function renderStoreCard(store) {
         style="cursor:pointer; display:flex; align-items:center; gap:6px;"
       >
         ${escapeHtml(store.shop_name || store.domain)}
-        <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0;">
+        <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#a1a1a1;fill:none;stroke-width:2;flex-shrink:0;">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
         </svg>
@@ -7140,7 +7140,7 @@ function renderStoreCard(store) {
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;position:relative;">
-      <span style="font-size:11px;color:#6b7280;font-weight:600;">Color notificación:</span>
+      <span style="font-size:11px;color:#6b6b6b;font-weight:600;">Color notificación:</span>
       <div id="color-trigger-${store.id}"
         onclick="toggleColorPicker(${store.id}, event)"
         style="width:10px;height:10px;border-radius:50%;background:${store.notification_color || '#3b82f6'};cursor:pointer;
@@ -7190,7 +7190,7 @@ if (inactiveStores.length > 0) {
         const open = inner.style.display !== 'none';
         inner.style.display = open ? 'none' : 'grid';
         this.querySelector('span').textContent = open ? '▶' : '▼';
-      " style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 0;margin-bottom:12px;">
+      " style="background:none;border:none;cursor:pointer;color:#a1a1a1;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 0;margin-bottom:12px;">
         <span>▶</span> Tiendas inactivas (${inactiveStores.length})
       </button>
       <div style="display:none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:18px;">
@@ -7447,7 +7447,7 @@ async function renderLeadsTrackingToggle(containerId) {
       el.innerHTML = `
         <button onclick="toggleLeadsTracking()" title="${enabled ? "Apagar la captura de Leads en tus tiendas" : "Encender la captura de Leads en tus tiendas"}"
           style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:9px;border:1.5px solid ${enabled ? "rgba(34,197,94,.3)" : "var(--border)"};background:${enabled ? "rgba(34,197,94,.08)" : "var(--input)"};color:${enabled ? "#16a34a" : "var(--muted)"};font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">
-          <span style="width:8px;height:8px;border-radius:50%;background:${enabled ? "#22c55e" : "#9ca3af"};flex-shrink:0;"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:${enabled ? "#22c55e" : "#a1a1a1"};flex-shrink:0;"></span>
           Leads: ${enabled ? "Activado" : "Apagado"}
         </button>`;
     } else {
@@ -7468,7 +7468,7 @@ async function toggleLeadsTracking() {
     const data = await r.json();
     if (!r.ok) { showToast("❌", data.error || "No se pudo cambiar", "#ef4444"); return; }
     window.__leadsTrackingEnabled = data.enabled;
-    showToast(data.enabled ? "🟢" : "⚪", data.enabled ? "Leads activado" : "Leads apagado", data.enabled ? "#22c55e" : "#6b7280");
+    showToast(data.enabled ? "🟢" : "⚪", data.enabled ? "Leads activado" : "Leads apagado", data.enabled ? "#22c55e" : "#6b6b6b");
     renderLeadsTrackingToggle("leads-tracking-toggle");
     renderLeadsTrackingToggle("leads-cod-tracking-toggle");
   } catch (e) { showToast("❌", "Error de red", "#ef4444"); }
@@ -8520,12 +8520,12 @@ async function loadMetricas() {
         }
         const _metChksHtml = _storesInPeriodMet.map(s => {
           const _isChecked = _isCheckedFn(s);
-          const _badge = s.status !== 'active' ? `<span style="font-size:10px;color:var(--muted,#9ca3af);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>` : '';
+          const _badge = s.status !== 'active' ? `<span style="font-size:10px;color:var(--muted,#a1a1a1);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>` : '';
           return `<label class="shop-check-label shop-check-row"><input type="checkbox" ${_isChecked ? 'checked' : ''} value="${escapeHtml(s.domain)}" onchange="recalcMetricasFiltro();">${escapeHtml(s.shop_name||s.domain)}${_badge}</label>`;
         }).join('');
         _metFB.innerHTML = _storesInPeriodMet.length
           ? `<label class="shop-check-label all"><input type="checkbox" id="met-shop-check-all" ${_allCheckedMet ? 'checked' : ''} onchange="toggleAllMetricasFiltro(this.checked)">Todas las tiendas</label>${_metChksHtml}`
-          : '<div style="color:#9ca3af;font-size:12px;">Sin pedidos en este período</div>';
+          : '<div style="color:#a1a1a1;font-size:12px;">Sin pedidos en este período</div>';
       }).catch(() => {});
   }
 
@@ -8813,21 +8813,21 @@ async function loadMetricasBalance(dateFrom, dateTo) {
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
             <tr style="background:rgba(34,197,94,.08);"><td colspan="2" style="padding:8px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📥 Ingresos</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">COD<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numCOD} pedidos — ${fmt(d.brutoCOD)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión MRW (${d.numCOD}×0.67€) = −${fmt(d.descCOD)}€</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#e5e7eb;font-weight:600;">${fmt(d.netoCOD)} €</td></tr>
-            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">TARJETA<div style="font-size:10px;color:#9ca3af;font-weight:400;">${d.numTarjeta} pedidos — ${fmt(d.brutoTarjeta)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(d.descTarjeta)}€</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#e5e7eb;font-weight:600;">${fmt(d.netoTarjeta)} €</td></tr>
-            ${d.man1val > 0 ? `<tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">${escapeHtml(d.man1nom||"Extra 1")}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;">${fmt(d.man1val)} €</td></tr>` : ""}
-            ${d.man2val > 0 ? `<tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">${escapeHtml(d.man2nom||"Extra 2")}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;">${fmt(d.man2val)} €</td></tr>` : ""}
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">COD<div style="font-size:10px;color:#a1a1a1;font-weight:400;">${d.numCOD} pedidos — ${fmt(d.brutoCOD)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión MRW (${d.numCOD}×0.67€) = −${fmt(d.descCOD)}€</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#e3e3e3;font-weight:600;">${fmt(d.netoCOD)} €</td></tr>
+            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">TARJETA<div style="font-size:10px;color:#a1a1a1;font-weight:400;">${d.numTarjeta} pedidos — ${fmt(d.brutoTarjeta)} € bruto</div><div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(d.descTarjeta)}€</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#e3e3e3;font-weight:600;">${fmt(d.netoTarjeta)} €</td></tr>
+            ${d.man1val > 0 ? `<tr><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">${escapeHtml(d.man1nom||"Extra 1")}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;">${fmt(d.man1val)} €</td></tr>` : ""}
+            ${d.man2val > 0 ? `<tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">${escapeHtml(d.man2nom||"Extra 2")}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;">${fmt(d.man2val)} €</td></tr>` : ""}
             <tr style="background:rgba(34,197,94,.08);"><td style="padding:8px 14px;border:1px solid #86efac;font-weight:700;color:#22c55e;">Total Ingresos</td><td style="padding:8px 14px;border:1px solid #86efac;text-align:right;font-weight:700;color:#22c55e;">${fmt(d.totalIngreso)} €</td></tr>
             <tr style="background:rgba(239,68,68,.1);"><td colspan="2" style="padding:8px 14px;border:1px solid #374151;font-weight:700;color:#dc2626;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">📤 Gastos</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Gasto Meta</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.meta)} €</td></tr>
-            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Gasto TikTok</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.tiktok)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Productos<div style="font-size:10px;color:#9ca3af;">costo × uds × qty</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.costoProductos)} €</td></tr>
-            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Envíos<div style="font-size:10px;color:#9ca3af;">${d.enviosTexto}</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.mrw)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Logística<div style="font-size:10px;color:#9ca3af;">${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.logistica)} €</td></tr>
-            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Gastos Fijos<div style="font-size:10px;color:#9ca3af;">${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.fijoXTienda)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Nómina<div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.nominaXTienda)} €</td></tr>
-            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">Shopify</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(d.shopify)} €</td></tr>
-            ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>`<tr><td style="padding:8px 14px;border:1px solid #374151;color:#e5e7eb;font-weight:600;">${escapeHtml(g.nombre||'Concepto extra')}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(g.valor)} €</td></tr>`).join("")}
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">Gasto Meta</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(d.meta)} €</td></tr>
+            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">Gasto TikTok</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(d.tiktok)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">Productos<div style="font-size:10px;color:#a1a1a1;">costo × uds × qty</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(d.costoProductos)} €</td></tr>
+            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">Envíos<div style="font-size:10px;color:#a1a1a1;">${d.enviosTexto}</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(d.mrw)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">Logística<div style="font-size:10px;color:#a1a1a1;">${fmt(d.precioLog)}€/ud × ${d.enviosMRW} envíos</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(d.logistica)} €</td></tr>
+            <tr style="background:#1f2937;"><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">Gastos Fijos<div style="font-size:10px;color:#a1a1a1;">${fmt(d.totalOtrosFijos)}€ ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(d.fijoXTienda)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">Nómina<div style="font-size:10px;color:#a1a1a1;">Total nómina ÷ ${d.numTiendas} tiendas</div></td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(d.nominaXTienda)} €</td></tr>
+            <tr><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">Shopify</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(d.shopify)} €</td></tr>
+            ${(d.extras||[]).filter(g=>g.nombre||g.valor>0).map(g=>`<tr><td style="padding:8px 14px;border:1px solid #374151;color:#e3e3e3;font-weight:600;">${escapeHtml(g.nombre||'Concepto extra')}</td><td style="padding:8px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(g.valor)} €</td></tr>`).join("")}
              <tr style="background:rgba(239,68,68,.1);"><td style="padding:8px 14px;border:1px solid #fecaca;font-weight:700;color:#dc2626;">Total Gastos</td><td style="padding:8px 14px;border:1px solid #fecaca;text-align:right;font-weight:700;color:#dc2626;">− ${fmt(d.totalGasto)} €</td></tr>
             <tr style="background:${resBg};"><td style="padding:12px 14px;border:1px solid ${resBorder};font-weight:700;color:${resColor};font-size:14px;">RESULTADO</td><td style="padding:12px 14px;border:1px solid ${resBorder};text-align:right;font-weight:800;color:${resColor};font-size:16px;">${fmt(d.resultado)} €</td></tr>
           </tbody>
@@ -8845,13 +8845,13 @@ async function loadMetricasBalance(dateFrom, dateTo) {
   wrap.innerHTML = `
     <div style="display:flex;gap:20px;align-items:flex-start;">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Esto es un estimado basado en el rango de fecha seleccionado y los precios Unt de MRW y Logística, tu balance final por mes lo puedes ver en Ingresos - Balance Final)</span></div>
+        <div style="font-size:13px;font-weight:700;color:#e3e3e3;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e3e3e3;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b6b6b;font-style:italic;">(Esto es un estimado basado en el rango de fecha seleccionado y los precios Unt de MRW y Logística, tu balance final por mes lo puedes ver en Ingresos - Balance Final)</span></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;" id="met-bal-cols">${cols}</div>
         <div id="met-bal-sumatoria" style="margin-top:20px;padding:16px 20px;background:rgba(34,197,94,.08);border:2px solid #22c55e;border-radius:12px;">
-          <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Sumatoria seleccionada</div>
+          <div style="font-size:12px;color:#6b6b6b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Sumatoria seleccionada</div>
           <div id="met-bal-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
           <div style="border-top:2px solid #22c55e;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-weight:700;font-size:15px;color:#e5e7eb;">TOTAL</span>
+            <span style="font-weight:700;font-size:15px;color:#e3e3e3;">TOTAL</span>
             <span id="met-bal-total" style="font-weight:800;font-size:22px;"></span>
           </div>
         </div>
@@ -8880,7 +8880,7 @@ function recalcMetricasBalance() {
   const total = filtradas.reduce((s,d)=>s+d.resultado,0);
   const filasEl = document.getElementById("met-bal-filas");
   const totalEl = document.getElementById("met-bal-total");
-  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#111827;border:1px solid #374151;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#22c55e':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
+  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#111827;border:1px solid #374151;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b6b6b;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#a1a1a1;">Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#a1a1a1;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#22c55e':'#dc2626'};margin-top:4px;border-top:1px solid #f3f3f3;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
   if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total>=0?"#22c55e":"#dc2626"; }
   const allCheck = document.getElementById("met-bal-check-all");
   if (allCheck) allCheck.checked = filtradas.length === data.length;
@@ -9053,8 +9053,8 @@ function renderBarChart(canvas, data, buckets, stores, labelFn, storeColorMap) {
   const isDark   = document.body.classList.contains('dark');
   const gridCol  = isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
   const axisCol  = isDark ? 'rgba(255,255,255,.1)'  : 'rgba(0,0,0,.08)';
-  const labelCol = isDark ? '#6b7280' : '#9ca3af';
-  const numCol   = isDark ? '#f9fafb' : '#111827';
+  const labelCol = isDark ? '#6b6b6b' : '#a1a1a1';
+  const numCol   = isDark ? '#fafafa' : '#111827';
 
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.parentElement.clientWidth || 400;
@@ -9331,12 +9331,12 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
       const _allChecked = _hadAny ? _storesInPeriod.every(s => _prevChecked.has(s.domain)) : true;
       const _chksHtml = _storesInPeriod.map(s => {
         const _chk = !_hadAny || _prevChecked.has(s.domain);
-        const _badge = s.status !== 'active' ? `<span style="font-size:10px;color:var(--muted,#9ca3af);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>` : '';
+        const _badge = s.status !== 'active' ? `<span style="font-size:10px;color:var(--muted,#a1a1a1);background:var(--border,#374151);padding:1px 6px;border-radius:4px;margin-left:4px;">inactiva</span>` : '';
         return `<label class="shop-check-label shop-check-row"><input type="checkbox" ${_chk ? 'checked' : ''} value="${escapeHtml(s.domain)}" onchange="recalcRentFiltro();loadRentabilidad();">${escapeHtml(s.shop_name||s.domain)}${_badge}</label>`;
       }).join('');
       _rentFB.innerHTML = _storesInPeriod.length
         ? `<label class="shop-check-label all"><input type="checkbox" id="rent-shop-check-all" ${_allChecked ? 'checked' : ''} onchange="toggleAllRentFiltro(this.checked)">Todas las tiendas</label>${_chksHtml}`
-        : '<div style="color:#9ca3af;font-size:12px;">Sin pedidos en este período</div>';
+        : '<div style="color:#a1a1a1;font-size:12px;">Sin pedidos en este período</div>';
       if (window.recalcRentFiltro) window.recalcRentFiltro();
     }
     // Facturación exacta por tienda
@@ -9581,24 +9581,24 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     const resBg    = d.resultado >= 0 ? "rgba(34,197,94,.08)" : "#fef2f2";
     const resBorder= d.resultado >= 0 ? "#86efac" : "#fecaca";
     const tr  = (label, sub, val, opts={}) =>
-      `<tr style="border-bottom:1px solid #f3f4f6;">
-        <td style="padding:7px 12px;color:#e5e7eb;font-weight:${opts.bold?'700':'500'};font-size:12px;${opts.cursor?'cursor:pointer;':''}"
+      `<tr style="border-bottom:1px solid #f3f3f3;">
+        <td style="padding:7px 12px;color:#e3e3e3;font-weight:${opts.bold?'700':'500'};font-size:12px;${opts.cursor?'cursor:pointer;':''}"
           ${opts.onclick ? `onclick="${opts.onclick}"` : ''}>
-          ${label}${sub ? `<div style="font-size:10px;color:#9ca3af;font-weight:400;margin-top:1px;">${sub}</div>` : ''}
+          ${label}${sub ? `<div style="font-size:10px;color:#a1a1a1;font-weight:400;margin-top:1px;">${sub}</div>` : ''}
         </td>
-        <td style="padding:7px 12px;text-align:right;font-size:12px;color:${opts.valColor||'#6b7280'};font-weight:${opts.bold?'700':'400'};white-space:nowrap;">${val}</td>
+        <td style="padding:7px 12px;text-align:right;font-size:12px;color:${opts.valColor||'#6b6b6b'};font-weight:${opts.bold?'700':'400'};white-space:nowrap;">${val}</td>
       </tr>`;
     // Desglose completo — se abre en modal
     window.__rentabilidadDesglose[d.domain] = `
       <table style="width:100%;border-collapse:collapse;">
         <tbody>
-          <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f4f6;">Ingresos</td></tr>
+          <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#a1a1a1;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f3f3;">Ingresos</td></tr>
           ${tr('COD', `${d.numCOD} pedidos · ${fmt(d.brutoCOD)}€ bruto · <span style="color:#dc2626;">−${fmt(d.descCOD)}€ comisión</span>`, fmt(d.netoCOD)+' €', {valColor:'#374151'})}
           ${tr('Tarjeta', `${d.numTarjeta} pedidos · ${fmt(d.brutoTarjeta)}€ bruto · <span style="color:#dc2626;">−${fmt(d.descTarjeta)}€ comisión</span>`, fmt(d.netoTarjeta)+' €', {valColor:'#374151'})}
           ${d.man1val > 0 ? tr(escapeHtml(d.man1nom||'Extra 1'), '', fmt(d.man1val)+' €') : ''}
           ${d.man2val > 0 ? tr(escapeHtml(d.man2nom||'Extra 2'), '', fmt(d.man2val)+' €') : ''}
           ${tr('Total Ingresos', '', fmt(d.totalIngreso)+' €', {bold:true, valColor:'#374151'})}
-          <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f4f6;border-top:6px solid #f9fafb;">Gastos</td></tr>
+          <tr><td colspan="2" style="padding:5px 12px;font-size:10px;font-weight:700;color:#a1a1a1;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #f3f3f3;border-top:6px solid #fafafa;">Gastos</td></tr>
           ${tr('Gasto Meta', d.porAgencia ? 'Proporcional a los pedidos de la agencia cada día' : '', fmt(d.meta)+' €')}
           ${tr('Gasto TikTok', d.porAgencia ? 'Proporcional a los pedidos de la agencia cada día' : '', fmt(d.tiktok)+' €')}
           ${tr('Productos <span style="font-size:10px;color:#3b82f6;">▶ ver detalle</span>', `${fmt(d.costoProductos)}€ bruto${d.costoRecuperado>0?` − ${fmt(d.costoRecuperado)}€ recuperado (${d.numDevueltosProd} dev.)`:''}`, fmt(d.costoProductos-(d.costoRecuperado||0))+' €', {cursor:true, onclick:`verDetalleProductosRent('${d.domain}')`})}
@@ -9615,24 +9615,24 @@ async function loadRentabilidadBalance(dateFrom, dateTo, shopsFiltro = []) {
     // Tarjeta compacta — vista principal
     return `
       <div style="background:var(--card);border:1px solid #374151;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;" data-domain="${d.domain}">
-        <div style="font-weight:700;font-size:13px;color:#e5e7eb;">${escapeHtml(d.name)}</div>
-        <div style="font-size:10px;color:#9ca3af;">${d.domain}</div>
+        <div style="font-weight:700;font-size:13px;color:#e3e3e3;">${escapeHtml(d.name)}</div>
+        <div style="font-size:10px;color:#a1a1a1;">${d.domain}</div>
         <div style="margin-top:6px;font-size:12px;display:flex;flex-direction:column;gap:3px;">
           <div>Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
           <div>Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div>
         </div>
-        <div style="font-size:16px;font-weight:800;color:${resColor};border-top:1px solid #f3f4f6;padding-top:8px;margin-top:2px;">${fmt(d.resultado)} €</div>
-        <button onclick="verDesgloseRentTienda('${d.domain}')" style="margin-top:4px;padding:6px 0;background:#1f2937;border:1px solid #374151;border-radius:6px;font-size:12px;font-weight:600;color:#e5e7eb;cursor:pointer;width:100%;">Ver desglose</button>
+        <div style="font-size:16px;font-weight:800;color:${resColor};border-top:1px solid #f3f3f3;padding-top:8px;margin-top:2px;">${fmt(d.resultado)} €</div>
+        <button onclick="verDesgloseRentTienda('${d.domain}')" style="margin-top:4px;padding:6px 0;background:#1f2937;border:1px solid #374151;border-radius:6px;font-size:12px;font-weight:600;color:#e3e3e3;cursor:pointer;width:100%;">Ver desglose</button>
       </div>`;
   }).join("");
 
   wrap.innerHTML = `
     <div>
-      <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b7280;font-style:italic;">(Estimado basado en el rango de fecha seleccionado)</span></div>
+      <div style="font-size:13px;font-weight:700;color:#e3e3e3;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e3e3e3;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">📊 Balance por tienda <span style="font-size:11px;font-weight:400;color:#6b6b6b;font-style:italic;">(Estimado basado en el rango de fecha seleccionado)</span></div>
       <div id="rent-bal-kpis" style="margin-bottom:20px;"></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;" id="rent-bal-cols">${cols}</div>
       <div id="rent-bal-sumatoria" style="margin-top:20px;padding:12px 20px;background:rgba(34,197,94,.08);border:2px solid #22c55e;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-weight:700;font-size:15px;color:#e5e7eb;">TOTAL</span>
+        <span style="font-weight:700;font-size:15px;color:#e3e3e3;">TOTAL</span>
         <span id="rent-bal-total" style="font-weight:800;font-size:22px;"></span>
         <div id="rent-bal-filas" style="display:none;"></div>
       </div>
@@ -9675,7 +9675,7 @@ function recalcRentabilidadBalance() {
   const total = filtradas.reduce((s,d)=>s+d.resultado,0);
   const filasEl = document.getElementById("rent-bal-filas");
   const totalEl = document.getElementById("rent-bal-total");
-  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#111827;border:1px solid #374151;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#22c55e':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
+  if (filasEl) filasEl.innerHTML = filtradas.map(d => `<div style="background:#111827;border:1px solid #374151;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;"><div style="color:#6b6b6b;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div><div style="font-size:11px;color:#a1a1a1;">Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div><div style="font-size:11px;color:#a1a1a1;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div><div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#22c55e':'#dc2626'};margin-top:4px;border-top:1px solid #f3f3f3;padding-top:4px;">${fmt(d.resultado)} €</div></div>`).join("");
   if (totalEl) { totalEl.textContent = fmt(total) + " €"; totalEl.style.color = total>=0?"#22c55e":"#dc2626"; }
   const allCheck = document.getElementById("rent-bal-check-all");
   if (allCheck) allCheck.checked = filtradas.length === data.length;
@@ -9707,14 +9707,14 @@ function renderRentKpis(filtradas) {
 
   const card = (label, value, sub='', color='var(--text,#111827)') =>
     `<div style="background:var(--card);border:1px solid #374151;border-radius:10px;padding:16px 18px;">
-      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">${label}</div>
+      <div style="font-size:11px;font-weight:700;color:#6b6b6b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">${label}</div>
       <div style="font-size:22px;font-weight:800;color:${color};line-height:1.1;">${value}</div>
-      ${sub ? `<div style="font-size:11px;color:#6b7280;margin-top:5px;">${sub}</div>` : ''}
+      ${sub ? `<div style="font-size:11px;color:#6b6b6b;margin-top:5px;">${sub}</div>` : ''}
     </div>`;
 
   const section = (title, cards) =>
     `<div style="margin-bottom:16px;">
-      <div style="font-size:11px;font-weight:700;color:#e5e7eb;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;padding-bottom:5px;border-bottom:2px solid #e5e7eb;">${title}</div>
+      <div style="font-size:11px;font-weight:700;color:#e3e3e3;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;padding-bottom:5px;border-bottom:2px solid #e3e3e3;">${title}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;">${cards.join('')}</div>
     </div>`;
 
@@ -9783,9 +9783,9 @@ function verDetalleProductosRent(domain) {
   if (!d) return;
   const fmt = n => (parseFloat(n)||0).toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 });
   const prods = d.productosDetalle || [];
-  const thStyle = 'padding:5px 8px;background:#1f2937;border:1px solid #374151;font-size:10px;font-weight:600;color:#6b7280;text-align:right;white-space:nowrap;';
+  const thStyle = 'padding:5px 8px;background:#1f2937;border:1px solid #374151;font-size:10px;font-weight:600;color:#6b6b6b;text-align:right;white-space:nowrap;';
   const thStyleL = thStyle.replace('text-align:right','text-align:center');
-  const tdStyle = 'padding:5px 8px;border:1px solid #f3f4f6;font-size:12px;text-align:right;color:#e5e7eb;white-space:nowrap;';
+  const tdStyle = 'padding:5px 8px;border:1px solid #f3f3f3;font-size:12px;text-align:right;color:#e3e3e3;white-space:nowrap;';
   const mkDistTable = (dist, uds, costo, accent) => {
     const rows = Object.entries(dist).sort((a,b)=>parseInt(a[0])-parseInt(b[0])).map(([qty,peds]) => {
       const udsS = peds * parseInt(qty);
@@ -9811,16 +9811,16 @@ function verDetalleProductosRent(domain) {
       + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>';
   };
   const cards = prods.length === 0
-    ? '<div style="padding:24px;text-align:center;color:#9ca3af;">Sin datos de productos</div>'
+    ? '<div style="padding:24px;text-align:center;color:#a1a1a1;">Sin datos de productos</div>'
     : prods.map((p, i) => {
         const totalPedidos = Object.values(p.qtyDist).reduce((s,v)=>s+v, 0);
         let html = '<div style="border:1px solid #374151;border-radius:8px;overflow:hidden;margin-bottom:10px;">'
           + '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px;background:#1f2937;border-bottom:1px solid #1f2937;">'
           +   '<div style="font-weight:700;font-size:13px;color:#111;flex:1;margin-right:12px;">' + escapeHtml(p.nombre) + '</div>'
-          +   '<div style="font-weight:700;font-size:14px;color:#e5e7eb;white-space:nowrap;">' + fmt(p.total) + ' €</div>'
+          +   '<div style="font-weight:700;font-size:14px;color:#e3e3e3;white-space:nowrap;">' + fmt(p.total) + ' €</div>'
           + '</div>'
           + '<div style="padding:10px 14px;">'
-          +   '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">'
+          +   '<div style="font-size:11px;color:#6b6b6b;margin-bottom:6px;">'
           +     '<span style="background:#1f2937;border-radius:4px;padding:2px 6px;margin-right:6px;">Coste: ' + fmt(p.costo) + '€/ud</span>'
           +     '<span style="background:#1f2937;border-radius:4px;padding:2px 6px;margin-right:6px;">Uds/venta: ' + p.uds + '</span>'
           +     '<span style="background:#1f2937;border-radius:4px;padding:2px 6px;margin-right:6px;">' + totalPedidos + ' pedidos</span>'
@@ -9853,9 +9853,9 @@ function verDetalleProductosRent(domain) {
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
     +   '<div>'
     +     '<div style="font-weight:700;font-size:15px;color:#111;">📦 Desglose de Productos</div>'
-    +     '<div style="font-size:12px;color:#6b7280;margin-top:2px;">' + escapeHtml(d.name) + ' — coste neto: <strong>' + fmt(neto) + ' €</strong></div>'
+    +     '<div style="font-size:12px;color:#6b6b6b;margin-top:2px;">' + escapeHtml(d.name) + ' — coste neto: <strong>' + fmt(neto) + ' €</strong></div>'
     +   '</div>'
-    +   '<button id="__prod-detail-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;line-height:1;padding:4px;">✕</button>'
+    +   '<button id="__prod-detail-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b6b6b;line-height:1;padding:4px;">✕</button>'
     + '</div>'
     + '<div>' + cards + '</div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(34,197,94,.08);border-radius:8px;margin-top:4px;">'
@@ -10505,7 +10505,7 @@ async function loadAdsTable() {
           body: JSON.stringify({ shop: inp.dataset.shop, date: inp.dataset.date, type: inp.dataset.type, spend: 0 }),
         }))).then(() => {
           invalidateCache("ads");
-          showToast?.("🗑️ Borrado", `${inputs.length} gasto${inputs.length === 1 ? "" : "s"} borrado${inputs.length === 1 ? "" : "s"}`, "#6b7280");
+          showToast?.("🗑️ Borrado", `${inputs.length} gasto${inputs.length === 1 ? "" : "s"} borrado${inputs.length === 1 ? "" : "s"}`, "#6b6b6b");
           loadAdsTable();
         }).catch(() => showToast?.("❌ Error", "No se pudieron borrar todos los gastos", "#dc2626"));
         return;
@@ -10666,7 +10666,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
               estimado = totalEnvios * (parseFloat(item.precio_unit) || 0);
             }
             return `
-            <tr data-id="${item.id}" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <tr data-id="${item.id}" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
               <td style="padding:7px 12px;border:1px solid #374151;">
                 ${esFijo
                   ? `<span style="font-weight:600;color:var(--text);">${item.nombre}</span>`
@@ -10679,7 +10679,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
                 <input type="number" min="0" step="0.01" value="${fmt(item.valor)}"
                   data-id="${item.id}" data-field="valor" data-mes="${mes}"
                   onchange="updateGastoFijoValor(this)"
-                  onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();this.style.borderColor='#22c55e';setTimeout(()=>{this.style.borderColor='#e5e7eb'},1500);this.dispatchEvent(new Event('change'));}"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();this.style.borderColor='#22c55e';setTimeout(()=>{this.style.borderColor='#e3e3e3'},1500);this.dispatchEvent(new Event('change'));}"
                   style="${inp}text-align:right;">
               </td>
               <td style="padding:7px 12px;border:1px solid #374151;">
@@ -10689,10 +10689,10 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
                       onchange="updateGastoFijoPrecio(this)"
                       onkeydown="if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}"
                       style="${inp}text-align:right;">`
-                  : `<span style="color:#d1d5db;display:block;text-align:center;">—</span>`
+                  : `<span style="color:#d4d4d4;display:block;text-align:center;">—</span>`
                 }
               </td>
-              <td style="padding:7px 12px;border:1px solid #374151;text-align:right;color:#6b7280;">
+              <td style="padding:7px 12px;border:1px solid #374151;text-align:right;color:#6b6b6b;">
                 ${estimado!=null ? fmt(estimado)+" €" : "—"}
               </td>
               <td style="padding:7px 12px;border:1px solid #374151;text-align:center;">
@@ -10718,7 +10718,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   window.__preciosGF = preciosGlobales;
   const _agsPrecio = await getAgenciasConectadas();
   const _filasAgencia = (_agsPrecio.length ? _agsPrecio : [{ id: "mrw", nombre: "MRW" }]).map(a => `
-          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+          <tr onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
             <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">${escapeHtml(a.nombre)}</td>
             <td style="padding:10px 14px;border:1px solid #374151;text-align:right;">
               <input type="number" min="0" step="0.01" value="${fmt(precioEnvioAgencia(preciosGlobales, a.id))}"
@@ -10739,7 +10739,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
         </thead>
         <tbody>
           ${_filasAgencia}
-          <tr onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+          <tr onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
             <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;">LOGÍSTICA</td>
             <td style="padding:10px 14px;border:1px solid #374151;text-align:right;">
               <input type="number" min="0" step="0.01" value="${fmt(preciosGlobales.precio_logistica)}"
@@ -10801,7 +10801,7 @@ async function updateGastoFijo(input) {
     });
     input.blur();
     input.style.borderColor = "#22c55e";
-    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
+    setTimeout(() => { input.style.borderColor = "#e3e3e3"; }, 1500);
   } catch(e) { console.error(e); }
 }
 
@@ -10843,7 +10843,7 @@ async function updateImpuesto(input) {
     invalidateCache("impuestos");
     input.blur();
     input.style.borderColor = "#22c55e";
-    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
+    setTimeout(() => { input.style.borderColor = "#e3e3e3"; }, 1500);
   } catch(e) { console.error(e); }
 }
 
@@ -10869,7 +10869,7 @@ async function updateGastoFijoPrecio(input) {
     invalidateCache("gastos-fijos");
     invalidateCache("precios-globales");
     input.style.borderColor = "#22c55e";
-    setTimeout(() => { input.style.borderColor = "#e5e7eb"; }, 1500);
+    setTimeout(() => { input.style.borderColor = "#e3e3e3"; }, 1500);
   } catch(e) { console.error(e); }
 }
 window.updateGastoFijoPrecio = updateGastoFijoPrecio;
@@ -11203,43 +11203,43 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Gasto Meta</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(ads.meta)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">Gasto Meta</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(ads.meta)} €</td>
             </tr>
             <tr style="background:#1f2937;">
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Gasto TikTok</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(ads.tiktok)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">Gasto TikTok</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(ads.tiktok)} €</td>
             </tr>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Productos</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(costoProductosNeto)} €
-                <div style="font-size:10px;color:#9ca3af;">${fmt(costoProductos)}€ bruto${costoRecuperadoGV>0?` − ${fmt(costoRecuperadoGV)}€ recuperado (${numDevGV} dev.)`:''}
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">Productos</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(costoProductosNeto)} €
+                <div style="font-size:10px;color:#a1a1a1;">${fmt(costoProductos)}€ bruto${costoRecuperadoGV>0?` − ${fmt(costoRecuperadoGV)}€ recuperado (${numDevGV} dev.)`:''}
                 </div>
               </td>
             </tr>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">MRW</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(mrw)} €
-                <div style="font-size:10px;color:#9ca3af;">${fmt(totalMRW)}€ ÷ ${totalEnviosGlobales} envíos globales (${enviosTiendaMRW.length} salidas + ${devueltosTienda} dev. esta tienda)</div>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">MRW</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(mrw)} €
+                <div style="font-size:10px;color:#a1a1a1;">${fmt(totalMRW)}€ ÷ ${totalEnviosGlobales} envíos globales (${enviosTiendaMRW.length} salidas + ${devueltosTienda} dev. esta tienda)</div>
               </td>
             </tr>
             <tr style="background:#1f2937;">
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Logística</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(logistica)} €
-                <div style="font-size:10px;color:#9ca3af;">${fmt(totalLogistica)}€ ÷ ${totalPedidosGlobales} envíos × ${enviosTiendaMRW.length} esta tienda</div>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">Logística</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(logistica)} €
+                <div style="font-size:10px;color:#a1a1a1;">${fmt(totalLogistica)}€ ÷ ${totalPedidosGlobales} envíos × ${enviosTiendaMRW.length} esta tienda</div>
               </td>
             </tr>
             <tr>
               <tr>
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Gastos Fijos</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(fijoXTienda)} €
-                <div style="font-size:10px;color:#9ca3af;">${fmt(totalOtrosFijos)}€ ÷ ${numTiendas} tiendas</div>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">Gastos Fijos</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(fijoXTienda)} €
+                <div style="font-size:10px;color:#a1a1a1;">${fmt(totalOtrosFijos)}€ ÷ ${numTiendas} tiendas</div>
               </td>
             </tr>
             <tr style="background:#1f2937;">
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Nómina</td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b7280;">${fmt(nominaXTienda)} €
-                <div style="font-size:10px;color:#9ca3af;">Total nómina ÷ ${numTiendas} tiendas</div>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">Nómina</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;color:#6b6b6b;">${fmt(nominaXTienda)} €
+                <div style="font-size:10px;color:#a1a1a1;">Total nómina ÷ ${numTiendas} tiendas</div>
               </td>
             </tr>
             <tr style="background:rgba(59,130,246,.08);">
@@ -11291,7 +11291,7 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
   if (content) {
     content.innerHTML = `
       <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:start;">
-        ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+        ${cols || `<div style="color:#6b6b6b;padding:16px;">No hay tiendas activas.</div>`}
       </div>
     `;
   }
@@ -11328,7 +11328,7 @@ async function switchInformesTab(tab) {
     if (k === tab) {
       btn.style.background = "#22c55e"; btn.style.color = "#fff"; btn.style.borderColor = "#22c55e";
     } else {
-      btn.style.background = "#fff"; btn.style.color = "#374151"; btn.style.borderColor = "#e5e7eb";
+      btn.style.background = "#fff"; btn.style.color = "#374151"; btn.style.borderColor = "#e3e3e3";
     }
   });
   const content = document.getElementById("informes-content");
@@ -11346,7 +11346,7 @@ async function switchInformesTab(tab) {
             <div id="ree-agencias" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <input type="text" id="ree-q" placeholder="Buscar pedido..." oninput="renderReembolsos()"
-                style="padding:7px 10px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;color:#f9fafb;background:#1f2937;width:160px;"/>
+                style="padding:7px 10px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;color:#fafafa;background:#1f2937;width:160px;"/>
               ${window.__DPF.triggerBtn('ree', 'Período')}
               <input type="date" id="ree-date-from" value="" style="display:none;">
               <input type="date" id="ree-date-to" value="" style="display:none;">
@@ -11362,7 +11362,7 @@ async function switchInformesTab(tab) {
             </div>
           </div>
           <div style="border-bottom:1px solid #1f2937;margin-bottom:12px;"></div>
-          <div id="ree-counter" style="font-size:13px;color:#6b7280;margin-bottom:8px;padding:0 4px;"></div>
+          <div id="ree-counter" style="font-size:13px;color:#6b6b6b;margin-bottom:8px;padding:0 4px;"></div>
           <div class="orders-table">
             <div class="orders-row head" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
               <div>#</div><div>Pedido</div><div>Nº seguimiento</div><div>Fecha</div><div>Cliente</div><div>Costo</div><div>Estado pago</div>
@@ -11496,20 +11496,20 @@ async function renderInformesIngresos() {
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">
                 COD
-                <div style="font-size:10px;color:#9ca3af;font-weight:400;">${fmt(totalCOD)} € — ${pedidosCOD.length} pedidos</div>
+                <div style="font-size:10px;color:#a1a1a1;font-weight:400;">${fmt(totalCOD)} € — ${pedidosCOD.length} pedidos</div>
                 <div style="font-size:10px;color:#dc2626;">Comisión MRW (${pedidosCOD.length}×0.67€) = −${fmt(descCOD)}€</div>
               </td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#e5e7eb;">${fmt(netoCOD)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#e3e3e3;">${fmt(netoCOD)} €</td>
             </tr>
             <tr style="background:#1f2937;">
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">
                 TARJETA
-                <div style="font-size:10px;color:#9ca3af;font-weight:400;">${fmt(totalPagado)} € — ${pedidosPagado.length} pedidos</div>
+                <div style="font-size:10px;color:#a1a1a1;font-weight:400;">${fmt(totalPagado)} € — ${pedidosPagado.length} pedidos</div>
                 <div style="font-size:10px;color:#dc2626;">Comisión tarjeta (4%) = −${fmt(descPagado)}€</div>
               </td>
-              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#e5e7eb;">${fmt(netoPagado)} €</td>
+              <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#e3e3e3;">${fmt(netoPagado)} €</td>
             </tr>
             <tr style="background:rgba(59,130,246,.08);">
               <td style="padding:8px 14px;border:1px solid #bfdbfe;">
@@ -11555,7 +11555,7 @@ async function renderInformesIngresos() {
     </div>
     <div style="background:#111827;border:1px solid #374151;border-radius:12px;padding:20px;">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
-      ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+      ${cols || `<div style="color:#6b6b6b;padding:16px;">No hay tiendas activas.</div>`}
     </div>
     </div>
   `;
@@ -11751,11 +11751,11 @@ async function renderInformesBalance() {
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
             <tr>
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Total Ingreso</td>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">Total Ingreso</td>
               <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#22c55e;">${fmt(d.totalIngreso)} €</td>
             </tr>
             <tr style="background:rgba(239,68,68,.1);">
-              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e5e7eb;">Total Gasto</td>
+              <td style="padding:10px 14px;border:1px solid #374151;font-weight:600;color:#e3e3e3;">Total Gasto</td>
               <td style="padding:10px 14px;border:1px solid #374151;text-align:right;font-weight:600;color:#dc2626;">− ${fmt(d.totalGasto)} €</td>
             </tr>
             <tr style="background:${resBg};">
@@ -11782,13 +11782,13 @@ async function renderInformesBalance() {
       <div style="display:flex;gap:20px;align-items:flex-start;">
         <div style="flex:1;min-width:0;">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;" id="bal-cols">
-            ${cols || `<div style="color:#6b7280;padding:16px;">No hay tiendas activas.</div>`}
+            ${cols || `<div style="color:#6b6b6b;padding:16px;">No hay tiendas activas.</div>`}
           </div>
           <div id="bal-sumatoria" style="margin-top:24px;padding:18px 22px;background:rgba(34,197,94,.08);border:2px solid #22c55e;border-radius:12px;">
-            <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Sumatoria seleccionada</div>
+            <div style="font-size:12px;color:#6b6b6b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Sumatoria seleccionada</div>
             <div id="bal-suma-filas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;"></div>
             <div style="border-top:2px solid #22c55e;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-weight:700;font-size:15px;color:#e5e7eb;">TOTAL</span>
+              <span style="font-weight:700;font-size:15px;color:#e3e3e3;">TOTAL</span>
               <span id="bal-suma-total" style="font-weight:800;font-size:24px;"></span>
             </div>
           </div>
@@ -11827,10 +11827,10 @@ function recalcBalanceSuma() {
 
   if (filasEl) filasEl.innerHTML = filtradas.map(d =>
     `<div style="background:#111827;border:1px solid #374151;border-radius:8px;padding:8px 14px;font-size:12px;min-width:140px;">
-      <div style="color:#6b7280;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div>
-      <div style="font-size:11px;color:#9ca3af;">Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
-      <div style="font-size:11px;color:#9ca3af;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div>
-      <div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#22c55e':'#dc2626'};margin-top:4px;border-top:1px solid #f3f4f6;padding-top:4px;">${fmt(d.resultado)} €</div>
+      <div style="color:#6b6b6b;font-weight:600;margin-bottom:4px;">${escapeHtml(d.name)}</div>
+      <div style="font-size:11px;color:#a1a1a1;">Ingreso: <span style="color:#22c55e;font-weight:600;">${fmt(d.totalIngreso)} €</span></div>
+      <div style="font-size:11px;color:#a1a1a1;">Gasto: <span style="color:#dc2626;font-weight:600;">${fmt(d.totalGasto)} €</span></div>
+      <div style="font-size:13px;font-weight:700;color:${d.resultado>=0?'#22c55e':'#dc2626'};margin-top:4px;border-top:1px solid #f3f3f3;padding-top:4px;">${fmt(d.resultado)} €</div>
     </div>`
   ).join("");
 
@@ -12503,7 +12503,7 @@ window.pfacturaSwitchTab = function(tab) {
     else { actionBtn.textContent = "+ Nuevo cliente"; actionBtn.onclick = () => pfacturaOpenClienteModal(); }
   }
   const content = document.getElementById("pfactura-tab-content");
-  if (content) content.innerHTML = `<div style="color:#6b7280;font-size:13px;">Cargando…</div>`;
+  if (content) content.innerHTML = `<div style="color:#6b6b6b;font-size:13px;">Cargando…</div>`;
   if (tab === "facturas") pfacturaLoadList();
   else if (tab === "emisores") pfacturaLoadEmisoresTab();
   else pfacturaLoadClientesTab();
@@ -12515,7 +12515,7 @@ async function pfacturaLoadList() {
   try {
     const rows = await fetch(`${API_BASE}/api/pfactura`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
     if (!Array.isArray(rows) || !rows.length) {
-      wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b7280;font-size:13px;">Aún no has creado ninguna factura.</div>`;
+      wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b6b6b;font-size:13px;">Aún no has creado ninguna factura.</div>`;
       return;
     }
     wrap.innerHTML = `
@@ -12565,7 +12565,7 @@ async function pfacturaLoadEmisoresTab() {
     const rows = await fetch(`${API_BASE}/api/pfactura/emisores`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
     window.__pfacturaEmisoresCache = Array.isArray(rows) ? rows : [];
     if (!window.__pfacturaEmisoresCache.length) {
-      wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b7280;font-size:13px;">Aún no has guardado ningún emisor.<br>Guarda tu nombre personal, tu empresa, etc. para reutilizarlos al facturar.</div>`;
+      wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b6b6b;font-size:13px;">Aún no has guardado ningún emisor.<br>Guarda tu nombre personal, tu empresa, etc. para reutilizarlos al facturar.</div>`;
       return;
     }
     wrap.innerHTML = `
@@ -12680,7 +12680,7 @@ async function pfacturaLoadClientesTab() {
     const rows = await fetch(`${API_BASE}/api/pfactura/clientes`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
     window.__pfacturaClientesCache = Array.isArray(rows) ? rows : [];
     if (!window.__pfacturaClientesCache.length) {
-      wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b7280;font-size:13px;">Aún no has guardado ningún cliente.<br>Guárdalos aquí para reutilizarlos al facturar, sin reescribir sus datos cada vez.</div>`;
+      wrap.innerHTML = `<div style="text-align:center;padding:48px 24px;color:#6b6b6b;font-size:13px;">Aún no has guardado ningún cliente.<br>Guárdalos aquí para reutilizarlos al facturar, sin reescribir sus datos cada vez.</div>`;
       return;
     }
     const addrCol = r => [r.direccion1, r.direccion2, [r.ciudad, r.pais].filter(Boolean).join(", ")].filter(Boolean).join(", ") || (r.direccion || "—");
@@ -13297,7 +13297,7 @@ function contaRenderMovimientosTab() {
       ${st.cuentaId ? `<button onclick="contaImportarCSV()" style="padding:6px 14px;border-radius:20px;border:1px dashed #3b82f6;background:transparent;color:#3b82f6;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">📄 Importar extracto (CSV)</button>` : ""}
     </div>
     <div id="conta-resumen" style="margin-bottom:16px;"></div>
-    <div id="conta-dias"><div style="color:#6b7280;font-size:13px;">Cargando…</div></div>
+    <div id="conta-dias"><div style="color:#6b6b6b;font-size:13px;">Cargando…</div></div>
   `;
 
   if (st.cuentaId) {
@@ -13313,7 +13313,7 @@ async function contaLoadMes() {
   const cont = document.getElementById("conta-dias");
   const resumen = document.getElementById("conta-resumen");
   if (!cont) return;
-  cont.innerHTML = `<div style="color:#6b7280;font-size:13px;">Cargando…</div>`;
+  cont.innerHTML = `<div style="color:#6b6b6b;font-size:13px;">Cargando…</div>`;
   try {
     const params = new URLSearchParams({ cuenta_id: st.cuentaId, year: st.year, month: st.month });
     const data = await fetch(`${API_BASE}/api/contabilidad/mes?${params}`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
@@ -13916,7 +13916,7 @@ async function contaProcesarCSV(file) {
 async function contaRenderRemitentesTab() {
   const cont = document.getElementById("conta-tab-content");
   if (!cont) return;
-  cont.innerHTML = `<div style="color:#6b7280;font-size:13px;">Cargando…</div>`;
+  cont.innerHTML = `<div style="color:#6b6b6b;font-size:13px;">Cargando…</div>`;
   try {
     const rows = await fetch(`${API_BASE}/api/contabilidad/remitentes`, { headers: { Authorization: "Bearer " + getActiveToken() } }).then(r => r.json());
     window.__contaRemitentes = Array.isArray(rows) ? rows : [];
@@ -14076,7 +14076,7 @@ window.contaAbrirFacturaMov = async function (movId) {
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
   overlay.innerHTML = `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;width:420px;max-width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3);">
-      <div id="conta-factura-body" style="color:#6b7280;font-size:13px;">Cargando…</div>
+      <div id="conta-factura-body" style="color:#6b6b6b;font-size:13px;">Cargando…</div>
     </div>`;
   document.body.appendChild(overlay);
   closeOnBackdropClick(overlay, () => overlay.remove());
@@ -14384,7 +14384,7 @@ window.confirmarReclamoModal = async function(orderId, orderNumber) {
     const btn = document.querySelector(`button[data-reclamo-order="${CSS.escape(orderId)}"]`);
     if (btn) {
       btn.disabled = true;
-      btn.style.background = "#9ca3af";
+      btn.style.background = "#a1a1a1";
       btn.style.cursor = "default";
       btn.title = "Ya reclamado a MRW";
     }
@@ -14440,7 +14440,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       } else if (finLower === "refunded" || finLower === "voided") {
         paymentBadge = `<span class="status red">Null</span>`;
       } else {
-        paymentBadge = `<span style="color:#9ca3af;font-size:12px;">${fin || "-"}</span>`;
+        paymentBadge = `<span style="color:#a1a1a1;font-size:12px;">${fin || "-"}</span>`;
       }
     } catch(e) { paymentBadge = "-"; }
 
@@ -14478,7 +14478,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
           const claimed = window.__reclamosSet && o.order_id && window.__reclamosSet.has(o.order_id);
           return `<button data-reclamo-order="${escapeAttr(o.order_id||"")}" onclick="abrirModalReclamo('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}')"
             title="${claimed ? "Ya reclamado a MRW" : "Reclamar a MRW"}" ${claimed ? "disabled" : ""}
-            style="width:22px;height:22px;background:${claimed ? "#9ca3af" : "#f59e0b"};border:none;border-radius:50%;cursor:${claimed ? "default" : "pointer"};display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
+            style="width:22px;height:22px;background:${claimed ? "#a1a1a1" : "#f59e0b"};border:none;border-radius:50%;cursor:${claimed ? "default" : "pointer"};display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".5" fill="white"/></svg>
           </button>`;
         })()}
@@ -14495,9 +14495,9 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
           </button>
           <div id="menu-estado-${o.id}" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#111827;border:1px solid #374151;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:140px;overflow:hidden;">
             <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'entregado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#22c55e;cursor:pointer;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(34,197,94,.08)'" onmouseout="this.style.background=''">✓ Entregado</div>
-            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'devuelto')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#ea580c;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background=''">↩ Devuelto</div>
-            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'destruido')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#c4b5fd;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">✕ Destruido</div>
-            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'cancelado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f4f6;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">✕ Cancelado</div>
+            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'devuelto')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#ea580c;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f3f3;" onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background=''">↩ Devuelto</div>
+            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'destruido')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#c4b5fd;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f3f3;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">✕ Destruido</div>
+            <div onclick="cambiarEstadoPedido('${escapeAttr(o.order_id||"")}','${escapeAttr(o.order_number||"")}',${o.id||'null'},'cancelado')" style="padding:9px 14px;font-size:12px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #f3f3f3;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">✕ Cancelado</div>
           </div>
         </div>` : ""}
       </div>
@@ -14513,7 +14513,7 @@ if (pagination) {
     // Botón anterior
     pages += `<button onclick="goToOrdersPage(${Math.max(1, p-1)})"
       style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;
-        background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};
+        background:var(--card);color:${p===1?"#d4d4d4":"var(--text)"};
         font-size:13px;cursor:pointer;font-family:inherit;"
       ${p===1?"disabled":""}>‹</button>`;
 
@@ -14527,13 +14527,13 @@ if (pagination) {
       pages += `<button onclick="goToOrdersPage(1)"
         style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;
           background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`;
-      if (startPage > 2) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`;
+      if (startPage > 2) pages += `<span style="padding:0 4px;color:#a1a1a1;line-height:34px;">…</span>`;
     }
 
     for (let i = startPage; i <= endPage; i++) {
       const isActive = i === p;
       pages += `<button onclick="goToOrdersPage(${i})"
-        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#22c55e":"#e5e7eb"};
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#22c55e":"#e3e3e3"};
           background:${isActive?"#22c55e":"var(--card)"};color:${isActive?"#fff":"var(--text)"};
           font-size:13px;font-weight:${isActive?"700":"400"};cursor:pointer;font-family:inherit;">
         ${i}
@@ -14541,7 +14541,7 @@ if (pagination) {
     }
 
     if (endPage < totalPages) {
-      if (endPage < totalPages - 1) pages += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`;
+      if (endPage < totalPages - 1) pages += `<span style="padding:0 4px;color:#a1a1a1;line-height:34px;">…</span>`;
       pages += `<button onclick="goToOrdersPage(${totalPages})"
         style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;
           background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${totalPages}</button>`;
@@ -14550,7 +14550,7 @@ if (pagination) {
     // Botón siguiente
     pages += `<button onclick="goToOrdersPage(${Math.min(totalPages, p+1)})"
       style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;
-        background:var(--card);color:${p===totalPages?"#d1d5db":"var(--text)"};
+        background:var(--card);color:${p===totalPages?"#d4d4d4":"var(--text)"};
         font-size:13px;cursor:pointer;font-family:inherit;"
       ${p===totalPages?"disabled":""}>›</button>`;
 
@@ -14741,7 +14741,7 @@ const _DP_FINANCIAL = {
   paid:            { label: "Pagado",          bg: "rgba(34,197,94,.12)",  color: "#16a34a", border: "rgba(34,197,94,.35)",   icon: "✓" },
   partially_refunded: { label: "Reembolso parcial", bg: "rgba(239,68,68,.12)", color: "#dc2626", border: "rgba(239,68,68,.35)", icon: "↩" },
   refunded:        { label: "Reembolsado",     bg: "rgba(239,68,68,.12)", color: "#dc2626", border: "rgba(239,68,68,.35)",   icon: "↩" },
-  voided:          { label: "Anulado",         bg: "rgba(107,114,128,.12)", color: "#6b7280", border: "rgba(107,114,128,.35)", icon: "✕" },
+  voided:          { label: "Anulado",         bg: "rgba(107,114,128,.12)", color: "#6b6b6b", border: "rgba(107,114,128,.35)", icon: "✕" },
 };
 
 function _dpPill(label, bg, color, border, icon) {
@@ -15039,7 +15039,7 @@ window.abrirEditarDireccion = function() {
     ${_edCampo("ed-emp", "Empresa", s.company)}
     <div style="position:relative;">
       ${_edEtiqueta("Calle y número de casa", `<span style="position:relative;display:block;">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#6b7280;pointer-events:none;"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#6b6b6b;pointer-events:none;"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input id="ed-dir1" class="ed-input" value="${escapeAttr(s.address1 || "")}" autocomplete="off" style="padding-left:34px;"
             oninput="_edBuscarDireccion(this.value)" onblur="setTimeout(()=>{const l=document.getElementById('ed-sug');if(l)l.style.display='none'},180)">
         </span>`)}
@@ -15220,7 +15220,7 @@ function renderDetallePedido(order) {
   const cobradoEnReembolsos = order.estado_cobro === "cobrado";
   const fin = cobradoEnReembolsos
     ? { label: "Cobrado", bg: "rgba(34,197,94,.12)", color: "#16a34a", border: "rgba(34,197,94,.35)", icon: "✓" }
-    : (_DP_FINANCIAL[order.financial_status] || { label: order.financial_status || "-", bg: "rgba(107,114,128,.12)", color: "#6b7280", border: "rgba(107,114,128,.35)", icon: "" });
+    : (_DP_FINANCIAL[order.financial_status] || { label: order.financial_status || "-", bg: "rgba(107,114,128,.12)", color: "#6b6b6b", border: "rgba(107,114,128,.35)", icon: "" });
 
   const totalPrice = parseFloat(order.total_price || raw.total_price || 0);
   let pagado;
@@ -15363,7 +15363,7 @@ function renderDetallePedido(order) {
         )}
 
         ${_dpCard(
-          `<span style="flex:1;">🧾 Dirección de facturación</span><span onclick="showToast('No disponible','Shopify no permite cambiar la dirección de facturación de un pedido ya creado. Solo se puede editar la de envío.','#6b7280')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          `<span style="flex:1;">🧾 Dirección de facturación</span><span onclick="showToast('No disponible','Shopify no permite cambiar la dirección de facturación de un pedido ya creado. Solo se puede editar la de envío.','#6b6b6b')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
           billing.address1
             ? `<div style="padding:14px 18px;font-size:13px;color:var(--text);line-height:1.7;">
                 ${escapeHtml(nombreFacturacion)}<br>
@@ -15524,7 +15524,7 @@ function renderReclamosPage(rows, total, page, totalPages) {
     if (o.order_id) __reclamoObsLastSaved[o.order_id] = o.observacion || "";
     return `
     <div class="orders-row" style="display:grid;grid-template-columns:30px 18% 15% 18% 15% 1fr;gap:0;">
-      <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;overflow:hidden;">${numero}</div>
+      <div style="color:#a1a1a1;font-size:12px;display:flex;align-items:center;overflow:hidden;">${numero}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="${trackingUrl(o)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
@@ -15549,14 +15549,14 @@ function renderReclamosPage(rows, total, page, totalPages) {
     } else {
       const p = page;
       let html = `<button onclick="goToReclamosPage(${Math.max(1, p-1)})"
-        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===1?"#d4d4d4":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
       for (let i = 1; i <= totalPages; i++) {
         const isActive = i === p;
         html += `<button onclick="goToReclamosPage(${i})"
-          style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#22c55e":"#e5e7eb"};background:${isActive?"#22c55e":"var(--card)"};color:${isActive?"#fff":"var(--text)"};font-size:13px;font-weight:${isActive?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`;
+          style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#22c55e":"#e3e3e3"};background:${isActive?"#22c55e":"var(--card)"};color:${isActive?"#fff":"var(--text)"};font-size:13px;font-weight:${isActive?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`;
       }
       html += `<button onclick="goToReclamosPage(${Math.min(totalPages, p+1)})"
-        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===totalPages?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===totalPages?"disabled":""}>›</button>`;
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===totalPages?"#d4d4d4":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===totalPages?"disabled":""}>›</button>`;
       pagination.innerHTML = html;
     }
   }
@@ -16002,7 +16002,7 @@ function openReactivateModal(domain, storeId) {
       </div>
 
       <div style="border:1px solid #374151;border-radius:10px;padding:12px;margin-bottom:16px;background:#1f2937;">
-        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">Tienda Shopify</div>
+        <div style="font-size:12px;color:#6b6b6b;margin-bottom:4px;">Tienda Shopify</div>
         <div style="font-weight:600;">${domain}</div>
       </div>
 
@@ -16102,7 +16102,7 @@ async function syncAndRefreshOrders() {
     const syncedCount = data.synced ?? 0;
     if (btn) { btn.textContent = `✓ ${syncedCount} pedidos`; }
     if (syncedCount === 0) {
-      showToast("ℹ️ Sincronizado", "No hay pedidos nuevos desde el 01/02/2026 en esta tienda.", "#6b7280");
+      showToast("ℹ️ Sincronizado", "No hay pedidos nuevos desde el 01/02/2026 en esta tienda.", "#6b6b6b");
     }
     setTimeout(() => {
       if (btn) { btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 20v-6h-6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke-linecap="round" stroke-linejoin="round"/></svg>`; btn.disabled = false; btn.style.opacity = "1"; }
@@ -16152,13 +16152,13 @@ async function toggleFilterPanel() {
   panel.innerHTML = `
     <div style="padding:20px 20px 14px; border-bottom:1px solid #1f2937; display:flex; justify-content:space-between; align-items:center;">
       <span style="font-size:16px; font-weight:700;">Filtros</span>
-      <span onclick="toggleFilterPanel()" style="cursor:pointer; font-size:20px; color:#6b7280; line-height:1;">×</span>
+      <span onclick="toggleFilterPanel()" style="cursor:pointer; font-size:20px; color:#6b6b6b; line-height:1;">×</span>
     </div>
 
     <div style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:20px;">
 
       <div>
-        <label style="font-size:12px; font-weight:600; color:#e5e7eb; display:block; margin-bottom:8px;">Fecha</label>
+        <label style="font-size:12px; font-weight:600; color:#e3e3e3; display:block; margin-bottom:8px;">Fecha</label>
         <input type="date" id="filter-date-from" value="${activeFilters.dateFrom}"
           style="width:100%; padding:8px 10px; border:1px solid #374151; border-radius:8px; font-size:13px; margin-bottom:6px;">
         <input type="date" id="filter-date-to" value="${activeFilters.dateTo}"
@@ -16166,7 +16166,7 @@ async function toggleFilterPanel() {
       </div>
 
       <div>
-        <label style="font-size:12px; font-weight:600; color:#e5e7eb; display:block; margin-bottom:8px;">Estado logístico</label>
+        <label style="font-size:12px; font-weight:600; color:#e3e3e3; display:block; margin-bottom:8px;">Estado logístico</label>
         <select id="filter-status"
           style="width:100%; padding:8px 10px; border:1px solid #374151; border-radius:8px; font-size:13px; background:#111827;">
           <option value="">Todos</option>
@@ -16180,14 +16180,14 @@ async function toggleFilterPanel() {
       </div>
 
       <div>
-        <label style="font-size:12px; font-weight:600; color:#e5e7eb; display:block; margin-bottom:8px;">Tiendas</label>
+        <label style="font-size:12px; font-weight:600; color:#e3e3e3; display:block; margin-bottom:8px;">Tiendas</label>
         <div style="border:1px solid #374151; border-radius:8px; overflow:hidden;">
           <div
             onclick="selectFilterShop('')"
             id="shop-opt-all"
             style="padding:10px 12px; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:8px;
               background:${!activeFilters.shop ? 'rgba(34,197,94,.1)' : 'transparent'};
-              color:${!activeFilters.shop ? '#4ade80' : '#9ca3af'};
+              color:${!activeFilters.shop ? '#4ade80' : '#a1a1a1'};
               font-weight:${!activeFilters.shop ? '600' : '400'};"
           >
             <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${!activeFilters.shop ? '#22c55e' : '#374151'};
@@ -16201,12 +16201,12 @@ async function toggleFilterPanel() {
               style="padding:10px 12px; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:8px;
                 border-top:1px solid #1f2937;
                 background:${activeFilters.shop===s.domain ? 'rgba(34,197,94,.1)' : 'transparent'};
-                color:${activeFilters.shop===s.domain ? '#4ade80' : '#9ca3af'};
+                color:${activeFilters.shop===s.domain ? '#4ade80' : '#a1a1a1'};
                 font-weight:${activeFilters.shop===s.domain ? '600' : '400'};"
               onmouseover="this.style.background='rgba(255,255,255,.04)'"
               onmouseout="this.style.background='${activeFilters.shop===s.domain ? 'rgba(34,197,94,.1)' : 'transparent'}'"
             >
-              <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${activeFilters.shop===s.domain ? '#22c55e' : '#d1d5db'};
+              <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${activeFilters.shop===s.domain ? '#22c55e' : '#d4d4d4'};
                 background:${activeFilters.shop===s.domain ? '#22c55e' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
               ${escapeHtml(shopLabel(s))}
             </div>
@@ -16218,7 +16218,7 @@ async function toggleFilterPanel() {
 
     <div style="padding:16px 20px; border-top:1px solid #1f2937; display:flex; gap:10px;">
       <button onclick="clearFilters()"
-        style="flex:1; padding:10px; border:1px solid #374151; border-radius:8px; background:transparent; font-size:13px; cursor:pointer; font-weight:600; color:#9ca3af; font-family:inherit;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#f9fafb';" onmouseout="this.style.borderColor='#374151';this.style.color='#9ca3af';">
+        style="flex:1; padding:10px; border:1px solid #374151; border-radius:8px; background:transparent; font-size:13px; cursor:pointer; font-weight:600; color:#a1a1a1; font-family:inherit;" onmouseover="this.style.borderColor='#525252';this.style.color='#fafafa';" onmouseout="this.style.borderColor='#374151';this.style.color='#a1a1a1';">
         Limpiar
       </button>
       <button onclick="applyFilters()"
@@ -16575,7 +16575,7 @@ async function fetchReembolsosFiltered() {
         const estadoPago = o.estado_pago || (window.__reembolsosEstados || {})[o.id] || "pendiente";
         return `
         <div class="orders-row" style="display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr 1fr 1fr;gap:0;">
-          <div style="color:#9ca3af;font-size:12px;display:flex;align-items:center;">${numero}</div>
+          <div style="color:#a1a1a1;font-size:12px;display:flex;align-items:center;">${numero}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.tracking_number ? `<a href="${trackingUrl(o)}" target="_blank" style="color:#22c55e;text-decoration:none;font-weight:500;font-size:12px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(o.tracking_number)}</a>` : "-"}</div>
           <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.created_at ? new Date(o.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day:"2-digit", month:"2-digit", year:"numeric" }) : "-"}</div>
@@ -16584,7 +16584,7 @@ async function fetchReembolsosFiltered() {
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             ${estadoPago === "cobrado"
               ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(34,197,94,.12);border:1px solid #86efac;border-radius:999px;font-size:12px;font-weight:600;color:#22c55e;">✅ Pagado</span>
-                 ${o.fecha_pago ? `<span style="font-size:11px;color:#6b7280;">${new Date(o.fecha_pago).toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>` : ""}`
+                 ${o.fecha_pago ? `<span style="font-size:11px;color:#6b6b6b;">${new Date(o.fecha_pago).toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"})}</span>` : ""}`
               : `<span class="status yellow" style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;">⏳ Pendiente</span>
                  <button onclick="confirmarPagadoReembolso(${o.id})" style="padding:4px 12px;font-size:12px;font-weight:600;background:#22c55e;color:#fff;border:none;border-radius:999px;cursor:pointer;">Marcar pagado</button>`
             }
@@ -16598,12 +16598,12 @@ async function fetchReembolsosFiltered() {
       const p = page;
       const delta = 2;
       let pagesHtml = "";
-      pagesHtml += `<button onclick="goToReePage(${Math.max(1,p-1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===1?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
+      pagesHtml += `<button onclick="goToReePage(${Math.max(1,p-1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===1?"#d4d4d4":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
       let sp = Math.max(1,p-delta), ep = Math.min(pages,p+delta);
-      if (sp > 1) { pagesHtml += `<button onclick="goToReePage(1)" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`; if (sp>2) pagesHtml += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; }
-      for (let i=sp;i<=ep;i++) { const a=i===p; pagesHtml += `<button onclick="goToReePage(${i})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${a?"#22c55e":"#e5e7eb"};background:${a?"#22c55e":"var(--card)"};color:${a?"#fff":"var(--text)"};font-size:13px;font-weight:${a?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`; }
-      if (ep < pages) { if (ep<pages-1) pagesHtml += `<span style="padding:0 4px;color:#9ca3af;line-height:34px;">…</span>`; pagesHtml += `<button onclick="goToReePage(${pages})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${pages}</button>`; }
-      pagesHtml += `<button onclick="goToReePage(${Math.min(pages,p+1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===pages?"#d1d5db":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===pages?"disabled":""}>›</button>`;
+      if (sp > 1) { pagesHtml += `<button onclick="goToReePage(1)" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`; if (sp>2) pagesHtml += `<span style="padding:0 4px;color:#a1a1a1;line-height:34px;">…</span>`; }
+      for (let i=sp;i<=ep;i++) { const a=i===p; pagesHtml += `<button onclick="goToReePage(${i})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${a?"#22c55e":"#e3e3e3"};background:${a?"#22c55e":"var(--card)"};color:${a?"#fff":"var(--text)"};font-size:13px;font-weight:${a?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`; }
+      if (ep < pages) { if (ep<pages-1) pagesHtml += `<span style="padding:0 4px;color:#a1a1a1;line-height:34px;">…</span>`; pagesHtml += `<button onclick="goToReePage(${pages})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${pages}</button>`; }
+      pagesHtml += `<button onclick="goToReePage(${Math.min(pages,p+1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===pages?"#d4d4d4":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===pages?"disabled":""}>›</button>`;
       pagination.innerHTML = pagesHtml;
     }
   } catch(e) {
@@ -16939,11 +16939,11 @@ function showToast(title, text, color, action) {
   if (action?.onClick) window["__toastAction_" + id] = action.onClick;
   toast.innerHTML = `
     <div style="flex:1;">
-      <div style="font-size:13px;font-weight:700;color:#f9fafb;margin-bottom:3px;">${escapeHtml(title)}</div>
-      <div style="font-size:12px;color:#6b7280;">${escapeHtml(text)}</div>
+      <div style="font-size:13px;font-weight:700;color:#fafafa;margin-bottom:3px;">${escapeHtml(title)}</div>
+      <div style="font-size:12px;color:#6b6b6b;">${escapeHtml(text)}</div>
       ${action?.label ? `<div onclick="window['__toastAction_${id}']?.();document.getElementById('${id}')?.remove();" style="margin-top:8px;display:inline-block;font-size:12px;font-weight:700;color:#22c55e;cursor:pointer;text-decoration:underline;">${escapeHtml(action.label)}</div>` : ""}
     </div>
-    <div onclick="document.getElementById('${id}')?.remove()" style="cursor:pointer;color:#9ca3af;font-size:16px;line-height:1;flex-shrink:0;">×</div>
+    <div onclick="document.getElementById('${id}')?.remove()" style="cursor:pointer;color:#a1a1a1;font-size:16px;line-height:1;flex-shrink:0;">×</div>
   `;
   document.body.appendChild(toast);
 
@@ -17266,7 +17266,7 @@ async function syncEnvioMRW(btn, orderId) {
       const info = data.debug.length ? data.debug.join(" | ") : "Respuesta vacía";
       showToast("⚠️ MRW sin estado", info, "#f59e0b");
     } else {
-      showToast("ℹ️ Sin cambios", `Estado actual: ${statusLabel(data.status)}${estadosTxt}`, "#6b7280");
+      showToast("ℹ️ Sin cambios", `Estado actual: ${statusLabel(data.status)}${estadosTxt}`, "#6b6b6b");
     }
   } catch(e) {
     showToast("❌ Error", "No se pudo conectar con MRW", "#dc2626");
@@ -17764,7 +17764,7 @@ async function guardarStock(shopDomain, productId, stock, stockMinimo) {
     // Recargar solo el input de stock sin recargar toda la tabla
     invalidateCache("stock");
     const inputStock = document.querySelector(`tr[data-pid="${productId}"] input[title="Stock actual"]`);
-    if (inputStock) inputStock.style.borderColor = stockNum <= minimoNum ? "#dc2626" : "#e5e7eb";
+    if (inputStock) inputStock.style.borderColor = stockNum <= minimoNum ? "#dc2626" : "#e3e3e3";
   } catch(e) { console.error(e); }
 }
 
@@ -17877,7 +17877,7 @@ async function cargarTabNuevaEntrada() {
     <div id="entrada-producto-seleccionado" style="display:none;">
       <div id="entrada-producto-card"></div>
     </div>
-    <div id="entrada-placeholder" style="padding:32px;text-align:center;color:#9ca3af;font-size:13px;">
+    <div id="entrada-placeholder" style="padding:32px;text-align:center;color:#a1a1a1;font-size:13px;">
       Busca y selecciona un producto para registrar la entrada
     </div>
   `;
@@ -18099,7 +18099,7 @@ function abrirModalMRW() {
         <div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.1);display:flex;align-items:center;justify-content:center;font-size:20px;">🚚</div>
         <div>
           <h3 style="margin:0;font-size:16px;font-weight:700;">Integrar MRW Webservice</h3>
-          <div style="font-size:12px;color:#6b7280;">Sincronización automática de estados de envío</div>
+          <div style="font-size:12px;color:#6b6b6b;">Sincronización automática de estados de envío</div>
         </div>
       </div>
       <div style="background:rgba(59,130,246,.08);border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#93c5fd;margin-bottom:16px;">
@@ -18107,23 +18107,23 @@ function abrirModalMRW() {
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div>
-          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Login SAGEC *</label>
+          <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Login SAGEC *</label>
           <input id="mrw-login" type="text" placeholder="Ej: CD01234Ejemplo"
             style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
         </div>
         <div>
-          <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
+          <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Contraseña SAGEC *</label>
           <input id="mrw-pass" type="password" placeholder="Contraseña"
             style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
-            <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Franquicia</label>
+            <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Franquicia</label>
             <input id="mrw-franquicia" type="text" placeholder="Ej: 01234"
               style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
           </div>
           <div>
-            <label style="font-size:12px;font-weight:600;color:#e5e7eb;display:block;margin-bottom:4px;">Abonado</label>
+            <label style="font-size:12px;font-weight:600;color:#e3e3e3;display:block;margin-bottom:4px;">Abonado</label>
             <input id="mrw-abonado" type="text" placeholder="Ej: 603835"
               style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--card);color:var(--text);">
           </div>
@@ -18148,7 +18148,7 @@ async function guardarCredencialesMRW() {
   const abonado    = document.getElementById("mrw-abonado")?.value.trim();
   const msg = document.getElementById("mrw-modal-msg");
   if (!login || !pass) { if (msg) { msg.style.color = "#dc2626"; msg.textContent = "Login y contraseña son obligatorios"; } return; }
-  if (msg) { msg.style.color = "#6b7280"; msg.textContent = "Verificando credenciales con MRW..."; }
+  if (msg) { msg.style.color = "#6b6b6b"; msg.textContent = "Verificando credenciales con MRW..."; }
   try {
     const res = await fetch(`${API_BASE}/api/tracking/mrw-credentials`, {
       method: "POST",
@@ -18230,7 +18230,7 @@ async function sincronizarMRW(esAutomatico = false) {
         showToast("⚠️ MRW rechazó la consulta", data.mrwError, "#f59e0b",
           data.errors?.length ? { label: "Ver pedidos afectados", onClick: () => mostrarPedidosFallidosMRW(data.errors) } : null);
       } else {
-        showToast("— MRW sincronizado", "Sin cambios de estado esta vez", "#6b7280");
+        showToast("— MRW sincronizado", "Sin cambios de estado esta vez", "#6b6b6b");
       }
     } else {
       showToast("❌ Error MRW", data.error || "Error desconocido", "#dc2626");
@@ -18278,7 +18278,7 @@ function mostrarPedidosFallidosMRW(errores) {
         <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,.1);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">⚠️</div>
         <div>
           <h3 style="margin:0;font-size:16px;font-weight:700;">Pedidos que MRW no reconoce</h3>
-          <div style="font-size:12px;color:#6b7280;">${errores.length} pedido${errores.length === 1 ? "" : "s"} · MRW no encuentra este número de albarán en su sistema</div>
+          <div style="font-size:12px;color:#6b6b6b;">${errores.length} pedido${errores.length === 1 ? "" : "s"} · MRW no encuentra este número de albarán en su sistema</div>
         </div>
       </div>
       <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--text);margin:10px 0;">
@@ -18292,7 +18292,7 @@ function mostrarPedidosFallidosMRW(errores) {
           style="flex:1;padding:10px;border:1px solid rgba(59,130,246,.4);border-radius:8px;background:rgba(59,130,246,.1);color:#3b82f6;font-size:13px;cursor:pointer;font-weight:600;">
           Ver y gestionar todos en Pedidos
         </button>
-        <button onclick="closeModal()" style="padding:10px 18px;border:1px solid #374151;border-radius:8px;background:#111827;color:#f9fafb;font-size:13px;cursor:pointer;font-weight:600;">Cerrar</button>
+        <button onclick="closeModal()" style="padding:10px 18px;border:1px solid #374151;border-radius:8px;background:#111827;color:#fafafa;font-size:13px;cursor:pointer;font-weight:600;">Cerrar</button>
       </div>
     </div>
   `;
