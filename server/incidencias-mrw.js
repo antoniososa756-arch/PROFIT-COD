@@ -77,6 +77,19 @@ async function ensureTablas() {
       UNIQUE (incidencia_id, message_id)
     )`);
   await db.run(`CREATE INDEX IF NOT EXISTS idx_inc_mrw_user_estado ON incidencias_mrw (user_id, estado)`);
+  // Registro de llamadas de cada pedido con incidencia (solo ProfitCOD, no
+  // va a Shopify): "LLAMADA 1 dd/mm/aa: ...", "LLAMADA 2 ...".
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS incidencias_llamadas (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      order_id INTEGER NOT NULL,
+      numero INTEGER NOT NULL,
+      texto TEXT NOT NULL,
+      autor TEXT,
+      created_at TEXT DEFAULT now()::text
+    )`);
+  await db.run(`CREATE INDEX IF NOT EXISTS idx_inc_llamadas_pedido ON incidencias_llamadas (user_id, order_id)`);
   await db.run(`ALTER TABLE incidencias_mrw_config ADD COLUMN IF NOT EXISTS version_lectura INTEGER DEFAULT 1`);
   // HTML del correo (para verlo con su formato) y lectura de la carpeta Enviados
   await db.run(`ALTER TABLE incidencias_mrw_mensajes ADD COLUMN IF NOT EXISTS html TEXT`);

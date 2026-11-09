@@ -1510,7 +1510,12 @@ function geIncReordenar() {
   const buscar = re => tarjetas.find(c => re.test(titulo(c)));
   const productos = buscar(/^Productos/i);
   const direccion = buscar(/^Direcci[óo]n de env[ií]o/i);
-  const notas = buscar(/^Notas/i);
+  // "Notas" aquí es el registro de llamadas de ProfitCOD (no la nota de
+  // Shopify): LLAMADA 1, LLAMADA 2... Ver geIncLlamadas.
+  const notas = document.createElement("div");
+  notas.innerHTML = _dpCard(`${_dpIco("nota")}Notas`, `<div id="dp-llamadas"><div class="muted" style="padding:14px 18px;font-size:13px;">Cargando...</div></div>`, "cliente");
+  const notasCard = notas.firstElementChild;
+  setTimeout(() => geIncLlamadas(Number(window.__currentRoute?.id)), 0);
   const seguimiento = buscar(/^Seguimiento/i);
   // Total a pagar al pie de Productos
   if (productos) {
@@ -1524,7 +1529,7 @@ function geIncReordenar() {
   }
   const fila1 = document.createElement("div");
   fila1.className = "ge-inc-fila1";
-  [productos, direccion, notas].filter(Boolean).forEach(c => { c.style.marginBottom = "0"; fila1.appendChild(c); });
+  [productos, direccion, notasCard].filter(Boolean).forEach(c => { c.style.marginBottom = "0"; fila1.appendChild(c); });
   const fila2 = document.createElement("div");
   fila2.className = "ge-inc-fila2" + (seguimiento ? "" : " sin-seguimiento");
   if (seguimiento) { seguimiento.style.marginBottom = "0"; fila2.appendChild(seguimiento); }
@@ -1538,6 +1543,72 @@ function geIncReordenar() {
   grid.replaceWith(layout); // el resto de tarjetas (pago, cliente...) no se muestra aquí
   return col;
 }
+
+// Registro de llamadas del pedido (solo ProfitCOD): cada llamada guardada
+// queda como "LLAMADA N dd/mm/aa" y abajo ya aparece la siguiente lista para
+// escribir. Enter guarda, Shift+Enter salta de línea.
+async function geIncLlamadas(orderId) {
+  const box = document.getElementById("dp-llamadas");
+  if (!box || !orderId) return;
+  const fecha = f => {
+    const d = f ? new Date(String(f).replace(" ", "T").replace(/(\.\d{3})\d+/, "$1").replace(/([+-]\d{2})$/, "$1:00")) : new Date();
+    return isNaN(d) ? "" : d.toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "2-digit" });
+  };
+  const hora = f => {
+    const d = new Date(String(f || "").replace(" ", "T").replace(/(\.\d{3})\d+/, "$1").replace(/([+-]\d{2})$/, "$1:00"));
+    return isNaN(d) ? "" : d.toLocaleTimeString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" });
+  };
+  let llamadas = [];
+  try {
+    llamadas = (await (await fetch(`${API_BASE}/api/gestion-ecom/llamadas/${orderId}`, { headers: { Authorization: "Bearer " + getActiveToken() } })).json()).llamadas || [];
+  } catch (e) {}
+  if (Number(window.__currentRoute?.id) !== Number(orderId)) return;
+  const siguiente = (llamadas.length ? Math.max(...llamadas.map(l => Number(l.numero))) : 0) + 1;
+  box.innerHTML = `
+    ${llamadas.map(l => `
+      <div class="ge-llamada" style="padding:10px 18px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:3px;">
+          <b style="font-size:12.5px;">LLAMADA ${Number(l.numero)} ${fecha(l.created_at)}:</b>
+          <span class="muted">${hora(l.created_at)}${l.autor ? ` · ${escapeHtml(l.autor)}` : ""}</span>
+          <a href="#" title="Borrar" onclick="event.preventDefault();geIncBorrarLlamada(${Number(orderId)},${Number(l.id)})" class="ge-llamada-borrar" style="margin-left:auto;color:var(--muted);text-decoration:none;font-size:14px;line-height:1;">×</a>
+        </div>
+        <div style="font-size:13px;white-space:pre-wrap;line-height:1.45;color:var(--text);">${escapeHtml(l.texto)}</div>
+      </div>`).join("")}
+    <div style="padding:12px 18px;">
+      <div style="font-size:12.5px;font-weight:700;margin-bottom:6px;">LLAMADA ${siguiente} ${fecha()}:</div>
+      <textarea id="dp-llamada-txt" class="ed-input" rows="2" placeholder="¿Qué pasó en la llamada?" style="height:auto;padding:9px 12px;resize:vertical;line-height:1.45;"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();geIncGuardarLlamada(${Number(orderId)})}"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+        <span class="muted" style="font-size:11.5px;">Enter para guardar · solo en ProfitCOD</span>
+        <button id="dp-llamada-btn" class="ge-tab activo" style="height:32px;font-size:12.5px;" onclick="geIncGuardarLlamada(${Number(orderId)})">Guardar</button>
+      </div>
+    </div>`;
+}
+window.geIncGuardarLlamada = async function(orderId) {
+  const ta = document.getElementById("dp-llamada-txt"), b = document.getElementById("dp-llamada-btn");
+  const texto = (ta?.value || "").trim();
+  if (!texto) { ta?.focus(); return; }
+  if (b) { b.disabled = true; b.textContent = "Guardando..."; }
+  try {
+    const r = await fetch(`${API_BASE}/api/gestion-ecom/llamadas/${orderId}`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ texto })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || "Error");
+    await geIncLlamadas(orderId);
+    document.getElementById("dp-llamada-txt")?.focus();
+  } catch (e) {
+    if (b) { b.disabled = false; b.textContent = "Guardar"; }
+    showToast("Error", e.message || "No se pudo guardar la llamada.", "#dc2626");
+  }
+};
+window.geIncBorrarLlamada = async function(orderId, id) {
+  if (!confirm("¿Borrar esta llamada?")) return;
+  try {
+    await fetch(`${API_BASE}/api/gestion-ecom/llamadas/${orderId}/${id}`, { method: "DELETE", headers: { Authorization: "Bearer " + getActiveToken() } });
+    geIncLlamadas(orderId);
+  } catch (e) { showToast("Error", "No se pudo borrar.", "#dc2626"); }
+};
 
 async function geIncColumnaCorreo(orderId) {
   // Desde Incidencias no se cambia el estado ni se archiva desde aquí

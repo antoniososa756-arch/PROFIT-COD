@@ -2381,3 +2381,7 @@ body:not(.dark) .rejilla td.ads-sel { background: #e8edf5 !important; outline: 2
   .ge-inc-fila1 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
   .ge-inc-fila2 { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Registro de llamadas: la × de borrar solo al pasar el ratón */
+.ge-llamada .ge-llamada-borrar { opacity: 0; transition: opacity .15s; }
+.ge-llamada:hover .ge-llamada-borrar { opacity: 1; }

@@ -290,6 +290,40 @@ router.get("/incidencias/por-pedido/:orderId", auth, soloAdmin, async (req, res)
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Registro de llamadas del pedido (Notas en la vista de Incidencias) ─────
+// Propio de ProfitCOD (no se sincroniza con la nota de Shopify).
+router.get("/llamadas/:orderId", auth, soloAdmin, async (req, res) => {
+  try {
+    await inc.ensureTablas();
+    const rows = await db.all(
+      "SELECT id, numero, texto, autor, created_at FROM incidencias_llamadas WHERE user_id = $1 AND order_id = $2 ORDER BY numero ASC",
+      [req.user.id, parseInt(req.params.orderId)]
+    );
+    res.json({ llamadas: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+router.post("/llamadas/:orderId", auth, soloAdmin, async (req, res) => {
+  const texto = String(req.body?.texto || "").trim().slice(0, 2000);
+  if (!texto) return res.status(400).json({ error: "Escribe qué pasó en la llamada" });
+  const orderId = parseInt(req.params.orderId);
+  try {
+    await inc.ensureTablas();
+    const n = await db.get("SELECT COALESCE(MAX(numero), 0) + 1 AS n FROM incidencias_llamadas WHERE user_id = $1 AND order_id = $2", [req.user.id, orderId]);
+    const u = await db.get("SELECT name FROM users WHERE id = $1", [req.user.id]).catch(() => null);
+    await db.run(
+      "INSERT INTO incidencias_llamadas (user_id, order_id, numero, texto, autor) VALUES ($1,$2,$3,$4,$5)",
+      [req.user.id, orderId, n.n, texto, u?.name || null]
+    );
+    res.json({ ok: true, numero: n.n });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+router.delete("/llamadas/:orderId/:id", auth, soloAdmin, async (req, res) => {
+  try {
+    await db.run("DELETE FROM incidencias_llamadas WHERE id = $1 AND user_id = $2 AND order_id = $3", [parseInt(req.params.id), req.user.id, parseInt(req.params.orderId)]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // POST /api/gestion-ecom/incidencias/:id/responder { texto } -> correo a MRW
 router.post("/incidencias/:id/responder", auth, soloAdmin, async (req, res) => {
   try {
