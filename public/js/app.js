@@ -1365,16 +1365,17 @@ async function geConfirmar(cont) {
   geCargarConfirmar();
 }
 
-// Pestaña colgada de la línea bajo el título "Gestión Ecom" (a la derecha):
+// Pestaña colgada del borde superior de la tarjeta de la sección (a la derecha):
 // muestra la etiqueta guardada y al pulsarla despliega el cuadro para
 // editarla (bloqueado con candado + lápiz, ver geEtiquetaModo).
 function gePestana() {
   gePestanaQuitar();
-  const sub = document.getElementById("subtitle");
-  if (!sub) return;
+  const box = document.getElementById("cardBox");
+  if (!box) return;
+  box.style.position = "relative";
   const w = document.createElement("div");
   w.id = "ge-pestana";
-  w.style.cssText = "position:relative;height:0;z-index:20;";
+  w.style.cssText = "position:absolute;top:0;right:18px;height:0;z-index:20;";
   w.innerHTML = `
     <button id="ge-pestana-btn" onclick="gePestanaAbrir()" class="ge-pestana-btn" title="Etiqueta de preparación de tu almacén">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>
@@ -1398,7 +1399,7 @@ function gePestana() {
         Se listan los pedidos sin esta etiqueta ni <b>correcto</b> (últimos 30 días, sin enviar ni cancelar).
       </div>
     </div>`;
-  sub.insertAdjacentElement("afterend", w);
+  box.prepend(w);
   if (!window.__gePestanaClickFuera) {
     window.__gePestanaClickFuera = true;
     document.addEventListener("mousedown", (e) => {
