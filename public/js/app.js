@@ -471,8 +471,13 @@ if (location.pathname.includes("login")) {
         __skipPush = true;
         const _pathParts = window.location.pathname.split("/").filter(Boolean);
         if (_pathParts[0] === "pedido" && _pathParts[1]) {
-          loadApp("pedidos");
-          abrirDetallePedido(_pathParts[1]);
+          // Pedido abierto desde Confirmar pedidos (Gestión Ecom): al recargar
+          // se vuelve a esa lista; si no, a Pedidos. Ver restoreFromPath.
+          let nav = null;
+          try { nav = JSON.parse(sessionStorage.getItem("orderNavOrigen") || "null"); } catch (e) {}
+          const conOrigen = !!nav?.origen && !!nav?.ids?.map(Number).includes(Number(_pathParts[1]));
+          loadApp(conOrigen ? nav.origen : "pedidos");
+          abrirDetallePedido(_pathParts[1], conOrigen ? { navIds: nav.ids, origen: nav.origen } : {});
         } else if (VALID_ROUTE_SECTIONS.includes(_pathParts[0])) {
           loadApp(_pathParts[0]);
         } else {
