@@ -68,6 +68,34 @@ router.get("/confirmar", auth, soloAdmin, async (req, res) => {
   }
 });
 
+// GET /api/gestion-ecom/franquicia -> pedidos que están ahora mismo en
+// franquicia (estado que ProfitCOD detecta con MRW/CTT), de todas las
+// tiendas. Primero los que más tiempo llevan allí.
+router.get("/franquicia", auth, soloAdmin, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT o.id, o.order_number, o.created_at, o.customer_name, o.total_price, o.currency,
+              o.note, o.tracking_number, o.carrier, o.mrw_estado_texto,
+              o.estado_cambiado_at,
+              COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
+              COALESCE(o.customer_phone, '') AS telefono
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+         AND o.fulfillment_status = 'franquicia'
+         AND o.cancelled_at IS NULL
+       ORDER BY COALESCE(o.estado_cambiado_at, o.created_at) ASC
+       LIMIT 500`,
+      [req.user.id]
+    );
+    res.json({ pedidos: rows });
+  } catch (e) {
+    console.error("[GestionEcom] franquicia:", e.message);
+    res.status(500).json({ error: "Error cargando los pedidos en franquicia" });
+  }
+});
+
 // POST /api/gestion-ecom/confirmar/:id — confirma el pedido: le añade en
 // Shopify la etiqueta del almacén (p.ej. "fulfio") conservando las que ya
 // tenga. Las etiquetas se leen de Shopify en ese momento (no de la copia

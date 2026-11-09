@@ -1339,17 +1339,113 @@ window.startTrialAndReload = async function() {
 // "gestion-ecom" en setSection). Recuerda la última elegida.
 window.geTab = function(tab) {
   window.__geTab = tab;
-  document.querySelectorAll(".ge-tab").forEach(b => b.classList.toggle("activo", b.dataset.tab === tab));
+  try { sessionStorage.setItem("geTab", tab); } catch (e) {}
+  document.querySelectorAll(".ge-tab[data-tab]").forEach(b => b.classList.toggle("activo", b.dataset.tab === tab));
   const cont = document.getElementById("ge-contenido");
   if (!cont) return;
   if (tab !== "confirmar") gePestanaQuitar();
   if (tab === "confirmar") return geConfirmar(cont);
+  geIncidencias(cont);
+};
+// La pestaña elegida sobrevive a recargar (F5)
+try { window.__geTab = sessionStorage.getItem("geTab") || window.__geTab; } catch (e) {}
+
+// "Incidencias MRW": sin filtro de tiendas (salen todas). Dos apartados:
+// "Incidencias en curso" y "Franquicia" (pedidos que ProfitCOD ya tiene en
+// estado franquicia). Ver GET /api/gestion-ecom/franquicia.
+function geIncidencias(cont) {
+  const sub = window.__geSubInc || "franquicia";
   cont.innerHTML = `
-    <div class="ui-entrada" style="padding:44px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;">
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">Incidencias MRW</div>
+    <div class="ui-entrada" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+      <button class="ge-tab${sub === "curso" ? " activo" : ""}" onclick="geSubIncidencias('curso')">Incidencias en curso</button>
+      <button class="ge-tab${sub === "franquicia" ? " activo" : ""}" onclick="geSubIncidencias('franquicia')">Franquicia <span id="ge-franq-n" style="opacity:.7;font-weight:500;"></span></button>
+    </div>
+    <div id="ge-inc-lista"></div>`;
+  if (sub === "franquicia") return geCargarFranquicia();
+  document.getElementById("ge-inc-lista").innerHTML = `
+    <div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;">
+      <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Incidencias en curso</div>
       <div class="muted">En construcción.</div>
     </div>`;
+  geContarFranquicia();
+}
+window.geSubIncidencias = function(sub) {
+  window.__geSubInc = sub;
+  try { sessionStorage.setItem("geSubInc", sub); } catch (e) {}
+  const cont = document.getElementById("ge-contenido");
+  if (cont) geIncidencias(cont);
 };
+try { window.__geSubInc = sessionStorage.getItem("geSubInc") || window.__geSubInc; } catch (e) {}
+
+async function geContarFranquicia() {
+  try {
+    const d = await (await fetch(`${API_BASE}/api/gestion-ecom/franquicia`, { headers: { Authorization: "Bearer " + getActiveToken() } })).json();
+    const n = document.getElementById("ge-franq-n");
+    if (n) n.textContent = (d.pedidos || []).length;
+  } catch (e) {}
+}
+
+async function geCargarFranquicia() {
+  const lista = document.getElementById("ge-inc-lista");
+  if (!lista) return;
+  lista.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:16px 0;color:var(--muted);font-size:13px;"><span style="width:14px;height:14px;border:2px solid rgba(156,163,175,.35);border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite;"></span>Cargando pedidos en franquicia...</div>`;
+  try {
+    const H = { Authorization: "Bearer " + getActiveToken() };
+    const [res, tiendas] = await Promise.all([
+      fetch(`${API_BASE}/api/gestion-ecom/franquicia`, { headers: H }),
+      cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: H }).catch(() => []),
+    ]);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+    const pedidos = data.pedidos || [];
+    const n = document.getElementById("ge-franq-n");
+    if (n) n.textContent = pedidos.length;
+    window.__geIdsVisibles = pedidos.map(p => Number(p.id));
+    if (!pedidos.length) {
+      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;"><div style="font-weight:700;color:var(--text);margin-bottom:4px;">✓ Ningún pedido en franquicia</div><div class="muted">Cuando MRW o CTT dejen un envío en franquicia aparecerá aquí.</div></div>`;
+      return;
+    }
+    const nombres = {}, colores = {};
+    (Array.isArray(tiendas) ? tiendas : []).forEach((t, i) => {
+      nombres[t.domain] = t.shop_name || t.domain.replace(".myshopify.com", "");
+      colores[t.domain] = t.notification_color || (STORE_PALETTE[i % STORE_PALETTE.length] || {}).light || "#a1a1a1";
+    });
+    const tel = t => t && t.length === 9 ? `+34 ${t.slice(0,3)} ${t.slice(3,5)} ${t.slice(5,7)} ${t.slice(7)}` : (t || "-");
+    // Tiempo en franquicia (desde que ProfitCOD detectó el cambio de estado):
+    // menos de 1 día verde, 1-3 días ámbar, más de 3 días rojo
+    const enFranq = p => {
+      const desde = p.estado_cambiado_at ? new Date(String(p.estado_cambiado_at).replace(" ", "T").replace(/(\.\d{3})\d+/, "$1").replace(/([+-]\d{2})$/, "$1:00")) : null;
+      if (!desde || isNaN(desde)) return `<span class="muted">—</span>`;
+      const h = (Date.now() - desde.getTime()) / 3600000;
+      const txt = h < 1 ? "menos de 1 h" : h < 48 ? `${Math.floor(h)} h` : `${Math.floor(h / 24)} días`;
+      const [bg, col, bd] = h > 72 ? ["#fef2f2", "#b91c1c", "#fecaca"] : h > 24 ? ["#fffbeb", "#b45309", "#fde68a"] : ["#f0fdf4", "#15803d", "#bbf7d0"];
+      return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:${bg};color:${col};border:1px solid ${bd};white-space:nowrap;">${txt}</span>`;
+    };
+    const th = (t, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${t}</th>`;
+    const td = (c, extra = "") => `<td style="padding:10px 12px;border-bottom:1px solid var(--border);${extra}">${c}</td>`;
+    lista.innerHTML = `
+      <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${pedidos.length}</b> pedido${pedidos.length === 1 ? "" : "s"} en franquicia</div>
+      <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr>${th("Pedido")}${th("En franquicia")}${th("Cliente")}${th("Teléfono")}${th("Seguimiento")}${th("Último estado")}${th("Total", "right")}${th("Tienda")}</tr></thead>
+          <tbody>${pedidos.map(p => `
+            <tr onclick="geAbrirPedido(${Number(p.id)})" style="cursor:pointer;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+              ${td(`<span style="font-weight:600;">${escapeHtml(p.order_number || "-")}</span>`, "white-space:nowrap;")}
+              ${td(enFranq(p), "white-space:nowrap;")}
+              ${td(escapeHtml(p.customer_name || "-"))}
+              ${td(escapeHtml(tel(p.telefono)), "white-space:nowrap;")}
+              ${td(escapeHtml(p.tracking_number || "-"), "white-space:nowrap;")}
+              ${td(`<span class="muted">${escapeHtml(p.mrw_estado_texto || "Franquicia")}</span>`)}
+              ${td(`${Number(p.total_price || 0).toFixed(2)} ${escapeHtml(p.currency || "")}`, "text-align:right;white-space:nowrap;font-weight:600;")}
+              ${td(`<span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:8px;height:8px;border-radius:50%;background:${colores[p.shop_domain] || "#a1a1a1"};display:inline-block;"></span>${escapeHtml(nombres[p.shop_domain] || (p.shop_domain || "").replace(".myshopify.com", ""))}</span>`, "white-space:nowrap;")}
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    lista.innerHTML = `<div style="padding:16px 0;color:#dc2626;font-size:13px;">${escapeHtml(e.message || "Error cargando los pedidos")}</div>`;
+  }
+}
 
 // "Confirmar pedidos": arriba a la izquierda la etiqueta con la que el
 // almacén prepara los pedidos; debajo, los pedidos que aún no la llevan (ni
@@ -15019,7 +15115,8 @@ window.abrirDetallePedido = async function(orderId, opts = {}) {
     setupOrderNavContext(orderId);
   }
   const origen = window.__orderNavOrigen || "pedidos";
-  geBotonFlotante(origen === "gestion-ecom" ? orderId : null);
+  // El botón "Confirmar pedido" solo para pedidos abiertos desde Confirmar pedidos
+  geBotonFlotante(origen === "gestion-ecom" && (window.__geTab || "confirmar") === "confirmar" ? orderId : null);
   document.querySelectorAll(".menu-item").forEach((i) => i.classList.remove("active"));
   document.querySelector(`.menu-item[data-id="${origen}"]`)?.classList.add("active");
 
@@ -15033,7 +15130,7 @@ window.abrirDetallePedido = async function(orderId, opts = {}) {
     <button onclick="setSection('${origen}')"
       class="ge-tab" style="height:34px;margin-bottom:16px;">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-      ${origen === "gestion-ecom" ? "Volver a confirmaciones" : "Volver a pedidos"}
+      ${origen === "gestion-ecom" ? (window.__geTab === "incidencias" ? "Volver a incidencias" : "Volver a confirmaciones") : "Volver a pedidos"}
     </button>
     <div id="detalle-pedido-body">
       <div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:32px 0;justify-content:center;">
