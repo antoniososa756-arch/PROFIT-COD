@@ -1496,25 +1496,55 @@ window.geIncAbrir = function(id) {
 
 // ── Columna "Correo con MRW" en el detalle del pedido (solo desde Incidencias)
 // El detalle pasa a 3 columnas: pedido | cliente/dirección | correo.
+// Pedido abierto desde Incidencias, en dos filas:
+//   arriba:  Productos (+ total a pagar) | Dirección de envío | Notas
+//   abajo:   Seguimiento MRW (25%) | Correo con MRW (75%)
+// Se reutilizan las tarjetas ya pintadas (se mueven, no se copian, así siguen
+// funcionando la edición de nota/dirección y el seguimiento que carga aparte).
+function geIncReordenar() {
+  const body = document.getElementById("detalle-pedido-body");
+  const grid = body?.querySelector(".ui-cascada");
+  if (!grid || document.getElementById("ge-inc-layout")) return document.getElementById("dp-correo-col");
+  const tarjetas = [...grid.querySelectorAll(":scope > div > div")];
+  const titulo = c => (c.firstElementChild?.textContent || "").replace(/\s+/g, " ").trim();
+  const buscar = re => tarjetas.find(c => re.test(titulo(c)));
+  const productos = buscar(/^Productos/i);
+  const direccion = buscar(/^Direcci[óo]n de env[ií]o/i);
+  const notas = buscar(/^Notas/i);
+  const seguimiento = buscar(/^Seguimiento/i);
+  // Total a pagar al pie de Productos
+  if (productos) {
+    const raw = window.__dpEdicion?.raw || {};
+    const total = raw.total_outstanding != null && Number(raw.total_outstanding) > 0 ? raw.total_outstanding : raw.total_price;
+    if (total != null) productos.insertAdjacentHTML("beforeend", `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-top:1px solid var(--border);background:#fafafa;">
+        <span style="font-weight:700;font-size:13.5px;">Total a pagar</span>
+        <span style="font-weight:800;font-size:16px;">${Number(total).toFixed(2)} ${escapeHtml(raw.currency || "EUR")}</span>
+      </div>`);
+  }
+  const fila1 = document.createElement("div");
+  fila1.className = "ge-inc-fila1";
+  [productos, direccion, notas].filter(Boolean).forEach(c => { c.style.marginBottom = "0"; fila1.appendChild(c); });
+  const fila2 = document.createElement("div");
+  fila2.className = "ge-inc-fila2" + (seguimiento ? "" : " sin-seguimiento");
+  if (seguimiento) { seguimiento.style.marginBottom = "0"; fila2.appendChild(seguimiento); }
+  const col = document.createElement("div");
+  col.id = "dp-correo-col";
+  col.style.minWidth = "0";
+  fila2.appendChild(col);
+  const layout = document.createElement("div");
+  layout.id = "ge-inc-layout";
+  layout.append(fila1, fila2);
+  grid.replaceWith(layout); // el resto de tarjetas (pago, cliente...) no se muestra aquí
+  return col;
+}
+
 async function geIncColumnaCorreo(orderId) {
-  const grid = document.querySelector("#detalle-pedido-body .ui-cascada");
-  if (!grid) return;
   // Desde Incidencias no se cambia el estado ni se archiva desde aquí
   document.getElementById("dp-archivar")?.remove();
   document.querySelector('#detalle-pedido-body [onclick*="menu-estado-detalle"]')?.parentElement?.remove();
-  const ancho = window.innerWidth;
-  const anchos = await geColumnasGuardadas();
-  grid.style.gridTemplateColumns = ancho >= 1250
-    ? anchos.map(f => `minmax(0,${f}fr)`).join(" ")
-    : "minmax(0,2fr) minmax(300px,1fr)";
-  if (ancho >= 1250) setTimeout(() => geColumnasAsas(grid), 0);
-  let col = document.getElementById("dp-correo-col");
-  if (!col) {
-    col = document.createElement("div");
-    col.id = "dp-correo-col";
-    col.style.cssText = "min-width:0;" + (ancho >= 1250 ? "" : "grid-column:1 / -1;");
-    grid.appendChild(col);
-  }
+  const col = geIncReordenar();
+  if (!col) return;
   col.innerHTML = _dpCard(`${_dpIco("nota")}Correo con MRW`, `<div class="muted" style="padding:14px 18px;font-size:13px;">Cargando correos...</div>`, "cliente");
   try {
     const d = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias/por-pedido/${orderId}`, { headers: { Authorization: "Bearer " + getActiveToken() } })).json();
