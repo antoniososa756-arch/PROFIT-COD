@@ -190,7 +190,7 @@ function analizarCorreo(parsed) {
   // del cuerpo (en las respuestas a mano, del correo original citado debajo).
   let tipo = (asunto.match(/ANOMAL[ÍI]A\s*[\\\/|-]\s*(.+)$/i) || [])[1] || campo(texto, "El env[ií]o no se ha podido entregar por");
   // (el texto a veces llega pegado: "...el envíoFecha de la Anomalía ...")
-  tipo = String(tipo || "").split(/Fecha\s+de\s+la|Hora\s+de\s+la|Observaciones|Contestan\s+al|Falta\s+tel/i)[0].replace(/\s+/g, " ").trim();
+  tipo = String(tipo || "").split(/Fecha\s+de\b|Hora\s+de\b|Observaciones|Contestan\s+al|Falta\s+tel/i)[0].replace(/\s+/g, " ").trim();
   // Solo lo nuevo del correo manual (sin el correo original citado debajo)
   const soloNuevo = texto.split(/\n\s*(De|From)\s*:\s*.+\n/i)[0].trim();
   return {
