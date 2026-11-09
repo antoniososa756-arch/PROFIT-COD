@@ -15029,6 +15029,22 @@ window._edBuscarDireccion = function(texto) {
     const CENTRO = { ES: [40.4, -3.7], PT: [39.5, -8], FR: [46.6, 2.4], IT: [42.8, 12.5], DE: [51.1, 10.4] }[cc];
     const ctrl = new AbortController(); _edSugCtrl = ctrl;
     try {
+      // 1º Google (si el servidor tiene GOOGLE_MAPS_KEY); si no, OpenStreetMap
+      if (window.__edProveedor !== "osm") {
+        if (!window.__edSesion) window.__edSesion = (crypto.randomUUID?.() || String(Date.now()) + Math.random()).replace(/[^a-zA-Z0-9-]/g, "");
+        const g = await (await fetch(`${API_BASE}/api/direcciones/sugerencias?q=${encodeURIComponent(texto)}&pais=${cc}&sesion=${window.__edSesion}`,
+          { headers: { Authorization: "Bearer " + getActiveToken() }, signal: ctrl.signal })).json();
+        if (g.proveedor === "google") {
+          window.__edSugs = (g.sugerencias || []).map(s => ({ googleId: s.id, texto: s.texto }));
+          lista.innerHTML = window.__edSugs.length
+            ? window.__edSugs.map((r, i) => `<div onmousedown="_edElegirDireccion(${i})" style="padding:9px 12px;border-radius:8px;font-size:13px;color:var(--text);cursor:pointer;"
+                onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">${escapeHtml(r.texto)}</div>`).join("")
+              + `<div style="padding:6px 12px 4px;font-size:11px;color:var(--muted);">Con la tecnología de Google</div>`
+            : `<div style="padding:10px 12px;font-size:12.5px;color:var(--muted);">Sin sugerencias — puedes escribir la dirección a mano.</div>`;
+          return;
+        }
+        window.__edProveedor = "osm";
+      }
       const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(texto)}&limit=10${CENTRO ? `&lat=${CENTRO[0]}&lon=${CENTRO[1]}` : ""}`;
       const data = await (await fetch(url, { signal: ctrl.signal })).json();
       const numTecleado = (texto.match(/\b(\d+[a-zA-Z]?)\b(?!.*\b\d)/) || [])[1] || "";
@@ -15058,9 +15074,25 @@ window._edBuscarDireccion = function(texto) {
   }, 300);
 };
 
-window._edElegirDireccion = function(i) {
-  const r = (window.__edSugs || [])[i]; if (!r) return;
+window._edElegirDireccion = async function(i) {
+  let r = (window.__edSugs || [])[i]; if (!r) return;
   const pon = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+  if (r.googleId) {
+    // Google: pedir calle, número, CP, ciudad y provincia de la elegida
+    const l = document.getElementById("ed-sug"); if (l) l.style.display = "none";
+    pon("ed-dir1", r.texto.split(",")[0]);
+    try {
+      const d = await (await fetch(`${API_BASE}/api/direcciones/detalle/${encodeURIComponent(r.googleId)}?sesion=${window.__edSesion || ""}`,
+        { headers: { Authorization: "Bearer " + getActiveToken() } })).json();
+      window.__edSesion = null; // la sesión de Google termina al elegir
+      if (d.error) throw new Error(d.error);
+      const cc = document.getElementById("ed-pais")?.value || "ES";
+      r = { ...d, prov: (cc === "ES" && _ED_PROV_ES[String(d.cp || "").slice(0, 2)]) || d.prov };
+    } catch (e) {
+      showToast("Aviso", "No se pudo completar la dirección automáticamente. Revisa el CP y la ciudad.", "#f59e0b");
+      return;
+    }
+  }
   pon("ed-dir1", r.dir1); pon("ed-cp", r.cp); pon("ed-ciudad", r.ciudad); pon("ed-prov", r.prov);
   const l = document.getElementById("ed-sug"); if (l) l.style.display = "none";
   document.getElementById("ed-dir2")?.focus();
