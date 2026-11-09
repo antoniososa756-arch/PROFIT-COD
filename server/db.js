@@ -486,6 +486,37 @@ await pool.query(`CREATE TRIGGER trg_orders_note BEFORE INSERT OR UPDATE ON orde
 pool.query(`UPDATE orders SET note = profit_note(raw_json) WHERE note IS NULL`)
   .then(r => { if (r.rowCount) console.log(`[DB] Notas de pedido rellenadas: ${r.rowCount}`); })
   .catch(e => console.warn("Backfill note:", e.message));
+
+// Email y teléfono del cliente en columnas (para contar "cuántos pedidos tiene
+// este cliente" como Shopify sin leer raw_json). Teléfono = últimos 9 dígitos,
+// así +34 685 95 05 52 y 685950552 cuentan como el mismo. '' = sin dato.
+await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email TEXT`);
+await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone TEXT`);
+await pool.query(`
+  CREATE OR REPLACE FUNCTION orders_set_customer_keys() RETURNS trigger AS $fn$
+  DECLARE j JSON; tel TEXT;
+  BEGIN
+    IF TG_OP = 'INSERT' OR NEW.raw_json IS DISTINCT FROM OLD.raw_json OR NEW.customer_email IS NULL THEN
+      BEGIN
+        j := NULLIF(NEW.raw_json, '')::json;
+        NEW.customer_email := lower(btrim(COALESCE(NULLIF(j->>'email',''), NULLIF(j->>'contact_email',''), j->'customer'->>'email', '')));
+        tel := regexp_replace(COALESCE(NULLIF(j->'shipping_address'->>'phone',''), NULLIF(j->>'phone',''), NULLIF(j->'customer'->>'phone',''), NULLIF(j->'billing_address'->>'phone',''), ''), '[^0-9]', '', 'g');
+        NEW.customer_phone := CASE WHEN length(tel) >= 9 THEN right(tel, 9) ELSE '' END;
+      EXCEPTION WHEN others THEN
+        NEW.customer_email := ''; NEW.customer_phone := '';
+      END;
+    END IF;
+    RETURN NEW;
+  END $fn$ LANGUAGE plpgsql
+`);
+await pool.query(`DROP TRIGGER IF EXISTS trg_orders_customer_keys ON orders`);
+await pool.query(`CREATE TRIGGER trg_orders_customer_keys BEFORE INSERT OR UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_customer_keys()`);
+await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_customer_email ON orders (customer_email) WHERE customer_email <> ''`);
+await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON orders (customer_phone) WHERE customer_phone <> ''`);
+// Existentes: el trigger los rellena al tocar la fila (customer_email IS NULL).
+pool.query(`UPDATE orders SET customer_email = NULL WHERE customer_email IS NULL`)
+  .then(r => { if (r.rowCount) console.log(`[DB] Email/teléfono de cliente rellenados: ${r.rowCount}`); })
+  .catch(e => console.warn("Backfill cliente:", e.message));
 // Pedidos ya existentes: se rellenan en segundo plano, por tandas pequeñas y
 // con pausa, para no frenar el arranque ni el resto de la app.
 (async function rellenarRawCompact() {

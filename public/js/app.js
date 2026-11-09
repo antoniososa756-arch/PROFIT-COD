@@ -14935,6 +14935,42 @@ async function _guardarEtiquetasPedido(orderId, tagsArray) {
   }
 }
 
+// "N pedidos" del cliente (mismo email o teléfono en tus tiendas), como en
+// Shopify, con el resumen por estado y la lista desplegable de sus pedidos.
+function _dpPedidosCliente(order) {
+  const lista = Array.isArray(order.cliente_pedidos) ? order.cliente_pedidos : null;
+  if (!lista || !lista.length) return "";
+  const estadoDe = p => p.cancelled_at ? "cancelado" : (p.fulfillment_status || "pendiente");
+  const cuenta = {};
+  lista.forEach(p => { const e = estadoDe(p); cuenta[e] = (cuenta[e] || 0) + 1; });
+  const COLOR = { entregado: "#16a34a", devuelto: "#ea580c", destruido: "#7c3aed", cancelado: "#dc2626" };
+  const resumen = Object.entries(cuenta)
+    .sort((a, b) => b[1] - a[1])
+    .map(([e, n]) => `<span style="color:${COLOR[e] || "var(--muted)"};font-weight:600;">${n} ${escapeHtml(statusLabel(e).toLowerCase())}</span>`)
+    .join(`<span style="color:var(--muted);"> · </span>`);
+  const n = lista.length;
+  const filas = lista.map(p => {
+    const actual = Number(p.id) === Number(order.id);
+    const fecha = p.created_at ? new Date(p.created_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "2-digit" }) : "";
+    return `<div ${actual ? "" : `onclick="abrirDetallePedido(${Number(p.id)})"`}
+      style="display:flex;align-items:center;gap:8px;padding:7px 18px;font-size:12.5px;${actual ? "background:var(--hover);" : "cursor:pointer;"}"
+      ${actual ? "" : `onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''"`}>
+      <span style="font-weight:600;color:${actual ? "var(--text)" : "#2563eb"};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.order_number || "-")}${actual ? ` <span style="color:var(--muted);font-weight:500;">(este)</span>` : ""}</span>
+      <span style="color:var(--muted);">${fecha}</span>
+      <span class="status ${statusClass(estadoDe(p))}" style="margin-left:auto;">${escapeHtml(statusLabel(estadoDe(p)))}</span>
+    </div>`;
+  }).join("");
+  return `<div style="padding:9px 18px;font-size:13px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;gap:12px;">
+        <span style="color:var(--muted);">Pedidos</span>
+        <span onclick="const l=this.closest('div').parentElement.nextElementSibling;l.style.display=l.style.display==='none'?'block':'none';"
+          style="color:#2563eb;font-weight:700;cursor:pointer;">${n} pedido${n === 1 ? "" : "s"}${n >= 50 ? "+" : ""} ▾</span>
+      </div>
+      <div style="font-size:12px;margin-top:4px;text-align:right;">${resumen}</div>
+    </div>
+    <div style="display:none;border-bottom:1px solid var(--border);max-height:260px;overflow-y:auto;">${filas}</div>`;
+}
+
 function renderDetallePedido(order) {
   const body = document.getElementById("detalle-pedido-body");
   if (!body) return;
@@ -15073,6 +15109,7 @@ function renderDetallePedido(order) {
             ${_dpRow("Nombre", escapeHtml(nombreCliente))}
             ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
             ${_dpRow("Teléfono", escapeHtml(shipping.phone || customer.phone || "-"))}
+            ${_dpPedidosCliente(order)}
           </div>`,
           "cliente"
         )}

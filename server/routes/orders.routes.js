@@ -420,6 +420,25 @@ router.get("/:id", auth, async (req, res) => {
       [id, userId]
     );
     if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
+
+    // Pedidos de este mismo cliente (por email o teléfono) en las tiendas del
+    // usuario, como el "N pedidos" de Shopify -- con su estado, que en COD es
+    // lo que importa (¿devolvió antes?).
+    try {
+      const k = await db.get("SELECT customer_email, customer_phone FROM orders WHERE id = $1", [id]);
+      const email = k?.customer_email || "", phone = k?.customer_phone || "";
+      if (email || phone) {
+        row.cliente_pedidos = await db.all(
+          `SELECT o.id, o.order_number, o.created_at, o.fulfillment_status, o.cancelled_at, o.total_price, o.currency
+           FROM orders o
+           WHERE ((o.customer_email = $1 AND $1 <> '') OR (o.customer_phone = $2 AND $2 <> ''))
+             AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $3) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3))
+           ORDER BY o.created_at DESC LIMIT 50`,
+          [email, phone, userId]
+        );
+      }
+    } catch (e) { console.warn("Pedidos del cliente:", e.message); }
+
     res.json(row);
   } catch (e) {
     console.error("Order detail error:", e);
