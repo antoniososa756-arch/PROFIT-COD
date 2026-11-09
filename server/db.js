@@ -368,6 +368,8 @@ await pool.query(`
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS last_mrw_check TEXT`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_rejected BOOLEAN DEFAULT false`);
 await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS mrw_history_json TEXT`);
+// Fecha (yyyy-mm-dd) del primer evento de franquicia del seguimiento (ver franquicia.js)
+await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS franquicia_desde TEXT`);
 // Texto crudo del último evento de seguimiento MRW (ej. "Envío en reparto"),
 // aparte del fulfillment_status interno que agrupa varios textos distintos
 // bajo "en_transito" — lo actualiza el cron de MRW en cada ciclo (ver

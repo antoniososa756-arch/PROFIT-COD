@@ -1431,14 +1431,15 @@ async function geCargarFranquicia() {
       colores[t.domain] = t.notification_color || (STORE_PALETTE[i % STORE_PALETTE.length] || {}).light || "#a1a1a1";
     });
     const tel = t => t && t.length === 9 ? `+34 ${t.slice(0,3)} ${t.slice(3,5)} ${t.slice(5,7)} ${t.slice(7)}` : (t || "-");
-    // Tiempo en franquicia (desde que ProfitCOD detectó el cambio de estado):
-    // menos de 1 día verde, 1-3 días ámbar, más de 3 días rojo
+    // Días en franquicia, contados por días de calendario (hora de España)
+    // desde el PRIMER "franquicia" del seguimiento: hoy = 1 día.
+    // 1 día verde, 2-3 días ámbar, 4 o más rojo.
+    const hoyMadrid = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
     const enFranq = p => {
-      const desde = p.estado_cambiado_at ? new Date(String(p.estado_cambiado_at).replace(" ", "T").replace(/(\.\d{3})\d+/, "$1").replace(/([+-]\d{2})$/, "$1:00")) : null;
-      if (!desde || isNaN(desde)) return `<span class="muted">—</span>`;
-      const h = (Date.now() - desde.getTime()) / 3600000;
-      const txt = h < 1 ? "menos de 1 h" : h < 48 ? `${Math.floor(h)} h` : `${Math.floor(h / 24)} días`;
-      const [bg, col, bd] = h > 72 ? ["#fef2f2", "#b91c1c", "#fecaca"] : h > 24 ? ["#fffbeb", "#b45309", "#fde68a"] : ["#f0fdf4", "#15803d", "#bbf7d0"];
+      if (!/^\d{4}-\d{2}-\d{2}/.test(p.franquicia_desde || "")) return `<span class="muted">—</span>`;
+      const dias = Math.round((Date.parse(hoyMadrid) - Date.parse(p.franquicia_desde.slice(0, 10))) / 86400000) + 1;
+      const txt = `${Math.max(1, dias)} día${dias > 1 ? "s" : ""}`;
+      const [bg, col, bd] = dias >= 4 ? ["#fef2f2", "#b91c1c", "#fecaca"] : dias >= 2 ? ["#fffbeb", "#b45309", "#fde68a"] : ["#f0fdf4", "#15803d", "#bbf7d0"];
       return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:${bg};color:${col};border:1px solid ${bd};white-space:nowrap;">${txt}</span>`;
     };
     const th = (t, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${t}</th>`;

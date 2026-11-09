@@ -619,8 +619,8 @@ router.get("/mrw-history/:orderId", auth, async (req, res) => {
     // futuro MRW deja de tenerlo (ver arriba), y el texto crudo del último
     // evento (ej. "Envío en reparto") que usa /api/metrics/en-reparto.
     await req.db.run(
-      "UPDATE orders SET mrw_history_json = $1, mrw_estado_texto = $2 WHERE id = $3",
-      [JSON.stringify(history), history[history.length - 1].estado, order.id]
+      "UPDATE orders SET mrw_history_json = $1, mrw_estado_texto = $2, franquicia_desde = $4 WHERE id = $3",
+      [JSON.stringify(history), history[history.length - 1].estado, order.id, require("../franquicia").franquiciaDesde(history)]
     ).catch(() => {});
 
     res.json({ history });

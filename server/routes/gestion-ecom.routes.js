@@ -76,7 +76,7 @@ router.get("/franquicia", auth, soloAdmin, async (req, res) => {
     const rows = await db.all(
       `SELECT o.id, o.order_number, o.created_at, o.customer_name, o.total_price, o.currency,
               o.note, o.tracking_number, o.carrier, o.mrw_estado_texto,
-              o.estado_cambiado_at,
+              o.estado_cambiado_at, o.franquicia_desde, o.mrw_history_json,
               COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
               COALESCE(o.customer_phone, '') AS telefono
        FROM orders o
@@ -85,10 +85,21 @@ router.get("/franquicia", auth, soloAdmin, async (req, res) => {
               OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
          AND o.fulfillment_status = 'franquicia'
          AND o.cancelled_at IS NULL
-       ORDER BY COALESCE(o.estado_cambiado_at, o.created_at) ASC
        LIMIT 500`,
       [req.user.id]
     );
+    // Desde cuándo está en franquicia: lo calculado por el cron MRW; si aún
+    // no, el historial guardado; si no, cuándo ProfitCOD vio el cambio.
+    const { franquiciaDesde } = require("../franquicia");
+    for (const r of rows) {
+      let desde = r.franquicia_desde;
+      if (!desde && r.mrw_history_json) { try { desde = franquiciaDesde(JSON.parse(r.mrw_history_json)); } catch (e) {} }
+      if (!desde && r.estado_cambiado_at) desde = String(r.estado_cambiado_at).slice(0, 10);
+      r.franquicia_desde = desde || null;
+      delete r.mrw_history_json;
+    }
+    // Primero los que más días llevan en franquicia
+    rows.sort((a, b) => String(a.franquicia_desde || "9999").localeCompare(String(b.franquicia_desde || "9999")));
     res.json({ pedidos: rows });
   } catch (e) {
     console.error("[GestionEcom] franquicia:", e.message);
