@@ -1350,13 +1350,21 @@ async function geConfirmar(cont) {
     <div class="ui-entrada" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
       <div id="ge-tiendas" style="display:flex;gap:6px;flex-wrap:wrap;min-width:0;"></div>
       <div style="width:min(380px,100%);margin-left:auto;">
-        <label for="ge-etiqueta" class="ed-label" style="white-space:nowrap;">Etiqueta de preparación de tu almacén</label>
+        <!-- Bloqueada con candado una vez guardada; el lápiz la desbloquea
+             (así no se cambia por error). Ver geEtiquetaModo(). -->
         <div style="display:flex;gap:8px;">
-          <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off" style="flex:1;min-width:0;"
-            onkeydown="if(event.key==='Enter')geGuardarEtiqueta()">
+          <div style="position:relative;flex:1;min-width:0;">
+            <svg id="ge-etiqueta-candado" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#6b6b6b;pointer-events:none;"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off" style="width:100%;"
+              onkeydown="if(event.key==='Enter')geGuardarEtiqueta();else if(event.key==='Escape')geEtiquetaModo(false)">
+          </div>
+          <button id="ge-etiqueta-editar" onclick="geEtiquetaModo(true)" class="ge-tab" title="Editar etiqueta" style="height:38px;width:38px;padding:0;justify-content:center;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          </button>
           <button id="ge-etiqueta-btn" onclick="geGuardarEtiqueta()" class="ge-tab activo" style="height:38px;flex-shrink:0;">Guardar</button>
         </div>
-        <div class="muted" style="font-size:11.5px;line-height:1.45;margin-top:6px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-top:6px;">Etiqueta de preparación de tu almacén</div>
+        <div class="muted" style="font-size:11.5px;line-height:1.45;margin-top:2px;">
           Se listan los pedidos sin esta etiqueta ni <b>correcto</b> (últimos 30 días, sin enviar ni cancelar).
         </div>
       </div>
@@ -1365,10 +1373,31 @@ async function geConfirmar(cont) {
   try {
     const cfg = await (await fetch(`${API_BASE}/api/gestion-ecom/config`, { headers: H })).json();
     const inp = document.getElementById("ge-etiqueta");
-    if (inp) inp.value = cfg.etiqueta || "";
+    if (inp) { inp.value = cfg.etiqueta || ""; inp.dataset.guardada = cfg.etiqueta || ""; }
   } catch (e) {}
+  // Con etiqueta guardada empieza bloqueada; sin ella, lista para escribir
+  geEtiquetaModo(!document.getElementById("ge-etiqueta")?.value);
   geCargarConfirmar();
 }
+
+// editar=true: campo desbloqueado + Guardar. editar=false: bloqueado con
+// candado + lápiz (y vuelve al valor guardado si se cancela con Esc).
+window.geEtiquetaModo = function(editar) {
+  const inp = document.getElementById("ge-etiqueta");
+  const lapiz = document.getElementById("ge-etiqueta-editar");
+  const guardar = document.getElementById("ge-etiqueta-btn");
+  const candado = document.getElementById("ge-etiqueta-candado");
+  if (!inp) return;
+  if (!editar) inp.value = inp.dataset.guardada || "";
+  inp.readOnly = !editar;
+  inp.style.paddingLeft = editar ? "12px" : "34px";
+  inp.style.cursor = editar ? "text" : "default";
+  inp.style.color = editar ? "" : "#525252";
+  if (candado) candado.style.display = editar ? "none" : "";
+  if (lapiz) lapiz.style.display = editar ? "none" : "";
+  if (guardar) guardar.style.display = editar ? "" : "none";
+  if (editar) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+};
 
 window.geGuardarEtiqueta = async function() {
   const inp = document.getElementById("ge-etiqueta"), btn = document.getElementById("ge-etiqueta-btn");
@@ -1382,6 +1411,9 @@ window.geGuardarEtiqueta = async function() {
     });
     if (!res.ok) throw new Error((await res.json()).error || "Error");
     showToast("✅ Etiqueta guardada", inp.value.trim() ? `Se filtran los pedidos sin "${inp.value.trim()}".` : "Etiqueta borrada.", "#22c55e");
+    inp.value = inp.value.trim();
+    inp.dataset.guardada = inp.value;
+    if (inp.value) geEtiquetaModo(false);
     geCargarConfirmar();
   } catch (e) {
     showToast("Error", e.message || "No se pudo guardar la etiqueta.", "#dc2626");
