@@ -53,6 +53,8 @@ router.get("/confirmar", auth, soloAdmin, async (req, res) => {
          AND o.cancelled_at IS NULL
          AND COALESCE(o.fulfillment_status, '') NOT IN ('cancelado','entregado','devuelto','destruido')
          AND (o.tracking_number IS NULL OR o.tracking_number = '')
+         -- Archivados en Shopify (closed_at con fecha): ya gestionados, fuera
+         AND COALESCE(o.raw_json, '') !~ '"closed_at":"'
          AND NOT (profit_tags(o.raw_json) && ARRAY[$3, $4]::text[])
        ORDER BY o.created_at DESC
        LIMIT 300`,

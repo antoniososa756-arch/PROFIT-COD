@@ -1411,6 +1411,36 @@ async function geCargarConfirmar() {
   }
 }
 
+// Archivar / desarchivar el pedido en Shopify (botón del detalle del pedido)
+window.archivarPedido = async function(id, archivar) {
+  const btn = document.getElementById("dp-archivar");
+  if (btn) { btn.disabled = true; btn.style.opacity = ".6"; }
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${id}/archivar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ archivar })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+    showToast(archivar ? "📦 Pedido archivado" : "Pedido desarchivado", archivar ? "Archivado también en Shopify." : "Ya no está archivado en Shopify.", "#1a1a1a");
+    // Archivado = ya no sale en Confirmar pedidos
+    if (archivar && window.__geDatos?.data?.pedidos) {
+      window.__geDatos.data.pedidos = window.__geDatos.data.pedidos.filter(p => Number(p.id) !== Number(id));
+    }
+    abrirDetallePedido(id, { keepNavContext: true });
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
+    showToast("Error", e.message || "No se pudo archivar el pedido.", "#dc2626");
+  }
+};
+
+// Abre el pedido con las flechas recorriendo ESTA lista (la de la tienda
+// elegida) y "Volver a confirmaciones".
+window.geAbrirPedido = function(id) {
+  abrirDetallePedido(id, { navIds: window.__geIdsVisibles || [id], origen: "gestion-ecom" });
+};
+
 window.geElegirTienda = function(dominio) {
   window.__geTienda = dominio;
   geRenderConfirmar();
@@ -1437,6 +1467,7 @@ function geRenderConfirmar() {
       return;
     }
     const pedidos = sel ? todos.filter(p => p.shop_domain === sel) : todos;
+    window.__geIdsVisibles = pedidos.map(p => Number(p.id));
     if (!pedidos.length) {
       lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;"><div style="font-weight:700;color:var(--text);margin-bottom:4px;">✓ Todo confirmado</div><div class="muted">No hay pedidos sin la etiqueta "${escapeHtml(data.etiqueta)}"${sel ? " en esta tienda" : ""}.</div></div>`;
       return;
@@ -1450,7 +1481,7 @@ function geRenderConfirmar() {
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead><tr>${th("Pedido")}${th("Fecha")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Etiquetas")}</tr></thead>
           <tbody>${pedidos.map(p => `
-            <tr onclick="abrirDetallePedido(${Number(p.id)})" style="cursor:pointer;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+            <tr onclick="geAbrirPedido(${Number(p.id)})" style="cursor:pointer;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
               <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;">
                 <span style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">${escapeHtml(p.order_number || "-")}${p.note ? `<span class="nota-pedido" data-nota="${escapeAttr(p.note)}" onclick="event.stopPropagation()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 21H6a2.5 2.5 0 0 1-2.5-2.5v-13A2.5 2.5 0 0 1 6 3h12a2.5 2.5 0 0 1 2.5 2.5V15Z"/><path d="M14.5 21v-4a2 2 0 0 1 2-2h4"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12.5" x2="13" y2="12.5"/></svg></span>` : ""}</span>
               </td>
@@ -14772,17 +14803,26 @@ window.abrirDetallePedido = async function(orderId, opts = {}) {
 
   window.__currentRoute = { type: "order", id: orderId };
   _syncUrlForRoute(`/pedido/${orderId}`);
-  document.querySelectorAll(".menu-item").forEach((i) => i.classList.remove("active"));
-  document.querySelector('.menu-item[data-id="pedidos"]')?.classList.add("active");
 
   // Contexto de navegación anterior/siguiente (flechas + contador "X de Y"),
   // basado en los filtros actuales de Pedidos — igual que el list view de Shopify.
   // Si venimos de una flecha/atajo (keepNavContext), el índice ya se actualizó.
-  if (opts.keepNavContext) {
+  // Otra lista (p.ej. Gestión Ecom > Confirmar pedidos) pasa sus propios ids
+  // en opts.navIds y su sección en opts.origen, para que las flechas recorran
+  // ESA lista y "Volver" regrese a ella.
+  if (opts.navIds) {
+    window.__orderNavIds = opts.navIds.map(Number);
+    window.__orderNavIndex = window.__orderNavIds.indexOf(orderId);
+    window.__orderNavOrigen = opts.origen || null;
+  } else if (opts.keepNavContext) {
     if (window.__orderNavIds) window.__orderNavIndex = window.__orderNavIds.indexOf(orderId);
   } else {
+    window.__orderNavOrigen = null;
     setupOrderNavContext(orderId);
   }
+  const origen = window.__orderNavOrigen || "pedidos";
+  document.querySelectorAll(".menu-item").forEach((i) => i.classList.remove("active"));
+  document.querySelector(`.menu-item[data-id="${origen}"]`)?.classList.add("active");
 
   if (t) t.textContent = "Detalle del pedido";
   if (s) s.textContent = "Información completa extraída de Shopify";
@@ -14791,11 +14831,11 @@ window.abrirDetallePedido = async function(orderId, opts = {}) {
   box.className = "card";
   box.removeAttribute("style");
   box.innerHTML = `
-    <button onclick="setSection('pedidos')"
+    <button onclick="setSection('${origen}')"
       style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;margin-bottom:16px;background:var(--input);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);transition:border-color .15s,color .15s;"
-      onmouseover="this.style.borderColor='#22c55e';this.style.color='#16a34a';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)';">
+      onmouseover="this.style.borderColor='#1a1a1a';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)';">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-      Volver a pedidos
+      ${origen === "gestion-ecom" ? "Volver a confirmaciones" : "Volver a pedidos"}
     </button>
     <div id="detalle-pedido-body">
       <div style="display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:32px 0;justify-content:center;">
@@ -15455,6 +15495,7 @@ function renderDetallePedido(order) {
         <div style="font-size:19px;font-weight:800;color:var(--text);">${escapeHtml(order.order_number || "-")}</div>
         ${_dpPill(fin.label, fin.bg, fin.color, fin.border, fin.icon)}
         <span class="status ${statusClass(order.fulfillment_status)}">${statusLabel(order.fulfillment_status)}</span>
+        ${raw.closed_at ? `<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#f1f1f1;color:#525252;border:1px solid #d4d4d4;">Archivado</span>` : ""}
         ${!["entregado","cancelado","destruido","devuelto"].includes(order.fulfillment_status) ? `
         <div style="position:relative;">
           <button onclick="toggleEstadoMenu(event,'menu-estado-detalle')" title="Cambiar estado"
@@ -15471,6 +15512,10 @@ function renderDetallePedido(order) {
         </div>` : ""}
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
+        <button onclick="archivarPedido(${Number(order.id)}, ${raw.closed_at ? "false" : "true"})" id="dp-archivar" class="ge-tab" style="height:34px;" title="${raw.closed_at ? "Quitar de archivados en Shopify" : "Archivar el pedido en Shopify"}">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+          ${raw.closed_at ? "Desarchivar" : "Archivar"}
+        </button>
         <span id="dp-nav-controls"></span>
         ${shopifyUrl ? `<a href="${shopifyUrl}" target="_blank"
           style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#22c55e;border:none;border-radius:8px;font-size:12.5px;font-weight:700;color:#fff;text-decoration:none;box-shadow:0 2px 10px rgba(34,197,94,.3);transition:background .15s,box-shadow .15s;"
