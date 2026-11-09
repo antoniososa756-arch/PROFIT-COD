@@ -2299,7 +2299,7 @@ body:not(.dark) .content {
 body.dark .ge-tab.activo { background: #22c55e; border-color: #22c55e; color: #052e16; }
 
 /* Métricas: filas de "Pedidos por tienda" -- blancas con borde negro */
-.met-leyenda-fila { background: #fff; border: 1px solid #1a1a1a; }
+.met-leyenda-fila { background: #fff; border: 1px solid #a3a3a3; }
 body.dark .met-leyenda-fila { background: var(--card); border-color: var(--border); }
 
 /* ═══ Cuadrículas de Facturas (Gastos Ads, Gastos fijos, Gastos por tienda,
