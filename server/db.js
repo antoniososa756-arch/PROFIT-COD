@@ -583,18 +583,19 @@ try {
 // inicio de initDB). Empieza 30 s después del arranque.
 // Primero los más recientes (los que más se buscan). Si una tanda falla se
 // reintenta en 30 s en vez de abandonar.
+if (!global.__rellenoBusqueda) {
 global.__rellenoBusqueda = { total: 0, error: null };
 setTimeout(async function rellenarTanda() {
   try {
     const r = await pool.query(`
       UPDATE orders SET customer_email = customer_email
       WHERE id IN (SELECT id FROM orders WHERE customer_email IS NULL OR search_text IS NULL OR note IS NULL
-                   ORDER BY id DESC LIMIT 500)`);
+                   ORDER BY id DESC LIMIT 250)`);
     global.__rellenoBusqueda.total += r.rowCount;
     global.__rellenoBusqueda.error = null;
     if (r.rowCount) {
-      if (global.__rellenoBusqueda.total % 5000 < 500) console.log(`[DB] Relleno búsqueda: ${global.__rellenoBusqueda.total} pedidos`);
-      return setTimeout(rellenarTanda, 300);
+      if (global.__rellenoBusqueda.total % 2500 < 250) console.log(`[DB] Relleno búsqueda: ${global.__rellenoBusqueda.total} pedidos`);
+      return setTimeout(rellenarTanda, 700);
     }
     if (global.__rellenoBusqueda.total) console.log(`[DB] Datos de cliente/búsqueda rellenados: ${global.__rellenoBusqueda.total}`);
   } catch (e) {
@@ -603,6 +604,7 @@ setTimeout(async function rellenarTanda() {
     setTimeout(rellenarTanda, 30 * 1000);
   }
 }, 20 * 1000);
+}
 // Pedidos ya existentes: se rellenan en segundo plano, por tandas pequeñas y
 // con pausa, para no frenar el arranque ni el resto de la app.
 (async function rellenarRawCompact() {
@@ -1005,6 +1007,14 @@ await pool.query(`
   console.log("✅ PostgreSQL tablas inicializadas");
 }
 
-initDB().catch(err => console.error("❌ Error inicializando DB:", err));
+// Si la base de datos se está reiniciando ("not yet accepting connections")
+// el arranque se quedaba a medias para siempre (sin el relleno de búsqueda
+// ni las tablas de más abajo). Todo es idempotente: se reintenta.
+(function arrancarDB(intento = 1) {
+  initDB().catch(err => {
+    console.error(`❌ Error inicializando DB (intento ${intento}):`, err.message || err);
+    if (intento < 10) setTimeout(() => arrancarDB(intento + 1), 15 * 1000);
+  });
+})();
 
 module.exports = db;
