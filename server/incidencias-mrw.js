@@ -224,11 +224,16 @@ async function buscarPedido(userId, envio, referencia) {
 
 async function guardarCorreo(userId, a, releyendo = false) {
   const orderId = await buscarPedido(userId, a.envio, a.referencia);
-  // Una incidencia por envío. Un correo automático nuevo la reabre (nueva
-  // anomalía); uno escrito a mano la marca para atenderla.
+  // Pedido ya terminado (entregado/devuelto/destruido/cancelado): el correo se
+  // guarda en el hilo pero la incidencia NO se reabre.
+  const ped = orderId ? await db.get("SELECT fulfillment_status FROM orders WHERE id = $1", [orderId]) : null;
+  const terminado = ["entregado", "devuelto", "destruido", "cancelado"].includes(ped?.fulfillment_status);
+  // Una incidencia por envío. Cada correo nuevo de MRW la reabre (aunque se
+  // hubiera resuelto o respondido) mientras el pedido no haya terminado; uno
+  // escrito a mano además la marca para atenderla.
   const inc = await db.get(
     `INSERT INTO incidencias_mrw (user_id, envio, order_id, referencia, tipo, destinatario, telefono, direccion, fecha_anomalia, estado, mrw_escribio, ultimo_mensaje_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'nueva',$10,$11)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,CASE WHEN $13::boolean THEN 'resuelta' ELSE 'nueva' END,$10 AND NOT $13::boolean,$11)
      ON CONFLICT (user_id, envio) DO UPDATE SET
        order_id = COALESCE(incidencias_mrw.order_id, EXCLUDED.order_id),
        referencia = COALESCE(NULLIF(EXCLUDED.referencia,''), incidencias_mrw.referencia),
@@ -238,11 +243,14 @@ async function guardarCorreo(userId, a, releyendo = false) {
        direccion = COALESCE(NULLIF(EXCLUDED.direccion,''), incidencias_mrw.direccion),
        fecha_anomalia = COALESCE(NULLIF(EXCLUDED.fecha_anomalia,''), incidencias_mrw.fecha_anomalia),
        -- Releyendo (cambio de reglas) no se reabre ni se marca nada: solo se completa
-       estado = CASE WHEN $12::boolean THEN incidencias_mrw.estado ELSE 'nueva' END,
-       mrw_escribio = CASE WHEN $12::boolean THEN incidencias_mrw.mrw_escribio ELSE incidencias_mrw.mrw_escribio OR EXCLUDED.mrw_escribio END,
+       estado = CASE WHEN $12::boolean THEN incidencias_mrw.estado
+                     WHEN $13::boolean THEN 'resuelta' ELSE 'nueva' END,
+       mrw_escribio = CASE WHEN $12::boolean THEN incidencias_mrw.mrw_escribio
+                           WHEN $13::boolean THEN false
+                           ELSE incidencias_mrw.mrw_escribio OR EXCLUDED.mrw_escribio END,
        ultimo_mensaje_at = GREATEST(COALESCE(incidencias_mrw.ultimo_mensaje_at,''), EXCLUDED.ultimo_mensaje_at)
      RETURNING id`,
-    [userId, a.envio, orderId, a.referencia, a.tipo, a.destinatario, a.telefono, a.direccion, a.fecha_anomalia, a.manual, a.fecha, releyendo]
+    [userId, a.envio, orderId, a.referencia, a.tipo, a.destinatario, a.telefono, a.direccion, a.fecha_anomalia, a.manual, a.fecha, releyendo, terminado]
   );
   await db.run(
     `INSERT INTO incidencias_mrw_mensajes (incidencia_id, message_id, de, asunto, texto, html, fecha, manual)
