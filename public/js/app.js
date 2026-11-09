@@ -1589,9 +1589,12 @@ window.geAbrirPedido = function(id) {
 };
 
 // Refresco cada minuto mientras se ve Confirmar pedidos (recoge también los
-// que el almacén etiqueta desde Shopify). Solo con la pestaña visible.
+// que el almacén etiqueta desde Shopify). Solo con la pestaña visible y en
+// horario de confirmaciones: de 07:00 a 19:00 hora de España.
 setInterval(() => {
   if (document.hidden || window.__currentRoute?.id !== "gestion-ecom") return;
+  const h = Number(new Date().toLocaleString("en-GB", { timeZone: "Europe/Madrid", hour: "2-digit", hour12: false }));
+  if (h >= 19 || h < 7) return;
   if ((window.__geTab || "confirmar") !== "confirmar" || !document.getElementById("ge-lista")) return;
   geCargarConfirmar(true);
 }, 60 * 1000);
