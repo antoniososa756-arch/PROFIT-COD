@@ -1527,33 +1527,15 @@ async function geIncColumnaCorreo(orderId) {
     const inc = d.incidencia;
     const yo = currentUser?.name || "Tú";
     const fmt = f => f ? new Date(f).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
-    // Cada correo con su formato original (HTML) dentro de un iframe aislado
-    // (sin scripts). El correo anterior citado debajo se oculta, como Gmail.
-    const ESTILO_CORREO = `<base target="_blank"><style>
-      html,body{margin:0;padding:0;background:transparent;}
-      body{font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45;color:#1f1f1f;word-break:break-word;}
-      img{max-width:100%;height:auto;} table{max-width:100%!important;}
-      body:not(.citas) .gmail_quote, body:not(.citas) blockquote, body:not(.citas) #divRplyFwdMsg, body:not(.citas) #divRplyFwdMsg ~ *,
-      body:not(.citas) #appendonsend ~ *, body:not(.citas) div[style*="border-top:solid #E1E1E1"], body:not(.citas) div[style*="border-top:solid #E1E1E1"] ~ *,
-      body:not(.citas) div[style*="border-top: solid #E1E1E1"], body:not(.citas) div[style*="border-top: solid #E1E1E1"] ~ * {display:none!important;}
-    </style>`;
     const burbuja = m => {
       const mio = !!m.saliente;
-      const caja = `max-width:94%;width:${m.html ? "94%" : "auto"};padding:10px 12px;border-radius:12px;${mio ? "border-top-right-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;" : `border-top-left-radius:4px;background:${m.manual ? "#fffbeb" : "#fafafa"};border:1px solid ${m.manual ? "#fde68a" : "var(--border)"};`}`;
-      const cuerpo = m.html
-        ? `<iframe sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="${escapeAttr(ESTILO_CORREO + m.html)}"
-             style="width:100%;height:60px;border:0;display:block;background:transparent;" onload="geIncAjustarCorreo(this)"></iframe>
-           <div class="ge-correo-acciones" style="display:none;gap:12px;margin-top:6px;font-size:12px;">
-             <a href="#" onclick="event.preventDefault();geIncVerCompleto(this)" style="color:#2563eb;">Ver correo completo</a>
-             <a href="#" onclick="event.preventDefault();geIncVerCitas(this)" style="color:#2563eb;">Mostrar correo anterior</a>
-           </div>`
-        : `<div style="font-size:12.5px;line-height:1.5;color:var(--text);white-space:pre-wrap;word-break:break-word;">${escapeHtml(String(m.texto || "").trim())}</div>`;
+      const cuerpo = geIncCuerpoMensaje(m);
       return `
         <div style="display:flex;flex-direction:column;align-items:${mio ? "flex-end" : "flex-start"};margin-bottom:14px;">
           <div style="font-size:11.5px;margin-bottom:4px;color:var(--muted);">
-            <b style="color:var(--text);">${mio ? escapeHtml(yo) : "MRW"}</b> · ${escapeHtml(mio ? (m.de || d.email || "") : (m.de || ""))} · ${fmt(m.fecha)}${m.manual ? ` · <span style="color:#b45309;font-weight:600;">escrito a mano</span>` : ""}
+            <b style="color:var(--text);">${mio ? escapeHtml(yo) : "MRW"}</b> · ${escapeHtml(mio ? (m.de || d.email || "") : (m.de || ""))} · ${fmt(m.fecha)}${m.manual ? ` · <span style="color:#b45309;font-weight:600;">escrito a mano</span>` : (!mio ? ` · <span class="muted">aviso automático</span>` : "")}
           </div>
-          <div style="${caja}">${cuerpo}</div>
+          <div style="max-width:92%;padding:10px 12px;border-radius:12px;${mio ? "border-top-right-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;" : `border-top-left-radius:4px;background:${m.manual ? "#fffbeb" : "#fafafa"};border:1px solid ${m.manual ? "#fde68a" : "var(--border)"};`}font-size:13px;line-height:1.5;color:var(--text);word-break:break-word;">${cuerpo}</div>
         </div>`;
     };
     const estadoBtn = inc.estado === "resuelta"
@@ -1655,6 +1637,40 @@ function geColumnasAsas(grid) {
     const ro = new ResizeObserver(colocar);
     cols.forEach(c => ro.observe(c));
   }
+}
+
+// Texto limpio de cada correo en el chat de "Correo con MRW":
+//  - Escrito a mano por MRW: solo lo que escriben (sin la firma: logo,
+//    "FRANQUICIA MRW...", dirección, redes, aviso legal).
+//  - Aviso automático de MRW: lo que pusieran en "Observaciones" (si algo) y
+//    la línea "El envío no se ha podido entregar por: ...".
+//  - Nuestras respuestas: solo nuestro texto.
+function geIncCuerpoMensaje(m) {
+  const t = String(m.texto || "").replace(/\r/g, "");
+  const parrafo = s => `<div style="white-space:pre-wrap;">${escapeHtml(s)}</div>`;
+  if (!m.saliente && !m.manual) {
+    const motivo = (t.match(/no se ha podido entregar por\s*:?\s*([^\n]+)/i) || [])[1]?.trim() || "";
+    const fecha = (t.match(/Fecha de la Anomal[íi]a\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i) || [])[1] || "";
+    const hora = (t.match(/Hora de la Anomal[íi]a\s*:?\s*(\d{1,2}:\d{2})/i) || [])[1] || "";
+    // "Observaciones:" que va DESPUÉS del motivo = lo que escribe la franquicia
+    let obs = "";
+    const iMotivo = t.search(/no se ha podido entregar por/i);
+    const resto = iMotivo >= 0 ? t.slice(iMotivo) : t;
+    const mObs = resto.match(/Observaciones\s*:?([\s\S]*?)(Responder desde el|Centro de mensajes|$)/i);
+    if (mObs) {
+      obs = mObs[1].split("\n").map(l => l.trim())
+        .filter(l => l && !/^"?Responda a este mail indicando c[oó]mo proceder"?\.?$/i.test(l) && !/^(Contestan al tel|Falta tel)/i.test(l))
+        .join("\n").trim();
+    }
+    return `${obs ? parrafo(obs) + `<div style="height:8px;"></div>` : ""}
+      <div>El envío no se ha podido entregar por: <b style="color:#dc2626;font-style:italic;">${escapeHtml(motivo || "—")}</b></div>
+      ${fecha || hora ? `<div class="muted" style="font-size:12px;margin-top:2px;">Fecha de la anomalía: ${escapeHtml([fecha, hora].filter(Boolean).join(" "))}</div>` : ""}`;
+  }
+  // Correo escrito (MRW a mano o nuestro): cortar en la firma de MRW / texto citado
+  const lineas = t.split("\n");
+  const fin = lineas.findIndex(l => /^\s*(\[cid:|<https?:\/\/www\.mrw|FRANQUICIA MRW|www\.mrw\.es|Antes de imprimir|Nota legal|De:\s|From:\s|-----)/i.test(l));
+  const limpio = (fin >= 0 ? lineas.slice(0, fin) : lineas).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return parrafo(limpio || "(sin texto)");
 }
 
 // Alto del iframe de un correo: hasta 320 px; si es más largo, enlaces para
