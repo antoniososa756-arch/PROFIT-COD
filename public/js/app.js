@@ -14849,17 +14849,29 @@ function renderOrderNavControls() {
   if (!ids || idx === -1) { el.innerHTML = ""; return; }
   const hasPrev = idx > 0;
   const hasNext = idx < ids.length - 1;
+  const pct = ids.length > 1 ? Math.round((idx / (ids.length - 1)) * 100) : 100;
+  const fmt = n => n.toLocaleString("es-ES");
+  const boton = (dir, activo, titulo, path) => `
+      <button onclick="irAOrdenAdyacente(${dir})" title="${titulo}" ${activo ? "" : "disabled"}
+        ${activo ? `onmouseover="this.style.background='#22c55e';this.style.color='#fff';this.style.borderColor='#22c55e';" onmouseout="this.style.background='var(--card)';this.style.color='var(--text)';this.style.borderColor='var(--border)';"` : ""}
+        style="width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%;
+               background:var(--card);border:1px solid var(--border);color:var(--text);padding:0;
+               cursor:${activo ? "pointer" : "default"};opacity:${activo ? "1" : ".35"};transition:background .15s,color .15s,border-color .15s;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>
+      </button>`;
   el.innerHTML = `
-    <div style="display:inline-flex;align-items:center;background:var(--input);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-      <button onclick="irAOrdenAdyacente(-1)" title="Pedido anterior (J)" ${hasPrev ? "" : "disabled"}
-        style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:${hasPrev ? "pointer" : "default"};color:${hasPrev ? "var(--text)" : "var(--muted)"};opacity:${hasPrev ? "1" : ".4"};">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
-      <span style="font-size:12px;font-weight:600;color:var(--muted);padding:0 8px;white-space:nowrap;">${idx + 1} de ${ids.length}</span>
-      <button onclick="irAOrdenAdyacente(1)" title="Pedido siguiente (K)" ${hasNext ? "" : "disabled"}
-        style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;border-left:1px solid var(--border);cursor:${hasNext ? "pointer" : "default"};color:${hasNext ? "var(--text)" : "var(--muted)"};opacity:${hasNext ? "1" : ".4"};">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-      </button>
+    <div style="display:inline-flex;align-items:center;gap:10px;padding:5px;background:var(--input);border:1px solid var(--border);border-radius:999px;">
+      ${boton(-1, hasPrev, "Pedido anterior (J)", "M15 18l-6-6 6-6")}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:72px;">
+        <span style="font-size:12px;white-space:nowrap;line-height:1;">
+          <b style="color:var(--text);font-weight:700;font-size:13px;">${fmt(idx + 1)}</b>
+          <span style="color:var(--muted);font-weight:500;"> / ${fmt(ids.length)}</span>
+        </span>
+        <span style="display:block;width:100%;height:3px;border-radius:3px;background:var(--border);overflow:hidden;">
+          <span style="display:block;height:100%;width:${pct}%;background:#22c55e;border-radius:3px;transition:width .2s;"></span>
+        </span>
+      </div>
+      ${boton(1, hasNext, "Pedido siguiente (K)", "M9 18l6-6-6-6")}
     </div>`;
 }
 
