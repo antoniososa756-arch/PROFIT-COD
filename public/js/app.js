@@ -212,7 +212,7 @@ window.__DPF = (function () {
         ${calSection}
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid var(--pk-border);">
           <button onclick="window.__DPF.pClose('${p}')" style="padding:8px 18px;background:transparent;border:1.5px solid var(--pk-border2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--pk-text2);transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='var(--pk-border)';this.style.color='var(--pk-text)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.color='var(--pk-text2)';">Cancelar</button>
-          <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:none;transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
+          <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#1a1a1a;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#fff;box-shadow:none;transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#333';" onmouseout="this.style.background='#1a1a1a';">Aplicar</button>
         </div>
       </div>
     </div>`;
@@ -2164,7 +2164,7 @@ const now = new Date();
         ${calSection}
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid var(--pk-border);">
           <button onclick="window.__metPClose()" style="padding:8px 18px;background:transparent;border:1.5px solid var(--pk-border2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--pk-text2);transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='var(--pk-border)';this.style.color='var(--pk-text)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.color='var(--pk-text2)';">Cancelar</button>
-          <button onclick="window.__metPApply()" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:none;transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
+          <button onclick="window.__metPApply()" style="padding:8px 22px;background:#1a1a1a;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#fff;box-shadow:none;transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#333';" onmouseout="this.style.background='#1a1a1a';">Aplicar</button>
         </div>
       </div>
     </div>`;
