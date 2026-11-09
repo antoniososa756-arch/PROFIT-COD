@@ -698,151 +698,13 @@ const I18N = {
       { title: "Factura pendiente", text: "Tienes 1 factura por revisar." },
     ],
   },
-
-  EN: {
-    labels: {
-      metricas: "Metrics",
-      leads: "Leads",
-      tiendas: "Stores",
-      productos: "Products",
-      pedidos: "Orders",
-      reclamos: "MRW Claims",
-      facturas: "Expenses",
-      informes: "Income",
-      exprod: "Exprod",
-      pfactura: "PFactura",
-      contabilidad: "Accounting",
-      ayuda: "Help center",
-      plan: "Billing plan",
-    },
-    ui: {
-      panel: "Dashboard",
-      sectionPrefix: "Section: ",
-      searchPH: "Search order, customer, phone, email, address...",
-      night: "Night mode",
-      langTitle: "Language",
-      notiTitle: "Notifications",
-      clearNoti: "Clear notifications",
-      accountTitle: "Account",
-      profile: "Profile",
-      settings: "Settings",
-      theme: "Change theme",
-      logout: "Log out",
-      previewTitle: "Preview",
-      previewText: "Here will be the real section content (tables, metrics, orders, etc.).",
-      notFound: "Value not found",
-      modalTitle: "Customize your logo",
-      modalDesc: "Set how your logo looks in light mode and dark mode.",
-      modalLight: "Your logo – Light mode",
-      modalDark: "Your logo – Dark mode",
-      modalSave: "Save",
-      modalCancel: "Cancel",
-    },
-    notifications: [
-      { title: "Order synced", text: "1 new Shopify order was imported." },
-      { title: "MRW updated", text: "2 shipments changed status." },
-      { title: "Pending invoice", text: "You have 1 invoice to review." },
-    ],
-  },
-
-  PT: {
-    labels: {
-      metricas: "Métricas",
-      leads: "Leads",
-      tiendas: "Lojas",
-      productos: "Produtos",
-      pedidos: "Pedidos",
-      facturas: "Gastos",
-      informes: "Receitas",
-      ayuda: "Central de ajuda",
-      plan: "Plano de faturação",
-    },
-    ui: {
-      panel: "Painel",
-      sectionPrefix: "Seção: ",
-      searchPH: "Buscar pedido, cliente, telefone, email, morada...",
-      night: "Modo noturno",
-      langTitle: "Idioma",
-      notiTitle: "Notificações",
-      clearNoti: "Limpar notificações",
-      accountTitle: "Conta",
-      profile: "Perfil",
-      settings: "Definições",
-      theme: "Mudar tema",
-      logout: "Terminar sessão",
-      previewTitle: "Pré-visualização",
-      previewText: "Aqui irá o conteúdo real da seção (tabelas, métricas, pedidos, etc.).",
-      notFound: "Valor não encontrado",
-      modalTitle: "Personaliza o teu logótipo",
-      modalDesc: "Define como o teu logótipo aparece no modo claro e no modo escuro.",
-      modalLight: "O teu logótipo – Modo claro",
-      modalDark: "O teu logótipo – Modo escuro",
-      modalSave: "Guardar",
-      modalCancel: "Cancelar",
-    },
-    notifications: [
-      { title: "Pedido sincronizado", text: "Foi importado 1 novo pedido do Shopify." },
-      { title: "MRW atualizado", text: "2 envios mudaram de estado." },
-      { title: "Fatura pendente", text: "Tens 1 fatura por rever." },
-    ],
-  },
-
-  IT: {
-    labels: {
-      metricas: "Metriche",
-      tiendas: "Negozi",
-      productos: "Prodotti",
-      pedidos: "Ordini",
-      facturas: "Spese",
-      informes: "Entrate",
-      ayuda: "Centro assistenza",
-      plan: "Piano di fatturazione",
-    },
-    ui: {
-      panel: "Pannello",
-      sectionPrefix: "Sezione: ",
-      searchPH: "Cerca ordine, cliente, telefono, email, indirizzo...",
-      night: "Modalità notte",
-      langTitle: "Lingua",
-      notiTitle: "Notifiche",
-      clearNoti: "Cancella notifiche",
-      accountTitle: "Account",
-      profile: "Profilo",
-      settings: "Impostazioni",
-      theme: "Cambia tema",
-      logout: "Disconnetti",
-      previewTitle: "Anteprima",
-      previewText: "Qui apparirà il contenuto reale della sezione (tabelle, metriche, ordini, ecc.).",
-      notFound: "Valore non trovato",
-      modalTitle: "Personalizza il tuo logo",
-      modalDesc: "Imposta come apparirà il logo in modalità chiara e scura.",
-      modalLight: "Il tuo logo – Modalità chiara",
-      modalDark: "Il tuo logo – Modalità scura",
-      modalSave: "Salva",
-      modalCancel: "Annulla",
-    },
-    notifications: [
-      { title: "Ordine sincronizzato", text: "È stato importato 1 nuovo ordine da Shopify." },
-      { title: "MRW aggiornato", text: "2 spedizioni hanno cambiato stato." },
-      { title: "Fattura in sospeso", text: "Hai 1 fattura da controllare." },
-    ],
-  },
 };
 
-function getLang() {
-  return localStorage.getItem("lang") || "ES";
-}
-
+// Solo español (se quitó el selector de idioma: la mayor parte de la app no
+// estaba traducida). Antiguo "lang" guardado en el navegador: se ignora.
 function dict() {
-  return I18N[getLang()] || I18N.ES;
+  return I18N.ES;
 }
-
-const languages = [
-  { code: "ES", name: "Español" },
-  { code: "EN", name: "English" },
-  { code: "PT", name: "Português" },
-  { code: "IT", name: "Italiano" },
-];
 
 // THEME
 const theme = localStorage.getItem("theme") || "light";
@@ -1066,8 +928,6 @@ function loadApp(section) {
   const d = dict();
   const labels = d.labels;
 
-  const savedLang = localStorage.getItem("lang") || "ES";
-
   // logo eliminado
   const logo = null;
 
@@ -1249,17 +1109,6 @@ function loadApp(section) {
             <div id="topbar-plan-chip" onclick="setSection('plan')" style="display:none;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:#1f2937;border:1px solid #374151;cursor:pointer;font-size:12px;font-weight:600;color:#e5e7eb;white-space:nowrap;flex-shrink:0;" title="Ver plan"></div>
 
             <div class="topbar-right" style="position:relative;">
-
-              <div class="pill" id="langBtn" onclick="toggleLang()" title="Idioma">${savedLang} ▾</div>
-              <div class="dropdown" id="langDrop">
-                <div class="dropdown-title">${d.ui.langTitle}</div>
-                ${languages
-                  .map(
-                    (l) =>
-                      `<div class="drop-item" onclick="setLang('${l.code}')"><span>${l.name}</span><small>${l.code}</small></div>`
-                  )
-                  .join("")}
-              </div>
 
               <div class="notify" title="${d.ui.notiTitle}" style="position:relative;">
                 <button class="icon-btn" style="border:none;" onclick="toggleNotif()">
@@ -5483,18 +5332,6 @@ function closeSidebarMobile() {
   if (bd) bd.style.display = "none";
 }
 
-function toggleLang() {
-  closeAllDrops("langDrop");
-  const d = document.getElementById("langDrop");
-  if (d) d.classList.toggle("open");
-  closeSearchDrop();
-}
-
-function setLang(code) {
-  localStorage.setItem("lang", code);
-  loadApp(localStorage.getItem("section") || "metricas");
-}
-
 // ✅ campana: SOLO abre/cierra
 function toggleNotif() {
   closeAllDrops("notifPanel");
@@ -5553,7 +5390,7 @@ function toggleUser() {
 }
 
 function closeAllDrops(exceptId) {
-  ["langDrop", "notifPanel", "userDrop"].forEach((id) => {
+  ["notifPanel", "userDrop"].forEach((id) => {
     if (id === exceptId) return;
     const el = document.getElementById(id);
     if (el) el.classList.remove("open");
@@ -5565,8 +5402,6 @@ function ensureOutsideClose() {
   window.__outsideBound = true;
 
   document.addEventListener("click", (e) => {
-    const langBtn = document.getElementById("langBtn");
-    const langDrop = document.getElementById("langDrop");
     const notifPanel = document.getElementById("notifPanel");
     const userDrop = document.getElementById("userDrop");
 
@@ -5575,9 +5410,6 @@ function ensureOutsideClose() {
     const searchWrap = document.querySelector(".search");
     const searchDrop = document.getElementById("searchDrop");
 
-    const inLang =
-      (langBtn && langBtn.contains(e.target)) ||
-      (langDrop && langDrop.contains(e.target));
 
     const inNotif =
       (notifyWrapper && notifyWrapper.contains(e.target)) ||
@@ -5591,7 +5423,7 @@ function ensureOutsideClose() {
       (searchWrap && searchWrap.contains(e.target)) ||
       (searchDrop && searchDrop.contains(e.target));
 
-    if (!inLang && !inNotif && !inUser) closeAllDrops();
+    if (!inNotif && !inUser) closeAllDrops();
     if (!inSearch) closeSearchDrop();
   });
 }
@@ -6558,8 +6390,6 @@ window.setSection = setSection;
 window.toggleTheme = toggleTheme;
 window.toggleSidebar = toggleSidebar;
 window.closeSidebarMobile = closeSidebarMobile;
-window.toggleLang = toggleLang;
-window.setLang = setLang;
 window.toggleNotif = toggleNotif;
 window.openNotif = openNotif;
 window.clearNotif = clearNotif;
