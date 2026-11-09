@@ -1381,13 +1381,196 @@ function geIncidencias(cont) {
     </div>
     <div id="ge-inc-lista"></div>`;
   if (sub === "franquicia") return geCargarFranquicia();
-  document.getElementById("ge-inc-lista").innerHTML = `
-    <div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;">
-      <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Incidencias en curso</div>
-      <div class="muted">En construcción.</div>
-    </div>`;
   geContarFranquicia();
+  geIncidenciasCurso();
 }
+
+// ── Incidencias en curso: correos de incidencia de MRW leídos del Gmail de
+// incidencias (ver server/incidencias-mrw.js). Sin configurar -> formulario.
+async function geIncidenciasCurso() {
+  const box = document.getElementById("ge-inc-lista");
+  if (!box) return;
+  const H = { Authorization: "Bearer " + getActiveToken() };
+  box.innerHTML = `<div class="muted" style="padding:16px 0;">Cargando...</div>`;
+  let cfg = {};
+  try { cfg = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias/config`, { headers: H })).json(); } catch (e) {}
+  window.__geIncCfg = cfg;
+  if (!cfg.configurado || window.__geIncEditando) return geIncFormulario(box, cfg);
+  const hace = t => {
+    if (!t) return "nunca";
+    const d = new Date(String(t).replace(" ", "T").replace(/(\.\d{3})\d+/, "$1").replace(/([+-]\d{2})$/, "$1:00"));
+    const m = Math.round((Date.now() - d.getTime()) / 60000);
+    return isNaN(m) ? "-" : m < 1 ? "ahora mismo" : m < 60 ? `hace ${m} min` : `hace ${Math.round(m / 60)} h`;
+  };
+  const error = cfg.last_result && cfg.last_result.ok === false ? cfg.last_result.error : "";
+  const verResueltas = window.__geIncResueltas === true;
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <div style="display:flex;gap:6px;">
+        <button class="ge-tab${verResueltas ? "" : " activo"}" onclick="window.__geIncResueltas=false;geIncidenciasCurso()">Abiertas</button>
+        <button class="ge-tab${verResueltas ? " activo" : ""}" onclick="window.__geIncResueltas=true;geIncidenciasCurso()">Resueltas</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="muted" style="font-size:12px;">📮 ${escapeHtml(cfg.email)} · leído ${hace(cfg.last_sync)}</span>
+        <button class="ge-tab" id="ge-inc-leer" onclick="geIncLeerAhora()">Leer correos ahora</button>
+        <button class="ge-tab" title="Configurar correo" onclick="window.__geIncEditando=true;geIncidenciasCurso()" style="width:36px;padding:0;justify-content:center;">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        </button>
+      </div>
+    </div>
+    ${error ? `<div style="padding:10px 14px;margin-bottom:12px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:10px;font-size:13px;">⚠️ No se pudo leer el correo: ${escapeHtml(error)}. Revisa la configuración (⚙).</div>` : ""}
+    <div id="ge-inc-tabla"><div class="muted" style="padding:16px 0;">Cargando incidencias...</div></div>`;
+  try {
+    const d = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias${verResueltas ? "?estado=resueltas" : ""}`, { headers: H })).json();
+    geIncPintar(d.incidencias || [], verResueltas);
+  } catch (e) {
+    const t = document.getElementById("ge-inc-tabla");
+    if (t) t.innerHTML = `<div style="color:#dc2626;font-size:13px;">Error cargando las incidencias</div>`;
+  }
+}
+
+function geIncPintar(lista, resueltas) {
+  const t = document.getElementById("ge-inc-tabla");
+  if (!t) return;
+  window.__geIncLista = lista;
+  if (!lista.length) {
+    t.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;"><div style="font-weight:700;color:var(--text);margin-bottom:4px;">${resueltas ? "Sin incidencias resueltas" : "✓ Sin incidencias abiertas"}</div><div class="muted">${resueltas ? "" : "Cuando MRW envíe un correo de incidencia aparecerá aquí."}</div></div>`;
+    return;
+  }
+  const tel = t => { const d = String(t || "").replace(/\D/g, "").slice(-9); return d.length === 9 ? `+34 ${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,7)} ${d.slice(7)}` : (t || "-"); };
+  const estado = i => i.estado === "resuelta"
+    ? `<span style="padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#f3f3f3;color:#525252;border:1px solid #e3e3e3;">Resuelta</span>`
+    : i.estado === "respondida"
+      ? `<span style="padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">Respondida</span>`
+      : `<span style="padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">Nueva</span>`;
+  const th = (x, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${x}</th>`;
+  const td = (c, e = "") => `<td style="padding:10px 12px;border-bottom:1px solid var(--border);${e}">${c}</td>`;
+  t.innerHTML = `
+    <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${lista.length}</b> incidencia${lista.length === 1 ? "" : "s"} ${resueltas ? "resueltas" : "abiertas"}</div>
+    <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr>${th("Envío / Pedido")}${th("Incidencia")}${th("Cliente")}${th("Teléfono")}${th("Fecha")}${th("Estado")}${th("", "right")}</tr></thead>
+        <tbody>${lista.map(i => `
+          <tr style="cursor:pointer;${i.mrw_escribio ? "background:#fffbeb;" : ""}" onclick="geIncVerHilo(${Number(i.id)})" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='${i.mrw_escribio ? "#fffbeb" : ""}'">
+            ${td(`<div style="font-weight:600;">${escapeHtml(i.envio)}</div><div class="muted" style="font-size:12px;">${escapeHtml(i.order_number || i.referencia || "pedido no encontrado")}</div>`, "white-space:nowrap;")}
+            ${td(`<span style="color:#b91c1c;font-weight:600;">${escapeHtml(i.tipo || "-")}</span>${i.mrw_escribio ? `<div style="font-size:11.5px;font-weight:700;color:#b45309;margin-top:2px;">✉️ MRW ha escrito</div>` : ""}`)}
+            ${td(escapeHtml(i.customer_name || i.destinatario || "-"))}
+            ${td(escapeHtml(tel(i.telefono)), "white-space:nowrap;")}
+            ${td(`<span class="muted">${escapeHtml(i.fecha_anomalia || "-")}</span>`, "white-space:nowrap;")}
+            ${td(estado(i), "white-space:nowrap;")}
+            ${td(`<div style="display:flex;gap:6px;justify-content:flex-end;" onclick="event.stopPropagation()">
+              ${i.order_id ? `<button class="ge-tab" style="height:30px;font-size:12px;" onclick="geAbrirPedidoIncidencia(${Number(i.order_id)})">Ver pedido</button>` : ""}
+              ${i.estado === "resuelta"
+                ? `<button class="ge-tab" style="height:30px;font-size:12px;" onclick="geIncEstado(${Number(i.id)},'nueva')">Reabrir</button>`
+                : `<button class="ge-tab activo" style="height:30px;font-size:12px;" onclick="geIncEstado(${Number(i.id)},'resuelta')">✓ Resuelta</button>`}
+            </div>`, "white-space:nowrap;")}
+          </tr>
+          <tr id="ge-inc-hilo-${Number(i.id)}" style="display:none;"><td colspan="7" style="padding:0 12px 12px;border-bottom:1px solid var(--border);background:var(--card);"></td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// Hilo de correos de una incidencia, desplegado bajo su fila
+window.geIncVerHilo = async function(id) {
+  const fila = document.getElementById(`ge-inc-hilo-${id}`);
+  if (!fila) return;
+  if (fila.style.display !== "none") { fila.style.display = "none"; return; }
+  const celda = fila.firstElementChild;
+  fila.style.display = "";
+  celda.innerHTML = `<div class="muted" style="padding:12px 0;">Cargando correos...</div>`;
+  try {
+    const d = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias/${id}/mensajes`, { headers: { Authorization: "Bearer " + getActiveToken() } })).json();
+    const fmt = f => f ? new Date(f).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+    celda.innerHTML = (d.mensajes || []).map(m => `
+      <div style="margin-top:12px;border:1px solid ${m.manual ? "#fde68a" : "var(--border)"};background:${m.manual ? "#fffbeb" : "#fafafa"};border-radius:10px;padding:12px 14px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;margin-bottom:6px;">
+          <b>${m.saliente ? "Tú" : escapeHtml(m.de || "MRW")}${m.manual ? ` <span style="color:#b45309;">· escrito a mano</span>` : ""}</b>
+          <span class="muted">${fmt(m.fecha)}</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;line-height:1.5;max-height:320px;overflow:auto;">${escapeHtml((m.texto || "").trim())}</div>
+      </div>`).join("") || `<div class="muted" style="padding:12px 0;">Sin correos.</div>`;
+  } catch (e) {
+    celda.innerHTML = `<div style="color:#dc2626;padding:12px 0;">Error cargando los correos</div>`;
+  }
+};
+
+window.geAbrirPedidoIncidencia = function(orderId) {
+  const ids = (window.__geIncLista || []).map(i => Number(i.order_id)).filter(Boolean);
+  abrirDetallePedido(orderId, { navIds: ids.length ? ids : [orderId], origen: "gestion-ecom" });
+};
+
+window.geIncEstado = async function(id, estado) {
+  try {
+    const r = await fetch(`${API_BASE}/api/gestion-ecom/incidencias/${id}/estado`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ estado })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || "Error");
+    showToast(estado === "resuelta" ? "✅ Incidencia resuelta" : "Incidencia reabierta", "", "#1a1a1a");
+    geIncidenciasCurso();
+  } catch (e) { showToast("Error", e.message, "#dc2626"); }
+};
+
+window.geIncLeerAhora = async function() {
+  const b = document.getElementById("ge-inc-leer");
+  if (b) { b.disabled = true; b.textContent = "Leyendo..."; }
+  try {
+    const r = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias/sincronizar`, { method: "POST", headers: { Authorization: "Bearer " + getActiveToken() } })).json();
+    if (r.ok === false) throw new Error(r.error || "Error");
+    showToast("📮 Correo leído", r.guardados ? `${r.guardados} correo${r.guardados === 1 ? "" : "s"} de incidencia nuevo${r.guardados === 1 ? "" : "s"}.` : "No hay correos nuevos.", "#22c55e");
+  } catch (e) { showToast("Error", e.message, "#dc2626"); }
+  geIncidenciasCurso();
+};
+
+// Formulario de conexión: remitente de las incidencias + Gmail donde se
+// reciben y responden + contraseña de aplicación de Google.
+function geIncFormulario(box, cfg) {
+  box.innerHTML = `
+    <div class="ui-entrada" style="max-width:560px;border:1px solid var(--border);border-radius:12px;padding:20px;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">Conectar el correo de incidencias</div>
+      <div class="muted" style="font-size:12.5px;margin-bottom:16px;">ProfitCOD leerá solo los correos que envía el remitente que indiques, cada 5 minutos de 8:00 a 20:00.</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <label style="display:block;"><span class="ed-label">Correo que envía las incidencias</span>
+          <input id="ge-inc-remitente" class="ed-input" placeholder="Ej. 04700@grupomrw.com" value="${escapeAttr(cfg.remitente || "")}"></label>
+        <label style="display:block;"><span class="ed-label">Correo donde recibes y respondes las incidencias (Gmail)</span>
+          <input id="ge-inc-email" class="ed-input" placeholder="Ej. incidencias@gmail.com" value="${escapeAttr(cfg.email || "")}"></label>
+        <label style="display:block;"><span class="ed-label">Contraseña de aplicación de ese Gmail</span>
+          <input id="ge-inc-pass" class="ed-input" type="password" autocomplete="new-password" placeholder="${cfg.configurado ? "Déjala vacía para mantener la actual" : "16 letras que te da Google"}"></label>
+        <div style="font-size:12px;line-height:1.6;color:var(--muted);background:#fafafa;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+          <b style="color:var(--text);">Cómo conseguir la contraseña de aplicación</b> (una sola vez):<br>
+          1. Entra en <b>myaccount.google.com</b> con ese Gmail y activa la <b>Verificación en 2 pasos</b> (si no la tiene).<br>
+          2. Abre <b>myaccount.google.com/apppasswords</b>, escribe "ProfitCOD" y pulsa <b>Crear</b>.<br>
+          3. Copia las 16 letras que aparecen y pégalas aquí.
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          ${cfg.configurado ? `<button class="ge-tab" onclick="window.__geIncEditando=false;geIncidenciasCurso()">Cancelar</button>` : ""}
+          <button class="ge-tab activo" id="ge-inc-guardar" onclick="geIncGuardar()">Guardar y conectar</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+window.geIncGuardar = async function() {
+  const b = document.getElementById("ge-inc-guardar");
+  const val = id => (document.getElementById(id)?.value || "").trim();
+  if (b) { b.disabled = true; b.textContent = "Conectando con Gmail..."; }
+  try {
+    const r = await fetch(`${API_BASE}/api/gestion-ecom/incidencias/config`, {
+      method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ remitente: val("ge-inc-remitente"), email: val("ge-inc-email"), password: val("ge-inc-pass") })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Error");
+    window.__geIncEditando = false;
+    const s = d.sincronizacion || {};
+    showToast("✅ Correo conectado", s.ok ? `Leídos ${s.guardados || 0} correos de incidencia de los últimos 15 días.` : "Conectado. La lectura dio un aviso, revísalo en la lista.", "#22c55e");
+    geIncidenciasCurso();
+  } catch (e) {
+    if (b) { b.disabled = false; b.textContent = "Guardar y conectar"; }
+    showToast("Error", e.message, "#dc2626");
+  }
+};
 window.geSubIncidencias = function(sub) {
   window.__geSubInc = sub;
   try { sessionStorage.setItem("geSubInc", sub); } catch (e) {}

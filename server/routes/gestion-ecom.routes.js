@@ -154,4 +154,110 @@ router.post("/confirmar/:id", auth, soloAdmin, async (req, res) => {
   }
 });
 
+// ── Incidencias MRW por correo (ver server/incidencias-mrw.js) ──────────────
+const inc = require("../incidencias-mrw");
+
+// GET /api/gestion-ecom/incidencias/config
+router.get("/incidencias/config", auth, soloAdmin, async (req, res) => {
+  try {
+    await inc.ensureTablas();
+    const c = await db.get("SELECT remitente, email, last_sync, last_result FROM incidencias_mrw_config WHERE user_id = $1", [req.user.id]);
+    let last_result = null;
+    try { last_result = c?.last_result ? JSON.parse(c.last_result) : null; } catch (e) {}
+    res.json({ configurado: !!c, remitente: c?.remitente || "", email: c?.email || "", last_sync: c?.last_sync || null, last_result });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /api/gestion-ecom/incidencias/config { remitente, email, password }
+// Prueba la conexión con Gmail antes de guardar. La contraseña es opcional
+// si ya había una guardada (para cambiar solo el remitente).
+router.put("/incidencias/config", auth, soloAdmin, async (req, res) => {
+  const remitente = String(req.body?.remitente || "").trim().toLowerCase();
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "").replace(/\s+/g, "");
+  if (!/^[^@\s]+@[^@\s]+$/.test(remitente)) return res.status(400).json({ error: "Indica el correo que envía las incidencias" });
+  if (!/^[^@\s]+@(gmail|googlemail)\.com$/.test(email)) return res.status(400).json({ error: "El correo donde recibes las incidencias debe ser de Gmail (@gmail.com)" });
+  try {
+    await inc.ensureTablas();
+    const previa = await db.get("SELECT email, password_enc FROM incidencias_mrw_config WHERE user_id = $1", [req.user.id]);
+    let pass = password;
+    if (!pass && previa && previa.email === email) pass = inc.descifrar(previa.password_enc);
+    if (!pass) return res.status(400).json({ error: "Indica la contraseña de aplicación de Gmail" });
+    try { await inc.probarConexion(email, pass); }
+    catch (e) { return res.status(400).json({ error: "Gmail no aceptó el correo o la contraseña de aplicación. Revisa que sea la contraseña de aplicación (16 letras), no la de la cuenta." }); }
+    // Buzón o remitente nuevos: volver a leer los últimos 15 días
+    const cambiaBuzon = !previa || previa.email !== email;
+    await db.run(
+      `INSERT INTO incidencias_mrw_config (user_id, remitente, email, password_enc) VALUES ($1,$2,$3,$4)
+       ON CONFLICT (user_id) DO UPDATE SET remitente = EXCLUDED.remitente, email = EXCLUDED.email, password_enc = EXCLUDED.password_enc,
+         ultimo_uid = CASE WHEN $5::boolean OR incidencias_mrw_config.remitente <> EXCLUDED.remitente THEN 0 ELSE incidencias_mrw_config.ultimo_uid END`,
+      [req.user.id, remitente, email, inc.cifrar(pass), cambiaBuzon]
+    );
+    const r = await inc.sincronizarUsuario(req.user.id);
+    res.json({ ok: true, sincronizacion: r });
+  } catch (e) {
+    console.error("[GestionEcom] incidencias config:", e.message);
+    res.status(500).json({ error: "Error guardando la configuración" });
+  }
+});
+
+// POST /api/gestion-ecom/incidencias/sincronizar -> leer correos ahora
+router.post("/incidencias/sincronizar", auth, soloAdmin, async (req, res) => {
+  try { res.json(await inc.sincronizarUsuario(req.user.id)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/gestion-ecom/incidencias?estado=abiertas|resueltas
+router.get("/incidencias", auth, soloAdmin, async (req, res) => {
+  try {
+    await inc.ensureTablas();
+    const resueltas = req.query.estado === "resueltas";
+    const rows = await db.all(
+      `SELECT i.id, i.envio, i.order_id, i.referencia, i.tipo, i.destinatario, i.telefono, i.direccion,
+              i.fecha_anomalia, i.estado, i.mrw_escribio, i.ultimo_mensaje_at, i.created_at,
+              o.order_number, o.customer_name, o.total_price, o.currency, o.fulfillment_status,
+              COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
+              (SELECT COUNT(*) FROM incidencias_mrw_mensajes m WHERE m.incidencia_id = i.id) AS n_mensajes
+       FROM incidencias_mrw i
+       LEFT JOIN orders o ON o.id = i.order_id
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE i.user_id = $1 AND ${resueltas ? "i.estado = 'resuelta'" : "i.estado <> 'resuelta'"}
+       ORDER BY i.mrw_escribio DESC, i.ultimo_mensaje_at DESC
+       LIMIT 500`,
+      [req.user.id]
+    );
+    res.json({ incidencias: rows });
+  } catch (e) {
+    console.error("[GestionEcom] incidencias:", e.message);
+    res.status(500).json({ error: "Error cargando las incidencias" });
+  }
+});
+
+// GET /api/gestion-ecom/incidencias/:id/mensajes -> hilo de correos
+router.get("/incidencias/:id/mensajes", auth, soloAdmin, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT m.id, m.de, m.asunto, m.texto, m.fecha, m.manual, m.saliente
+       FROM incidencias_mrw_mensajes m JOIN incidencias_mrw i ON i.id = m.incidencia_id
+       WHERE i.id = $1 AND i.user_id = $2 ORDER BY m.fecha ASC`,
+      [parseInt(req.params.id), req.user.id]
+    );
+    res.json({ mensajes: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/gestion-ecom/incidencias/:id/estado { estado: nueva|respondida|resuelta }
+router.post("/incidencias/:id/estado", auth, soloAdmin, async (req, res) => {
+  const estado = String(req.body?.estado || "");
+  if (!["nueva", "respondida", "resuelta"].includes(estado)) return res.status(400).json({ error: "Estado no válido" });
+  try {
+    const r = await db.run(
+      "UPDATE incidencias_mrw SET estado = $1, mrw_escribio = CASE WHEN $1 = 'nueva' THEN mrw_escribio ELSE false END WHERE id = $2 AND user_id = $3",
+      [estado, parseInt(req.params.id), req.user.id]
+    );
+    if (!r.changes) return res.status(404).json({ error: "Incidencia no encontrada" });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

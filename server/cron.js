@@ -523,6 +523,11 @@ function startCrons() {
     }, 60 * 1000);
   })();
   setTimeout(syncAllCTT, 90 * 1000);
+  // Incidencias MRW por correo (Gestión Ecom): cada 5 min, de 8:00 a 20:00
+  // hora de España (el horario lo comprueba sincronizarTodas).
+  const { sincronizarTodas: syncIncidenciasMRW } = require("./incidencias-mrw");
+  setInterval(() => syncIncidenciasMRW().catch(() => {}), 5 * 60 * 1000);
+  setTimeout(() => syncIncidenciasMRW().catch(() => {}), 2 * 60 * 1000);
 
   console.log("✅ [CRON] Crons iniciados — Shopify cada 1min, MRW y CTT cada 5min");
 
