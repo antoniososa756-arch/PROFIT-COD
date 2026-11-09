@@ -154,6 +154,27 @@ router.post("/confirmar/:id", auth, soloAdmin, async (req, res) => {
   }
 });
 
+// Anchos de los 3 bloques del pedido abierto desde Incidencias, guardados en
+// la cuenta (así se mantienen entre días y ordenadores).
+router.get("/columnas", auth, soloAdmin, async (req, res) => {
+  try {
+    const r = await db.get("SELECT ge_columnas FROM users WHERE id = $1", [req.user.id]);
+    let columnas = null;
+    try { columnas = r?.ge_columnas ? JSON.parse(r.ge_columnas) : null; } catch (e) {}
+    res.json({ columnas });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+router.put("/columnas", auth, soloAdmin, async (req, res) => {
+  const c = req.body?.columnas;
+  if (!Array.isArray(c) || c.length !== 3 || !c.every(x => Number.isFinite(x) && x > 0 && x < 100)) {
+    return res.status(400).json({ error: "Anchos no válidos" });
+  }
+  try {
+    await db.run("UPDATE users SET ge_columnas = $1 WHERE id = $2", [JSON.stringify(c.map(x => Math.round(x * 1000) / 1000)), req.user.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Incidencias MRW por correo (ver server/incidencias-mrw.js) ──────────────
 const inc = require("../incidencias-mrw");
 

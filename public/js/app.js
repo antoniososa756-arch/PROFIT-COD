@@ -1496,10 +1496,15 @@ window.geIncAbrir = function(id) {
 async function geIncColumnaCorreo(orderId) {
   const grid = document.querySelector("#detalle-pedido-body .ui-cascada");
   if (!grid) return;
+  // Desde Incidencias no se cambia el estado ni se archiva desde aquí
+  document.getElementById("dp-archivar")?.remove();
+  document.querySelector('#detalle-pedido-body [onclick*="menu-estado-detalle"]')?.parentElement?.remove();
   const ancho = window.innerWidth;
+  const anchos = await geColumnasGuardadas();
   grid.style.gridTemplateColumns = ancho >= 1250
-    ? "minmax(0,1.35fr) minmax(270px,1fr) minmax(330px,1.15fr)"
+    ? anchos.map(f => `minmax(0,${f}fr)`).join(" ")
     : "minmax(0,2fr) minmax(300px,1fr)";
+  if (ancho >= 1250) setTimeout(() => geColumnasAsas(grid), 0);
   let col = document.getElementById("dp-correo-col");
   if (!col) {
     col = document.createElement("div");
@@ -1580,6 +1585,75 @@ async function geIncColumnaCorreo(orderId) {
     if (h) h.scrollTop = h.scrollHeight; // lo último, abajo
   } catch (e) {
     col.innerHTML = _dpCard(`${_dpIco("nota")}Correo con MRW`, `<div style="padding:14px 18px;color:#dc2626;font-size:13px;">Error cargando los correos</div>`, "cliente");
+  }
+}
+
+// ── Anchos de los 3 bloques (pedido | cliente | correo) desde Incidencias ──
+// Se arrastra el separador entre bloques; el reparto se guarda en la cuenta
+// (GET/PUT /api/gestion-ecom/columnas) y en el navegador para cargarlo al
+// instante. Cada bloque mide como mínimo 240 px.
+const GE_COLUMNAS_DEF = [1.35, 1, 1.15];
+async function geColumnasGuardadas() {
+  if (Array.isArray(window.__geColumnas)) return window.__geColumnas;
+  try { const l = JSON.parse(localStorage.getItem("geColumnas") || "null"); if (Array.isArray(l) && l.length === 3) window.__geColumnas = l; } catch (e) {}
+  try {
+    const d = await (await fetch(`${API_BASE}/api/gestion-ecom/columnas`, { headers: { Authorization: "Bearer " + getActiveToken() } })).json();
+    if (Array.isArray(d.columnas) && d.columnas.length === 3) window.__geColumnas = d.columnas;
+  } catch (e) {}
+  return window.__geColumnas || GE_COLUMNAS_DEF;
+}
+function geColumnasAsas(grid) {
+  grid.querySelectorAll(".ge-col-asa").forEach(a => a.remove());
+  const cols = [...grid.children].filter(c => !c.classList.contains("ge-col-asa"));
+  if (cols.length !== 3) return;
+  grid.style.position = "relative";
+  const colocar = () => {
+    const g = grid.getBoundingClientRect();
+    grid.querySelectorAll(".ge-col-asa").forEach((asa, i) => {
+      const r = cols[i].getBoundingClientRect();
+      asa.style.left = (r.right - g.left + 3) + "px";
+    });
+  };
+  [0, 1].forEach(i => {
+    const asa = document.createElement("div");
+    asa.className = "ge-col-asa";
+    asa.title = "Arrastra para cambiar el ancho";
+    asa.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const anchosPx = cols.map(c => c.getBoundingClientRect().width);
+      const x0 = e.clientX, a = anchosPx[i], b = anchosPx[i + 1], MIN = 240;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      const mover = (ev) => {
+        const dx = Math.max(MIN - a, Math.min(b - MIN, ev.clientX - x0));
+        const nuevos = [...anchosPx];
+        nuevos[i] = a + dx; nuevos[i + 1] = b - dx;
+        const total = nuevos.reduce((s, x) => s + x, 0);
+        window.__geColumnas = nuevos.map(x => +(x / total * 3.5).toFixed(3));
+        grid.style.gridTemplateColumns = window.__geColumnas.map(f => `minmax(0,${f}fr)`).join(" ");
+        colocar();
+      };
+      const soltar = () => {
+        document.removeEventListener("mousemove", mover);
+        document.removeEventListener("mouseup", soltar);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        try { localStorage.setItem("geColumnas", JSON.stringify(window.__geColumnas)); } catch (e) {}
+        fetch(`${API_BASE}/api/gestion-ecom/columnas`, {
+          method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+          body: JSON.stringify({ columnas: window.__geColumnas })
+        }).catch(() => {});
+      };
+      document.addEventListener("mousemove", mover);
+      document.addEventListener("mouseup", soltar);
+    });
+    grid.appendChild(asa);
+  });
+  colocar();
+  // Recolocar si cambia el alto/ancho (correos que cargan, ventana...)
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(colocar);
+    cols.forEach(c => ro.observe(c));
   }
 }
 

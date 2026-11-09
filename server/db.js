@@ -692,6 +692,8 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DE
 // Gestión Ecom: etiqueta que usa el almacén para preparar los pedidos (p.ej.
 // "fulfio"); los pedidos sin ella salen en "Confirmar pedidos".
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ge_etiqueta TEXT`);
+// Anchos de los 3 bloques del pedido abierto desde Incidencias (JSON [a,b,c])
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ge_columnas TEXT`);
 // Etiquetas de Shopify de un pedido (raw_json.tags "a, b") en minúsculas,
 // sin espacios. Si raw_json no es JSON válido devuelve lista vacía.
 await pool.query(`
