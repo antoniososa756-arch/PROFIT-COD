@@ -903,7 +903,12 @@ function _syncUrlForRoute(path) {
 function restoreFromPath(pathname) {
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] === "pedido" && parts[1] && typeof window.abrirDetallePedido === "function") {
-    window.abrirDetallePedido(parts[1]);
+    // Abierto desde otra lista (Gestión Ecom > Confirmar pedidos): al recargar
+    // se recupera esa lista y su "Volver", no la de Pedidos.
+    let nav = null;
+    try { nav = JSON.parse(sessionStorage.getItem("orderNavOrigen") || "null"); } catch (e) {}
+    if (nav?.ids?.map(Number).includes(Number(parts[1]))) window.abrirDetallePedido(parts[1], { navIds: nav.ids, origen: nav.origen });
+    else window.abrirDetallePedido(parts[1]);
     return;
   }
   const id = VALID_ROUTE_SECTIONS.includes(parts[0]) ? parts[0] : (localStorage.getItem("section") || "metricas");
@@ -1466,10 +1471,11 @@ window.geGuardarEtiqueta = async function() {
   }
 };
 
-async function geCargarConfirmar() {
+async function geCargarConfirmar(silencioso) {
   const lista = document.getElementById("ge-lista");
   if (!lista) return;
-  lista.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:16px 0;color:var(--muted);font-size:13px;"><span style="width:14px;height:14px;border:2px solid rgba(156,163,175,.35);border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite;"></span>Cargando pedidos...</div>`;
+  // silencioso: refresco automático, sin la ruedita (no parpadea la lista)
+  if (!silencioso) lista.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:16px 0;color:var(--muted);font-size:13px;"><span style="width:14px;height:14px;border:2px solid rgba(156,163,175,.35);border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite;"></span>Cargando pedidos...</div>`;
   try {
     const H = { Authorization: "Bearer " + getActiveToken() };
     const [res, tiendas] = await Promise.all([
@@ -1581,6 +1587,14 @@ window.archivarPedido = async function(id, archivar) {
 window.geAbrirPedido = function(id) {
   abrirDetallePedido(id, { navIds: window.__geIdsVisibles || [id], origen: "gestion-ecom" });
 };
+
+// Refresco cada minuto mientras se ve Confirmar pedidos (recoge también los
+// que el almacén etiqueta desde Shopify). Solo con la pestaña visible.
+setInterval(() => {
+  if (document.hidden || window.__currentRoute?.id !== "gestion-ecom") return;
+  if ((window.__geTab || "confirmar") !== "confirmar" || !document.getElementById("ge-lista")) return;
+  geCargarConfirmar(true);
+}, 60 * 1000);
 
 window.geElegirTienda = function(dominio) {
   window.__geTienda = dominio;
@@ -14986,10 +15000,12 @@ window.abrirDetallePedido = async function(orderId, opts = {}) {
     window.__orderNavIds = opts.navIds.map(Number);
     window.__orderNavIndex = window.__orderNavIds.indexOf(orderId);
     window.__orderNavOrigen = opts.origen || null;
+    try { sessionStorage.setItem("orderNavOrigen", JSON.stringify({ ids: window.__orderNavIds, origen: window.__orderNavOrigen })); } catch (e) {}
   } else if (opts.keepNavContext) {
     if (window.__orderNavIds) window.__orderNavIndex = window.__orderNavIds.indexOf(orderId);
   } else {
     window.__orderNavOrigen = null;
+    try { sessionStorage.removeItem("orderNavOrigen"); } catch (e) {}
     setupOrderNavContext(orderId);
   }
   const origen = window.__orderNavOrigen || "pedidos";
@@ -17544,6 +17560,8 @@ function handleOrderEvent(data) {
   showOrderSquare(color, count, shop);
   playOrderSound();
   sendDesktopOrderNotif(color, count, shop, data.orderNumber);
+  // Gestión Ecom > Confirmar pedidos abierto: el pedido nuevo entra solo en la lista
+  if (window.__currentRoute?.id === "gestion-ecom" && (window.__geTab || "confirmar") === "confirmar") setTimeout(() => geCargarConfirmar(true), 1500);
   if (localStorage.getItem("section") === "pedidos" && typeof fetchOrdersFiltered === "function") {
     fetchOrdersFiltered();
   }
