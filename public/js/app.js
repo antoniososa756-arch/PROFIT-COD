@@ -1512,7 +1512,11 @@ async function geIncColumnaCorreo(orderId) {
     const d = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias/por-pedido/${orderId}`, { headers: { Authorization: "Bearer " + getActiveToken() } })).json();
     if (Number(window.__currentRoute?.id) !== Number(orderId)) return; // ya se cambió de pedido
     if (!d.incidencia) {
-      col.innerHTML = _dpCard(`${_dpIco("nota")}Correo con MRW`, `<div class="muted" style="padding:14px 18px;font-size:13px;">Este pedido no tiene correos de incidencia.</div>`, "cliente");
+      col.innerHTML = _dpCard(`${_dpIco("nota")}Correo con MRW`, d.leyendo
+        ? `<div style="display:flex;align-items:center;gap:8px;padding:14px 18px;font-size:13px;color:var(--muted);"><span style="width:13px;height:13px;border:2px solid rgba(156,163,175,.35);border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite;"></span>Leyendo los correos de MRW... un momento.</div>`
+        : `<div class="muted" style="padding:14px 18px;font-size:13px;">Este pedido no tiene correos de incidencia.</div>`, "cliente");
+      // Mientras se leen los correos, volver a intentarlo solo
+      if (d.leyendo) setTimeout(() => { if (Number(window.__currentRoute?.id) === Number(orderId)) geIncColumnaCorreo(orderId); }, 8000);
       return;
     }
     const inc = d.incidencia;

@@ -114,7 +114,7 @@ const campo = (texto, etiqueta) => {
 };
 const textoDe = (parsed) => {
   const t = parsed.text || (parsed.html ? String(parsed.html).replace(/<br\s*\/?>|<\/(p|div|tr|li|h\d)>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") : "");
-  return t.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n");
+  return t.replace(/\u0000/g, "").replace(/\r/g, "").replace(/[ \t]+\n/g, "\n");
 };
 
 // HTML del correo para verlo con su formato en ProfitCOD. Se muestra dentro
@@ -129,7 +129,7 @@ function htmlLimpio(parsed) {
        .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
        .replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, '$1="#"')
        .replace(/<img\b[^>]*src\s*=\s*("|')cid:[^"']*\1[^>]*>/gi, "");
-  return h.slice(0, 300000);
+  return h.replace(/\u0000/g, "").slice(0, 300000); // Postgres no admite el carácter nulo
 }
 
 // Correo NUESTRO de la carpeta Enviados dirigido a MRW (respondido desde
@@ -221,7 +221,7 @@ async function buscarPedido(userId, envio, referencia) {
   return r?.id || null;
 }
 
-async function guardarCorreo(userId, a) {
+async function guardarCorreo(userId, a, releyendo = false) {
   const orderId = await buscarPedido(userId, a.envio, a.referencia);
   // Una incidencia por envío. Un correo automático nuevo la reabre (nueva
   // anomalía); uno escrito a mano la marca para atenderla.
@@ -236,22 +236,24 @@ async function guardarCorreo(userId, a) {
        telefono = COALESCE(NULLIF(EXCLUDED.telefono,''), incidencias_mrw.telefono),
        direccion = COALESCE(NULLIF(EXCLUDED.direccion,''), incidencias_mrw.direccion),
        fecha_anomalia = COALESCE(NULLIF(EXCLUDED.fecha_anomalia,''), incidencias_mrw.fecha_anomalia),
-       estado = 'nueva',
-       mrw_escribio = incidencias_mrw.mrw_escribio OR EXCLUDED.mrw_escribio,
+       -- Releyendo (cambio de reglas) no se reabre ni se marca nada: solo se completa
+       estado = CASE WHEN $12::boolean THEN incidencias_mrw.estado ELSE 'nueva' END,
+       mrw_escribio = CASE WHEN $12::boolean THEN incidencias_mrw.mrw_escribio ELSE incidencias_mrw.mrw_escribio OR EXCLUDED.mrw_escribio END,
        ultimo_mensaje_at = GREATEST(COALESCE(incidencias_mrw.ultimo_mensaje_at,''), EXCLUDED.ultimo_mensaje_at)
      RETURNING id`,
-    [userId, a.envio, orderId, a.referencia, a.tipo, a.destinatario, a.telefono, a.direccion, a.fecha_anomalia, a.manual, a.fecha]
+    [userId, a.envio, orderId, a.referencia, a.tipo, a.destinatario, a.telefono, a.direccion, a.fecha_anomalia, a.manual, a.fecha, releyendo]
   );
   await db.run(
     `INSERT INTO incidencias_mrw_mensajes (incidencia_id, message_id, de, asunto, texto, html, fecha, manual)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+     ON CONFLICT (incidencia_id, message_id) DO UPDATE SET html = EXCLUDED.html, texto = EXCLUDED.texto`,
     [inc.id, a.message_id, a.de, a.asunto, a.texto, a.html, a.fecha, a.manual]
   );
 }
 
 // Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
 // desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
-const VERSION_LECTURA = 4; // v4: formato HTML + carpeta Enviados
+const VERSION_LECTURA = 5; // v4-5: formato HTML + carpeta Enviados
 
 // Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
 // días. Una sola lectura a la vez por usuario.
@@ -267,14 +269,12 @@ async function _sincronizarUsuario(userId) {
   await ensureTablas();
   let cfg = await db.get("SELECT * FROM incidencias_mrw_config WHERE user_id = $1", [userId]);
   if (!cfg) return { ok: false, error: "Sin configurar" };
-  // Al rehacer se conserva lo que el usuario ya gestionó (resuelta/respondida)
-  let estadosPrevios = [];
-  if (Number(cfg.version_lectura || 1) < VERSION_LECTURA) {
-    estadosPrevios = await db.all("SELECT envio, estado FROM incidencias_mrw WHERE user_id = $1 AND estado <> 'nueva'", [userId]);
-    await db.run("DELETE FROM incidencias_mrw WHERE user_id = $1", [userId]);
-    await db.run("UPDATE incidencias_mrw_config SET ultimo_uid = 0, ultimo_uid_enviados = 0, version_lectura = $1 WHERE user_id = $2", [VERSION_LECTURA, userId]);
-    cfg = { ...cfg, ultimo_uid: 0, uid_validity: null, ultimo_uid_enviados: 0, uid_validity_enviados: null };
-  }
+  // Reglas nuevas: se vuelven a leer los últimos 15 días SIN borrar nada (se
+  // completan datos/formato y se añade lo que falte; no se reabre lo
+  // gestionado). La versión solo se apunta al terminar bien.
+  const releyendo = Number(cfg.version_lectura || 1) < VERSION_LECTURA;
+  if (releyendo) cfg = { ...cfg, ultimo_uid: 0, uid_validity: null, ultimo_uid_enviados: 0, uid_validity_enviados: null };
+  const estadosPrevios = [];
   const client = clienteImap(cfg.email, descifrar(cfg.password_enc));
   let leidos = 0, guardados = 0, maxUid = Number(cfg.ultimo_uid || 0);
   try {
@@ -292,10 +292,13 @@ async function _sincronizarUsuario(userId) {
         const tanda = uids.slice(i, i + 50);
         for await (const msg of client.fetch(tanda.join(","), { uid: true, source: true }, { uid: true })) {
           leidos++;
-          if (msg?.source) {
-            const a = analizarCorreo(await simpleParser(msg.source));
-            if (a) { await guardarCorreo(userId, a); guardados++; }
-          }
+          // Un correo que falle no para la lectura de los demás
+          try {
+            if (msg?.source) {
+              const a = analizarCorreo(await simpleParser(msg.source));
+              if (a) { await guardarCorreo(userId, a, releyendo); guardados++; }
+            }
+          } catch (e) { console.warn(`[Incidencias MRW] correo ${msg.uid} omitido:`, e.message); }
           if (msg.uid > maxUid) maxUid = msg.uid;
         }
         await db.run("UPDATE incidencias_mrw_config SET ultimo_uid = $1, uid_validity = $2 WHERE user_id = $3", [maxUid, validity, userId]);
@@ -317,10 +320,12 @@ async function _sincronizarUsuario(userId) {
           const uidsE = ((await client.search(critE, { uid: true })) || []).filter(u => u > maxE);
           for (let i = 0; i < uidsE.length; i += 50) {
             for await (const msg of client.fetch(uidsE.slice(i, i + 50).join(","), { uid: true, source: true }, { uid: true })) {
-              if (msg?.source) {
-                const a = analizarEnviado(await simpleParser(msg.source));
-                if (a && await guardarEnviado(userId, a)) guardados++;
-              }
+              try {
+                if (msg?.source) {
+                  const a = analizarEnviado(await simpleParser(msg.source));
+                  if (a && await guardarEnviado(userId, a)) guardados++;
+                }
+              } catch (e) { console.warn(`[Incidencias MRW] enviado ${msg.uid} omitido:`, e.message); }
               if (msg.uid > maxE) maxE = msg.uid;
             }
           }
@@ -332,6 +337,7 @@ async function _sincronizarUsuario(userId) {
     for (const p of estadosPrevios) {
       await db.run("UPDATE incidencias_mrw SET estado = $1, mrw_escribio = false WHERE user_id = $2 AND envio = $3", [p.estado, userId, p.envio]).catch(() => {});
     }
+    if (releyendo) await db.run("UPDATE incidencias_mrw_config SET version_lectura = $1 WHERE user_id = $2", [VERSION_LECTURA, userId]);
     const res = { ok: true, leidos, guardados };
     await db.run("UPDATE incidencias_mrw_config SET last_sync = now()::text, last_result = $1 WHERE user_id = $2", [JSON.stringify(res), userId]);
     return res;

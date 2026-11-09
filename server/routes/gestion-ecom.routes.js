@@ -259,7 +259,7 @@ router.get("/incidencias/por-pedido/:orderId", auth, soloAdmin, async (req, res)
        WHERE user_id = $1 AND order_id = $2 ORDER BY ultimo_mensaje_at DESC LIMIT 1`,
       [req.user.id, parseInt(req.params.orderId)]
     );
-    if (!i) return res.json({ incidencia: null, mensajes: [] });
+    if (!i) return res.json({ incidencia: null, mensajes: [], leyendo: !!global.__incMrwEnCurso?.[req.user.id] });
     const mensajes = await db.all(
       "SELECT id, de, asunto, texto, html, fecha, manual, saliente FROM incidencias_mrw_mensajes WHERE incidencia_id = $1 ORDER BY fecha ASC",
       [i.id]
