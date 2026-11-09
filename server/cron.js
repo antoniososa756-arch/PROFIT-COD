@@ -272,9 +272,9 @@ async function syncAllMRW() {
             // real está el envío (lo usa /api/metrics/en-reparto).
             const ultimoTextoRaw = allEstados.length ? allEstados[allEstados.length - 1] : "Entregado";
             console.log(`[MRW CRON] ${pedido.tracking_number} → ${nuevoStatus}`);
-            // franquicia_desde: primer "franquicia" del seguimiento (Gestión Ecom > Franquicia)
-            const franqDesde = require("./franquicia").franquiciaDesde(require("./franquicia").historialDesdeXml(xml));
-            await db.run(`UPDATE orders SET mrw_estado_texto = $1, carrier = COALESCE(carrier, 'mrw'), franquicia_desde = $3 WHERE id = $2`, [ultimoTextoRaw, pedido.id, franqDesde]).catch(() => {});
+            // envio_desde: primer movimiento del seguimiento = salida (Gestión Ecom > Franquicia)
+            const envioDesde = require("./franquicia").inicioEnvio(require("./franquicia").historialDesdeXml(xml));
+            await db.run(`UPDATE orders SET mrw_estado_texto = $1, carrier = COALESCE(carrier, 'mrw'), envio_desde = COALESCE($3, envio_desde) WHERE id = $2`, [ultimoTextoRaw, pedido.id, envioDesde]).catch(() => {});
             if (nuevoStatus !== pedido.fulfillment_status) {
               await db.run(`UPDATE orders SET fulfillment_status = $1, updated_at = now()::text WHERE id = $2`, [nuevoStatus, pedido.id]);
               updated++;

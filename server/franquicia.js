@@ -1,14 +1,14 @@
-// Desde cuándo está un envío en franquicia: fecha (yyyy-mm-dd) del PRIMER
-// evento del seguimiento que menciona "franquicia" (p.ej. "Pendiente de
-// recoger en Franquicia destino"), aunque MRW lo repita varios días.
-// Se guarda en orders.franquicia_desde (cron MRW y /mrw-history) y lo usa
+// Desde cuándo está en camino un envío: fecha (yyyy-mm-dd) del PRIMER evento
+// de su seguimiento (cuando sale el paquete). Un envío dura ~15 días en
+// franquicia contando desde la salida, no desde que llega a la franquicia.
+// Se guarda en orders.envio_desde (cron MRW y /mrw-history) y lo usa
 // Gestión Ecom > Incidencias MRW > Franquicia para contar los días.
 
-// history: [{ estado, fecha: "dd/mm/yyyy" }] (formato de mrw_history_json)
-function franquiciaDesde(history) {
+// history: [{ estado, fecha: "dd/mm/yyyy" }] (formato de mrw_history_json),
+// en orden cronológico.
+function inicioEnvio(history) {
   for (const h of Array.isArray(history) ? history : []) {
-    if (!/franquicia/i.test(h?.estado || "")) continue;
-    const m = String(h.fecha || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const m = String(h?.fecha || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (m) return `${m[3]}-${m[2]}-${m[1]}`;
   }
   return null;
@@ -26,4 +26,4 @@ function historialDesdeXml(xml) {
   }).filter(Boolean);
 }
 
-module.exports = { franquiciaDesde, historialDesdeXml };
+module.exports = { inicioEnvio, historialDesdeXml };

@@ -1431,24 +1431,24 @@ async function geCargarFranquicia() {
       colores[t.domain] = t.notification_color || (STORE_PALETTE[i % STORE_PALETTE.length] || {}).light || "#a1a1a1";
     });
     const tel = t => t && t.length === 9 ? `+34 ${t.slice(0,3)} ${t.slice(3,5)} ${t.slice(5,7)} ${t.slice(7)}` : (t || "-");
-    // Días en franquicia, contados por días de calendario (hora de España)
-    // desde el PRIMER "franquicia" del seguimiento: hoy = 1 día.
-    // 1 día verde, 2-3 días ámbar, 4 o más rojo.
+    // Días desde que salió el paquete (primer movimiento del seguimiento),
+    // por días de calendario en hora de España: hoy = 1 día. En franquicia
+    // aguanta ~15 días: 1-5 verde, 6-10 ámbar, 11 o más rojo.
     const hoyMadrid = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
     const enFranq = p => {
-      if (!/^\d{4}-\d{2}-\d{2}/.test(p.franquicia_desde || "")) return `<span class="muted">—</span>`;
-      const dias = Math.round((Date.parse(hoyMadrid) - Date.parse(p.franquicia_desde.slice(0, 10))) / 86400000) + 1;
-      const txt = `${Math.max(1, dias)} día${dias > 1 ? "s" : ""}`;
-      const [bg, col, bd] = dias >= 4 ? ["#fef2f2", "#b91c1c", "#fecaca"] : dias >= 2 ? ["#fffbeb", "#b45309", "#fde68a"] : ["#f0fdf4", "#15803d", "#bbf7d0"];
+      if (!/^\d{4}-\d{2}-\d{2}/.test(p.envio_desde || "")) return `<span class="muted">—</span>`;
+      const dias = Math.max(1, Math.round((Date.parse(hoyMadrid) - Date.parse(p.envio_desde.slice(0, 10))) / 86400000) + 1);
+      const txt = `${dias} día${dias > 1 ? "s" : ""}${p.envio_aproximado ? "*" : ""}`;
+      const [bg, col, bd] = dias >= 11 ? ["#fef2f2", "#b91c1c", "#fecaca"] : dias >= 6 ? ["#fffbeb", "#b45309", "#fde68a"] : ["#f0fdf4", "#15803d", "#bbf7d0"];
       return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:${bg};color:${col};border:1px solid ${bd};white-space:nowrap;">${txt}</span>`;
     };
     const th = (t, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${t}</th>`;
     const td = (c, extra = "") => `<td style="padding:10px 12px;border-bottom:1px solid var(--border);${extra}">${c}</td>`;
     lista.innerHTML = `
-      <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${pedidos.length}</b> pedido${pedidos.length === 1 ? "" : "s"} en franquicia</div>
+      <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${pedidos.length}</b> pedido${pedidos.length === 1 ? "" : "s"} en franquicia <span class="muted" style="font-size:12px;">· días contados desde que salió el paquete${pedidos.some(p => p.envio_aproximado) ? " (* aproximado: desde la fecha del pedido, hasta que MRW actualice el seguimiento)" : ""}</span></div>
       <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead><tr>${th("Pedido")}${th("En franquicia")}${th("Cliente")}${th("Teléfono")}${th("Seguimiento")}${th("Último estado")}${th("Total", "right")}${th("Tienda")}</tr></thead>
+          <thead><tr>${th("Pedido")}${th("Días desde salida")}${th("Cliente")}${th("Teléfono")}${th("Seguimiento")}${th("Último estado")}${th("Total", "right")}${th("Tienda")}</tr></thead>
           <tbody>${pedidos.map(p => `
             <tr onclick="geAbrirPedido(${Number(p.id)})" style="cursor:pointer;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
               ${td(`<span style="font-weight:600;">${escapeHtml(p.order_number || "-")}</span>`, "white-space:nowrap;")}
