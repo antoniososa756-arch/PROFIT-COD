@@ -1429,7 +1429,10 @@ async function geIncidenciasCurso() {
   }
 }
 
-function geIncPintar(lista, resueltas) {
+// Lista de incidencias con el mismo aspecto que Confirmar pedidos. Al pulsar
+// una fila se abre el pedido con la columna de correo de MRW (ver
+// geIncColumnaCorreo); si el pedido no se encontró, se despliega el hilo aquí.
+async function geIncPintar(lista, resueltas) {
   const t = document.getElementById("ge-inc-tabla");
   if (!t) return;
   window.__geIncLista = lista;
@@ -1437,39 +1440,167 @@ function geIncPintar(lista, resueltas) {
     t.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;"><div style="font-weight:700;color:var(--text);margin-bottom:4px;">${resueltas ? "Sin incidencias resueltas" : "✓ Sin incidencias abiertas"}</div><div class="muted">${resueltas ? "" : "Cuando MRW envíe un correo de incidencia aparecerá aquí."}</div></div>`;
     return;
   }
-  const tel = t => { const d = String(t || "").replace(/\D/g, "").slice(-9); return d.length === 9 ? `+34 ${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,7)} ${d.slice(7)}` : (t || "-"); };
+  let tiendas = [];
+  try { tiendas = await cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: { Authorization: "Bearer " + getActiveToken() } }); } catch (e) {}
+  const info = {};
+  (Array.isArray(tiendas) ? tiendas : []).forEach((s, i) => {
+    info[s.domain] = { nombre: s.shop_name || s.domain.replace(".myshopify.com", ""), color: s.notification_color || (STORE_PALETTE[i % STORE_PALETTE.length] || {}).light || "#a1a1a1" };
+  });
+  const tel = x => { const d = String(x || "").replace(/\D/g, "").slice(-9); return d.length === 9 ? `+34 ${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,7)} ${d.slice(7)}` : "-"; };
   const estado = i => i.estado === "resuelta"
     ? `<span style="padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#f3f3f3;color:#525252;border:1px solid #e3e3e3;">Resuelta</span>`
     : i.estado === "respondida"
       ? `<span style="padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">Respondida</span>`
       : `<span style="padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">Nueva</span>`;
+  const icoNota = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 21H6a2.5 2.5 0 0 1-2.5-2.5v-13A2.5 2.5 0 0 1 6 3h12a2.5 2.5 0 0 1 2.5 2.5V15Z"/><path d="M14.5 21v-4a2 2 0 0 1 2-2h4"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12.5" x2="13" y2="12.5"/></svg>`;
   const th = (x, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${x}</th>`;
   const td = (c, e = "") => `<td style="padding:10px 12px;border-bottom:1px solid var(--border);${e}">${c}</td>`;
   t.innerHTML = `
-    <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${lista.length}</b> incidencia${lista.length === 1 ? "" : "s"} ${resueltas ? "resueltas" : "abiertas"}</div>
+    <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${lista.length}</b> incidencia${lista.length === 1 ? "" : "s"} ${resueltas ? "resuelta" + (lista.length === 1 ? "" : "s") : "abierta" + (lista.length === 1 ? "" : "s")}</div>
     <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr>${th("Envío / Pedido")}${th("Incidencia")}${th("Cliente")}${th("Teléfono")}${th("Fecha")}${th("Estado")}${th("", "right")}</tr></thead>
-        <tbody>${lista.map(i => `
-          <tr style="cursor:pointer;${i.mrw_escribio ? "background:#fffbeb;" : ""}" onclick="geIncVerHilo(${Number(i.id)})" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='${i.mrw_escribio ? "#fffbeb" : ""}'">
-            ${td(`<div style="font-weight:600;">${escapeHtml(i.envio)}</div><div class="muted" style="font-size:12px;">${escapeHtml(i.order_number || i.referencia || "pedido no encontrado")}</div>`, "white-space:nowrap;")}
+        <thead><tr>${th("Pedido")}${th("Incidencia")}${th("Fecha")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Estado")}</tr></thead>
+        <tbody>${lista.map(i => {
+          const ti = info[i.shop_domain] || { nombre: (i.shop_domain || "").replace(".myshopify.com", "") || "-", color: "#a1a1a1" };
+          const fondo = i.mrw_escribio ? "#fffbeb" : "";
+          return `
+          <tr style="cursor:pointer;${fondo ? `background:${fondo};` : ""}" onclick="geIncAbrir(${Number(i.id)})" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='${fondo}'">
+            ${td(`<span style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">${escapeHtml(i.order_number || i.referencia || "Pedido no encontrado")}${i.note ? `<span class="nota-pedido" data-nota="${escapeAttr(i.note)}" onclick="event.stopPropagation()">${icoNota}</span>` : ""}</span><div class="muted" style="font-size:11.5px;">${escapeHtml(i.envio)}</div>`, "white-space:nowrap;")}
             ${td(`${i.tipo ? `<span style="color:#b91c1c;font-weight:600;">${escapeHtml(i.tipo)}</span>` : `<span style="color:#b45309;font-weight:600;">Respuesta de MRW</span>`}${i.mrw_escribio ? `<div style="font-size:11.5px;font-weight:700;color:#b45309;margin-top:2px;">✉️ MRW ha escrito</div>` : ""}`)}
-            ${td(escapeHtml(i.customer_name || i.destinatario || "-"))}
-            ${td(escapeHtml(tel(i.telefono)), "white-space:nowrap;")}
             ${td(`<span class="muted">${escapeHtml(i.fecha_anomalia || "-")}</span>`, "white-space:nowrap;")}
+            ${td(escapeHtml(i.customer_name || i.destinatario || "-"))}
+            ${td(escapeHtml(tel(i.telefono_pedido || i.telefono)), "white-space:nowrap;")}
+            ${td(i.total_price != null ? `${Number(i.total_price).toFixed(2)} ${escapeHtml(i.currency || "")}` : "-", "text-align:right;white-space:nowrap;font-weight:600;")}
+            ${td(`<span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:8px;height:8px;border-radius:50%;background:${ti.color};display:inline-block;"></span>${escapeHtml(ti.nombre)}</span>`, "white-space:nowrap;")}
             ${td(estado(i), "white-space:nowrap;")}
-            ${td(`<div style="display:flex;gap:6px;justify-content:flex-end;" onclick="event.stopPropagation()">
-              ${i.order_id ? `<button class="ge-tab" style="height:30px;font-size:12px;" onclick="geAbrirPedidoIncidencia(${Number(i.order_id)})">Ver pedido</button>` : ""}
-              ${i.estado === "resuelta"
-                ? `<button class="ge-tab" style="height:30px;font-size:12px;" onclick="geIncEstado(${Number(i.id)},'nueva')">Reabrir</button>`
-                : `<button class="ge-tab activo" style="height:30px;font-size:12px;" onclick="geIncEstado(${Number(i.id)},'resuelta')">✓ Resuelta</button>`}
-            </div>`, "white-space:nowrap;")}
           </tr>
-          <tr id="ge-inc-hilo-${Number(i.id)}" style="display:none;"><td colspan="7" style="padding:0 12px 12px;border-bottom:1px solid var(--border);background:var(--card);"></td></tr>`).join("")}
+          <tr id="ge-inc-hilo-${Number(i.id)}" style="display:none;"><td colspan="8" style="padding:0 12px 12px;border-bottom:1px solid var(--border);background:var(--card);"></td></tr>`;
+        }).join("")}
         </tbody>
       </table>
     </div>`;
 }
+
+// Abre el pedido de la incidencia (con la columna de correo) recorriendo con
+// las flechas los pedidos de esta lista; sin pedido, despliega el hilo aquí.
+window.geIncAbrir = function(id) {
+  const lista = window.__geIncLista || [];
+  const i = lista.find(x => Number(x.id) === Number(id));
+  if (!i?.order_id) return geIncVerHilo(id);
+  const ids = lista.map(x => Number(x.order_id)).filter(Boolean);
+  abrirDetallePedido(i.order_id, { navIds: ids, origen: "gestion-ecom" });
+};
+
+// ── Columna "Correo con MRW" en el detalle del pedido (solo desde Incidencias)
+// El detalle pasa a 3 columnas: pedido | cliente/dirección | correo.
+async function geIncColumnaCorreo(orderId) {
+  const grid = document.querySelector("#detalle-pedido-body .ui-cascada");
+  if (!grid) return;
+  const ancho = window.innerWidth;
+  grid.style.gridTemplateColumns = ancho >= 1250
+    ? "minmax(0,1.35fr) minmax(270px,1fr) minmax(330px,1.15fr)"
+    : "minmax(0,2fr) minmax(300px,1fr)";
+  let col = document.getElementById("dp-correo-col");
+  if (!col) {
+    col = document.createElement("div");
+    col.id = "dp-correo-col";
+    col.style.cssText = "min-width:0;" + (ancho >= 1250 ? "" : "grid-column:1 / -1;");
+    grid.appendChild(col);
+  }
+  col.innerHTML = _dpCard(`${_dpIco("nota")}Correo con MRW`, `<div class="muted" style="padding:14px 18px;font-size:13px;">Cargando correos...</div>`, "cliente");
+  try {
+    const d = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias/por-pedido/${orderId}`, { headers: { Authorization: "Bearer " + getActiveToken() } })).json();
+    if (Number(window.__currentRoute?.id) !== Number(orderId)) return; // ya se cambió de pedido
+    if (!d.incidencia) {
+      col.innerHTML = _dpCard(`${_dpIco("nota")}Correo con MRW`, `<div class="muted" style="padding:14px 18px;font-size:13px;">Este pedido no tiene correos de incidencia.</div>`, "cliente");
+      return;
+    }
+    const inc = d.incidencia;
+    const yo = currentUser?.name || "Tú";
+    const fmt = f => f ? new Date(f).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+    const burbuja = m => {
+      const mio = !!m.saliente;
+      const texto = escapeHtml(String(m.texto || "").trim());
+      const largo = texto.length > 600;
+      return `
+        <div style="display:flex;flex-direction:column;align-items:${mio ? "flex-end" : "flex-start"};margin-bottom:12px;">
+          <div style="font-size:11.5px;margin-bottom:4px;color:var(--muted);">
+            <b style="color:var(--text);">${mio ? escapeHtml(yo) : "MRW"}</b> · ${escapeHtml(mio ? (d.email || "") : (m.de || ""))} · ${fmt(m.fecha)}${m.manual ? ` · <span style="color:#b45309;font-weight:600;">escrito a mano</span>` : ""}
+          </div>
+          <div style="max-width:92%;padding:10px 12px;border-radius:12px;${mio ? "border-top-right-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;" : `border-top-left-radius:4px;background:${m.manual ? "#fffbeb" : "#f7f7f7"};border:1px solid ${m.manual ? "#fde68a" : "var(--border)"};`}font-size:12.5px;line-height:1.5;color:var(--text);white-space:pre-wrap;word-break:break-word;">
+            <div style="${largo ? "max-height:180px;overflow:hidden;" : ""}" ${largo ? `id="dp-msg-${Number(m.id)}"` : ""}>${texto}</div>
+            ${largo ? `<a href="#" onclick="event.preventDefault();const e=document.getElementById('dp-msg-${Number(m.id)}');const ab=e.style.maxHeight!=='none';e.style.maxHeight=ab?'none':'180px';this.textContent=ab?'Ver menos':'Ver correo completo';" style="display:inline-block;margin-top:6px;font-size:12px;color:#2563eb;">Ver correo completo</a>` : ""}
+          </div>
+        </div>`;
+    };
+    const estadoBtn = inc.estado === "resuelta"
+      ? `<button class="ge-tab" style="height:30px;font-size:12px;" onclick="geIncEstadoDetalle(${Number(inc.id)},'nueva',${Number(orderId)})">Reabrir</button>`
+      : `<button class="ge-tab activo" style="height:30px;font-size:12px;" onclick="geIncEstadoDetalle(${Number(inc.id)},'resuelta',${Number(orderId)})">✓ Marcar resuelta</button>`;
+    const estadoPill = inc.estado === "resuelta" ? ["Resuelta", "#f3f3f3", "#525252", "#e3e3e3"] : inc.estado === "respondida" ? ["Respondida", "#eff6ff", "#1d4ed8", "#bfdbfe"] : ["Nueva", "#fef2f2", "#b91c1c", "#fecaca"];
+    col.innerHTML = _dpCard(
+      `<span style="flex:1;display:inline-flex;align-items:center;gap:8px;">${_dpIco("nota")}Correo con MRW</span>${estadoBtn}`,
+      `<div style="padding:10px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;">
+         <span style="color:#b91c1c;font-weight:600;">${escapeHtml(inc.tipo || "Respuesta de MRW")}</span>
+         <span style="padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:${estadoPill[1]};color:${estadoPill[2]};border:1px solid ${estadoPill[3]};">${estadoPill[0]}</span>
+         <span class="muted" style="margin-left:auto;">Envío ${escapeHtml(inc.envio)}</span>
+       </div>
+       <div id="dp-correo-hilo" style="padding:14px 18px 2px;max-height:520px;overflow-y:auto;">${(d.mensajes || []).map(burbuja).join("") || `<div class="muted" style="font-size:13px;">Sin correos.</div>`}</div>
+       <div style="padding:12px 18px 16px;border-top:1px solid var(--border);">
+         <textarea id="dp-correo-resp" class="ed-input" rows="3" placeholder="Escribe la respuesta para MRW..." style="height:auto;padding:10px 12px;resize:vertical;line-height:1.45;"
+           onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();geIncResponderDetalle(${Number(inc.id)},${Number(orderId)})}"></textarea>
+         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;">
+           <span class="muted" style="font-size:11.5px;">Desde ${escapeHtml(d.email || "tu Gmail")} · Ctrl + Enter</span>
+           <button id="dp-correo-enviar" class="ge-tab ge-tab-confirmar activo" onclick="geIncResponderDetalle(${Number(inc.id)},${Number(orderId)})">
+             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+             Enviar a MRW
+           </button>
+         </div>
+       </div>`,
+      "cliente"
+    );
+    const h = document.getElementById("dp-correo-hilo");
+    if (h) h.scrollTop = h.scrollHeight; // lo último, abajo
+  } catch (e) {
+    col.innerHTML = _dpCard(`${_dpIco("nota")}Correo con MRW`, `<div style="padding:14px 18px;color:#dc2626;font-size:13px;">Error cargando los correos</div>`, "cliente");
+  }
+}
+
+window.geIncResponderDetalle = async function(incId, orderId) {
+  const ta = document.getElementById("dp-correo-resp");
+  const b = document.getElementById("dp-correo-enviar");
+  const texto = (ta?.value || "").trim();
+  if (!texto) { ta?.focus(); return; }
+  if (b) { b.disabled = true; b.lastChild.textContent = " Enviando..."; }
+  try {
+    const r = await fetch(`${API_BASE}/api/gestion-ecom/incidencias/${incId}/responder`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ texto })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Error");
+    showToast("✉️ Respuesta enviada", `Enviada a ${d.para}.`, "#22c55e");
+    const it = (window.__geIncLista || []).find(x => Number(x.id) === Number(incId));
+    if (it) { it.estado = "respondida"; it.mrw_escribio = false; }
+    geIncColumnaCorreo(orderId);
+  } catch (e) {
+    if (b) { b.disabled = false; b.lastChild.textContent = " Enviar a MRW"; }
+    showToast("Error", e.message || "No se pudo enviar la respuesta.", "#dc2626");
+  }
+};
+
+window.geIncEstadoDetalle = async function(incId, estado, orderId) {
+  try {
+    const r = await fetch(`${API_BASE}/api/gestion-ecom/incidencias/${incId}/estado`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ estado })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || "Error");
+    showToast(estado === "resuelta" ? "✅ Incidencia resuelta" : "Incidencia reabierta", "", "#1a1a1a");
+    const it = (window.__geIncLista || []).find(x => Number(x.id) === Number(incId));
+    if (it) it.estado = estado;
+    geIncColumnaCorreo(orderId);
+  } catch (e) { showToast("Error", e.message, "#dc2626"); }
+};
 
 // Hilo de correos de una incidencia, desplegado bajo su fila
 window.geIncVerHilo = async function(id) {
@@ -16179,6 +16310,8 @@ function renderDetallePedido(order) {
 
   if (order.tracking_number) cargarSeguimientoMRW(order.id, agenciaSeguimiento(order));
   renderOrderNavControls();
+  // Abierto desde Gestión Ecom > Incidencias: tercera columna con el correo de MRW
+  if (window.__orderNavOrigen === "gestion-ecom" && window.__geTab === "incidencias") geIncColumnaCorreo(order.id);
 }
 
 // Agencia del pedido para su tarjeta de seguimiento: orders.carrier o, si

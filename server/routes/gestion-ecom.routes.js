@@ -216,7 +216,8 @@ router.get("/incidencias", auth, soloAdmin, async (req, res) => {
     const rows = await db.all(
       `SELECT i.id, i.envio, i.order_id, i.referencia, i.tipo, i.destinatario, i.telefono, i.direccion,
               i.fecha_anomalia, i.estado, i.mrw_escribio, i.ultimo_mensaje_at, i.created_at,
-              o.order_number, o.customer_name, o.total_price, o.currency, o.fulfillment_status,
+              o.order_number, o.customer_name, o.total_price, o.currency, o.fulfillment_status, o.note, o.created_at AS pedido_created_at,
+              COALESCE(o.customer_phone, '') AS telefono_pedido,
               COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
               (SELECT COUNT(*) FROM incidencias_mrw_mensajes m WHERE m.incidencia_id = i.id) AS n_mensajes
        FROM incidencias_mrw i
@@ -244,6 +245,27 @@ router.get("/incidencias/:id/mensajes", auth, soloAdmin, async (req, res) => {
       [parseInt(req.params.id), req.user.id]
     );
     res.json({ mensajes: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/gestion-ecom/incidencias/por-pedido/:orderId -> la incidencia de
+// ese pedido (la más reciente) con su hilo de correos, para la columna de
+// correo del detalle del pedido.
+router.get("/incidencias/por-pedido/:orderId", auth, soloAdmin, async (req, res) => {
+  try {
+    await inc.ensureTablas();
+    const i = await db.get(
+      `SELECT id, envio, tipo, estado, mrw_escribio, fecha_anomalia FROM incidencias_mrw
+       WHERE user_id = $1 AND order_id = $2 ORDER BY ultimo_mensaje_at DESC LIMIT 1`,
+      [req.user.id, parseInt(req.params.orderId)]
+    );
+    if (!i) return res.json({ incidencia: null, mensajes: [] });
+    const mensajes = await db.all(
+      "SELECT id, de, asunto, texto, fecha, manual, saliente FROM incidencias_mrw_mensajes WHERE incidencia_id = $1 ORDER BY fecha ASC",
+      [i.id]
+    );
+    const cfg = await db.get("SELECT email FROM incidencias_mrw_config WHERE user_id = $1", [req.user.id]);
+    res.json({ incidencia: i, mensajes, email: cfg?.email || "" });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
