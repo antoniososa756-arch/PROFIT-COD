@@ -1345,17 +1345,23 @@ window.geTab = function(tab) {
 // "correcto"). Ver server/routes/gestion-ecom.routes.js.
 async function geConfirmar(cont) {
   const H = { Authorization: "Bearer " + getActiveToken() };
+  // Izquierda: tiendas (Todas / Tienda 1 / ...). Derecha: etiqueta del almacén.
   cont.innerHTML = `
-    <div class="ui-entrada" style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-      <label style="display:block;width:min(340px,100%);">
-        <span class="ed-label">Etiqueta que usa tu almacén para preparar los pedidos</span>
-        <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off"
-          onkeydown="if(event.key==='Enter')geGuardarEtiqueta()">
-      </label>
-      <button id="ge-etiqueta-btn" onclick="geGuardarEtiqueta()" class="ge-tab activo" style="height:38px;">Guardar</button>
-    </div>
-    <div class="muted" style="font-size:12px;margin-bottom:16px;">
-      Aquí salen los pedidos de los últimos 30 días, sin enviar ni cancelar, que aún <b>no</b> tienen esta etiqueta ni la de <b>correcto</b>.
+    <div class="ui-entrada" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+      <div id="ge-tiendas" style="display:flex;gap:6px;flex-wrap:wrap;min-width:0;"></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-left:auto;">
+        <div style="display:flex;align-items:flex-end;gap:8px;">
+          <label style="display:block;width:min(300px,60vw);">
+            <span class="ed-label">Etiqueta que usa tu almacén para preparar los pedidos</span>
+            <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off"
+              onkeydown="if(event.key==='Enter')geGuardarEtiqueta()">
+          </label>
+          <button id="ge-etiqueta-btn" onclick="geGuardarEtiqueta()" class="ge-tab activo" style="height:38px;">Guardar</button>
+        </div>
+        <div class="muted" style="font-size:11.5px;text-align:right;max-width:420px;">
+          Pedidos de los últimos 30 días, sin enviar ni cancelar, que aún <b>no</b> tienen esta etiqueta ni la de <b>correcto</b>.
+        </div>
+      </div>
     </div>
     <div id="ge-lista"><div class="muted" style="padding:16px 0;">Cargando...</div></div>`;
   try {
@@ -1391,16 +1397,48 @@ async function geCargarConfirmar() {
   if (!lista) return;
   lista.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:16px 0;color:var(--muted);font-size:13px;"><span style="width:14px;height:14px;border:2px solid rgba(156,163,175,.35);border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite;"></span>Cargando pedidos...</div>`;
   try {
-    const res = await fetch(`${API_BASE}/api/gestion-ecom/confirmar`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const H = { Authorization: "Bearer " + getActiveToken() };
+    const [res, tiendas] = await Promise.all([
+      fetch(`${API_BASE}/api/gestion-ecom/confirmar`, { headers: H }),
+      cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: H }).catch(() => []),
+    ]);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Error");
+    window.__geDatos = { data, tiendas: Array.isArray(tiendas) ? tiendas : [] };
+    geRenderConfirmar();
+  } catch (e) {
+    lista.innerHTML = `<div style="padding:16px 0;color:#dc2626;font-size:13px;">${escapeHtml(e.message || "Error cargando los pedidos")}</div>`;
+  }
+}
+
+window.geElegirTienda = function(dominio) {
+  window.__geTienda = dominio;
+  geRenderConfirmar();
+};
+
+// Pinta los botones de tienda (con cuántos pedidos tiene cada una) y la
+// lista filtrada por la tienda elegida ("" = todas).
+function geRenderConfirmar() {
+  const lista = document.getElementById("ge-lista");
+  const caja = document.getElementById("ge-tiendas");
+  const { data, tiendas } = window.__geDatos || {};
+  if (!lista || !data) return;
+  const todos = data.pedidos || [];
+  const sel = window.__geTienda || "";
+  if (caja) {
+    const cuenta = d => todos.filter(p => p.shop_domain === d).length;
+    const boton = (dom, nombre, n) => `<button class="ge-tab${sel === dom ? " activo" : ""}" onclick="geElegirTienda('${escapeAttr(dom)}')">${escapeHtml(nombre)}${data.etiqueta ? ` <span style="opacity:.7;font-weight:500;">${n}</span>` : ""}</button>`;
+    caja.innerHTML = boton("", "Todas las tiendas", todos.length)
+      + tiendas.map(t => boton(t.domain, t.shop_name || t.domain.replace(".myshopify.com", ""), cuenta(t.domain))).join("");
+  }
+  try {
     if (!data.etiqueta) {
-      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;" class="muted">Escribe arriba la etiqueta de tu almacén y pulsa <b>Guardar</b> para ver los pedidos sin confirmar.</div>`;
+      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;" class="muted">Escribe arriba a la derecha la etiqueta de tu almacén y pulsa <b>Guardar</b> para ver los pedidos sin confirmar.</div>`;
       return;
     }
-    const pedidos = data.pedidos || [];
+    const pedidos = sel ? todos.filter(p => p.shop_domain === sel) : todos;
     if (!pedidos.length) {
-      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;"><div style="font-weight:700;color:var(--text);margin-bottom:4px;">✓ Todo confirmado</div><div class="muted">No hay pedidos sin la etiqueta "${escapeHtml(data.etiqueta)}".</div></div>`;
+      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;"><div style="font-weight:700;color:var(--text);margin-bottom:4px;">✓ Todo confirmado</div><div class="muted">No hay pedidos sin la etiqueta "${escapeHtml(data.etiqueta)}"${sel ? " en esta tienda" : ""}.</div></div>`;
       return;
     }
     const tel = t => t && t.length === 9 ? `+34 ${t.slice(0,3)} ${t.slice(3,5)} ${t.slice(5,7)} ${t.slice(7)}` : (t || "-");
