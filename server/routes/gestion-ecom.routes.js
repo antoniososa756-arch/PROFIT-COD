@@ -11,8 +11,16 @@ const router = express.Router();
 const ETIQUETA_YA_REVISADO = "correcto";
 const DIAS = 30; // solo pedidos recientes
 
-const soloAdmin = (req, res, next) =>
-  req.user?.role === "admin" ? next() : res.status(403).json({ error: "Solo administradores" });
+// Gestión Ecom está abierta a todas las cuentas. Las de apoyo trabajan con
+// los datos de su cuenta principal (auth.js cambia req.user.id por el del
+// padre) y solo entran si tienen el permiso "gestion-ecom" (sin lista de
+// permisos = acceso completo, igual que en el menú).
+const soloAdmin = (req, res, next) => {
+  if (req.user?.role !== "apoyo") return next();
+  const p = req.user.permissions;
+  if (!Array.isArray(p) || p.includes("gestion-ecom")) return next();
+  return res.status(403).json({ error: "Sin permiso para Gestión Ecom" });
+};
 
 // GET /api/gestion-ecom/config -> { etiqueta }
 router.get("/config", auth, soloAdmin, async (req, res) => {
@@ -309,7 +317,8 @@ router.post("/llamadas/:orderId", auth, soloAdmin, async (req, res) => {
   try {
     await inc.ensureTablas();
     const n = await db.get("SELECT COALESCE(MAX(numero), 0) + 1 AS n FROM incidencias_llamadas WHERE user_id = $1 AND order_id = $2", [req.user.id, orderId]);
-    const u = await db.get("SELECT COALESCE(NULLIF(display_name, ''), email) AS name FROM users WHERE id = $1", [req.user.id]).catch(() => null);
+    // Autor: la persona que escribe (en apoyo, su propia cuenta, no la principal)
+    const u = await db.get("SELECT COALESCE(NULLIF(display_name, ''), email) AS name FROM users WHERE id = $1", [req.user.own_id || req.user.id]).catch(() => null);
     await db.run(
       "INSERT INTO incidencias_llamadas (user_id, order_id, numero, texto, autor) VALUES ($1,$2,$3,$4,$5)",
       [req.user.id, orderId, n.n, texto, u?.name || null]

@@ -1004,8 +1004,8 @@ function loadApp(section) {
 
       ${(() => {
         // "Leads" (tracker en vivo de Releasit) también es solo del admin y su apoyo.
-        // "Gestión Ecom": en construcción, de momento solo para el administrador.
-        const sections = ["metricas",...(puedeVerLeads() ? ["leads"] : []),...(currentUser.role === "Administrador" ? ["gestion-ecom"] : []),"rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
+        // "Gestión Ecom": para todas las cuentas (las de apoyo, según su permiso).
+        const sections = ["metricas",...(puedeVerLeads() ? ["leads"] : []),"gestion-ecom","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
         // "Contabilidad" es exclusiva del admin: solo se ofrece en el menú al
         // propio admin, o a sus cuentas de apoyo (nunca a las de un Cliente).
         if (currentUser.role === "Administrador" || currentUser.apoyoDeAdmin) sections.push("contabilidad");
@@ -2454,11 +2454,11 @@ function setSection(id) {
   geBotonFlotante(null); // botón "Confirmar pedido" del detalle
   // Cuentas apoyo nunca pueden ver el plan de facturación
   if (currentUser?.role === "Apoyo" && id === "plan") {
-    const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda"];
+    const PERM_SECTIONS = ["metricas","gestion-ecom","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda"];
     id = (currentUser.permissions ? PERM_SECTIONS.find(s => currentUser.permissions.includes(s)) : null) || "metricas";
   }
   // Bloquear acceso a secciones sin permiso para cuentas apoyo
-  const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda"];
+  const PERM_SECTIONS = ["metricas","gestion-ecom","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda"];
   if (currentUser?.role === "Apoyo" && currentUser.permissions && PERM_SECTIONS.includes(id)) {
     if (!currentUser.permissions.includes(id)) {
       // Redirigir a la primera sección permitida
@@ -3494,6 +3494,7 @@ if (id === "gestion-clientes") {
     tiendas:           "🔗 Integraciones",
     productos:         "📦 Productos",
     pedidos:           "🛒 Pedidos",
+    "gestion-ecom":    "🛍️ Gestión Ecom",
     reclamos:          "📋 Reclamos MRW",
     facturas:          "🧾 Gastos",
     informes:          "📈 Ingresos",
@@ -3578,6 +3579,7 @@ if (id === "mi-equipo") {
     tiendas:           "🔗 Integraciones",
     productos:         "📦 Productos",
     pedidos:           "🛒 Pedidos",
+    "gestion-ecom":    "🛍️ Gestión Ecom",
     reclamos:          "📋 Reclamos MRW",
     facturas:          "🧾 Gastos",
     informes:          "📈 Ingresos",
@@ -3693,7 +3695,8 @@ if (id === "mi-equipo") {
 // lista se abrirá al resto de cuentas)
 // =========================
 if (id === "gestion-ecom") {
-  if (currentUser?.role !== "Administrador") { setSection("metricas"); return; }
+  // Abierta a todas las cuentas; a las de apoyo sin permiso ya las redirige
+  // el control de permisos del principio de setSection (PERM_SECTIONS).
   if (t) t.textContent = "Gestión Ecom";
   if (s) s.textContent = "Gestión de tu ecommerce";
   if (c) c.textContent = "Gestión Ecom";
