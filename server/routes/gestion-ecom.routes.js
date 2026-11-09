@@ -44,7 +44,8 @@ router.get("/confirmar", auth, soloAdmin, async (req, res) => {
               o.financial_status, o.note,
               COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
               COALESCE(o.customer_phone, '') AS telefono,
-              array_to_string(profit_tags(o.raw_json), ', ') AS etiquetas
+              -- tal cual se escribieron (ACEPTAR, Aceptar...); el filtro usa profit_tags
+              COALESCE(substring(o.raw_json from '"tags":"([^"]*)"'), '') AS etiquetas
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)

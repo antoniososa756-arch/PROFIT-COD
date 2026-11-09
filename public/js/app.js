@@ -1574,23 +1574,11 @@ function geRenderConfirmar() {
     const chip = t => /^releasit/i.test(t)
       ? `<span style="display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border-radius:999px;font-size:11.5px;background:#f3f3f3;color:#6b6b6b;border:1px solid #e3e3e3;">${escapeHtml(t)}</span>`
       : `<span style="display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">${escapeHtml(t)}</span>`;
-    // Resumen de arriba
-    const viejos = pedidos.filter(p => horas(p.created_at) > 24).length;
-    const enJuego = pedidos.reduce((s, p) => s + Number(p.total_price || 0), 0);
-    const moneda = !pedidos[0]?.currency || pedidos[0].currency === "EUR" ? "€" : pedidos[0].currency;
-    const dato = (valor, texto, color) => `<div style="display:flex;align-items:baseline;gap:6px;"><span style="font-size:18px;font-weight:800;color:${color || "var(--text)"};">${valor}</span><span class="muted" style="font-size:12.5px;">${texto}</span></div>`;
-    const sep = `<span style="width:1px;height:22px;background:var(--border);"></span>`;
     const th = (t, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${t}</th>`;
     const icoNota = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 21H6a2.5 2.5 0 0 1-2.5-2.5v-13A2.5 2.5 0 0 1 6 3h12a2.5 2.5 0 0 1 2.5 2.5V15Z"/><path d="M14.5 21v-4a2 2 0 0 1 2-2h4"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12.5" x2="13" y2="12.5"/></svg>`;
     const td = (contenido, extra = "") => `<td style="padding:10px 12px;border-bottom:1px solid var(--border);${extra}">${contenido}</td>`;
     lista.innerHTML = `
-      <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:12px 16px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;">
-        ${dato(`${pedidos.length}${pedidos.length >= 300 ? "+" : ""}`, `por confirmar (sin "${escapeHtml(data.etiqueta)}")`)}
-        ${sep}
-        ${dato(viejos, "de más de 24 h", viejos ? "#b91c1c" : "var(--text)")}
-        ${sep}
-        ${dato(`${enJuego.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${escapeHtml(moneda)}`, "en juego")}
-      </div>
+      <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${pedidos.length}${pedidos.length >= 300 ? "+" : ""}</b> pedido${pedidos.length === 1 ? "" : "s"} sin la etiqueta "${escapeHtml(data.etiqueta)}"</div>
       <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead><tr>${th("Pedido")}${th("Fecha")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Etiquetas")}</tr></thead>
