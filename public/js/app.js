@@ -15014,14 +15014,16 @@ window.abrirEditarDireccion = function() {
   });
 };
 
-// Sugerencias de dirección mientras se escribe (como Shopify)
+// Sugerencias de dirección mientras se escribe (como Shopify). Con Google
+// cada consulta cuenta (10.000 gratis/mes): se espera 0,55 s sin teclear y
+// al menos 6 letras, para hacer pocas consultas por dirección.
 let _edSugTimer = null, _edSugCtrl = null;
 window._edBuscarDireccion = function(texto) {
   const lista = document.getElementById("ed-sug");
   clearTimeout(_edSugTimer);
   if (_edSugCtrl) _edSugCtrl.abort();
   if (!lista) return;
-  if ((texto || "").trim().length < 4) { lista.style.display = "none"; return; }
+  if ((texto || "").trim().length < 6) { lista.style.display = "none"; return; }
   lista.style.display = "block";
   lista.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:12.5px;color:var(--muted);"><span style="width:12px;height:12px;border:2px solid rgba(156,163,175,.35);border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></span>Buscando direcciones...</div>`;
   _edSugTimer = setTimeout(async () => {
@@ -15071,7 +15073,7 @@ window._edBuscarDireccion = function(texto) {
     } catch (e) {
       if (e.name !== "AbortError") lista.style.display = "none";
     }
-  }, 300);
+  }, 550);
 };
 
 window._edElegirDireccion = async function(i) {
