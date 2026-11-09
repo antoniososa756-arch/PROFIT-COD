@@ -15,7 +15,7 @@ async function syncAllShopifyOrders() {
   global.__cronShopifyRunning = true;
   console.log("⏰ [CRON] Iniciando sync Shopify...");
   try {
-    const shops = await db.all(`SELECT id, shop_domain, access_token FROM shops WHERE status = 'active'`);
+    const shops = await db.all(`SELECT id, shop_domain, access_token, user_id, shop_name, notification_color FROM shops WHERE status = 'active'`);
     let total = 0;
     for (const shop of shops) {
       try {
@@ -35,7 +35,7 @@ async function syncAllShopifyOrders() {
               ? `${o.customer.first_name || ""} ${o.customer.last_name || ""}`.trim()
               : "Desconocido";
             const fStatus = mapStatus(o);
-            await db.run(
+            const fila = await db.get(
               `INSERT INTO orders (shop_id, order_id, order_number, customer_name, fulfillment_status, financial_status, tracking_number, total_price, currency, created_at, cancelled_at, raw_json)
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
                               ON CONFLICT(order_id) DO UPDATE SET
@@ -64,12 +64,21 @@ async function syncAllShopifyOrders() {
                  cancelled_at       = EXCLUDED.cancelled_at,
                  raw_json           = EXCLUDED.raw_json
                -- Pedido idéntico al guardado: no se reescribe la fila
-               WHERE orders.raw_json IS DISTINCT FROM EXCLUDED.raw_json`,
+               WHERE orders.raw_json IS DISTINCT FROM EXCLUDED.raw_json
+               RETURNING (xmax = 0) AS inserted`,
               [shop.id, String(o.id), o.name || String(o.order_number), customerName,
                fStatus, o.financial_status || null,
                o.fulfillments?.[0]?.tracking_number || null,
                o.total_price, o.currency, o.created_at, o.cancelled_at || null, JSON.stringify(o)]
             );
+            // Pedido nuevo que llega antes que el webhook orders/create: avisa
+            // este sync (el webhook luego lo verá como ya guardado y no repetirá).
+            // Solo pedidos de la última hora, para no avisar de pedidos viejos.
+            if (fila?.inserted && !o.cancelled_at && Date.now() - new Date(o.created_at).getTime() < 60 * 60 * 1000) {
+              require("./notificar-pedido").notificarPedidoNuevo(shop, o)
+                .then(n => console.log(`[CRON] Pedido nuevo ${o.name} (${shop.shop_domain}) avisado por el sync, #${n} del día`))
+                .catch(() => {});
+            }
             total++;
           }
           const link = r.headers.get("Link") || "";
