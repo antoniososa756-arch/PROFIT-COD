@@ -15200,21 +15200,6 @@ function renderDetallePedido(order) {
           "cliente"
         )}
 
-        ${_dpCard(
-          `📊 Resumen de conversión`,
-          `<div style="padding:14px 18px;">
-            <div class="muted" style="font-size:13px;line-height:1.6;">No hay detalles de la conversión disponibles para este pedido.</div>
-          </div>`,
-          "cliente"
-        )}
-
-        ${_dpCard(
-          `⚠️ Riesgo del pedido`,
-          `<div style="padding:14px 18px;">
-            <div class="muted" style="font-size:13px;">Análisis no disponible.</div>
-          </div>`,
-          "cliente"
-        )}
 
         ${_dpCard(
           `🏷️ Etiquetas`,
