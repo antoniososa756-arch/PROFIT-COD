@@ -5620,17 +5620,24 @@ function doSearch(value) {
   // Render immediately con lo que ya tenemos (secciones + productos).
   // Si no hay nada local todavía, no abrir el cuadro solo para mostrar "Buscando..." vacío.
   const localResults = [...secciones, ...productos];
-  if (localResults.length > 0) _renderSearchDrop(drop, localResults, true);
+  // La ruedita sale al instante mientras llegan los pedidos (antes el cuadro
+  // se quedaba quieto unos segundos y parecía roto).
+  _renderSearchDrop(drop, localResults, true);
 
-  // Debounce API call for orders/tracking
+  // Debounce API call for orders/tracking. Cada tecla cancela la consulta
+  // anterior para que no lleguen resultados viejos detrás de los nuevos.
   clearTimeout(__searchDebounceTimer);
+  if (window.__searchAbort) window.__searchAbort.abort();
   __searchDebounceTimer = setTimeout(async () => {
+    const ctrl = new AbortController();
+    window.__searchAbort = ctrl;
     try {
       const res = await fetch(
-        `${API_BASE}/api/orders?q=${encodeURIComponent(q)}&limit=8&page=1`,
-        { headers: { Authorization: "Bearer " + getActiveToken() } }
+        `${API_BASE}/api/orders?q=${encodeURIComponent(q)}&limit=8&page=1&light=1&nocount=1`,
+        { headers: { Authorization: "Bearer " + getActiveToken() }, signal: ctrl.signal }
       );
       const data = await res.json();
+      if (ctrl.signal.aborted) return;
       const pedidos = (data.orders || []).map(o => ({
         label: `🛍️ ${o.order_number || "-"} — ${o.customer_name || "-"}`,
         section: "pedidos",
@@ -5640,8 +5647,11 @@ function doSearch(value) {
       }));
       const allResults = [...secciones, ...productos, ...pedidos];
       _renderSearchDrop(drop, allResults, false);
-    } catch {}
-  }, 300);
+    } catch (e) {
+      // Si falla (no si la cancela otra tecla) que no se quede la ruedita
+      if (e?.name !== "AbortError") _renderSearchDrop(drop, localResults, false);
+    }
+  }, 180);
 
 }
 
@@ -5695,7 +5705,10 @@ function _renderSearchDrop(drop, results, loading) {
   }
 
   if (loading) {
-    html += `<div class="search-item" style="color:#9ca3af;font-size:12px;pointer-events:none;">Buscando pedidos...</div>`;
+    html += `<div class="search-item" style="color:#9ca3af;font-size:12px;pointer-events:none;display:flex;align-items:center;gap:8px;">
+      <span style="width:13px;height:13px;border:2px solid rgba(156,163,175,.35);border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></span>
+      Buscando pedidos...
+    </div>`;
   }
 
   drop.innerHTML = html;

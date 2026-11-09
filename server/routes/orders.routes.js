@@ -14,13 +14,16 @@ db.run(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS fecha_pago TEXT`)
 function busquedaPedido(q, i) {
   const texto = String(q).trim();
   const norm = texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  const conds = [`o.search_text LIKE $${i}`, `o.order_number ILIKE $${i + 1}`, `o.tracking_number ILIKE $${i + 1}`, `o.customer_name ILIKE $${i + 1}`];
-  const params = [`%${norm}%`, `%${texto}%`];
+  // Solo search_text (ya incluye número, seguimiento y nombre): así usa el
+  // índice trigram. Con un OR a otras columnas Postgres recorría la tabla
+  // entera y cada búsqueda tardaba segundos.
+  const conds = [`o.search_text LIKE $${i}`];
+  const params = [`%${norm}%`];
   let digitos = texto.replace(/\D/g, "");
   if (/^[\d\s+().-]+$/.test(texto) && digitos.length >= 3) {
     digitos = digitos.replace(/^00/, "");
     if (digitos.length >= 11 && digitos.startsWith("34")) digitos = digitos.slice(2);
-    conds.push(`o.search_text LIKE $${i + 2}`);
+    conds.push(`o.search_text LIKE $${i + 1}`);
     params.push(`%${digitos}%`);
   }
   return { sql: `(${conds.join(" OR ")})`, params };
@@ -204,9 +207,10 @@ router.get("/", auth, async (req, res) => {
       return res.json(rows || []);
     }
 
-    // Modo paginado: devuelve { orders, total, page, pages }
+    // Modo paginado: devuelve { orders, total, page, pages }. nocount=1 (el
+    // buscador de arriba) no necesita el total y se ahorra el COUNT.
     const [countRow, rows] = await Promise.all([
-      db.get(
+      req.query.nocount === "1" ? Promise.resolve(null) : db.get(
         `SELECT COUNT(*) as total FROM orders o LEFT JOIN shops s ON s.id = o.shop_id WHERE ${where}`,
         params
       ),
