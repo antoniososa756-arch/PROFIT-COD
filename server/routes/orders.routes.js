@@ -472,6 +472,104 @@ router.patch("/:id/note", auth, async (req, res) => {
   }
 });
 
+// PATCH /api/orders/:id/datos — edita datos del cliente y dirección de envío
+// del pedido en Shopify y localmente. Body (todo opcional):
+//   { email, phone, customer_name, shipping_address: { first_name, last_name,
+//     company, address1, address2, zip, city, province, country, country_code, phone } }
+// email/teléfono/dirección van en el propio pedido (permiso write_orders). El
+// nombre del cliente es del objeto Customer de Shopify: si la tienda no tiene
+// ese permiso se avisa y no se cambia (el resto sí se guarda).
+router.patch("/:id/datos", auth, async (req, res) => {
+  const userId = req.user.id;
+  const id = parseInt(req.params.id);
+  const body = req.body || {};
+  if (!Number.isInteger(id)) return res.status(400).json({ error: "id inválido" });
+
+  // Mensaje legible de un error de Shopify ({"errors":{"phone":["is invalid"]}})
+  const errorShopify = async (r) => {
+    const txt = await r.text();
+    try {
+      const j = JSON.parse(txt);
+      const e = j.errors;
+      if (typeof e === "string") return e;
+      if (e && typeof e === "object") {
+        const CAMPOS = { phone: "Teléfono", email: "Email", "shipping_address": "Dirección", zip: "Código postal", province: "Provincia", country: "País" };
+        return Object.entries(e).map(([k, v]) => `${CAMPOS[k] || k}: ${[].concat(v).join(", ")}`).join(" · ");
+      }
+    } catch (_) {}
+    return `Shopify respondió ${r.status}`;
+  };
+
+  try {
+    const row = await db.get(
+      `SELECT o.order_id, o.raw_json, COALESCE(o.shop_domain, s.shop_domain) as shop_domain
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.id = $1
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+      [id, userId]
+    );
+    if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
+    const shopRow = await db.get(`SELECT access_token FROM shops WHERE shop_domain = $1 AND user_id = $2`, [row.shop_domain, userId]);
+    if (!shopRow) return res.status(404).json({ error: "Tienda no encontrada" });
+    const H = { "Content-Type": "application/json", "X-Shopify-Access-Token": shopRow.access_token };
+    const base = `https://${row.shop_domain}/admin/api/2024-10`;
+    let raw = {};
+    try { raw = JSON.parse(row.raw_json || "{}"); } catch (_) {}
+
+    const pedido = { id: parseInt(row.order_id) };
+    if (typeof body.email === "string") pedido.email = body.email.trim();
+    if (typeof body.phone === "string") pedido.phone = body.phone.trim() || null;
+    if (body.shipping_address && typeof body.shipping_address === "object") {
+      const CAMPOS = ["first_name", "last_name", "company", "address1", "address2", "zip", "city", "province", "country", "country_code", "phone"];
+      pedido.shipping_address = {};
+      for (const k of CAMPOS) {
+        if (body.shipping_address[k] !== undefined) pedido.shipping_address[k] = String(body.shipping_address[k] ?? "").trim();
+      }
+    }
+
+    let nuevoRaw = raw;
+    if (Object.keys(pedido).length > 1) {
+      const r = await fetch(`${base}/orders/${row.order_id}.json`, { method: "PUT", headers: H, body: JSON.stringify({ order: pedido }) });
+      if (!r.ok) {
+        const msg = await errorShopify(r);
+        console.error("Shopify datos update error:", r.status, msg);
+        return res.status(502).json({ error: `Shopify no aceptó los cambios — ${msg}` });
+      }
+      const data = await r.json();
+      if (data.order) nuevoRaw = data.order;
+    }
+
+    // Nombre del cliente (objeto Customer)
+    let aviso = null;
+    const nombre = typeof body.customer_name === "string" ? body.customer_name.trim().replace(/\s+/g, " ") : null;
+    if (nombre) {
+      const [first_name, ...resto] = nombre.split(" ");
+      const last_name = resto.join(" ");
+      const custId = raw.customer?.id;
+      let ok = false;
+      if (custId) {
+        const r = await fetch(`${base}/customers/${custId}.json`, { method: "PUT", headers: H, body: JSON.stringify({ customer: { id: custId, first_name, last_name } }) });
+        ok = r.ok;
+        if (!ok) console.error("Shopify customer update error:", r.status, await r.text());
+      }
+      if (ok) {
+        nuevoRaw.customer = { ...(nuevoRaw.customer || raw.customer || {}), first_name, last_name };
+        await db.run(`UPDATE orders SET customer_name = $1 WHERE id = $2`, [nombre, id]);
+      } else {
+        aviso = "El nombre del cliente no se pudo cambiar en Shopify (la tienda no da permiso para editar clientes). El resto se guardó.";
+      }
+    }
+
+    // raw_json nuevo -> los triggers actualizan búsqueda, email/teléfono, etc.
+    await db.run(`UPDATE orders SET raw_json = $1 WHERE id = $2`, [JSON.stringify(nuevoRaw), id]);
+    res.json({ ok: true, aviso });
+  } catch (e) {
+    console.error("update datos error:", e);
+    res.status(500).json({ error: "Error guardando los cambios" });
+  }
+});
+
 // GET /api/orders/:id — detalle completo de un pedido (incluye raw_json de Shopify)
 // Nota: se registra al final para no capturar las rutas fijas de arriba (/reembolsos, etc.)
 router.get("/:id", auth, async (req, res) => {

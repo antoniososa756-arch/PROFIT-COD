@@ -14865,6 +14865,190 @@ window.guardarNotaPedido = async function(orderId) {
   }
 };
 
+// ── Editar cliente / dirección de envío (se guarda en Shopify) ─────────────
+// PATCH /api/orders/:id/datos. El buscador de direcciones usa Photon
+// (OpenStreetMap, gratis y sin clave); Google Places, el de Shopify, es de pago.
+const _ED_PAISES = [
+  ["ES", "España"], ["PT", "Portugal"], ["FR", "Francia"], ["IT", "Italia"], ["DE", "Alemania"],
+  ["AD", "Andorra"], ["BE", "Bélgica"], ["NL", "Países Bajos"], ["GB", "Reino Unido"], ["CH", "Suiza"],
+];
+const _ED_PROV_ES = {
+  "01": "Álava", "02": "Albacete", "03": "Alicante", "04": "Almería", "05": "Ávila", "06": "Badajoz", "07": "Baleares",
+  "08": "Barcelona", "09": "Burgos", "10": "Cáceres", "11": "Cádiz", "12": "Castellón", "13": "Ciudad Real", "14": "Córdoba",
+  "15": "La Coruña", "16": "Cuenca", "17": "Girona", "18": "Granada", "19": "Guadalajara", "20": "Guipúzcoa", "21": "Huelva",
+  "22": "Huesca", "23": "Jaén", "24": "León", "25": "Lleida", "26": "La Rioja", "27": "Lugo", "28": "Madrid", "29": "Málaga",
+  "30": "Murcia", "31": "Navarra", "32": "Ourense", "33": "Asturias", "34": "Palencia", "35": "Las Palmas", "36": "Pontevedra",
+  "37": "Salamanca", "38": "Santa Cruz de Tenerife", "39": "Cantabria", "40": "Segovia", "41": "Sevilla", "42": "Soria",
+  "43": "Tarragona", "44": "Teruel", "45": "Toledo", "46": "Valencia", "47": "Valladolid", "48": "Vizcaya", "49": "Zamora",
+  "50": "Zaragoza", "51": "Ceuta", "52": "Melilla",
+};
+const _ED_INPUT = "width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--input);color:var(--text);font:inherit;font-size:13px;outline:none;";
+
+function _edCampo(id, label, valor, extra = "") {
+  return `<label style="display:block;min-width:0;">
+    <span style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">${label}</span>
+    <input id="${id}" value="${escapeAttr(valor || "")}" style="${_ED_INPUT}" onfocus="this.style.borderColor='#22c55e'" onblur="this.style.borderColor='var(--border)'" ${extra}>
+  </label>`;
+}
+
+function _edModal(titulo, cuerpo, onGuardar) {
+  _edCerrar();
+  const ov = document.createElement("div");
+  ov.id = "ed-modal";
+  ov.style.cssText = "position:fixed;inset:0;z-index:4000;background:rgba(15,23,42,.45);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow-y:auto;";
+  ov.innerHTML = `
+    <div style="width:100%;max-width:620px;background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.25);">
+      <div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);">
+        <span style="flex:1;font-weight:700;font-size:15px;color:var(--text);">${titulo}</span>
+        <button onclick="_edCerrar()" title="Cerrar" style="width:30px;height:30px;border:none;border-radius:8px;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
+      </div>
+      <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;">${cuerpo}</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--border);">
+        <button onclick="_edCerrar()" style="padding:9px 16px;border:1px solid var(--border);border-radius:9px;background:transparent;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;">Cancelar</button>
+        <button id="ed-guardar" style="padding:9px 18px;border:none;border-radius:9px;background:#22c55e;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Guardar</button>
+      </div>
+    </div>`;
+  ov.addEventListener("mousedown", e => { if (e.target === ov) _edCerrar(); });
+  document.body.appendChild(ov);
+  document.getElementById("ed-guardar").onclick = onGuardar;
+  document.addEventListener("keydown", _edEsc);
+}
+function _edEsc(e) { if (e.key === "Escape") _edCerrar(); }
+window._edCerrar = function() {
+  document.getElementById("ed-modal")?.remove();
+  document.removeEventListener("keydown", _edEsc);
+};
+const _edVal = id => (document.getElementById(id)?.value || "").trim();
+
+async function _edEnviar(payload) {
+  const ctx = window.__dpEdicion;
+  const btn = document.getElementById("ed-guardar");
+  if (!ctx || !btn) return;
+  btn.disabled = true; btn.textContent = "Guardando..."; btn.style.opacity = ".7";
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${ctx.id}/datos`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+    _edCerrar();
+    if (data.aviso) showToast("⚠️ Guardado con aviso", data.aviso, "#f59e0b");
+    else showToast("✅ Guardado", "Los cambios se han guardado también en Shopify.", "#22c55e");
+    abrirDetallePedido(ctx.id, { keepNavContext: true });
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "Guardar"; btn.style.opacity = "1";
+    showToast("Error", e.message || "No se pudieron guardar los cambios.", "#dc2626");
+  }
+}
+
+window.abrirEditarCliente = function() {
+  const ctx = window.__dpEdicion; if (!ctx) return;
+  const raw = ctx.raw || {}, c = raw.customer || {}, s = raw.shipping_address || {};
+  const nombre = ctx.nombreCliente && ctx.nombreCliente !== "-" ? ctx.nombreCliente : "";
+  _edModal("Editar cliente", `
+    ${_edCampo("ed-nombre", "Nombre y apellidos", nombre)}
+    ${_edCampo("ed-email", "Email", c.email || raw.email || "", 'type="email"')}
+    ${_edCampo("ed-tel", "Teléfono", raw.phone || s.phone || c.phone || "", 'type="tel" placeholder="+34 600 000 000"')}
+    <div style="font-size:12px;color:var(--muted);line-height:1.5;">El teléfono de la dirección de envío se cambia en "Dirección de envío".</div>
+  `, () => {
+    const p = { email: _edVal("ed-email"), phone: _edVal("ed-tel") };
+    if (_edVal("ed-nombre") && _edVal("ed-nombre") !== nombre) p.customer_name = _edVal("ed-nombre");
+    _edEnviar(p);
+  });
+};
+
+window.abrirEditarDireccion = function() {
+  const ctx = window.__dpEdicion; if (!ctx) return;
+  const raw = ctx.raw || {}, s = raw.shipping_address || {};
+  const cc = (s.country_code || "ES").toUpperCase();
+  const paises = _ED_PAISES.some(([c]) => c === cc) ? _ED_PAISES : [[cc, s.country || cc], ..._ED_PAISES];
+  const dos = (a, b) => `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">${a}${b}</div>`;
+  _edModal("Editar dirección de envío", `
+    <label style="display:block;">
+      <span style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">País o región</span>
+      <select id="ed-pais" style="${_ED_INPUT}">${paises.map(([c, n]) => `<option value="${c}" ${c === cc ? "selected" : ""}>${escapeHtml(n)}</option>`).join("")}</select>
+    </label>
+    ${dos(_edCampo("ed-nom", "Nombre", s.first_name), _edCampo("ed-ape", "Apellido", s.last_name))}
+    ${_edCampo("ed-emp", "Empresa", s.company)}
+    <div style="position:relative;">
+      <label style="display:block;">
+        <span style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">Calle y número de casa</span>
+        <span style="position:relative;display:block;">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="ed-dir1" value="${escapeAttr(s.address1 || "")}" autocomplete="off" style="${_ED_INPUT}padding-left:34px;"
+            oninput="_edBuscarDireccion(this.value)" onfocus="this.style.borderColor='#22c55e'" onblur="this.style.borderColor='var(--border)';setTimeout(()=>{const l=document.getElementById('ed-sug');if(l)l.style.display='none'},180)">
+        </span>
+      </label>
+      <div id="ed-sug" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:10;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;max-height:280px;overflow-y:auto;"></div>
+    </div>
+    ${_edCampo("ed-dir2", "Apartamento, local, etc.", s.address2)}
+    ${dos(_edCampo("ed-cp", "Código postal", s.zip), _edCampo("ed-ciudad", "Ciudad", s.city))}
+    ${dos(_edCampo("ed-prov", "Provincia", s.province), _edCampo("ed-tel2", "Teléfono", s.phone, 'type="tel"'))}
+  `, () => {
+    const sel = document.getElementById("ed-pais");
+    _edEnviar({ shipping_address: {
+      first_name: _edVal("ed-nom"), last_name: _edVal("ed-ape"), company: _edVal("ed-emp"),
+      address1: _edVal("ed-dir1"), address2: _edVal("ed-dir2"), zip: _edVal("ed-cp"), city: _edVal("ed-ciudad"),
+      province: _edVal("ed-prov"), phone: _edVal("ed-tel2"),
+      country_code: sel.value, country: sel.options[sel.selectedIndex].text,
+    }});
+  });
+};
+
+// Sugerencias de dirección mientras se escribe (como Shopify)
+let _edSugTimer = null, _edSugCtrl = null;
+window._edBuscarDireccion = function(texto) {
+  const lista = document.getElementById("ed-sug");
+  clearTimeout(_edSugTimer);
+  if (_edSugCtrl) _edSugCtrl.abort();
+  if (!lista) return;
+  if ((texto || "").trim().length < 4) { lista.style.display = "none"; return; }
+  lista.style.display = "block";
+  lista.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:12.5px;color:var(--muted);"><span style="width:12px;height:12px;border:2px solid rgba(156,163,175,.35);border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></span>Buscando direcciones...</div>`;
+  _edSugTimer = setTimeout(async () => {
+    const cc = document.getElementById("ed-pais")?.value || "ES";
+    const CENTRO = { ES: [40.4, -3.7], PT: [39.5, -8], FR: [46.6, 2.4], IT: [42.8, 12.5], DE: [51.1, 10.4] }[cc];
+    const ctrl = new AbortController(); _edSugCtrl = ctrl;
+    try {
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(texto)}&limit=10${CENTRO ? `&lat=${CENTRO[0]}&lon=${CENTRO[1]}` : ""}`;
+      const data = await (await fetch(url, { signal: ctrl.signal })).json();
+      const numTecleado = (texto.match(/\b(\d+[a-zA-Z]?)\b(?!.*\b\d)/) || [])[1] || "";
+      const res = (data.features || [])
+        .map(f => f.properties || {})
+        .filter(p => (p.countrycode || "").toUpperCase() === cc && (p.street || p.name))
+        .slice(0, 6)
+        .map(p => {
+          const calle = p.street || p.name;
+          const num = p.housenumber || numTecleado;
+          const ciudad = p.city || p.town || p.village || p.district || "";
+          // En España la provincia sale exacta de los 2 primeros dígitos del CP
+          // (OpenStreetMap a veces solo trae la comunidad autónoma).
+          const prov = (cc === "ES" && _ED_PROV_ES[String(p.postcode || "").slice(0, 2)]) || p.county || p.state || "";
+          return { dir1: num ? `${calle} ${num}` : calle, cp: p.postcode || "", ciudad, prov };
+        });
+      window.__edSugs = res;
+      lista.innerHTML = res.length
+        ? res.map((r, i) => `<div onmousedown="_edElegirDireccion(${i})" style="padding:9px 12px;border-radius:8px;font-size:13px;color:var(--text);cursor:pointer;"
+              onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+              ${escapeHtml([r.dir1, r.cp, r.ciudad].filter(Boolean).join(", "))}${r.prov && r.prov !== r.ciudad ? `<span style="color:var(--muted);"> · ${escapeHtml(r.prov)}</span>` : ""}
+            </div>`).join("") + `<div style="padding:6px 12px 4px;font-size:11px;color:var(--muted);">Sugerencias de OpenStreetMap</div>`
+        : `<div style="padding:10px 12px;font-size:12.5px;color:var(--muted);">Sin sugerencias — puedes escribir la dirección a mano.</div>`;
+    } catch (e) {
+      if (e.name !== "AbortError") lista.style.display = "none";
+    }
+  }, 300);
+};
+
+window._edElegirDireccion = function(i) {
+  const r = (window.__edSugs || [])[i]; if (!r) return;
+  const pon = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+  pon("ed-dir1", r.dir1); pon("ed-cp", r.cp); pon("ed-ciudad", r.ciudad); pon("ed-prov", r.prov);
+  const l = document.getElementById("ed-sug"); if (l) l.style.display = "none";
+  document.getElementById("ed-dir2")?.focus();
+};
+
 // Tarjeta "Pedidos del cliente" (mismo email o teléfono en tus tiendas):
 // resumen por estado, los 3 últimos pedidos a la vista (con su nota, si la
 // tienen, junto al número) y el resto con "Ver todos".
@@ -14973,6 +15157,8 @@ function renderDetallePedido(order) {
   const shopifyUrl = order.shop_domain && order.order_id ? `https://${order.shop_domain}/admin/orders/${order.order_id}` : null;
   const nombreCliente = order.customer_name || `${customer.first_name || ""} ${customer.last_name || ""}`.trim() || "-";
   const nombreEnvio = `${shipping.first_name || ""} ${shipping.last_name || ""}`.trim() || nombreCliente;
+  // Datos para las ventanas de editar cliente / dirección (abrirEditarCliente...)
+  window.__dpEdicion = { id: order.id, raw, nombreCliente };
   const nombreFacturacion = `${billing.first_name || ""} ${billing.last_name || ""}`.trim() || nombreCliente;
   const tags = (raw.tags || "").split(",").map(t => t.trim()).filter(Boolean);
 
@@ -15048,7 +15234,7 @@ function renderDetallePedido(order) {
         )}
 
         ${_dpCard(
-          `<span style="flex:1;">👤 Cliente</span><span onclick="showToast('Próximamente','La edición de los datos del cliente estará disponible pronto.','#6b7280')" title="Editar cliente" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          `<span style="flex:1;">👤 Cliente</span><span onclick="abrirEditarCliente()" title="Editar cliente" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
           `<div>
             ${_dpRow("Nombre", escapeHtml(nombreCliente))}
             ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
@@ -15060,7 +15246,7 @@ function renderDetallePedido(order) {
         ${_dpPedidosCliente(order)}
 
         ${_dpCard(
-          `<span style="flex:1;">📍 Dirección de envío</span><span onclick="showToast('Próximamente','La edición de la dirección de envío estará disponible pronto.','#6b7280')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          `<span style="flex:1;">📍 Dirección de envío</span><span onclick="abrirEditarDireccion()" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
           shipping.address1
             ? `<div style="padding:14px 18px;font-size:13px;color:var(--text);line-height:1.7;">
                 ${escapeHtml(nombreEnvio)}<br>
@@ -15076,7 +15262,7 @@ function renderDetallePedido(order) {
         )}
 
         ${_dpCard(
-          `<span style="flex:1;">🧾 Dirección de facturación</span><span onclick="showToast('Próximamente','La edición de la dirección de facturación estará disponible pronto.','#6b7280')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          `<span style="flex:1;">🧾 Dirección de facturación</span><span onclick="showToast('No disponible','Shopify no permite cambiar la dirección de facturación de un pedido ya creado. Solo se puede editar la de envío.','#6b7280')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
           billing.address1
             ? `<div style="padding:14px 18px;font-size:13px;color:var(--text);line-height:1.7;">
                 ${escapeHtml(nombreFacturacion)}<br>
