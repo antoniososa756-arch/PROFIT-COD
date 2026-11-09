@@ -1,5 +1,6 @@
-// Icono de nota del pedido en la lista de Pedidos (como en Shopify): al pasar
-// el ratón muestra la nota en un globo oscuro.
+// Icono de nota del pedido (lista de Pedidos y "Pedidos del cliente"), como en
+// Shopify: al pasar el ratón muestra la nota en un globo oscuro. El globo es
+// fixed sobre el <body> para que no lo recorte ninguna tarjeta/tabla.
 (function () {
   const st = document.createElement("style");
   st.textContent = `
@@ -8,11 +9,28 @@
     body.dark .nota-pedido{color:#d1d5db;}
     .nota-pedido:hover{background:rgba(107,114,128,.15);color:#111827;}
     body.dark .nota-pedido:hover{color:#fff;}
-    .nota-pedido:hover::after{content:attr(data-nota);position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);
-      background:#1f2937;color:#fff;font-size:12px;font-weight:500;line-height:1.35;padding:6px 10px;border-radius:7px;
-      white-space:pre-wrap;width:max-content;max-width:260px;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.25);pointer-events:none;}
+    #nota-globo{position:fixed;z-index:5000;background:#1f2937;color:#fff;font-size:12px;font-weight:500;line-height:1.35;
+      padding:6px 10px;border-radius:7px;white-space:pre-wrap;max-width:280px;box-shadow:0 4px 12px rgba(0,0,0,.25);pointer-events:none;}
   `;
   document.head.appendChild(st);
+  let globo = null;
+  document.addEventListener("mouseover", (e) => {
+    const ico = e.target.closest && e.target.closest(".nota-pedido");
+    if (!ico) return;
+    if (!globo) { globo = document.createElement("div"); globo.id = "nota-globo"; document.body.appendChild(globo); }
+    globo.textContent = ico.getAttribute("data-nota") || "";
+    globo.style.display = "block";
+    const r = ico.getBoundingClientRect(), g = globo.getBoundingClientRect();
+    const left = Math.min(Math.max(8, r.left + r.width / 2 - g.width / 2), window.innerWidth - g.width - 8);
+    const top = r.top - g.height - 6 >= 8 ? r.top - g.height - 6 : r.bottom + 6;
+    globo.style.left = left + "px"; globo.style.top = top + "px";
+  });
+  document.addEventListener("mouseout", (e) => {
+    const ico = e.target.closest && e.target.closest(".nota-pedido");
+    if (ico && globo && !ico.contains(e.relatedTarget)) globo.style.display = "none";
+  });
+  // Al cambiar de pantalla o hacer scroll, que no se quede colgado
+  window.addEventListener("scroll", () => { if (globo) globo.style.display = "none"; }, true);
 })();
 // Abre el calendario hacia arriba SOLO si arriba cabe entero y abajo no; si
 // no cabe en ningún lado (ventana baja, p. ej. Mac con el Dock y la ventana
@@ -14948,8 +14966,9 @@ async function _guardarEtiquetasPedido(orderId, tagsArray) {
   }
 }
 
-// "N pedidos" del cliente (mismo email o teléfono en tus tiendas), como en
-// Shopify, con el resumen por estado y la lista desplegable de sus pedidos.
+// Tarjeta "Pedidos del cliente" (mismo email o teléfono en tus tiendas):
+// resumen por estado, los 3 últimos pedidos a la vista (con su nota, si la
+// tienen, junto al número) y el resto con "Ver todos".
 function _dpPedidosCliente(order) {
   const lista = Array.isArray(order.cliente_pedidos) ? order.cliente_pedidos : null;
   if (!lista || !lista.length) return "";
@@ -14962,26 +14981,35 @@ function _dpPedidosCliente(order) {
     .map(([e, n]) => `<span style="color:${COLOR[e] || "var(--muted)"};font-weight:600;">${n} ${escapeHtml(statusLabel(e).toLowerCase())}</span>`)
     .join(`<span style="color:var(--muted);"> · </span>`);
   const n = lista.length;
-  const filas = lista.map(p => {
+  const fila = p => {
     const actual = Number(p.id) === Number(order.id);
     const fecha = p.created_at ? new Date(p.created_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "2-digit" }) : "";
+    const nota = p.note ? `<span class="nota-pedido" data-nota="${escapeAttr(p.note)}" onclick="event.stopPropagation()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 21H6a2.5 2.5 0 0 1-2.5-2.5v-13A2.5 2.5 0 0 1 6 3h12a2.5 2.5 0 0 1 2.5 2.5V15Z"/><path d="M14.5 21v-4a2 2 0 0 1 2-2h4"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12.5" x2="13" y2="12.5"/></svg>
+      </span>` : "";
     return `<div ${actual ? "" : `onclick="abrirDetallePedido(${Number(p.id)})"`}
-      style="display:flex;align-items:center;gap:8px;padding:7px 18px;font-size:12.5px;${actual ? "background:var(--hover);" : "cursor:pointer;"}"
+      style="display:flex;align-items:center;gap:8px;padding:9px 18px;font-size:13px;border-bottom:1px solid var(--border);${actual ? "background:var(--hover);" : "cursor:pointer;"}"
       ${actual ? "" : `onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''"`}>
-      <span style="font-weight:600;color:${actual ? "var(--text)" : "#2563eb"};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.order_number || "-")}${actual ? ` <span style="color:var(--muted);font-weight:500;">(este)</span>` : ""}</span>
-      <span style="color:var(--muted);">${fecha}</span>
+      <span style="font-weight:600;color:${actual ? "var(--text)" : "#2563eb"};white-space:nowrap;">${escapeHtml(p.order_number || "-")}${actual ? ` <span style="color:var(--muted);font-weight:500;">(este)</span>` : ""}</span>
+      ${nota}
+      <span style="color:var(--muted);font-size:12px;">${fecha}</span>
       <span class="status ${statusClass(estadoDe(p))}" style="margin-left:auto;">${escapeHtml(statusLabel(estadoDe(p)))}</span>
     </div>`;
-  }).join("");
-  return `<div style="padding:9px 18px;font-size:13px;border-bottom:1px solid var(--border);">
-      <div style="display:flex;justify-content:space-between;gap:12px;">
-        <span style="color:var(--muted);">Pedidos</span>
-        <span onclick="const l=this.closest('div').parentElement.nextElementSibling;l.style.display=l.style.display==='none'?'block':'none';"
-          style="color:#2563eb;font-weight:700;cursor:pointer;">${n} pedido${n === 1 ? "" : "s"}${n >= 50 ? "+" : ""} ▾</span>
-      </div>
-      <div style="font-size:12px;margin-top:4px;text-align:right;">${resumen}</div>
-    </div>
-    <div style="display:none;border-bottom:1px solid var(--border);max-height:260px;overflow-y:auto;">${filas}</div>`;
+  };
+  const VISIBLES = 3;
+  const resto = lista.slice(VISIBLES);
+  const cuerpo = `
+    <div style="padding:10px 18px;font-size:12.5px;border-bottom:1px solid var(--border);">${resumen}</div>
+    ${lista.slice(0, VISIBLES).map(fila).join("")}
+    ${resto.length ? `
+      <div style="display:none;">${resto.map(fila).join("")}</div>
+      <div onclick="const l=this.previousElementSibling;const ab=l.style.display==='none';l.style.display=ab?'block':'none';this.textContent=ab?'Ver menos ▴':'Ver todos (${n}) ▾';"
+        style="padding:9px 18px;font-size:12.5px;font-weight:700;color:#2563eb;cursor:pointer;text-align:center;">Ver todos (${n}) ▾</div>` : ""}`;
+  return _dpCard(
+    `🛍️ Pedidos del cliente <span style="margin-left:auto;color:var(--muted);font-weight:600;font-size:12.5px;">${n} pedido${n === 1 ? "" : "s"}${n >= 50 ? "+" : ""}</span>`,
+    cuerpo,
+    "cliente"
+  );
 }
 
 function renderDetallePedido(order) {
@@ -15122,10 +15150,11 @@ function renderDetallePedido(order) {
             ${_dpRow("Nombre", escapeHtml(nombreCliente))}
             ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
             ${_dpRow("Teléfono", escapeHtml(shipping.phone || customer.phone || "-"))}
-            ${_dpPedidosCliente(order)}
           </div>`,
           "cliente"
         )}
+
+        ${_dpPedidosCliente(order)}
 
         ${_dpCard(
           `<span style="flex:1;">📍 Dirección de envío</span><span onclick="showToast('Próximamente','La edición de la dirección de envío estará disponible pronto.','#6b7280')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,

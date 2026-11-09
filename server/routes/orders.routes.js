@@ -452,7 +452,7 @@ router.get("/:id", auth, async (req, res) => {
       const email = k?.customer_email || "", phone = k?.customer_phone || "";
       if (email || phone) {
         row.cliente_pedidos = await db.all(
-          `SELECT o.id, o.order_number, o.created_at, o.fulfillment_status, o.cancelled_at, o.total_price, o.currency
+          `SELECT o.id, o.order_number, o.created_at, o.fulfillment_status, o.cancelled_at, o.total_price, o.currency, o.note
            FROM orders o
            WHERE ((o.customer_email = $1 AND $1 <> '') OR (o.customer_phone = $2 AND $2 <> ''))
              AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $3) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3))
