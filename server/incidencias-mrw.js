@@ -366,7 +366,7 @@ async function sincronizarTodas() {
       if (!r.ok) console.warn(`[Incidencias MRW] user ${c.user_id}:`, r.error);
     }
     await db.run(`
-      UPDATE incidencias_mrw i SET estado = 'resuelta'
+      UPDATE incidencias_mrw i SET estado = 'resuelta', mrw_escribio = false
       FROM orders o
       WHERE i.order_id = o.id AND i.estado <> 'resuelta'
         AND o.fulfillment_status IN ('entregado','devuelto','destruido','cancelado')`);

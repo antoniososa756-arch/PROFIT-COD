@@ -1459,22 +1459,25 @@ async function geIncPintar(lista, resueltas) {
     <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${lista.length}</b> incidencia${lista.length === 1 ? "" : "s"} ${resueltas ? "resuelta" + (lista.length === 1 ? "" : "s") : "abierta" + (lista.length === 1 ? "" : "s")}</div>
     <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr>${th("Pedido")}${th("Incidencia")}${th("Fecha")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Estado")}</tr></thead>
+        <thead><tr>${th("Pedido")}${th("Incidencia")}${th("Fecha")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Estado")}${resueltas ? th("Estado pedido") : ""}</tr></thead>
         <tbody>${lista.map(i => {
           const ti = info[i.shop_domain] || { nombre: (i.shop_domain || "").replace(".myshopify.com", "") || "-", color: "#a1a1a1" };
-          const fondo = i.mrw_escribio ? "#fffbeb" : "";
+          // En resueltas no se resalta ni se avisa de "MRW ha escrito": ya está cerrada
+          const aviso = i.mrw_escribio && i.estado !== "resuelta";
+          const fondo = aviso ? "#fffbeb" : "";
           return `
           <tr style="cursor:pointer;${fondo ? `background:${fondo};` : ""}" onclick="geIncAbrir(${Number(i.id)})" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='${fondo}'">
             ${td(`<span style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">${escapeHtml(i.order_number || i.referencia || "Pedido no encontrado")}${i.note ? `<span class="nota-pedido" data-nota="${escapeAttr(i.note)}" onclick="event.stopPropagation()">${icoNota}</span>` : ""}</span><div class="muted" style="font-size:11.5px;">${escapeHtml(i.envio)}</div>`, "white-space:nowrap;")}
-            ${td(`${i.tipo ? `<span style="color:#b91c1c;font-weight:600;">${escapeHtml(i.tipo)}</span>` : `<span style="color:#b45309;font-weight:600;">Respuesta de MRW</span>`}${i.mrw_escribio ? `<div style="font-size:11.5px;font-weight:700;color:#b45309;margin-top:2px;">✉️ MRW ha escrito</div>` : ""}`)}
+            ${td(`${i.tipo ? `<span style="color:#b91c1c;font-weight:600;">${escapeHtml(i.tipo)}</span>` : `<span style="color:#b45309;font-weight:600;">Respuesta de MRW</span>`}${aviso ? `<div style="font-size:11.5px;font-weight:700;color:#b45309;margin-top:2px;">✉️ MRW ha escrito</div>` : ""}`)}
             ${td(`<span class="muted">${escapeHtml(i.fecha_anomalia || "-")}</span>`, "white-space:nowrap;")}
             ${td(escapeHtml(i.customer_name || i.destinatario || "-"))}
             ${td(escapeHtml(tel(i.telefono_pedido || i.telefono)), "white-space:nowrap;")}
             ${td(i.total_price != null ? `${Number(i.total_price).toFixed(2)} ${escapeHtml(i.currency || "")}` : "-", "text-align:right;white-space:nowrap;font-weight:600;")}
             ${td(`<span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:8px;height:8px;border-radius:50%;background:${ti.color};display:inline-block;"></span>${escapeHtml(ti.nombre)}</span>`, "white-space:nowrap;")}
             ${td(estado(i), "white-space:nowrap;")}
+            ${resueltas ? td(`<span class="status ${statusClass(i.fulfillment_status)}">${escapeHtml(i.fulfillment_status ? statusLabel(i.fulfillment_status) : "-")}</span>`, "white-space:nowrap;") : ""}
           </tr>
-          <tr id="ge-inc-hilo-${Number(i.id)}" style="display:none;"><td colspan="8" style="padding:0 12px 12px;border-bottom:1px solid var(--border);background:var(--card);"></td></tr>`;
+          <tr id="ge-inc-hilo-${Number(i.id)}" style="display:none;"><td colspan="${resueltas ? 9 : 8}" style="padding:0 12px 12px;border-bottom:1px solid var(--border);background:var(--card);"></td></tr>`;
         }).join("")}
         </tbody>
       </table>
