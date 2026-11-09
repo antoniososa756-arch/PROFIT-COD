@@ -1385,13 +1385,9 @@ function gePestana() {
     <div id="ge-pestana-panel" class="ge-pestana-panel" style="display:none;">
       <div style="display:flex;gap:8px;">
         <div style="position:relative;flex:1;min-width:0;">
-          <svg id="ge-etiqueta-candado" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#6b6b6b;pointer-events:none;"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
           <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off" style="width:100%;"
             onkeydown="if(event.key==='Enter')geGuardarEtiqueta();else if(event.key==='Escape')geEtiquetaModo(false)">
         </div>
-        <button id="ge-etiqueta-editar" onclick="geEtiquetaModo(true)" class="ge-tab" title="Editar etiqueta" style="height:38px;width:38px;padding:0;justify-content:center;flex-shrink:0;">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-        </button>
         <button id="ge-etiqueta-btn" onclick="geGuardarEtiqueta()" class="ge-tab activo" style="height:38px;flex-shrink:0;">Guardar</button>
       </div>
       <div style="font-size:12px;font-weight:600;color:var(--text);margin-top:8px;">Etiqueta de preparación de tu almacén</div>
@@ -1417,7 +1413,9 @@ window.gePestanaAbrir = function(abrir) {
   const abierto = abrir === undefined ? panel.style.display === "none" : abrir;
   panel.style.display = abierto ? "block" : "none";
   if (flecha) flecha.style.transform = abierto ? "rotate(180deg)" : "";
-  if (!abierto) geEtiquetaModo(false);
+  // Al desplegar ya se puede escribir (desplegar es el paso de seguridad,
+  // sin candado ni lápiz); al plegar vuelve al valor guardado.
+  geEtiquetaModo(abierto);
 };
 function gePestanaTexto() {
   const t = document.getElementById("ge-pestana-txt");
