@@ -1649,9 +1649,12 @@ function geIncCuerpoMensaje(m) {
   const t = String(m.texto || "").replace(/\r/g, "");
   const parrafo = s => `<div style="white-space:pre-wrap;">${escapeHtml(s)}</div>`;
   if (!m.saliente && !m.manual) {
-    const motivo = (t.match(/no se ha podido entregar por\s*:?\s*([^\n]+)/i) || [])[1]?.trim() || "";
-    const fecha = (t.match(/Fecha de la Anomal[íi]a\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i) || [])[1] || "";
-    const hora = (t.match(/Hora de la Anomal[íi]a\s*:?\s*(\d{1,2}:\d{2})/i) || [])[1] || "";
+    // El texto del correo a veces llega pegado ("...el envíoFecha de la
+    // Anomalía : ..."): el motivo se corta donde empieza el siguiente dato.
+    const motivo = ((t.match(/no se ha podido entregar por\s*:?\s*([^\n]+)/i) || [])[1] || "")
+      .split(/Fecha\s+de\s+la|Hora\s+de\s+la|Observaciones|Contestan\s+al|Falta\s+tel/i)[0].trim();
+    const fecha = (t.match(/Fecha\s+de\s+la\s+Anomal[íi]a\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i) || [])[1] || "";
+    const hora = (t.match(/Hora\s+de\s+la\s+Anomal[íi]a\s*:?\s*(\d{1,2}:\d{2})/i) || [])[1] || "";
     // "Observaciones:" que va DESPUÉS del motivo = lo que escribe la franquicia
     let obs = "";
     const iMotivo = t.search(/no se ha podido entregar por/i);

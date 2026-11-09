@@ -189,7 +189,8 @@ function analizarCorreo(parsed) {
   // Tipo: del asunto ("ANOMALÍA \ Destinatario ausente o cerrado"); si no,
   // del cuerpo (en las respuestas a mano, del correo original citado debajo).
   let tipo = (asunto.match(/ANOMAL[ÍI]A\s*[\\\/|-]\s*(.+)$/i) || [])[1] || campo(texto, "El env[ií]o no se ha podido entregar por");
-  tipo = String(tipo || "").replace(/\s+/g, " ").trim();
+  // (el texto a veces llega pegado: "...el envíoFecha de la Anomalía ...")
+  tipo = String(tipo || "").split(/Fecha\s+de\s+la|Hora\s+de\s+la|Observaciones|Contestan\s+al|Falta\s+tel/i)[0].replace(/\s+/g, " ").trim();
   // Solo lo nuevo del correo manual (sin el correo original citado debajo)
   const soloNuevo = texto.split(/\n\s*(De|From)\s*:\s*.+\n/i)[0].trim();
   return {
@@ -200,7 +201,7 @@ function analizarCorreo(parsed) {
     destinatario: automatico ? campo(texto, "Destinatario").replace(/\s*Tel[ée]fono:.*$/i, "") : "",
     telefono: automatico ? (campo(texto, "Tel[ée]fono").match(/\+?\d[\d\s]{7,}/) || [""])[0].replace(/\s/g, "") : "",
     direccion: automatico ? [campo(texto, "Direcci[óo]n"), campo(texto, "Poblaci[óo]n")].filter(Boolean).join(" · ") : "",
-    fecha_anomalia: automatico ? [(texto.match(/Fecha de la Anomal[íi]a\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i) || [])[1], (texto.match(/Hora de la Anomal[íi]a\s*:?\s*(\d{1,2}:\d{2})/i) || [])[1]].filter(Boolean).join(" ") : "",
+    fecha_anomalia: automatico ? [(texto.match(/Fecha\s+de\s+la\s+Anomal[íi]a\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i) || [])[1], (texto.match(/Hora\s+de\s+la\s+Anomal[íi]a\s*:?\s*(\d{1,2}:\d{2})/i) || [])[1]].filter(Boolean).join(" ") : "",
     asunto,
     texto: (automatico ? texto : soloNuevo).slice(0, 20000),
     html: htmlLimpio(parsed),
