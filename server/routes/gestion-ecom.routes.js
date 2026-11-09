@@ -309,6 +309,11 @@ router.post("/incidencias/:id/estado", auth, soloAdmin, async (req, res) => {
       [estado, parseInt(req.params.id), req.user.id]
     );
     if (!r.changes) return res.status(404).json({ error: "Incidencia no encontrada" });
+    // Resuelta en ProfitCOD -> sus correos de MRW quedan leídos en Gmail
+    if (estado === "resuelta") {
+      const i = await db.get("SELECT envio FROM incidencias_mrw WHERE id = $1 AND user_id = $2", [parseInt(req.params.id), req.user.id]);
+      if (i?.envio) inc.marcarLeidoGmail(req.user.id, i.envio); // en segundo plano
+    }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

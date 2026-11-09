@@ -375,6 +375,28 @@ async function sincronizarTodas() {
   } finally { global.__incMrwRunning = false; }
 }
 
+// Marca como LEÍDOS en Gmail los correos de MRW de un envío (al responder
+// desde ProfitCOD o al marcar la incidencia resuelta), para que la bandeja
+// refleje lo ya gestionado. Se buscan por remitente + número de envío en el
+// asunto. No se lanza error: si falla, solo queda sin marcar en Gmail.
+async function marcarLeidoGmail(userId, envio) {
+  try {
+    await ensureTablas();
+    const cfg = await db.get("SELECT email, password_enc, remitente FROM incidencias_mrw_config WHERE user_id = $1", [userId]);
+    if (!cfg || !envio) return;
+    const client = clienteImap(cfg.email, descifrar(cfg.password_enc));
+    await client.connect();
+    const lock = await client.getMailboxLock("INBOX");
+    try {
+      const uids = (await client.search({ from: cfg.remitente, subject: envio, seen: false }, { uid: true })) || [];
+      if (uids.length) await client.messageFlagsAdd(uids.join(","), ["\\Seen"], { uid: true });
+    } finally { lock.release(); }
+    await client.logout().catch(() => {});
+  } catch (e) {
+    console.warn(`[Incidencias MRW] marcar leído ${envio}:`, e.message);
+  }
+}
+
 // Responde a MRW desde el Gmail de incidencias, en el MISMO hilo (Re: del
 // asunto + In-Reply-To/References), así a la franquicia le llega como una
 // respuesta normal. Gmail guarda la copia en "Enviados". Al responder, la
@@ -416,7 +438,8 @@ async function responder(userId, incidenciaId, texto) {
     [inc.id, info.messageId || `enviado-${Date.now()}`, cfg.email, asunto, cuerpo, ahora]
   );
   await db.run("UPDATE incidencias_mrw SET estado = 'resuelta', mrw_escribio = false, ultimo_mensaje_at = $1 WHERE id = $2", [ahora, inc.id]);
+  marcarLeidoGmail(userId, inc.envio); // en segundo plano
   return { ok: true, para };
 }
 
-module.exports = { ensureTablas, cifrar, descifrar, probarConexion, sincronizarUsuario, sincronizarTodas, analizarCorreo, responder };
+module.exports = { ensureTablas, cifrar, descifrar, probarConexion, sincronizarUsuario, sincronizarTodas, analizarCorreo, responder, marcarLeidoGmail };
