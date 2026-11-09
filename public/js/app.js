@@ -1518,6 +1518,7 @@ window.geIncLeerAhora = async function() {
   try {
     const r = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias/sincronizar`, { method: "POST", headers: { Authorization: "Bearer " + getActiveToken() } })).json();
     if (r.ok === false) throw new Error(r.error || "Error");
+    if (r.enCurso) { showToast("📮 Leyendo correos", "Ya se está leyendo el correo, espera unos segundos.", "#1a1a1a"); return geIncidenciasCurso(); }
     showToast("📮 Correo leído", r.guardados ? `${r.guardados} correo${r.guardados === 1 ? "" : "s"} de incidencia nuevo${r.guardados === 1 ? "" : "s"}.` : "No hay correos nuevos.", "#22c55e");
   } catch (e) { showToast("Error", e.message, "#dc2626"); }
   geIncidenciasCurso();
@@ -1563,9 +1564,12 @@ window.geIncGuardar = async function() {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Error");
     window.__geIncEditando = false;
-    const s = d.sincronizacion || {};
-    showToast("✅ Correo conectado", s.ok ? `Leídos ${s.guardados || 0} correos de incidencia de los últimos 15 días.` : "Conectado. La lectura dio un aviso, revísalo en la lista.", "#22c55e");
+    showToast("✅ Correo conectado", "Leyendo las incidencias de los últimos 15 días... la lista se irá completando.", "#22c55e");
     geIncidenciasCurso();
+    // Refrescar mientras termina la primera lectura
+    [15, 40, 90].forEach(s => setTimeout(() => {
+      if (window.__geTab === "incidencias" && (window.__geSubInc || "franquicia") === "curso") geIncidenciasCurso();
+    }, s * 1000));
   } catch (e) {
     if (b) { b.disabled = false; b.textContent = "Guardar y conectar"; }
     showToast("Error", e.message, "#dc2626");

@@ -193,8 +193,9 @@ router.put("/incidencias/config", auth, soloAdmin, async (req, res) => {
          ultimo_uid = CASE WHEN $5::boolean OR incidencias_mrw_config.remitente <> EXCLUDED.remitente THEN 0 ELSE incidencias_mrw_config.ultimo_uid END`,
       [req.user.id, remitente, email, inc.cifrar(pass), cambiaBuzon]
     );
-    const r = await inc.sincronizarUsuario(req.user.id);
-    res.json({ ok: true, sincronizacion: r });
+    // La primera lectura (15 días) puede tardar: se hace en segundo plano
+    inc.sincronizarUsuario(req.user.id).catch(() => {});
+    res.json({ ok: true, leyendo: true });
   } catch (e) {
     console.error("[GestionEcom] incidencias config:", e.message);
     res.status(500).json({ error: "Error guardando la configuración" });

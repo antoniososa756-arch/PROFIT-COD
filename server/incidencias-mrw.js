@@ -77,6 +77,7 @@ async function ensureTablas() {
       UNIQUE (incidencia_id, message_id)
     )`);
   await db.run(`CREATE INDEX IF NOT EXISTS idx_inc_mrw_user_estado ON incidencias_mrw (user_id, estado)`);
+  await db.run(`ALTER TABLE incidencias_mrw_config ADD COLUMN IF NOT EXISTS version_lectura INTEGER DEFAULT 1`);
   global.__incMrwTablas = true;
 }
 
@@ -96,17 +97,32 @@ async function probarConexion(email, password) {
 
 // ── Lectura del correo de MRW ───────────────────────────────────────────────
 const ENVIO_RE = /\b\d{5}[A-Z]\d{6}\b/;
+// Valor tras "Etiqueta:". En el correo de MRW (HTML pasado a texto) a veces
+// el valor cae en la línea siguiente: si la línea está vacía, se toma la
+// siguiente que no sea otra etiqueta.
 const campo = (texto, etiqueta) => {
-  const m = texto.match(new RegExp(`${etiqueta}\\s*:?\\s*([^\\n]*)`, "i"));
-  return m ? m[1].trim() : "";
+  const m = texto.match(new RegExp(`${etiqueta}\\s*:?[ \\t]*([^\\n]*)(?:\\n+[ \\t]*([^\\n]*))?`, "i"));
+  if (!m) return "";
+  const v = m[1].trim();
+  if (v) return v;
+  const sig = (m[2] || "").trim();
+  return sig && !/^[^:]{2,40}:/.test(sig) ? sig : "";
+};
+const textoDe = (parsed) => {
+  const t = parsed.text || (parsed.html ? String(parsed.html).replace(/<br\s*\/?>|<\/(p|div|tr|li|h\d)>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") : "");
+  return t.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n");
 };
 
+// Solo cuentan los correos de ANOMALÍA (el asunto lo dice, también en las
+// respuestas a mano "RE: [AN2] G3 \ ... \ ANOMALÍA \ ..."). El mismo
+// remitente envía otros avisos (entregas, etc.) que no son incidencias.
 function analizarCorreo(parsed) {
   const asunto = parsed.subject || "";
-  const texto = (parsed.text || "").replace(/\r/g, "");
+  if (!/ANOMAL[ÍI]A/i.test(asunto)) return null;
+  const texto = textoDe(parsed);
   const envio = (asunto.match(ENVIO_RE) || texto.match(ENVIO_RE) || [])[0] || null;
   if (!envio) return null;
-  // Escrito a mano: respuesta (RE:) o sin la ficha automática de la anomalía
+  // Escrito a mano: respuesta/reenvío (RE:, RV:...) o sin la ficha automática
   const esRespuesta = /^\s*(re|rv|fw|fwd)\s*:/i.test(asunto);
   const automatico = !esRespuesta && /no se ha podido entregar por/i.test(texto) && /N[ºo°]\s*env[ií]o/i.test(texto);
   let tipo = (asunto.match(/ANOMAL[ÍI]A\s*\\\s*(.+)$/i) || [])[1] || campo(texto, "El env[ií]o no se ha podido entregar por");
@@ -121,7 +137,7 @@ function analizarCorreo(parsed) {
     destinatario: automatico ? campo(texto, "Destinatario").replace(/\s*Tel[ée]fono:.*$/i, "") : "",
     telefono: automatico ? (campo(texto, "Tel[ée]fono").match(/\+?\d[\d\s]{7,}/) || [""])[0].replace(/\s/g, "") : "",
     direccion: automatico ? [campo(texto, "Direcci[óo]n"), campo(texto, "Poblaci[óo]n")].filter(Boolean).join(" · ") : "",
-    fecha_anomalia: automatico ? [campo(texto, "Fecha de la Anomal[íi]a").split(/\s+Hora/i)[0], (texto.match(/Hora de la Anomal[íi]a\s*:\s*([\d:]+)/i) || [])[1]].filter(Boolean).join(" ") : "",
+    fecha_anomalia: automatico ? [(texto.match(/Fecha de la Anomal[íi]a\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i) || [])[1], (texto.match(/Hora de la Anomal[íi]a\s*:?\s*(\d{1,2}:\d{2})/i) || [])[1]].filter(Boolean).join(" ") : "",
     asunto,
     texto: (automatico ? texto : soloNuevo).slice(0, 20000),
     de: parsed.from?.value?.[0]?.address || "",
@@ -169,11 +185,29 @@ async function guardarCorreo(userId, a) {
   );
 }
 
-// Lee los correos nuevos del remitente configurado. Primera vez: últimos 15 días.
+// Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
+// desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
+const VERSION_LECTURA = 2;
+
+// Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
+// días. Una sola lectura a la vez por usuario.
 async function sincronizarUsuario(userId) {
+  global.__incMrwEnCurso = global.__incMrwEnCurso || {};
+  if (global.__incMrwEnCurso[userId]) return { ok: true, enCurso: true, leidos: 0, guardados: 0 };
+  global.__incMrwEnCurso[userId] = true;
+  try { return await _sincronizarUsuario(userId); }
+  finally { delete global.__incMrwEnCurso[userId]; }
+}
+
+async function _sincronizarUsuario(userId) {
   await ensureTablas();
-  const cfg = await db.get("SELECT * FROM incidencias_mrw_config WHERE user_id = $1", [userId]);
+  let cfg = await db.get("SELECT * FROM incidencias_mrw_config WHERE user_id = $1", [userId]);
   if (!cfg) return { ok: false, error: "Sin configurar" };
+  if (Number(cfg.version_lectura || 1) < VERSION_LECTURA) {
+    await db.run("DELETE FROM incidencias_mrw WHERE user_id = $1", [userId]);
+    await db.run("UPDATE incidencias_mrw_config SET ultimo_uid = 0, version_lectura = $1 WHERE user_id = $2", [VERSION_LECTURA, userId]);
+    cfg = { ...cfg, ultimo_uid: 0, uid_validity: null };
+  }
   const client = clienteImap(cfg.email, descifrar(cfg.password_enc));
   let leidos = 0, guardados = 0, maxUid = Number(cfg.ultimo_uid || 0);
   try {
@@ -185,18 +219,21 @@ async function sincronizarUsuario(userId) {
       const criterio = { from: cfg.remitente };
       if (maxUid > 0) criterio.uid = `${maxUid + 1}:*`;
       else criterio.since = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
-      const uids = (await client.search(criterio, { uid: true })) || [];
-      for (const uid of uids) {
-        if (uid <= Number(cfg.ultimo_uid || 0) && cfg.uid_validity === validity) continue;
-        const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
-        leidos++;
-        if (msg?.source) {
-          const a = analizarCorreo(await simpleParser(msg.source));
-          if (a) { await guardarCorreo(userId, a); guardados++; }
+      const uids = ((await client.search(criterio, { uid: true })) || []).filter(u => u > maxUid);
+      // De 50 en 50 (una petición por tanda en vez de una por correo)
+      for (let i = 0; i < uids.length; i += 50) {
+        const tanda = uids.slice(i, i + 50);
+        for await (const msg of client.fetch(tanda.join(","), { uid: true, source: true }, { uid: true })) {
+          leidos++;
+          if (msg?.source) {
+            const a = analizarCorreo(await simpleParser(msg.source));
+            if (a) { await guardarCorreo(userId, a); guardados++; }
+          }
+          if (msg.uid > maxUid) maxUid = msg.uid;
         }
-        if (uid > maxUid) maxUid = uid;
+        await db.run("UPDATE incidencias_mrw_config SET ultimo_uid = $1, uid_validity = $2 WHERE user_id = $3", [maxUid, validity, userId]);
       }
-      await db.run("UPDATE incidencias_mrw_config SET ultimo_uid = $1, uid_validity = $2 WHERE user_id = $3", [maxUid, validity, userId]);
+      if (!uids.length) await db.run("UPDATE incidencias_mrw_config SET uid_validity = $1 WHERE user_id = $2", [validity, userId]);
     } finally { lock.release(); }
     await client.logout().catch(() => {});
     const res = { ok: true, leidos, guardados };
