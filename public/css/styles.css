@@ -2314,3 +2314,21 @@ body:not(.dark) .rejilla tbody tr:hover td { background: #f7f7f7 !important; }
 body:not(.dark) .rejilla .fila-total td { font-weight: 700; }
 body:not(.dark) .rejilla .fila-balance td { background: #1a1a1a !important; color: #fff !important; border-color: #16a34a !important; }
 body:not(.dark) .rejilla td.ads-sel { background: #e8edf5 !important; outline: 2px solid #1a1a1a !important; }
+
+/* Gestión Ecom: pestaña de la etiqueta del almacén, colgada de la línea del
+   título (a la derecha) y su panel desplegable para editarla */
+.ge-pestana-btn {
+  position: absolute; right: 0; top: -20px;
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px;
+  background: var(--card); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer;
+  border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,.05);
+}
+.ge-pestana-btn:hover { background: #f7f7f7; }
+body.dark .ge-pestana-btn:hover { background: var(--input); }
+.ge-pestana-panel {
+  position: absolute; right: 0; top: 14px; width: min(400px, calc(100vw - 40px));
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.14);
+  animation: ui-drop-in .18s cubic-bezier(.2,.7,.3,1) both; transform-origin: top right;
+}

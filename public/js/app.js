@@ -1332,6 +1332,7 @@ window.geTab = function(tab) {
   document.querySelectorAll(".ge-tab").forEach(b => b.classList.toggle("activo", b.dataset.tab === tab));
   const cont = document.getElementById("ge-contenido");
   if (!cont) return;
+  if (tab !== "confirmar") gePestanaQuitar();
   if (tab === "confirmar") return geConfirmar(cont);
   cont.innerHTML = `
     <div class="ui-entrada" style="padding:44px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;">
@@ -1345,39 +1346,82 @@ window.geTab = function(tab) {
 // "correcto"). Ver server/routes/gestion-ecom.routes.js.
 async function geConfirmar(cont) {
   const H = { Authorization: "Bearer " + getActiveToken() };
-  // Izquierda: tiendas (Todas / Tienda 1 / ...). Derecha: etiqueta del almacén.
+  // Tiendas (Todas / Tienda 1 / ...) arriba a la izquierda; la etiqueta del
+  // almacén va en una pestaña colgada de la línea del título (gePestana).
   cont.innerHTML = `
-    <div class="ui-entrada" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
-      <div id="ge-tiendas" style="display:flex;gap:6px;flex-wrap:wrap;min-width:0;"></div>
-      <div style="width:min(380px,100%);margin-left:auto;">
-        <!-- Bloqueada con candado una vez guardada; el lápiz la desbloquea
-             (así no se cambia por error). Ver geEtiquetaModo(). -->
-        <div style="display:flex;gap:8px;">
-          <div style="position:relative;flex:1;min-width:0;">
-            <svg id="ge-etiqueta-candado" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#6b6b6b;pointer-events:none;"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off" style="width:100%;"
-              onkeydown="if(event.key==='Enter')geGuardarEtiqueta();else if(event.key==='Escape')geEtiquetaModo(false)">
-          </div>
-          <button id="ge-etiqueta-editar" onclick="geEtiquetaModo(true)" class="ge-tab" title="Editar etiqueta" style="height:38px;width:38px;padding:0;justify-content:center;flex-shrink:0;">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-          </button>
-          <button id="ge-etiqueta-btn" onclick="geGuardarEtiqueta()" class="ge-tab activo" style="height:38px;flex-shrink:0;">Guardar</button>
-        </div>
-        <div style="font-size:12px;font-weight:600;color:var(--text);margin-top:6px;">Etiqueta de preparación de tu almacén</div>
-        <div class="muted" style="font-size:11.5px;line-height:1.45;margin-top:2px;">
-          Se listan los pedidos sin esta etiqueta ni <b>correcto</b> (últimos 30 días, sin enviar ni cancelar).
-        </div>
-      </div>
-    </div>
+    <div class="ui-entrada" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;" id="ge-tiendas"></div>
     <div id="ge-lista"><div class="muted" style="padding:16px 0;">Cargando...</div></div>`;
+  gePestana();
   try {
     const cfg = await (await fetch(`${API_BASE}/api/gestion-ecom/config`, { headers: H })).json();
     const inp = document.getElementById("ge-etiqueta");
     if (inp) { inp.value = cfg.etiqueta || ""; inp.dataset.guardada = cfg.etiqueta || ""; }
   } catch (e) {}
-  // Con etiqueta guardada empieza bloqueada; sin ella, lista para escribir
-  geEtiquetaModo(!document.getElementById("ge-etiqueta")?.value);
+  gePestanaTexto();
+  // Con etiqueta guardada empieza bloqueada; sin ella, desplegada para escribir
+  const sinEtiqueta = !document.getElementById("ge-etiqueta")?.value;
+  geEtiquetaModo(sinEtiqueta);
+  if (sinEtiqueta) gePestanaAbrir(true);
   geCargarConfirmar();
+}
+
+// Pestaña colgada de la línea bajo el título "Gestión Ecom" (a la derecha):
+// muestra la etiqueta guardada y al pulsarla despliega el cuadro para
+// editarla (bloqueado con candado + lápiz, ver geEtiquetaModo).
+function gePestana() {
+  gePestanaQuitar();
+  const sub = document.getElementById("subtitle");
+  if (!sub) return;
+  const w = document.createElement("div");
+  w.id = "ge-pestana";
+  w.style.cssText = "position:relative;height:0;z-index:20;";
+  w.innerHTML = `
+    <button id="ge-pestana-btn" onclick="gePestanaAbrir()" class="ge-pestana-btn" title="Etiqueta de preparación de tu almacén">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>
+      <span id="ge-pestana-txt">Etiqueta</span>
+      <svg id="ge-pestana-flecha" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .18s;"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div id="ge-pestana-panel" class="ge-pestana-panel" style="display:none;">
+      <div style="display:flex;gap:8px;">
+        <div style="position:relative;flex:1;min-width:0;">
+          <svg id="ge-etiqueta-candado" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#6b6b6b;pointer-events:none;"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off" style="width:100%;"
+            onkeydown="if(event.key==='Enter')geGuardarEtiqueta();else if(event.key==='Escape')geEtiquetaModo(false)">
+        </div>
+        <button id="ge-etiqueta-editar" onclick="geEtiquetaModo(true)" class="ge-tab" title="Editar etiqueta" style="height:38px;width:38px;padding:0;justify-content:center;flex-shrink:0;">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
+        <button id="ge-etiqueta-btn" onclick="geGuardarEtiqueta()" class="ge-tab activo" style="height:38px;flex-shrink:0;">Guardar</button>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-top:8px;">Etiqueta de preparación de tu almacén</div>
+      <div class="muted" style="font-size:11.5px;line-height:1.45;margin-top:2px;">
+        Se listan los pedidos sin esta etiqueta ni <b>correcto</b> (últimos 30 días, sin enviar ni cancelar).
+      </div>
+    </div>`;
+  sub.insertAdjacentElement("afterend", w);
+  if (!window.__gePestanaClickFuera) {
+    window.__gePestanaClickFuera = true;
+    document.addEventListener("mousedown", (e) => {
+      const p = document.getElementById("ge-pestana");
+      if (p && !p.contains(e.target) && document.getElementById("ge-etiqueta")?.dataset.guardada) gePestanaAbrir(false);
+    });
+  }
+}
+// Se quita al salir de "Confirmar pedidos" (vive fuera de cardBox)
+function gePestanaQuitar() { document.getElementById("ge-pestana")?.remove(); }
+window.gePestanaAbrir = function(abrir) {
+  const panel = document.getElementById("ge-pestana-panel");
+  const flecha = document.getElementById("ge-pestana-flecha");
+  if (!panel) return;
+  const abierto = abrir === undefined ? panel.style.display === "none" : abrir;
+  panel.style.display = abierto ? "block" : "none";
+  if (flecha) flecha.style.transform = abierto ? "rotate(180deg)" : "";
+  if (!abierto) geEtiquetaModo(false);
+};
+function gePestanaTexto() {
+  const t = document.getElementById("ge-pestana-txt");
+  const v = document.getElementById("ge-etiqueta")?.dataset.guardada || "";
+  if (t) t.innerHTML = v ? `Etiqueta: <b>${escapeHtml(v)}</b>` : "Añadir etiqueta del almacén";
 }
 
 // editar=true: campo desbloqueado + Guardar. editar=false: bloqueado con
@@ -1413,7 +1457,8 @@ window.geGuardarEtiqueta = async function() {
     showToast("✅ Etiqueta guardada", inp.value.trim() ? `Se filtran los pedidos sin "${inp.value.trim()}".` : "Etiqueta borrada.", "#22c55e");
     inp.value = inp.value.trim();
     inp.dataset.guardada = inp.value;
-    if (inp.value) geEtiquetaModo(false);
+    gePestanaTexto();
+    if (inp.value) { geEtiquetaModo(false); gePestanaAbrir(false); }
     geCargarConfirmar();
   } catch (e) {
     showToast("Error", e.message || "No se pudo guardar la etiqueta.", "#dc2626");
@@ -1542,6 +1587,7 @@ function uiEntrada(el) {
 }
 
 function setSection(id) {
+  gePestanaQuitar(); // pestaña de la etiqueta de Gestión Ecom (vive fuera de cardBox)
   // Cuentas apoyo nunca pueden ver el plan de facturación
   if (currentUser?.role === "Apoyo" && id === "plan") {
     const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda"];
@@ -14826,6 +14872,7 @@ window.handleOrderRowClick = function(e, orderId) {
 };
 
 window.abrirDetallePedido = async function(orderId, opts = {}) {
+  gePestanaQuitar();
   orderId = Number(orderId);
   const box = document.getElementById("cardBox");
   const t = document.getElementById("title");
