@@ -422,6 +422,56 @@ router.patch("/:id/tags", auth, async (req, res) => {
   }
 });
 
+// PATCH /api/orders/:id/note  { note: "texto" } — guarda la nota del pedido en
+// Shopify (igual que /tags) y localmente. Texto vacío = borrar la nota.
+router.patch("/:id/note", auth, async (req, res) => {
+  const userId = req.user.id;
+  const id = parseInt(req.params.id);
+  const { note } = req.body || {};
+  if (!Number.isInteger(id)) return res.status(400).json({ error: "id inválido" });
+  if (typeof note !== "string") return res.status(400).json({ error: "note debe ser texto" });
+  if (note.length > 5000) return res.status(400).json({ error: "La nota es demasiado larga (máx. 5000 caracteres)" });
+
+  try {
+    const row = await db.get(
+      `SELECT o.order_id, COALESCE(o.shop_domain, s.shop_domain) as shop_domain
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.id = $1
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+      [id, userId]
+    );
+    if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
+
+    const shopRow = await db.get(
+      `SELECT access_token FROM shops WHERE shop_domain = $1 AND user_id = $2`,
+      [row.shop_domain, userId]
+    );
+    if (!shopRow) return res.status(404).json({ error: "Tienda no encontrada" });
+
+    const shopifyRes = await fetch(`https://${row.shop_domain}/admin/api/2024-10/orders/${row.order_id}.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": shopRow.access_token },
+      body: JSON.stringify({ order: { id: parseInt(row.order_id), note } }),
+    });
+    if (!shopifyRes.ok) {
+      console.error("Shopify note update error:", shopifyRes.status, await shopifyRes.text());
+      return res.status(502).json({ error: "No se pudo guardar la nota en Shopify" });
+    }
+    const shopifyData = await shopifyRes.json();
+
+    // raw_json nuevo -> los triggers actualizan orders.note y la búsqueda
+    if (shopifyData.order) {
+      await db.run(`UPDATE orders SET raw_json = $1 WHERE id = $2`, [JSON.stringify(shopifyData.order), id]);
+    }
+
+    res.json({ ok: true, note: shopifyData.order?.note ?? note });
+  } catch (e) {
+    console.error("update note error:", e);
+    res.status(500).json({ error: "Error guardando la nota" });
+  }
+});
+
 // GET /api/orders/:id — detalle completo de un pedido (incluye raw_json de Shopify)
 // Nota: se registra al final para no capturar las rutas fijas de arriba (/reembolsos, etc.)
 router.get("/:id", auth, async (req, res) => {

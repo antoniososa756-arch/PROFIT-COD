@@ -14808,6 +14808,63 @@ async function _guardarEtiquetasPedido(orderId, tagsArray) {
   }
 }
 
+// Nota del pedido: se ve, se edita aquí y se guarda en Shopify
+// (PATCH /api/orders/:id/note).
+function _dpNotaVista(nota, orderId) {
+  return nota
+    ? `<div onclick="editarNotaPedido(${Number(orderId)})" title="Pulsa para editar" style="padding:12px 18px;font-size:13px;color:var(--text);white-space:pre-wrap;cursor:text;">${escapeHtml(nota)}</div>`
+    : `<div onclick="editarNotaPedido(${Number(orderId)})" title="Pulsa para añadir una nota" style="padding:12px 18px;font-size:13px;color:var(--muted);cursor:text;">No hay notas del cliente</div>`;
+}
+
+window.editarNotaPedido = function(orderId) {
+  const box = document.getElementById("dp-nota");
+  if (!box || box.querySelector("textarea")) return;
+  const nota = box.getAttribute("data-nota") || "";
+  box.innerHTML = `
+    <div style="padding:12px 18px;">
+      <textarea id="dp-nota-input" rows="4" placeholder="Escribe una nota para este pedido..."
+        style="width:100%;box-sizing:border-box;resize:vertical;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--input);color:var(--text);font:inherit;font-size:13px;line-height:1.45;outline:none;"
+        onfocus="this.style.borderColor='#22c55e'" onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){guardarNotaPedido(${Number(orderId)})}else if(event.key==='Escape'){cancelarNotaPedido(${Number(orderId)})}">${escapeHtml(nota)}</textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+        <button onclick="cancelarNotaPedido(${Number(orderId)})" style="padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;">Cancelar</button>
+        <button id="dp-nota-guardar" onclick="guardarNotaPedido(${Number(orderId)})" style="padding:7px 14px;border:none;border-radius:8px;background:#22c55e;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;">Guardar</button>
+      </div>
+    </div>`;
+  const ta = document.getElementById("dp-nota-input");
+  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+};
+
+window.cancelarNotaPedido = function(orderId) {
+  const box = document.getElementById("dp-nota");
+  if (box) box.innerHTML = _dpNotaVista(box.getAttribute("data-nota") || "", orderId);
+};
+
+window.guardarNotaPedido = async function(orderId) {
+  const box = document.getElementById("dp-nota");
+  const ta = document.getElementById("dp-nota-input");
+  const btn = document.getElementById("dp-nota-guardar");
+  if (!box || !ta) return;
+  const note = ta.value.trim();
+  if (btn) { btn.disabled = true; btn.textContent = "Guardando..."; btn.style.opacity = ".7"; }
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${orderId}/note`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ note })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+    const guardada = data.note || "";
+    box.setAttribute("data-nota", guardada);
+    box.innerHTML = _dpNotaVista(guardada, orderId);
+    showToast("✅ Nota guardada", "Se ha guardado también en Shopify.", "#22c55e");
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = "Guardar"; btn.style.opacity = "1"; }
+    showToast("Error", e.message || "No se pudo guardar la nota.", "#dc2626");
+  }
+};
+
 // Tarjeta "Pedidos del cliente" (mismo email o teléfono en tus tiendas):
 // resumen por estado, los 3 últimos pedidos a la vista (con su nota, si la
 // tienen, junto al número) y el resto con "Ver todos".
@@ -14984,9 +15041,11 @@ function renderDetallePedido(order) {
       </div>
 
       <div style="min-width:0;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:14px;">
-        ${_dpCard(`📝 Notas`, raw.note
-          ? `<div style="padding:12px 18px;font-size:13px;color:var(--text);white-space:pre-wrap;">${escapeHtml(raw.note)}</div>`
-          : `<div style="padding:12px 18px;font-size:13px;color:var(--muted);">No hay notas del cliente</div>`, "cliente")}
+        ${_dpCard(
+          `<span style="flex:1;">📝 Notas</span><span onclick="editarNotaPedido(${Number(order.id)})" title="Editar nota" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          `<div id="dp-nota" data-nota="${escapeAttr(raw.note || "")}">${_dpNotaVista(raw.note, order.id)}</div>`,
+          "cliente"
+        )}
 
         ${_dpCard(
           `<span style="flex:1;">👤 Cliente</span><span onclick="showToast('Próximamente','La edición de los datos del cliente estará disponible pronto.','#6b7280')" title="Editar cliente" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
