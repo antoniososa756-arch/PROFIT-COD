@@ -581,16 +581,28 @@ try {
 // search_text igual (NULL -> lo calcula el trigger). Por tandas de 300 con
 // pausa: un solo UPDATE de toda la tabla bloqueaba orders minutos (ver el
 // inicio de initDB). Empieza 30 s después del arranque.
-setTimeout(async function rellenarTanda(total = 0) {
+// Primero los más recientes (los que más se buscan). Si una tanda falla se
+// reintenta en 30 s en vez de abandonar.
+global.__rellenoBusqueda = { total: 0, error: null };
+setTimeout(async function rellenarTanda() {
   try {
     const r = await pool.query(`
       UPDATE orders SET customer_email = customer_email
-      WHERE id IN (SELECT id FROM orders WHERE customer_email IS NULL OR search_text IS NULL OR note IS NULL LIMIT 300)`);
-    total += r.rowCount;
-    if (r.rowCount) return setTimeout(() => rellenarTanda(total), 1500);
-    if (total) console.log(`[DB] Datos de cliente/búsqueda rellenados: ${total}`);
-  } catch (e) { console.warn("Backfill cliente:", e.message); }
-}, 30 * 1000);
+      WHERE id IN (SELECT id FROM orders WHERE customer_email IS NULL OR search_text IS NULL OR note IS NULL
+                   ORDER BY id DESC LIMIT 500)`);
+    global.__rellenoBusqueda.total += r.rowCount;
+    global.__rellenoBusqueda.error = null;
+    if (r.rowCount) {
+      if (global.__rellenoBusqueda.total % 5000 < 500) console.log(`[DB] Relleno búsqueda: ${global.__rellenoBusqueda.total} pedidos`);
+      return setTimeout(rellenarTanda, 300);
+    }
+    if (global.__rellenoBusqueda.total) console.log(`[DB] Datos de cliente/búsqueda rellenados: ${global.__rellenoBusqueda.total}`);
+  } catch (e) {
+    global.__rellenoBusqueda.error = e.message;
+    console.warn("Backfill cliente:", e.message);
+    setTimeout(rellenarTanda, 30 * 1000);
+  }
+}, 20 * 1000);
 // Pedidos ya existentes: se rellenan en segundo plano, por tandas pequeñas y
 // con pausa, para no frenar el arranque ni el resto de la app.
 (async function rellenarRawCompact() {
