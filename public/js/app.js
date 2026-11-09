@@ -6001,7 +6001,7 @@ async function loadNominaData() {
 
     content.innerHTML = `
       <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <table class="rejilla" style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead>
             <tr style="background:#1a1a1a;">
               <th style="${thS}left;">TRABAJADOR</th>
@@ -6030,7 +6030,7 @@ async function loadNominaData() {
             `).join("")}
           </tbody>
           <tfoot>
-            <tr style="background:rgba(34,197,94,.08);">
+            <tr class="fila-total">
               <td style="padding:11px 14px;border:1px solid #374151;font-weight:700;">TOTAL NÓMINA</td>
               <td style="padding:11px 14px;border:1px solid #374151;text-align:right;font-weight:700;color:#22c55e;">${fmt(totalNomina)} €</td>
               <td style="border:1px solid #374151;"></td>
@@ -10337,6 +10337,10 @@ window.handleAdsCsvImport = async function(event, type) {
   }
 };
 
+// Logos para las cabeceras "Gasto Meta" / "Gasto TikTok" de Gastos Ads
+const LOGO_META = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0866FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="Meta"><path d="M12 12c-2-2.7-3.6-4-5.2-4C4.6 8 3 9.9 3 12.2S4.5 16 6.6 16c1.9 0 3.3-1.5 5.4-4s3.5-4 5.4-4C19.5 8 21 9.8 21 12.2S19.4 16 17.2 16c-1.6 0-3.2-1.3-5.2-4z"/></svg>`;
+const LOGO_TIKTOK = `<svg viewBox="0 0 24 24" width="15" height="15" aria-label="TikTok"><path fill="#000" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>`;
+
 async function loadAdsTable() {
   const shop  = document.getElementById("ads-shop-sel")?.value;
   const month = document.getElementById("ads-month-sel")?.value;
@@ -10394,42 +10398,42 @@ async function loadAdsTable() {
   const th   = (content, extra="") => `<th style="padding:11px 14px;border:1px solid var(--border);font-weight:600;font-size:13px;${extra}">${content}</th>`;
 
   wrap.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <table class="rejilla" style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
-        <tr style="background:var(--input);">
+        <tr>
           ${th("Día","text-align:left;color:var(--text);")}
-          ${th("Gasto Meta","text-align:right;background:#1877f2;color:#fff;border-color:#1565c0;")}
-          ${th("Gasto TikTok","text-align:right;background:#000;color:#fff;border-color:#333;")}
+          ${th(`<span style="display:inline-flex;align-items:center;gap:6px;">${LOGO_META}Gasto Meta</span>`,"text-align:right;")}
+          ${th(`<span style="display:inline-flex;align-items:center;gap:6px;">${LOGO_TIKTOK}Gasto TikTok</span>`,"text-align:right;")}
           ${th("Facturación","text-align:right;color:var(--text);")}
           ${th("Cantidad Pedidos","text-align:right;color:var(--text);")}
           ${th("CPA","text-align:right;color:var(--text);")}
           ${th("ROAS","text-align:right;color:var(--text);")}
         </tr>
-        <tr style="background:#1a1a1a;">
+        <tr class="fila-balance" style="background:#1a1a1a;">
           <td style="padding:13px 16px;font-weight:700;color:#fff;border:1px solid #1a1a1a;font-size:15px;">Balance del mes</td>
           <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #1a1a1a;">${fmt(totalMeta)}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalTiktok)}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalFact)}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${totalPedidos}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalCPA)}</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt2(totalROAS)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #1a1a1a;">${fmt(totalTiktok)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #1a1a1a;">${fmt(totalFact)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #1a1a1a;">${totalPedidos}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #1a1a1a;">${fmt(totalCPA)}</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #1a1a1a;">${fmt2(totalROAS)}</td>
         </tr>
       </thead>
       <tbody>
         ${rows.map(r => `
           <tr onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
             ${td(r.label, "color:var(--text);white-space:nowrap;")}
-            <td style="padding:10px 14px;border:1px solid var(--border);font-size:15px;text-align:right;background:rgba(24,119,242,.06);">
+            <td style="padding:10px 14px;border:1px solid var(--border);font-size:15px;text-align:right;">
               <input type="number" min="0" step="0.01" value="${r.meta||""}" placeholder="0.00"
                 data-date="${r.dateStr}" data-shop="${shop}" data-type="meta"
                 onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)"
-                style="width:80px;padding:4px 8px;border:1.5px solid rgba(24,119,242,.4);border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:#1877f2;font-weight:600;outline:none;">
+                style="width:80px;padding:4px 8px;border:1px solid #c9cccf;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);font-weight:600;outline:none;">
             </td>
-            <td style="padding:10px 14px;border:1px solid var(--border);font-size:15px;text-align:right;background:rgba(254,44,85,.05);">
+            <td style="padding:10px 14px;border:1px solid var(--border);font-size:15px;text-align:right;">
               <input type="number" min="0" step="0.01" value="${r.tiktok||""}" placeholder="0.00"
                 data-date="${r.dateStr}" data-shop="${shop}" data-type="tiktok"
                 onchange="saveAdsSpend(this)" onpaste="pegarDesdeExcel(event,this)"
-                style="width:80px;padding:4px 8px;border:1.5px solid rgba(254,44,85,.4);border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:#fe2c55;font-weight:600;outline:none;">
+                style="width:80px;padding:4px 8px;border:1px solid #c9cccf;border-radius:6px;font-size:13px;text-align:right;font-family:inherit;background:var(--card);color:var(--text);font-weight:600;outline:none;">
             </td>
             ${td(fmt(r.facturacion), "text-align:right;" + (r.facturacion < 0 ? "font-weight:700;color:#dc2626;" : "color:" + (r.facturacion > 0 ? "var(--text)" : "var(--muted)") + ";"))}
             ${td(r.pedidos > 0 ? r.pedidos : "0", "text-align:right;color:" + (r.pedidos > 0 ? "var(--text)" : "var(--muted)") + ";")}
@@ -10693,7 +10697,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
 
   const tablaGF = `
     <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <table class="rejilla" style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
           <tr style="background:#1a1a1a;">
             <th style="${thStyle}left;">GASTO FIJO</th>
@@ -10702,7 +10706,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
             <th style="${thStyle}right;">ESTIMADO</th>
             <th style="${thStyle}center;width:36px;"></th>
           </tr>
-          <tr style="background:rgba(34,197,94,.08);">
+          <tr class="fila-total">
             <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;">TOTAL</td>
             <td style="padding:10px 14px;border:1px solid #374151;font-weight:700;color:#22c55e;text-align:right;">${fmt(totalValor)} €</td>
             <td style="padding:10px 14px;border:1px solid #374151;"></td>
@@ -10783,7 +10787,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
           </tr>`).join("");
   const tablaPreciosEnvio = `
     <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <table class="rejilla" style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
           <tr style="background:#1a1a1a;">
             <th style="${thStyle}left;">PRECIO UNIT. ENVÍO</th>

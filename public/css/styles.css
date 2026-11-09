@@ -2301,3 +2301,16 @@ body.dark .ge-tab.activo { background: #22c55e; border-color: #22c55e; color: #0
 /* Métricas: filas de "Pedidos por tienda" -- blancas con borde negro */
 .met-leyenda-fila { background: #fff; border: 1px solid #1a1a1a; }
 body.dark .met-leyenda-fila { background: var(--card); border-color: var(--border); }
+
+/* ═══ Cuadrículas de Facturas (Gastos Ads, Gastos fijos, Gastos por tienda,
+   Nómina): todo blanco con separadores negros; solo "Balance del mes" en
+   negro. Con !important porque las celdas traen colores en línea. */
+body:not(.dark) .rejilla th,
+body:not(.dark) .rejilla td {
+  background: #fff !important; color: #1a1a1a !important; border: 1px solid #000 !important;
+}
+body:not(.dark) .rejilla thead th { font-weight: 700; }
+body:not(.dark) .rejilla tbody tr:hover td { background: #f7f7f7 !important; }
+body:not(.dark) .rejilla .fila-total td { font-weight: 700; }
+body:not(.dark) .rejilla .fila-balance td { background: #1a1a1a !important; color: #fff !important; }
+body:not(.dark) .rejilla td.ads-sel { background: #e8edf5 !important; outline: 2px solid #1a1a1a !important; }
