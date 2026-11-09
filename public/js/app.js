@@ -121,10 +121,10 @@ window.__DPF = (function () {
         const inR=s.startDate&&s.endDate&&ds>s.startDate&&ds<s.endDate;
         const isT=ds===today;
         let bg='transparent',col='var(--pk-day-text)',fw='400',br='6px',tdBg='transparent';
-        if (isS||isE) { bg='#22c55e';col='#fff';fw='700'; }
-        else if (inR) { tdBg='rgba(34,197,94,.15)';col='#86efac';fw='500';br='0'; }
-        else if (hi)  { tdBg='rgba(34,197,94,.08)';col='#86efac';br='0'; }
-        if (isT&&!isS&&!isE) { fw='700';col=inR||hi?col:'#4ade80'; }
+        if (isS||isE) { bg='#1a1a1a';col='#fff';fw='700'; }
+        else if (inR) { tdBg='rgba(0,0,0,.06)';col='var(--pk-text)';fw='500';br='0'; }
+        else if (hi)  { tdBg='rgba(0,0,0,.04)';col='var(--pk-text)';br='0'; }
+        if (isT&&!isS&&!isE) { fw='700';col=inR||hi?col:'var(--pk-text)'; }
         row+=`<td style="width:36px;height:36px;text-align:center;padding:0;background:${tdBg};">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:${bg};color:${col};border-radius:${br};font-size:13px;font-weight:${fw};cursor:pointer;transition:all .12s;"
             onclick="window.__DPF.pDay('${p}','${ds}')" onmouseover="window.__DPF.pHover('${p}','${ds}')"
@@ -172,11 +172,11 @@ window.__DPF = (function () {
       const act=s.preset===q.key;
       return `<div onclick="window.__DPF.pPreset('${p}','${q.key}')"
         style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#fff':'var(--pk-text)'};background:${act?'#1a1a1a':'transparent'};border-left:${act?'3px solid #1a1a1a':'3px solid transparent'};transition:all .12s;"
-        onmouseover="if(!${act})this.style.background='var(--pk-hover)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${q.label}</div>`;
+        onmouseover="if(!${act})this.style.background='var(--pk-hover)';" onmouseout="this.style.background='${act?'#1a1a1a':'transparent'}';">${q.label}</div>`;
     }).join('');
     const dateBox=(d,ph)=>`<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#1a1a1a':'var(--pk-border2)'};border-radius:9px;background:${d?'var(--pk-bg)':'var(--pk-input)'};">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#1a1a1a':'var(--pk-text3)'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-      <span style="font-size:12.5px;color:${d?'#86efac':'var(--pk-text2)'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):ph}</span></div>`;
+      <span style="font-size:12.5px;color:${d?'var(--pk-text)':'var(--pk-text2)'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):ph}</span></div>`;
     const navBtn=(dir,lbl)=>`<button onclick="window.__DPF.pNav('${p}',${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:var(--pk-btn-bg);border:1px solid var(--pk-border2);border-radius:7px;cursor:pointer;font-size:15px;color:var(--pk-text2);font-weight:700;transition:all .12s;" onmouseover="this.style.color='var(--pk-text)';this.style.borderColor='var(--pk-border)';" onmouseout="this.style.color='var(--pk-text2)';this.style.borderColor='var(--pk-border2)';">${lbl}</button>`;
     const calSection = narrow
       ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">${navBtn(-1,'‹')}<span></span>${navBtn(1,'›')}</div>
@@ -212,7 +212,7 @@ window.__DPF = (function () {
         ${calSection}
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid var(--pk-border);">
           <button onclick="window.__DPF.pClose('${p}')" style="padding:8px 18px;background:transparent;border:1.5px solid var(--pk-border2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--pk-text2);transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='var(--pk-border)';this.style.color='var(--pk-text)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.color='var(--pk-text2)';">Cancelar</button>
-          <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
+          <button onclick="window.__DPF.pApply('${p}')" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:none;transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
         </div>
       </div>
     </div>`;
@@ -1843,10 +1843,10 @@ const now = new Date();
         const inR = s.startDate&&s.endDate&&ds>s.startDate&&ds<s.endDate;
         const isT = ds===today;
         let bg='transparent', col='var(--pk-day-text)', fw='400', br='6px', tdBg='transparent', outline='none';
-        if (isS||isE) { bg='#22c55e'; col='#fff'; fw='700'; outline='none'; }
-        else if (inR) { tdBg='rgba(34,197,94,.15)'; col='#86efac'; fw='500'; br='0'; }
-        else if (hi)  { tdBg='rgba(34,197,94,.08)'; col='#86efac'; br='0'; }
-        if (isT&&!isS&&!isE) { fw='700'; col=inR||hi?col:'#4ade80'; }
+        if (isS||isE) { bg='#1a1a1a'; col='#fff'; fw='700'; outline='none'; }
+        else if (inR) { tdBg='rgba(0,0,0,.06)'; col='var(--pk-text)'; fw='500'; br='0'; }
+        else if (hi)  { tdBg='rgba(0,0,0,.04)'; col='var(--pk-text)'; br='0'; }
+        if (isT&&!isS&&!isE) { fw='700'; col=inR||hi?col:'var(--pk-text)'; }
         row+=`<td style="width:36px;height:36px;text-align:center;padding:0;background:${tdBg};">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:${bg};color:${col};border-radius:${br};font-size:13px;font-weight:${fw};cursor:pointer;transition:all .12s;"
             onclick="window.__metPDay('${ds}')" onmouseover="window.__metPHover('${ds}')"
@@ -1893,11 +1893,11 @@ const now = new Date();
       const act=s.preset===p.key;
       return `<div onclick="window.__metPPreset('${p.key}')"
         style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#fff':'var(--pk-text)'};background:${act?'#1a1a1a':'transparent'};border-left:${act?'3px solid #1a1a1a':'3px solid transparent'};transition:all .12s;"
-        onmouseover="if(!${act})this.style.background='var(--pk-hover)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${p.label}</div>`;
+        onmouseover="if(!${act})this.style.background='var(--pk-hover)';" onmouseout="this.style.background='${act?'#1a1a1a':'transparent'}';">${p.label}</div>`;
     }).join('');
     const dateBox = (d,placeholder) => `<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#1a1a1a':'var(--pk-border2)'};border-radius:9px;background:${d?'var(--pk-bg)':'var(--pk-input)'};">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#1a1a1a':'var(--pk-text3)'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-      <span style="font-size:12.5px;color:${d?'#86efac':'var(--pk-text2)'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):placeholder}</span>
+      <span style="font-size:12.5px;color:${d?'var(--pk-text)':'var(--pk-text2)'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):placeholder}</span>
     </div>`;
     const navBtn = (dir,label) => `<button onclick="window.__metPNav(${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:var(--pk-btn-bg);border:1px solid var(--pk-border2);border-radius:7px;cursor:pointer;font-size:15px;color:var(--pk-text2);font-weight:700;transition:all .12s;" onmouseover="this.style.color='var(--pk-text)';this.style.borderColor='var(--pk-border)';" onmouseout="this.style.color='var(--pk-text2)';this.style.borderColor='var(--pk-border2)';">${label}</button>`;
     const calSection = narrow
@@ -1925,7 +1925,7 @@ const now = new Date();
         ${calSection}
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:${narrow?'14px':'20px'};padding-top:${narrow?'12px':'16px'};border-top:1px solid var(--pk-border);">
           <button onclick="window.__metPClose()" style="padding:8px 18px;background:transparent;border:1.5px solid var(--pk-border2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--pk-text2);transition:all .12s;font-family:inherit;" onmouseover="this.style.borderColor='var(--pk-border)';this.style.color='var(--pk-text)';" onmouseout="this.style.borderColor='var(--pk-border2)';this.style.color='var(--pk-text2)';">Cancelar</button>
-          <button onclick="window.__metPApply()" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:0 0 20px rgba(34,197,94,.3);transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
+          <button onclick="window.__metPApply()" style="padding:8px 22px;background:#22c55e;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#052e16;box-shadow:none;transition:all .12s;font-family:inherit;" onmouseover="this.style.background='#16a34a';this.style.boxShadow='0 0 28px rgba(34,197,94,.5)';" onmouseout="this.style.background='#22c55e';this.style.boxShadow='0 0 20px rgba(34,197,94,.3)';">Aplicar</button>
         </div>
       </div>
     </div>`;
@@ -9073,7 +9073,7 @@ async function loadOrdersChart(period) {
       const totalPorTienda = stores.map(s => ({ domain: s, name: displayName(s), total: buckets.reduce((a,b) => a + ((data[s]||{})[b]||0), 0) }));
       legendEl.innerHTML = totalPorTienda.map(({domain,name,total},i) => {
         const color = storeColorMap[domain] || (STORE_PALETTE[i % STORE_PALETTE.length])[isDark ? 'dark' : 'light'];
-        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--input);border-radius:8px;">
+        return `<div class="met-leyenda-fila" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;">
           <span style="width:10px;height:10px;border-radius:3px;background:${color};flex-shrink:0;"></span>
           <span style="font-size:13px;font-weight:600;color:var(--text);letter-spacing:.3px;">${escapeHtml(name)}</span>
           <span style="font-size:13px;font-weight:700;color:${color};margin-left:auto;">${total}</span>
