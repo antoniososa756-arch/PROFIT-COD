@@ -479,6 +479,7 @@ if (location.pathname.includes("login")) {
           loadApp(conOrigen ? nav.origen : "pedidos");
           abrirDetallePedido(_pathParts[1], conOrigen ? { navIds: nav.ids, origen: nav.origen } : {});
         } else if (VALID_ROUTE_SECTIONS.includes(_pathParts[0])) {
+          geLeerUrl(_pathParts);
           loadApp(_pathParts[0]);
         } else {
           loadApp(localStorage.getItem("section") || "metricas");
@@ -916,6 +917,7 @@ function restoreFromPath(pathname) {
     else window.abrirDetallePedido(parts[1]);
     return;
   }
+  geLeerUrl(parts);
   const id = VALID_ROUTE_SECTIONS.includes(parts[0]) ? parts[0] : (localStorage.getItem("section") || "metricas");
   setSection(id);
 }
@@ -1340,6 +1342,7 @@ window.startTrialAndReload = async function() {
 window.geTab = function(tab) {
   window.__geTab = tab;
   try { sessionStorage.setItem("geTab", tab); } catch (e) {}
+  geUrl();
   document.querySelectorAll(".ge-tab[data-tab]").forEach(b => b.classList.toggle("activo", b.dataset.tab === tab));
   const cont = document.getElementById("ge-contenido");
   if (!cont) return;
@@ -1347,6 +1350,22 @@ window.geTab = function(tab) {
   if (tab === "confirmar") return geConfirmar(cont);
   geIncidencias(cont);
 };
+// La dirección refleja la pestaña: /gestion-ecom/confirmar,
+// /gestion-ecom/incidencias/franquicia... (al recargar se abre esa misma).
+// Se reemplaza la entrada del historial para no duplicarla.
+function geUrl() {
+  if (window.__currentRoute?.id !== "gestion-ecom") return;
+  const tab = window.__geTab || "confirmar";
+  const path = `/gestion-ecom/${tab}${tab === "incidencias" ? `/${window.__geSubInc || "franquicia"}` : ""}`;
+  const imp = new URLSearchParams(window.location.search).get("impersonated") === "1";
+  if (window.location.pathname !== path) history.replaceState(null, "", imp ? `${path}?impersonated=1` : path);
+}
+// Lee la pestaña de la dirección (/gestion-ecom/<pestaña>/<apartado>)
+function geLeerUrl(parts) {
+  if (parts[0] !== "gestion-ecom") return;
+  if (["confirmar", "incidencias"].includes(parts[1])) window.__geTab = parts[1];
+  if (["curso", "franquicia"].includes(parts[2])) window.__geSubInc = parts[2];
+}
 // La pestaña elegida sobrevive a recargar (F5)
 try { window.__geTab = sessionStorage.getItem("geTab") || window.__geTab; } catch (e) {}
 
@@ -1372,6 +1391,7 @@ function geIncidencias(cont) {
 window.geSubIncidencias = function(sub) {
   window.__geSubInc = sub;
   try { sessionStorage.setItem("geSubInc", sub); } catch (e) {}
+  geUrl();
   const cont = document.getElementById("ge-contenido");
   if (cont) geIncidencias(cont);
 };
