@@ -1325,6 +1325,21 @@ window.startTrialAndReload = async function() {
   } catch(e) { alert("Error: " + e.message); }
 };
 
+// Gestión Ecom: pestañas "Confirmar pedidos" / "Incidencias" (ver la sección
+// "gestion-ecom" en setSection). Recuerda la última elegida.
+window.geTab = function(tab) {
+  window.__geTab = tab;
+  document.querySelectorAll(".ge-tab").forEach(b => b.classList.toggle("activo", b.dataset.tab === tab));
+  const cont = document.getElementById("ge-contenido");
+  if (!cont) return;
+  const titulo = tab === "confirmar" ? "Confirmar pedidos" : "Incidencias";
+  cont.innerHTML = `
+    <div class="ui-entrada" style="padding:44px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">${titulo}</div>
+      <div class="muted">En construcción.</div>
+    </div>`;
+};
+
 // Animación de entrada (ver .ui-entrada en styles.css): se quita y se vuelve
 // a poner la clase para que se repita en cada cambio de sección.
 function uiEntrada(el) {
@@ -2583,13 +2598,18 @@ if (id === "gestion-ecom") {
   box.className = "card";
   box.removeAttribute("style");
   box.innerHTML = `
-    <div style="padding:48px 20px;text-align:center;">
-      <div style="width:52px;height:52px;margin:0 auto 14px;border-radius:14px;background:rgba(34,197,94,.12);color:#16a34a;display:flex;align-items:center;justify-content:center;">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.7H6.5a2 2 0 0 1-2-1.7L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M9 12h6"/></svg>
-      </div>
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">Gestión Ecom</div>
-      <div class="muted">Sección en construcción. Solo visible para administradores.</div>
-    </div>`;
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+      <button class="ge-tab" data-tab="confirmar" onclick="geTab('confirmar')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+        Confirmar pedidos
+      </button>
+      <button class="ge-tab" data-tab="incidencias" onclick="geTab('incidencias')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        Incidencias
+      </button>
+    </div>
+    <div id="ge-contenido"></div>`;
+  geTab(window.__geTab || "confirmar");
   closeAllDrops();
   closeSearchDrop();
   return;
