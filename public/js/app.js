@@ -171,11 +171,11 @@ window.__DPF = (function () {
     const sidebar=PRESETS.map(q=>{
       const act=s.preset===q.key;
       return `<div onclick="window.__DPF.pPreset('${p}','${q.key}')"
-        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#22c55e':'var(--pk-text2)'};background:${act?'rgba(34,197,94,.12)':'transparent'};border-left:${act?'3px solid #22c55e':'3px solid transparent'};transition:all .12s;"
+        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#fff':'var(--pk-text)'};background:${act?'#1a1a1a':'transparent'};border-left:${act?'3px solid #1a1a1a':'3px solid transparent'};transition:all .12s;"
         onmouseover="if(!${act})this.style.background='var(--pk-hover)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${q.label}</div>`;
     }).join('');
-    const dateBox=(d,ph)=>`<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#22c55e':'var(--pk-border2)'};border-radius:9px;background:${d?'rgba(34,197,94,.08)':'var(--pk-input)'};">
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#22c55e':'var(--pk-text3)'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    const dateBox=(d,ph)=>`<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#1a1a1a':'var(--pk-border2)'};border-radius:9px;background:${d?'var(--pk-bg)':'var(--pk-input)'};">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#1a1a1a':'var(--pk-text3)'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       <span style="font-size:12.5px;color:${d?'#86efac':'var(--pk-text2)'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):ph}</span></div>`;
     const navBtn=(dir,lbl)=>`<button onclick="window.__DPF.pNav('${p}',${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:var(--pk-btn-bg);border:1px solid var(--pk-border2);border-radius:7px;cursor:pointer;font-size:15px;color:var(--pk-text2);font-weight:700;transition:all .12s;" onmouseover="this.style.color='var(--pk-text)';this.style.borderColor='var(--pk-border)';" onmouseout="this.style.color='var(--pk-text2)';this.style.borderColor='var(--pk-border2)';">${lbl}</button>`;
     const calSection = narrow
@@ -198,7 +198,7 @@ window.__DPF = (function () {
         ${sidebar}
       </div>`;
     const presetMobile = narrow
-      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__DPF.pPreset('${p}','${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'var(--pk-btn-bg)'};color:${act?'#052e16':'var(--pk-text2)'};border:1px solid ${act?'#22c55e':'var(--pk-border2)'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__DPF.pPreset('${p}','${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#1a1a1a':'var(--pk-bg)'};color:${act?'#fff':'var(--pk-text)'};border:1px solid ${act?'#1a1a1a':'var(--pk-border2)'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
       : '';
     panel.innerHTML=`<div class="dpf-panel" style="display:flex;box-shadow:var(--pk-shadow);border-radius:14px;overflow:hidden;background:var(--pk-bg);border:1px solid var(--pk-border);">
       ${sidebarSection}
@@ -1595,15 +1595,15 @@ const now = new Date();
 
       <div style="display:flex;gap:6px;margin-bottom:14px;">
         <button onclick="setMetPaymentFilter('all')" id="met-pay-all"
-          style="padding:5px 14px;border-radius:7px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#22c55e;color:#fff;transition:all .15s;">
+          style="padding:5px 14px;border-radius:7px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#1a1a1a;color:#fff;transition:all .15s;">
           Ambos
         </button>
         <button onclick="setMetPaymentFilter('cod')" id="met-pay-cod"
-          style="padding:5px 14px;border-radius:7px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
+          style="padding:5px 14px;border-radius:7px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--card);color:var(--text);transition:all .15s;">
           Solo COD
         </button>
         <button onclick="setMetPaymentFilter('card')" id="met-pay-card"
-          style="padding:5px 14px;border-radius:7px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
+          style="padding:5px 14px;border-radius:7px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--card);color:var(--text);transition:all .15s;">
           Solo Tarjeta
         </button>
       </div>
@@ -1892,11 +1892,11 @@ const now = new Date();
     const sidebar=PRESETS.map(p=>{
       const act=s.preset===p.key;
       return `<div onclick="window.__metPPreset('${p.key}')"
-        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#22c55e':'var(--pk-text2)'};background:${act?'rgba(34,197,94,.12)':'transparent'};border-left:${act?'3px solid #22c55e':'3px solid transparent'};transition:all .12s;"
+        style="padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:${act?'600':'400'};color:${act?'#fff':'var(--pk-text)'};background:${act?'#1a1a1a':'transparent'};border-left:${act?'3px solid #1a1a1a':'3px solid transparent'};transition:all .12s;"
         onmouseover="if(!${act})this.style.background='var(--pk-hover)';" onmouseout="this.style.background='${act?'rgba(34,197,94,.12)':'transparent'}';">${p.label}</div>`;
     }).join('');
-    const dateBox = (d,placeholder) => `<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#22c55e':'var(--pk-border2)'};border-radius:9px;background:${d?'rgba(34,197,94,.08)':'var(--pk-input)'};">
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#22c55e':'var(--pk-text3)'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    const dateBox = (d,placeholder) => `<div style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1.5px solid ${d?'#1a1a1a':'var(--pk-border2)'};border-radius:9px;background:${d?'var(--pk-bg)':'var(--pk-input)'};">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="${d?'#1a1a1a':'var(--pk-text3)'}" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       <span style="font-size:12.5px;color:${d?'#86efac':'var(--pk-text2)'};font-weight:${d?'500':'400'};white-space:nowrap;">${d?fmtD(d):placeholder}</span>
     </div>`;
     const navBtn = (dir,label) => `<button onclick="window.__metPNav(${dir})" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:var(--pk-btn-bg);border:1px solid var(--pk-border2);border-radius:7px;cursor:pointer;font-size:15px;color:var(--pk-text2);font-weight:700;transition:all .12s;" onmouseover="this.style.color='var(--pk-text)';this.style.borderColor='var(--pk-border)';" onmouseout="this.style.color='var(--pk-text2)';this.style.borderColor='var(--pk-border2)';">${label}</button>`;
@@ -1908,7 +1908,7 @@ const now = new Date();
           <div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span></span>${navBtn(1,'›')}</div>${renderMonth(vy,vm)}</div>
         </div>`;
     const presetMobile = narrow
-      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__metPPreset('${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#22c55e':'var(--pk-btn-bg)'};color:${act?'#052e16':'var(--pk-text2)'};border:1px solid ${act?'#22c55e':'var(--pk-border2)'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">${PRESETS.map(q=>{const act=s.preset===q.key;return `<button onclick="window.__metPPreset('${q.key}')" style="padding:5px 12px;border-radius:999px;font-size:12px;font-weight:${act?'700':'400'};cursor:pointer;background:${act?'#1a1a1a':'var(--pk-bg)'};color:${act?'#fff':'var(--pk-text)'};border:1px solid ${act?'#1a1a1a':'var(--pk-border2)'};font-family:inherit;">${q.label}</button>`;}).join('')}</div>`
       : '';
     panel.innerHTML=`<div class="dpf-panel" style="display:flex;box-shadow:var(--pk-shadow);border-radius:14px;overflow:hidden;background:var(--pk-bg);border:1px solid var(--pk-border);">
       ${narrow?'':` <div style="width:176px;padding:18px 10px;background:var(--pk-sidebar);border-right:1px solid var(--pk-border);display:flex;flex-direction:column;gap:2px;">
@@ -1943,7 +1943,7 @@ const now = new Date();
     const lbl = document.getElementById("met-carrier-label");
     if (lbl) lbl.textContent = etiquetaFiltroAgencia(k);
     document.querySelectorAll('[id^="met-carrier-opt-"]').forEach(el => {
-      el.style.color = el.id === "met-carrier-opt-" + k ? "#22c55e" : "";
+      el.style.color = el.id === "met-carrier-opt-" + k ? "#1a1a1a" : "";
     });
     const p = document.getElementById("met-carrier-panel");
     if (p) p.style.display = "none";
@@ -1962,9 +1962,9 @@ const now = new Date();
       const btn = document.getElementById("met-pay-" + k);
       if (!btn) return;
       if (k === type) {
-        btn.style.background = "#22c55e"; btn.style.color = "#fff"; btn.style.border = "none";
+        btn.style.background = "#1a1a1a"; btn.style.color = "#fff"; btn.style.border = "none";
       } else {
-        btn.style.background = "transparent"; btn.style.color = "var(--muted)"; btn.style.border = "1px solid var(--border)";
+        btn.style.background = "var(--card)"; btn.style.color = "var(--text)"; btn.style.border = "1px solid var(--border)";
       }
     });
     if (window.__refreshMetrics) window.__refreshMetrics();
@@ -2744,7 +2744,7 @@ if (id === "rentabilidad") {
     const lbl = document.getElementById("rent-carrier-label");
     if (lbl) lbl.textContent = etiquetaFiltroAgencia(k);
     document.querySelectorAll('[id^="rent-carrier-opt-"]').forEach(el => {
-      el.style.color = el.id === "rent-carrier-opt-" + k ? "#22c55e" : "";
+      el.style.color = el.id === "rent-carrier-opt-" + k ? "#1a1a1a" : "";
     });
     const p = document.getElementById("rent-carrier-panel");
     if (p) p.style.display = "none";
@@ -2863,21 +2863,21 @@ if (id === "tiendas") {
   box.className = "";
   box.removeAttribute("style");
   box.innerHTML = `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;background:var(--input);padding:4px;border-radius:10px;width:fit-content;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;width:fit-content;">
       <button id="int-tab-btn-tiendas" onclick="switchIntegracionesTab('tiendas')"
-        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:#22c55e;color:#fff;box-shadow:0 2px 8px rgba(34,197,94,.25);transition:all .15s;">
+        style="padding:7px 18px;border-radius:8px;border:1px solid #1a1a1a;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:#1a1a1a;color:#fff;box-shadow:none;transition:all .15s;">
         Tiendas
       </button>
       <button id="int-tab-btn-agencia" onclick="switchIntegracionesTab('agencia')"
-        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
+        style="padding:7px 18px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--card);color:var(--text);transition:all .15s;">
         Agencia de envío
       </button>
       <button id="int-tab-btn-reembolsos" onclick="switchIntegracionesTab('reembolsos')"
-        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
+        style="padding:7px 18px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--card);color:var(--text);transition:all .15s;">
         Reembolsos
       </button>
       ${puedeVerLeads() ? `<button id="int-tab-btn-leads" onclick="switchIntegracionesTab('leads')"
-        style="padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .15s;">
+        style="padding:7px 18px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--card);color:var(--text);transition:all .15s;">
         Leads COD
       </button>` : ""}
     </div>
@@ -2889,9 +2889,9 @@ if (id === "tiendas") {
       const btn = document.getElementById("int-tab-btn-" + k);
       if (!btn) return;
       if (k === tab) {
-        btn.style.background = "#22c55e"; btn.style.color = "#fff"; btn.style.boxShadow = "0 2px 8px rgba(34,197,94,.25)";
+        btn.style.background = "#1a1a1a"; btn.style.color = "#fff"; btn.style.boxShadow = "none"; btn.style.borderColor = "#1a1a1a";
       } else {
-        btn.style.background = "transparent"; btn.style.color = "var(--muted)"; btn.style.boxShadow = "none";
+        btn.style.background = "var(--card)"; btn.style.color = "var(--text)"; btn.style.boxShadow = "none"; btn.style.borderColor = "var(--border)";
       }
     });
 
@@ -4102,7 +4102,7 @@ if (id === "facturas") {
           ["nomina","Nómina"]
         ].map(([key, label]) => `
           <button id="tab-btn-${key}" onclick="switchFacturasTab('${key}')"
-            style="padding:8px 18px;border-radius:8px;border:1px solid #374151;font-size:13px;font-weight:600;cursor:pointer;background:#111827;color:#e3e3e3;transition:all .15s;">
+            style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;background:var(--card);color:var(--text);transition:all .15s;">
             ${label}
           </button>
         `).join("")}
@@ -4203,7 +4203,7 @@ if (id === "informes") {
   box.innerHTML = `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
       <button id="inf-tab-btn-reembolsos" onclick="switchInformesTab('reembolsos')"
-        style="padding:8px 18px;border-radius:8px;border:1px solid #22c55e;font-size:13px;font-weight:600;cursor:pointer;background:#22c55e;color:#fff;">
+        style="padding:8px 18px;border-radius:8px;border:1px solid #1a1a1a;font-size:13px;font-weight:600;cursor:pointer;background:#1a1a1a;color:#fff;">
         Reembolsos
       </button>
       <button id="inf-tab-btn-ingresos" onclick="switchInformesTab('ingresos')"
@@ -5792,9 +5792,9 @@ function switchFacturasTab(key) {
     const btn = document.getElementById("tab-btn-" + k);
     if (!btn) return;
     if (k === key) {
-      btn.style.background = "#22c55e";
+      btn.style.background = "#1a1a1a";
       btn.style.color = "#fff";
-      btn.style.borderColor = "#22c55e";
+      btn.style.borderColor = "#1a1a1a";
     } else {
       btn.style.background = "#fff";
       btn.style.color = "#374151";
@@ -8132,7 +8132,7 @@ function renderLeadsGlobalFilter() {
   el.innerHTML = Object.entries(LEADS_FILTER_LABELS).map(([key, label]) => `
     <span onclick="setLeadsFilter('${key}')"
       style="padding:6px 16px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;
-             background:${filter === key ? "#22c55e" : "transparent"};color:${filter === key ? "#fff" : "var(--muted)"};">
+             background:${filter === key ? "#1a1a1a" : "transparent"};color:${filter === key ? "#fff" : "var(--text)"};">
       ${label}
     </span>`).join("");
 }
@@ -11379,7 +11379,7 @@ async function switchInformesTab(tab) {
     const btn = document.getElementById(`inf-tab-btn-${k}`);
     if (!btn) return;
     if (k === tab) {
-      btn.style.background = "#22c55e"; btn.style.color = "#fff"; btn.style.borderColor = "#22c55e";
+      btn.style.background = "#1a1a1a"; btn.style.color = "#fff"; btn.style.borderColor = "#1a1a1a";
     } else {
       btn.style.background = "#fff"; btn.style.color = "#374151"; btn.style.borderColor = "#e3e3e3";
     }
@@ -12545,9 +12545,9 @@ function pfActionBtn(icon, onclick, title, hoverColor) {
 window.pfacturaSwitchTab = function(tab) {
   document.querySelectorAll(".pf-tab-btn").forEach(b => {
     const active = b.dataset.pfTab === tab;
-    b.style.background = active ? "#22c55e" : "var(--input)";
-    b.style.color = active ? "#fff" : "var(--muted)";
-    b.style.borderColor = active ? "#22c55e" : "var(--border)";
+    b.style.background = active ? "#1a1a1a" : "var(--card)";
+    b.style.color = active ? "#fff" : "var(--text)";
+    b.style.borderColor = active ? "#1a1a1a" : "var(--border)";
   });
   const actionBtn = document.getElementById("pf-tab-action-btn");
   if (actionBtn) {
@@ -13296,7 +13296,7 @@ function contaRender() {
   const tabBtn = (key, label) => {
     const active = st.tab === key;
     return `<button onclick="contaSetTab('${key}')"
-      style="padding:7px 16px;border-radius:8px;border:1px solid ${active ? "#22c55e" : "var(--border)"};background:${active ? "#22c55e" : "var(--input)"};color:${active ? "#fff" : "var(--text)"};font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">${label}</button>`;
+      style="padding:7px 16px;border-radius:8px;border:1px solid ${active ? "#1a1a1a" : "var(--border)"};background:${active ? "#1a1a1a" : "var(--card)"};color:${active ? "#fff" : "var(--text)"};font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">${label}</button>`;
   };
 
   box.className = "card";
@@ -13325,7 +13325,7 @@ function contaRenderMovimientosTab() {
     const mm = i + 1;
     const active = mm === st.month;
     return `<button onclick="contaSetMonth(${mm})"
-      style="padding:6px 12px;border-radius:8px;border:1px solid ${active ? "#22c55e" : "var(--border)"};background:${active ? "#22c55e" : "var(--input)"};color:${active ? "#fff" : "var(--text)"};font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">${m}</button>`;
+      style="padding:6px 12px;border-radius:8px;border:1px solid ${active ? "#1a1a1a" : "var(--border)"};background:${active ? "#1a1a1a" : "var(--card)"};color:${active ? "#fff" : "var(--text)"};font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">${m}</button>`;
   }).join("");
 
   const cuentasHtml = st.cuentas.length
@@ -14586,8 +14586,8 @@ if (pagination) {
     for (let i = startPage; i <= endPage; i++) {
       const isActive = i === p;
       pages += `<button onclick="goToOrdersPage(${i})"
-        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#22c55e":"#e3e3e3"};
-          background:${isActive?"#22c55e":"var(--card)"};color:${isActive?"#fff":"var(--text)"};
+        style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#1a1a1a":"#e3e3e3"};
+          background:${isActive?"#1a1a1a":"var(--card)"};color:${isActive?"#fff":"var(--text)"};
           font-size:13px;font-weight:${isActive?"700":"400"};cursor:pointer;font-family:inherit;">
         ${i}
       </button>`;
@@ -14746,7 +14746,7 @@ function renderOrderNavControls() {
   const fmt = n => n.toLocaleString("es-ES");
   const boton = (dir, activo, titulo, path) => `
       <button onclick="irAOrdenAdyacente(${dir})" title="${titulo}" ${activo ? "" : "disabled"}
-        ${activo ? `onmouseover="this.style.background='#22c55e';this.style.color='#fff';this.style.borderColor='#22c55e';" onmouseout="this.style.background='var(--card)';this.style.color='var(--text)';this.style.borderColor='var(--border)';"` : ""}
+        ${activo ? `onmouseover="this.style.background='#1a1a1a';this.style.color='#fff';this.style.borderColor='#1a1a1a';" onmouseout="this.style.background='var(--card)';this.style.color='var(--text)';this.style.borderColor='var(--border)';"` : ""}
         style="width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%;
                background:var(--card);border:1px solid var(--border);color:var(--text);padding:0;
                cursor:${activo ? "pointer" : "default"};opacity:${activo ? "1" : ".35"};transition:background .15s,color .15s,border-color .15s;">
@@ -15606,7 +15606,7 @@ function renderReclamosPage(rows, total, page, totalPages) {
       for (let i = 1; i <= totalPages; i++) {
         const isActive = i === p;
         html += `<button onclick="goToReclamosPage(${i})"
-          style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#22c55e":"#e3e3e3"};background:${isActive?"#22c55e":"var(--card)"};color:${isActive?"#fff":"var(--text)"};font-size:13px;font-weight:${isActive?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`;
+          style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${isActive?"#1a1a1a":"#e3e3e3"};background:${isActive?"#1a1a1a":"var(--card)"};color:${isActive?"#fff":"var(--text)"};font-size:13px;font-weight:${isActive?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`;
       }
       html += `<button onclick="goToReclamosPage(${Math.min(totalPages, p+1)})"
         style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===totalPages?"#d4d4d4":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===totalPages?"disabled":""}>›</button>`;
@@ -16243,8 +16243,8 @@ async function toggleFilterPanel() {
               color:${!activeFilters.shop ? '#4ade80' : '#a1a1a1'};
               font-weight:${!activeFilters.shop ? '600' : '400'};"
           >
-            <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${!activeFilters.shop ? '#22c55e' : '#374151'};
-              background:${!activeFilters.shop ? '#22c55e' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
+            <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${!activeFilters.shop ? '#1a1a1a' : '#374151'};
+              background:${!activeFilters.shop ? '#1a1a1a' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
             Todas las tiendas
           </div>
           ${stores.map(s => `
@@ -16259,8 +16259,8 @@ async function toggleFilterPanel() {
               onmouseover="this.style.background='rgba(255,255,255,.04)'"
               onmouseout="this.style.background='${activeFilters.shop===s.domain ? 'rgba(34,197,94,.1)' : 'transparent'}'"
             >
-              <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${activeFilters.shop===s.domain ? '#22c55e' : '#d4d4d4'};
-                background:${activeFilters.shop===s.domain ? '#22c55e' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
+              <span style="width:16px; height:16px; border-radius:50%; border:2px solid ${activeFilters.shop===s.domain ? '#1a1a1a' : '#d4d4d4'};
+                background:${activeFilters.shop===s.domain ? '#1a1a1a' : 'transparent'}; display:inline-block; flex-shrink:0;"></span>
               ${escapeHtml(shopLabel(s))}
             </div>
           `).join("")}
@@ -16566,7 +16566,7 @@ async function pintarAgenciasReembolsos() {
   const opciones = ags.length > 1 ? [["", "Todas"], ...ags.map(a => [a.id, a.nombre])] : ags.map(a => [a.id, a.nombre]);
   box.innerHTML = opciones.map(([id, nombre]) => {
     const on = id === sel;
-    return `<button onclick="setReeCarrier('${id}')" style="padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:${ags.length > 1 ? "pointer" : "default"};font-family:inherit;border:1.5px solid ${on ? "#22c55e" : "var(--border)"};background:${on ? "rgba(34,197,94,.1)" : "transparent"};color:${on ? "#16a34a" : "var(--muted)"};">${escapeHtml(nombre)}</button>`;
+    return `<button onclick="setReeCarrier('${id}')" style="padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:${ags.length > 1 ? "pointer" : "default"};font-family:inherit;border:1.5px solid ${on ? "#1a1a1a" : "var(--border)"};background:${on ? "#1a1a1a" : "transparent"};color:${on ? "#fff" : "var(--text)"};">${escapeHtml(nombre)}</button>`;
   }).join("");
 }
 
@@ -16654,7 +16654,7 @@ async function fetchReembolsosFiltered() {
       pagesHtml += `<button onclick="goToReePage(${Math.max(1,p-1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===1?"#d4d4d4":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===1?"disabled":""}>‹</button>`;
       let sp = Math.max(1,p-delta), ep = Math.min(pages,p+delta);
       if (sp > 1) { pagesHtml += `<button onclick="goToReePage(1)" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">1</button>`; if (sp>2) pagesHtml += `<span style="padding:0 4px;color:#a1a1a1;line-height:34px;">…</span>`; }
-      for (let i=sp;i<=ep;i++) { const a=i===p; pagesHtml += `<button onclick="goToReePage(${i})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${a?"#22c55e":"#e3e3e3"};background:${a?"#22c55e":"var(--card)"};color:${a?"#fff":"var(--text)"};font-size:13px;font-weight:${a?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`; }
+      for (let i=sp;i<=ep;i++) { const a=i===p; pagesHtml += `<button onclick="goToReePage(${i})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid ${a?"#1a1a1a":"#e3e3e3"};background:${a?"#1a1a1a":"var(--card)"};color:${a?"#fff":"var(--text)"};font-size:13px;font-weight:${a?"700":"400"};cursor:pointer;font-family:inherit;">${i}</button>`; }
       if (ep < pages) { if (ep<pages-1) pagesHtml += `<span style="padding:0 4px;color:#a1a1a1;line-height:34px;">…</span>`; pagesHtml += `<button onclick="goToReePage(${pages})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;">${pages}</button>`; }
       pagesHtml += `<button onclick="goToReePage(${Math.min(pages,p+1)})" style="min-width:34px;height:34px;padding:0 10px;border-radius:8px;border:1px solid #374151;background:var(--card);color:${p===pages?"#d4d4d4":"var(--text)"};font-size:13px;cursor:pointer;font-family:inherit;" ${p===pages?"disabled":""}>›</button>`;
       pagination.innerHTML = pagesHtml;
