@@ -1349,17 +1349,15 @@ async function geConfirmar(cont) {
   cont.innerHTML = `
     <div class="ui-entrada" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
       <div id="ge-tiendas" style="display:flex;gap:6px;flex-wrap:wrap;min-width:0;"></div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-left:auto;">
-        <div style="display:flex;align-items:flex-end;gap:8px;">
-          <label style="display:block;width:min(300px,60vw);">
-            <span class="ed-label">Etiqueta que usa tu almacén para preparar los pedidos</span>
-            <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off"
-              onkeydown="if(event.key==='Enter')geGuardarEtiqueta()">
-          </label>
-          <button id="ge-etiqueta-btn" onclick="geGuardarEtiqueta()" class="ge-tab activo" style="height:38px;">Guardar</button>
+      <div style="width:min(380px,100%);margin-left:auto;">
+        <label for="ge-etiqueta" class="ed-label" style="white-space:nowrap;">Etiqueta de preparación de tu almacén</label>
+        <div style="display:flex;gap:8px;">
+          <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off" style="flex:1;min-width:0;"
+            onkeydown="if(event.key==='Enter')geGuardarEtiqueta()">
+          <button id="ge-etiqueta-btn" onclick="geGuardarEtiqueta()" class="ge-tab activo" style="height:38px;flex-shrink:0;">Guardar</button>
         </div>
-        <div class="muted" style="font-size:11.5px;text-align:right;max-width:420px;">
-          Pedidos de los últimos 30 días, sin enviar ni cancelar, que aún <b>no</b> tienen esta etiqueta ni la de <b>correcto</b>.
+        <div class="muted" style="font-size:11.5px;line-height:1.45;margin-top:6px;">
+          Se listan los pedidos sin esta etiqueta ni <b>correcto</b> (últimos 30 días, sin enviar ni cancelar).
         </div>
       </div>
     </div>
@@ -1400,7 +1398,7 @@ async function geCargarConfirmar() {
     const H = { Authorization: "Bearer " + getActiveToken() };
     const [res, tiendas] = await Promise.all([
       fetch(`${API_BASE}/api/gestion-ecom/confirmar`, { headers: H }),
-      cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: H }).catch(() => []),
+      cachedFetch(`${API_BASE}/api/shopify/stores`, { headers: H }).catch(() => []), // solo tiendas activas
     ]);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Error");
@@ -1453,7 +1451,9 @@ function geRenderConfirmar() {
   const caja = document.getElementById("ge-tiendas");
   const { data, tiendas } = window.__geDatos || {};
   if (!lista || !data) return;
-  const todos = data.pedidos || [];
+  // Solo pedidos de tiendas activas (las mismas que salen en los botones)
+  const activas = new Set((tiendas || []).map(t => t.domain));
+  const todos = (data.pedidos || []).filter(p => !activas.size || activas.has(p.shop_domain));
   const sel = window.__geTienda || "";
   if (caja) {
     const cuenta = d => todos.filter(p => p.shop_domain === d).length;
