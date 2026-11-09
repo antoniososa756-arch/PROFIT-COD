@@ -2227,3 +2227,62 @@ body:not(.dark) :is(input:not([type=checkbox]):not([type=radio]):not([type=range
 }
 body:not(.dark) :is(input, textarea)::placeholder { color: #8a8a8a; }
 input[type=checkbox], input[type=radio] { accent-color: #22c55e; }
+
+/* ═══ Marco oscuro tipo Shopify (modo claro) ═══════════════════════════
+   Menú lateral y barra superior en negro, y el contenido de cada sección
+   (título incluido) dentro de un panel blanco redondeado. Dentro del menú y
+   de la barra se redefinen las variables de color, así todo lo que usa
+   var(--text)/var(--card)... se ve bien sobre negro sin tocar cada pantalla. */
+body:not(.dark) { --marco: #1a1a1a; background: var(--marco); }
+body:not(.dark) .layout { background: var(--marco); }
+
+body:not(.dark) .sidebar {
+  background: var(--marco); border-right: none;
+  --text: #f1f1f1; --muted: #a8a8a8; --menuText: #e3e3e3;
+  --border: #303030; --divider: rgba(255,255,255,.08);
+  --card: #262626; --input: #262626; --hover: rgba(255,255,255,.06);
+  color: var(--text);
+}
+body:not(.dark) .sidebar .menu-item { color: #e3e3e3; }
+body:not(.dark) .sidebar .menu-item:hover { background: rgba(255,255,255,.07); color: #fff; transform: none; }
+body:not(.dark) .sidebar .menu-item.active {
+  background: #303030; color: #fff; font-weight: 600;
+  border-left: none; padding-left: 8px;
+}
+body:not(.dark) .sidebar .menu-item.active svg { stroke: #22c55e; }
+body:not(.dark) .sidebar .divider { background: rgba(255,255,255,.08); }
+body:not(.dark) .sidebar .toggle span { color: #a8a8a8; }
+
+body:not(.dark) .topbar {
+  background: var(--marco); border-bottom: none; box-shadow: none;
+  --text: #f1f1f1; --muted: #a8a8a8; --border: #3a3a3a;
+  --card: #262626; --input: #2b2b2b; --hover: rgba(255,255,255,.06);
+  color: var(--text);
+}
+body:not(.dark) .topbar .icon-btn { background: transparent; border-color: transparent; color: #e3e3e3; }
+body:not(.dark) .topbar .icon-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
+body:not(.dark) .topbar .breadcrumbs, body:not(.dark) .topbar .breadcrumbs strong { color: #e3e3e3; }
+body:not(.dark) .topbar .search { background: #303030; border-color: #3d3d3d; }
+body:not(.dark) .topbar .search:focus-within { background: #383838; border-color: #5a5a5a; box-shadow: none; }
+body:not(.dark) .topbar .search svg { stroke: #b5b5b5; }
+body:not(.dark) .topbar .search input { color: #fff !important; }
+body:not(.dark) .topbar .search input::placeholder { color: #a8a8a8; }
+body:not(.dark) .topbar .user-name { color: #fff; }
+body:not(.dark) .topbar .user-role { color: #a8a8a8; }
+/* Los desplegables de la barra (buscador, notificaciones, usuario) siguen
+   siendo blancos: se devuelven las variables de color claras. */
+body:not(.dark) .topbar :is(.dropdown, .panel, .search-results) {
+  --text: #1f1f1f; --muted: #6b6b6b; --border: #e3e3e3;
+  --card: #fff; --input: #f3f3f3; --hover: rgba(0,0,0,.04);
+  color: var(--text);
+}
+
+/* Panel blanco con el contenido de la sección */
+body:not(.dark) .main { background: var(--marco); }
+body:not(.dark) .content {
+  background: #fff; border-radius: 12px; margin: 0 8px 8px 0;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.04);
+}
+@media (max-width: 768px) {
+  body:not(.dark) .content { margin: 0; border-radius: 12px 12px 0 0; }
+}

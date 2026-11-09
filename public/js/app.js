@@ -1065,7 +1065,7 @@ function loadApp(section) {
           </div>
         </div>
       </div>` : ""}
-      <div style="padding:8px 4px;border-top:1px solid #f3f3f3;text-align:center;font-size:10px;color:#d4d4d4;line-height:1.4;">
+      <div style="padding:8px 4px;border-top:1px solid var(--border);text-align:center;font-size:10px;color:var(--muted);line-height:1.4;">
         © 2026 <a href="https://profitcod.com" style="color:#22c55e;text-decoration:none;font-weight:600;">ProfitCOD</a>
       </div>
     </div>
