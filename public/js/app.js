@@ -1536,9 +1536,9 @@ async function geIncColumnaCorreo(orderId) {
       return `
         <div style="display:flex;flex-direction:column;align-items:${mio ? "flex-end" : "flex-start"};margin-bottom:14px;">
           <div style="font-size:11.5px;margin-bottom:4px;color:var(--muted);">
-            <b style="color:var(--text);">${mio ? escapeHtml(yo) : "MRW"}</b> · ${escapeHtml(mio ? (m.de || d.email || "") : (m.de || ""))} · ${fmt(m.fecha)}${m.manual ? ` · <span style="color:#b45309;font-weight:600;">escrito a mano</span>` : (!mio ? ` · <span class="muted">aviso automático</span>` : "")}
+            <b style="color:var(--text);">${mio ? escapeHtml(yo) : "MRW"}</b> · ${escapeHtml(mio ? (m.de || d.email || "") : (m.de || ""))} · ${horaMsg(m.fecha)}${!mio ? ` · <span class="muted">${m.manual ? "escrito a mano" : "aviso automático"}</span>` : ""}
           </div>
-          <div style="max-width:92%;padding:10px 12px;border-radius:12px;${mio ? "border-top-right-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;" : `border-top-left-radius:4px;background:${m.manual ? "#fffbeb" : "#fafafa"};border:1px solid ${m.manual ? "#fde68a" : "var(--border)"};`}font-size:13px;line-height:1.5;color:var(--text);word-break:break-word;">${cuerpo}</div>
+          <div style="max-width:92%;padding:10px 12px;border-radius:12px;${mio ? "border-top-right-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;" : `border-top-left-radius:4px;background:#f3f3f3;border:1px solid #e3e3e3;`}font-size:13px;line-height:1.5;color:var(--text);word-break:break-word;">${cuerpo}</div>
         </div>`;
     };
     const estadoBtn = inc.estado === "resuelta"
@@ -1552,7 +1552,7 @@ async function geIncColumnaCorreo(orderId) {
          <span style="padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:${estadoPill[1]};color:${estadoPill[2]};border:1px solid ${estadoPill[3]};">${estadoPill[0]}</span>
          <span class="muted" style="margin-left:auto;">Envío ${escapeHtml(inc.envio)}</span>
        </div>
-       <div id="dp-correo-hilo" style="padding:14px 18px 2px;max-height:520px;overflow-y:auto;">${(d.mensajes || []).map(burbuja).join("") || `<div class="muted" style="font-size:13px;">Sin correos.</div>`}</div>
+       <div id="dp-correo-hilo" style="padding:14px 18px 2px;max-height:520px;overflow-y:auto;">${geIncConDias(d.mensajes || [], burbuja) || `<div class="muted" style="font-size:13px;">Sin correos.</div>`}</div>
        <div style="padding:12px 18px 16px;border-top:1px solid var(--border);">
          <textarea id="dp-correo-resp" class="ed-input" rows="3" placeholder="Escribe la respuesta para MRW..." style="height:auto;padding:10px 12px;resize:vertical;line-height:1.45;"
            onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();geIncResponderDetalle(${Number(inc.id)},${Number(orderId)})}"></textarea>
@@ -1640,6 +1640,34 @@ function geColumnasAsas(grid) {
     const ro = new ResizeObserver(colocar);
     cols.forEach(c => ro.observe(c));
   }
+}
+
+// Hora de un correo (hora de España); la fecha va en el separador del día
+function horaMsg(f) {
+  return f ? new Date(f).toLocaleTimeString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" }) : "";
+}
+// Mensajes del chat con un separador centrado al cambiar de día, como en
+// WhatsApp: "Hoy", "Ayer" o "6 de noviembre" (con año si no es el actual).
+function geIncConDias(mensajes, pintar) {
+  const dia = f => f ? new Date(f).toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" }) : "";
+  const hoy = dia(new Date());
+  const ayer = dia(new Date(Date.now() - 86400000));
+  const etiqueta = d => {
+    if (d === hoy) return "Hoy";
+    if (d === ayer) return "Ayer";
+    const [y, m, dd] = d.split("-").map(Number);
+    const fecha = new Date(Date.UTC(y, m - 1, dd, 12));
+    return fecha.toLocaleDateString("es-ES", { timeZone: "UTC", day: "numeric", month: "long", ...(y !== new Date().getFullYear() ? { year: "numeric" } : {}) });
+  };
+  let ultimo = "";
+  return mensajes.map(m => {
+    const d = dia(m.fecha);
+    const sep = d && d !== ultimo
+      ? `<div style="display:flex;justify-content:center;margin:6px 0 14px;"><span style="padding:3px 12px;border-radius:999px;background:#fff;border:1px solid #e3e3e3;font-size:11.5px;font-weight:600;color:#525252;box-shadow:0 1px 2px rgba(0,0,0,.04);">${etiqueta(d)}</span></div>`
+      : "";
+    if (d) ultimo = d;
+    return sep + pintar(m);
+  }).join("");
 }
 
 // Texto limpio de cada correo en el chat de "Correo con MRW":
