@@ -3,8 +3,10 @@
 (function () {
   const st = document.createElement("style");
   st.textContent = `
-    .nota-pedido{position:relative;display:inline-flex;flex-shrink:0;color:var(--muted);cursor:default;}
-    .nota-pedido:hover{color:var(--text);}
+    .nota-pedido{position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+      width:20px;height:20px;border-radius:6px;background:rgba(245,158,11,.14);color:#d97706;cursor:default;
+      transition:background .15s,color .15s,transform .15s;}
+    .nota-pedido:hover{background:#f59e0b;color:#fff;transform:translateY(-1px);}
     .nota-pedido:hover::after{content:attr(data-nota);position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);
       background:#1f2937;color:#fff;font-size:12px;font-weight:500;line-height:1.35;padding:6px 10px;border-radius:7px;
       white-space:pre-wrap;width:max-content;max-width:260px;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.25);pointer-events:none;}
@@ -14589,7 +14591,7 @@ function renderOrdersPage(pageOrders, total, page, totalPages) {
       <div style="display:flex;align-items:center;gap:6px;min-width:0;">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(o.order_number || "-")}</span>
         ${o.note ? `<span class="nota-pedido" data-nota="${escapeAttr(o.note)}" onclick="event.stopPropagation()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/><line x1="7.5" y1="13" x2="14" y2="13"/><line x1="7.5" y1="17" x2="11.5" y2="17"/></svg>
         </span>` : ""}
       </div>
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${paymentBadge}</div>
