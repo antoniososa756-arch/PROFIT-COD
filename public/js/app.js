@@ -5994,7 +5994,7 @@ async function loadNominaData() {
     if (Array.isArray(pagos)) pagos.forEach(p => { pagosMap[p.trabajador_id] = p.valor || 0; });
 
     const fmt = n => (parseFloat(n)||0).toFixed(2);
-    const thS = `padding:11px 14px;border:1px solid #d1fae5;font-weight:600;color:#fff;text-align:`;
+    const thS = `padding:11px 14px;border:1px solid #333;font-weight:600;color:#fff;text-align:`;
     const inp = `width:100%;padding:6px 8px;border:1px solid #374151;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
 
     const totalNomina = trabajadores.reduce((s,t) => s + (parseFloat(pagosMap[t.id])||0), 0);
@@ -6003,7 +6003,7 @@ async function loadNominaData() {
       <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead>
-            <tr style="background:#22c55e;">
+            <tr style="background:#1a1a1a;">
               <th style="${thS}left;">TRABAJADOR</th>
               <th style="${thS}right;">PAGO DEL MES (€)</th>
               <th style="${thS}center;">ACCIONES</th>
@@ -6168,7 +6168,7 @@ window.openAddTrabajador = openAddTrabajador;
         width:340px;height:480px;background:#111827;border-radius:16px;
         box-shadow:0 8px 32px rgba(0,0,0,.15);display:none;flex-direction:column;overflow:hidden;">
 
-        <div style="background:#22c55e;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="background:#1a1a1a;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
           <div style="display:flex;align-items:center;gap:10px;">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span style="font-weight:700;font-size:14px;color:#fff;" id="chat-panel-title">Soporte ProfitCod</span>
@@ -8859,9 +8859,9 @@ async function loadMetricasBalance(dateFrom, dateTo) {
     const resBorder= d.resultado >= 0 ? "#86efac" : "#fecaca";
     return `
       <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;" data-domain="${d.domain}">
-        <div style="background:#22c55e;padding:10px 14px;">
+        <div style="background:#1a1a1a;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
-          <div style="font-size:11px;color:#86efac;">${d.domain}</div>
+          <div style="font-size:11px;color:#b5b5b5;">${d.domain}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
@@ -9815,10 +9815,10 @@ function verDesgloseRentTienda(domain) {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3500;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML = `<div style="background:#111827;border-radius:12px;overflow:hidden;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-    <div style="background:#22c55e;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="background:#1a1a1a;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
       <div>
         <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
-        <div style="font-size:11px;color:#86efac;">${d.domain}</div>
+        <div style="font-size:11px;color:#b5b5b5;">${d.domain}</div>
       </div>
       <button id="__desglose-tienda-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;padding:4px;">✕</button>
     </div>
@@ -10405,9 +10405,9 @@ async function loadAdsTable() {
           ${th("CPA","text-align:right;color:var(--text);")}
           ${th("ROAS","text-align:right;color:var(--text);")}
         </tr>
-        <tr style="background:#22c55e;">
-          <td style="padding:13px 16px;font-weight:700;color:#fff;border:1px solid #16a34a;font-size:15px;">Balance del mes</td>
-          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalMeta)}</td>
+        <tr style="background:#1a1a1a;">
+          <td style="padding:13px 16px;font-weight:700;color:#fff;border:1px solid #1a1a1a;font-size:15px;">Balance del mes</td>
+          <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #1a1a1a;">${fmt(totalMeta)}</td>
           <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalTiktok)}</td>
           <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${fmt(totalFact)}</td>
           <td style="padding:13px 16px;text-align:right;font-weight:700;color:#fff;border:1px solid #16a34a;">${totalPedidos}</td>
@@ -10689,13 +10689,13 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
   const fmt = n => (parseFloat(n)||0).toFixed(2);
   const inp = `width:100%;padding:6px 8px;border:1px solid #374151;border-radius:6px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;`;
   const totalValor = items.reduce((s,i) => s+(parseFloat(i.valor)||0), 0);
-  const thStyle = `padding:11px 14px;border:1px solid #d1fae5;font-weight:600;color:#fff;text-align:`;
+  const thStyle = `padding:11px 14px;border:1px solid #333;font-weight:600;color:#fff;text-align:`;
 
   const tablaGF = `
     <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
-          <tr style="background:#22c55e;">
+          <tr style="background:#1a1a1a;">
             <th style="${thStyle}left;">GASTO FIJO</th>
             <th style="${thStyle}right;">VALOR MES</th>
             <th style="${thStyle}right;">P. UNIT</th>
@@ -10785,7 +10785,7 @@ let preciosGlobales = { precio_mrw: 0, precio_logistica: 0 };
     <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
-          <tr style="background:#22c55e;">
+          <tr style="background:#1a1a1a;">
             <th style="${thStyle}left;">PRECIO UNIT. ENVÍO</th>
             <th style="${thStyle}right;">€</th>
           </tr>
@@ -11249,9 +11249,9 @@ async function loadGastosVarios(forzarMonth, forzarYear) {
 
     return `
       <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;min-width:220px;flex:1;">
-        <div style="background:#22c55e;padding:12px 16px;">
+        <div style="background:#1a1a1a;padding:12px 16px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
-          <div style="font-size:11px;color:#86efac;margin-top:2px;">${store.domain}</div>
+          <div style="font-size:11px;color:#b5b5b5;margin-top:2px;">${store.domain}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
@@ -11542,9 +11542,9 @@ async function renderInformesIngresos() {
 
     return `
       <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;">
-        <div style="background:#22c55e;padding:10px 14px;">
+        <div style="background:#1a1a1a;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(store.shop_name||store.domain)}</div>
-          <div style="font-size:11px;color:#86efac;">${store.domain}</div>
+          <div style="font-size:11px;color:#b5b5b5;">${store.domain}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
@@ -11797,9 +11797,9 @@ async function renderInformesBalance() {
     const resBorder= d.resultado >= 0 ? "#86efac" : "#fecaca";
     return `
       <div style="background:var(--card);border:1px solid #374151;border-radius:12px;overflow:hidden;" data-domain="${d.domain}">
-        <div style="background:#22c55e;padding:10px 14px;">
+        <div style="background:#1a1a1a;padding:10px 14px;">
           <div style="font-weight:700;color:#fff;font-size:14px;">${escapeHtml(d.name)}</div>
-          <div style="font-size:11px;color:#86efac;">${d.domain}</div>
+          <div style="font-size:11px;color:#b5b5b5;">${d.domain}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tbody>
