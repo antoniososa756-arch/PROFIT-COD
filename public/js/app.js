@@ -540,6 +540,13 @@ const icons = {
       <rect x="3" y="16" width="7" height="5" rx="1.5"/>
     </svg>
   `,
+  "gestion-ecom": `
+    <svg viewBox="0 0 24 24">
+      <path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.7H6.5a2 2 0 0 1-2-1.7L3 7Z"/>
+      <path d="M8 7V5a4 4 0 0 1 8 0v2"/>
+      <path d="M9 12h6"/>
+    </svg>
+  `,
   leads: `
     <svg viewBox="0 0 24 24">
       <circle cx="9" cy="7" r="4"/>
@@ -656,6 +663,7 @@ const I18N = {
     labels: {
       metricas: "Métricas",
       leads: "Leads",
+      "gestion-ecom": "Gestión Ecom",
       rentabilidad: "Rentabilidad",
       tiendas: "Integraciones",
       productos: "Productos",
@@ -878,7 +886,7 @@ function closeOnBackdropClick(el, closeFn) {
 // F5 o compartir el link no pierda dónde estabas. __skipPush evita generar una
 // entrada nueva en el historial cuando estamos restaurando desde popstate/carga inicial.
 // =========================
-const VALID_ROUTE_SECTIONS = ["metricas","leads","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
+const VALID_ROUTE_SECTIONS = ["metricas","leads","gestion-ecom","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda","plan","crear-cliente","gestion-clientes","pagos-config","mi-equipo"];
 let __skipPush = false;
 
 function _syncUrlForRoute(path) {
@@ -984,7 +992,8 @@ function loadApp(section) {
 
       ${(() => {
         // "Leads" (tracker en vivo de Releasit) también es solo del admin y su apoyo.
-        const sections = ["metricas",...(puedeVerLeads() ? ["leads"] : []),"rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
+        // "Gestión Ecom": en construcción, de momento solo para el administrador.
+        const sections = ["metricas",...(puedeVerLeads() ? ["leads"] : []),...(currentUser.role === "Administrador" ? ["gestion-ecom"] : []),"rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura"];
         // "Contabilidad" es exclusiva del admin: solo se ofrece en el menú al
         // propio admin, o a sus cuentas de apoyo (nunca a las de un Cliente).
         if (currentUser.role === "Administrador" || currentUser.apoyoDeAdmin) sections.push("contabilidad");
@@ -2557,6 +2566,30 @@ if (id === "mi-equipo") {
   };
 
   renderEquipo();
+  closeAllDrops();
+  closeSearchDrop();
+  return;
+}
+
+// =========================
+// SECCIÓN GESTIÓN ECOM — en construcción, solo administrador (cuando esté
+// lista se abrirá al resto de cuentas)
+// =========================
+if (id === "gestion-ecom") {
+  if (currentUser?.role !== "Administrador") { setSection("metricas"); return; }
+  if (t) t.textContent = "Gestión Ecom";
+  if (s) s.textContent = "Gestión de tu ecommerce";
+  if (c) c.textContent = "Gestión Ecom";
+  box.className = "card";
+  box.removeAttribute("style");
+  box.innerHTML = `
+    <div style="padding:48px 20px;text-align:center;">
+      <div style="width:52px;height:52px;margin:0 auto 14px;border-radius:14px;background:rgba(34,197,94,.12);color:#16a34a;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.7H6.5a2 2 0 0 1-2-1.7L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M9 12h6"/></svg>
+      </div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">Gestión Ecom</div>
+      <div class="muted">Sección en construcción. Solo visible para administradores.</div>
+    </div>`;
   closeAllDrops();
   closeSearchDrop();
   return;
