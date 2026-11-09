@@ -1485,6 +1485,73 @@ async function geCargarConfirmar() {
   }
 }
 
+// Botón flotante "Confirmar pedido" (abajo a la izquierda) en el detalle de
+// un pedido abierto desde Confirmar pedidos. Pone en Shopify la etiqueta del
+// almacén (POST /api/gestion-ecom/confirmar/:id) y pasa al siguiente pedido.
+// Atajo: Ctrl + Enter (Cmd + Enter en Mac). id = null lo quita.
+function geBotonFlotante(id) {
+  document.getElementById("ge-confirmar-flotante")?.remove();
+  window.__geConfirmarId = id || null;
+  if (!id) return;
+  const etq = window.__geDatos?.data?.etiqueta || "";
+  const b = document.createElement("button");
+  b.id = "ge-confirmar-flotante";
+  b.className = "ge-confirmar-flotante";
+  b.title = `Añade la etiqueta "${etq}" en Shopify y pasa al siguiente pedido`;
+  b.innerHTML = `
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    <span>Confirmar pedido</span>
+    <kbd>Ctrl + Enter</kbd>`;
+  b.onclick = () => geConfirmarPedido();
+  document.body.appendChild(b);
+  // A la izquierda del contenido (junto al menú lateral)
+  const colocar = () => {
+    const box = document.getElementById("cardBox");
+    if (box && document.body.contains(b)) b.style.left = Math.max(12, box.getBoundingClientRect().left + 16) + "px";
+  };
+  colocar();
+  if (!window.__geFlotanteResize) { window.__geFlotanteResize = true; window.addEventListener("resize", () => {
+    const btn = document.getElementById("ge-confirmar-flotante"), box = document.getElementById("cardBox");
+    if (btn && box) btn.style.left = Math.max(12, box.getBoundingClientRect().left + 16) + "px";
+  }); }
+}
+
+window.geConfirmarPedido = async function() {
+  const id = window.__geConfirmarId;
+  const b = document.getElementById("ge-confirmar-flotante");
+  if (!id || !b || b.disabled) return;
+  b.disabled = true;
+  b.querySelector("span").textContent = "Confirmando...";
+  try {
+    const res = await fetch(`${API_BASE}/api/gestion-ecom/confirmar/${id}`, {
+      method: "POST", headers: { Authorization: "Bearer " + getActiveToken() }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+    showToast("✅ Pedido confirmado", `${data.order_number || ""} — etiqueta "${data.etiqueta}" añadida en Shopify.`, "#22c55e");
+    // Fuera de la lista de confirmaciones y siguiente pedido (o volver a la lista)
+    if (window.__geDatos?.data?.pedidos) window.__geDatos.data.pedidos = window.__geDatos.data.pedidos.filter(p => Number(p.id) !== Number(id));
+    const ids = (window.__orderNavIds || []).filter(x => Number(x) !== Number(id));
+    const i = Math.min(Math.max(window.__orderNavIndex, 0), ids.length - 1);
+    window.__geIdsVisibles = ids;
+    if (ids.length) abrirDetallePedido(ids[i], { navIds: ids, origen: "gestion-ecom" });
+    else setSection("gestion-ecom");
+  } catch (e) {
+    b.disabled = false;
+    b.querySelector("span").textContent = "Confirmar pedido";
+    showToast("Error", e.message || "No se pudo confirmar el pedido.", "#dc2626");
+  }
+};
+
+document.addEventListener("keydown", (e) => {
+  if (!window.__geConfirmarId || e.key !== "Enter" || !(e.ctrlKey || e.metaKey)) return;
+  // Ctrl+Enter dentro de un campo (nota, dirección...) es para ese campo
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || document.getElementById("ed-modal")) return;
+  e.preventDefault();
+  geConfirmarPedido();
+});
+
 // Archivar / desarchivar el pedido en Shopify (botón del detalle del pedido)
 window.archivarPedido = async function(id, archivar) {
   const btn = document.getElementById("dp-archivar");
@@ -1613,6 +1680,7 @@ function uiEntrada(el) {
 
 function setSection(id) {
   gePestanaQuitar(); // pestaña de la etiqueta de Gestión Ecom (vive fuera de cardBox)
+  geBotonFlotante(null); // botón "Confirmar pedido" del detalle
   // Cuentas apoyo nunca pueden ver el plan de facturación
   if (currentUser?.role === "Apoyo" && id === "plan") {
     const PERM_SECTIONS = ["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","contabilidad","ayuda"];
@@ -14925,6 +14993,7 @@ window.abrirDetallePedido = async function(orderId, opts = {}) {
     setupOrderNavContext(orderId);
   }
   const origen = window.__orderNavOrigen || "pedidos";
+  geBotonFlotante(origen === "gestion-ecom" ? orderId : null);
   document.querySelectorAll(".menu-item").forEach((i) => i.classList.remove("active"));
   document.querySelector(`.menu-item[data-id="${origen}"]`)?.classList.add("active");
 

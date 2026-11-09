@@ -68,4 +68,49 @@ router.get("/confirmar", auth, soloAdmin, async (req, res) => {
   }
 });
 
+// POST /api/gestion-ecom/confirmar/:id — confirma el pedido: le añade en
+// Shopify la etiqueta del almacén (p.ej. "fulfio") conservando las que ya
+// tenga. Las etiquetas se leen de Shopify en ese momento (no de la copia
+// local) para no borrar ninguna que se haya puesto desde el último sync.
+router.post("/confirmar/:id", auth, soloAdmin, async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: "id inválido" });
+  try {
+    const cfg = await db.get("SELECT ge_etiqueta FROM users WHERE id = $1", [req.user.id]);
+    const etiqueta = (cfg?.ge_etiqueta || "").trim();
+    if (!etiqueta) return res.status(400).json({ error: "Primero guarda la etiqueta de tu almacén" });
+
+    const row = await db.get(
+      `SELECT o.order_id, o.order_number, COALESCE(o.shop_domain, s.shop_domain) AS shop_domain
+       FROM orders o LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.id = $1
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+      [id, req.user.id]
+    );
+    if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
+    const shopRow = await db.get("SELECT access_token FROM shops WHERE shop_domain = $1 AND user_id = $2", [row.shop_domain, req.user.id]);
+    if (!shopRow) return res.status(404).json({ error: "Tienda no encontrada" });
+    const H = { "Content-Type": "application/json", "X-Shopify-Access-Token": shopRow.access_token };
+    const url = `https://${row.shop_domain}/admin/api/2024-10/orders/${row.order_id}.json`;
+
+    const actual = await fetch(`${url}?fields=id,tags`, { headers: H });
+    if (!actual.ok) return res.status(502).json({ error: "No se pudo leer el pedido en Shopify" });
+    const tags = String((await actual.json()).order?.tags || "").split(",").map(t => t.trim()).filter(Boolean);
+    if (!tags.some(t => t.toLowerCase() === etiqueta.toLowerCase())) tags.push(etiqueta);
+
+    const r = await fetch(url, { method: "PUT", headers: H, body: JSON.stringify({ order: { id: parseInt(row.order_id), tags: tags.join(", ") } }) });
+    if (!r.ok) {
+      console.error("[GestionEcom] confirmar Shopify:", r.status, await r.text());
+      return res.status(502).json({ error: "Shopify no aceptó la etiqueta" });
+    }
+    const data = await r.json();
+    if (data.order) await db.run("UPDATE orders SET raw_json = $1 WHERE id = $2", [JSON.stringify(data.order), id]);
+    res.json({ ok: true, etiqueta, order_number: row.order_number });
+  } catch (e) {
+    console.error("[GestionEcom] confirmar:", e.message);
+    res.status(500).json({ error: "Error confirmando el pedido" });
+  }
+});
+
 module.exports = router;
