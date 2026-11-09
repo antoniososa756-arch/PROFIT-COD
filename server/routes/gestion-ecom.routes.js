@@ -309,7 +309,7 @@ router.post("/llamadas/:orderId", auth, soloAdmin, async (req, res) => {
   try {
     await inc.ensureTablas();
     const n = await db.get("SELECT COALESCE(MAX(numero), 0) + 1 AS n FROM incidencias_llamadas WHERE user_id = $1 AND order_id = $2", [req.user.id, orderId]);
-    const u = await db.get("SELECT name FROM users WHERE id = $1", [req.user.id]).catch(() => null);
+    const u = await db.get("SELECT COALESCE(NULLIF(display_name, ''), email) AS name FROM users WHERE id = $1", [req.user.id]).catch(() => null);
     await db.run(
       "INSERT INTO incidencias_llamadas (user_id, order_id, numero, texto, autor) VALUES ($1,$2,$3,$4,$5)",
       [req.user.id, orderId, n.n, texto, u?.name || null]
