@@ -1336,7 +1336,7 @@ window.geTab = function(tab) {
   if (tab === "confirmar") return geConfirmar(cont);
   cont.innerHTML = `
     <div class="ui-entrada" style="padding:44px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;">
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">Incidencias</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">Incidencias MRW</div>
       <div class="muted">En construcción.</div>
     </div>`;
 };
@@ -2864,11 +2864,11 @@ if (id === "gestion-ecom") {
   box.removeAttribute("style");
   box.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-      <button class="ge-tab" data-tab="confirmar" onclick="geTab('confirmar')">
+      <button class="ge-tab ge-tab-confirmar" data-tab="confirmar" onclick="geTab('confirmar')">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
         Confirmar pedidos
       </button>
-      <button class="ge-tab" data-tab="incidencias" onclick="geTab('incidencias')">
+      <button class="ge-tab ge-tab-incidencias" data-tab="incidencias" onclick="geTab('incidencias')">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
         Incidencias
       </button>

@@ -2331,3 +2331,7 @@ body:not(.dark) .rejilla td.ads-sel { background: #e8edf5 !important; outline: 2
   box-shadow: 0 12px 32px rgba(0,0,0,.14);
   animation: ui-drop-in .18s cubic-bezier(.2,.7,.3,1) both; transform-origin: top right;
 }
+
+/* Gestión Ecom: color propio de cada pestaña al estar seleccionada (prueba) */
+.ge-tab.ge-tab-confirmar.activo { background: #22c55e; border-color: #22c55e; color: #fff; }
+.ge-tab.ge-tab-incidencias.activo { background: #dc2626; border-color: #dc2626; color: #fff; }
