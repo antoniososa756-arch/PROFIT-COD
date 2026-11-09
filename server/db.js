@@ -82,6 +82,18 @@ const db = {
 
 // Inicializar tablas
 async function initDB() {
+  // Si un arranque anterior dejó corriendo el relleno masivo de orders (un
+  // único UPDATE de toda la tabla), sus bloqueos dejaban los ALTER TABLE de
+  // abajo en cola y TODA consulta a orders esperando detrás: el login se
+  // quedaba en "Entrando...". Se cancela; el relleno ahora va por tandas.
+  try {
+    const r = await pool.query(`
+      SELECT pg_cancel_backend(pid) FROM pg_stat_activity
+      WHERE pid <> pg_backend_pid() AND state <> 'idle'
+        AND (query LIKE 'UPDATE orders SET customer_email =%' OR query LIKE 'UPDATE orders SET note = profit_note%'
+             OR (wait_event_type = 'Lock' AND (query ~* '^\\s*(ALTER TABLE|CREATE INDEX|DROP TRIGGER|CREATE TRIGGER)')))`);
+    if (r.rowCount) console.log(`[DB] Rellenos antiguos cancelados: ${r.rowCount}`);
+  } catch (e) { console.warn("Cancelar rellenos:", e.message); }
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -483,9 +495,7 @@ await pool.query(`DROP TRIGGER IF EXISTS trg_orders_note ON orders`);
 await pool.query(`CREATE TRIGGER trg_orders_note BEFORE INSERT OR UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_note()`);
 // Pedidos ya existentes: una sola vez (luego no quedan NULL). En segundo
 // plano para no retrasar el arranque.
-pool.query(`UPDATE orders SET note = profit_note(raw_json) WHERE note IS NULL`)
-  .then(r => { if (r.rowCount) console.log(`[DB] Notas de pedido rellenadas: ${r.rowCount}`); })
-  .catch(e => console.warn("Backfill note:", e.message));
+// (lo hace el relleno por tandas de más abajo: note IS NULL -> trigger).
 
 // Email y teléfono del cliente en columnas (para contar "cuántos pedidos tiene
 // este cliente" como Shopify sin leer raw_json). Teléfono = últimos 9 dígitos,
@@ -568,10 +578,19 @@ try {
 } catch (e) { console.warn("Índice de búsqueda (pg_trgm):", e.message); }
 
 // Existentes: el trigger los rellena al tocar la fila (customer_email IS NULL).
-// search_text igual (NULL -> lo calcula el trigger); en la misma pasada.
-pool.query(`UPDATE orders SET customer_email = customer_email WHERE customer_email IS NULL OR search_text IS NULL`)
-  .then(r => { if (r.rowCount) console.log(`[DB] Datos de cliente/búsqueda rellenados: ${r.rowCount}`); })
-  .catch(e => console.warn("Backfill cliente:", e.message));
+// search_text igual (NULL -> lo calcula el trigger). Por tandas de 300 con
+// pausa: un solo UPDATE de toda la tabla bloqueaba orders minutos (ver el
+// inicio de initDB). Empieza 30 s después del arranque.
+setTimeout(async function rellenarTanda(total = 0) {
+  try {
+    const r = await pool.query(`
+      UPDATE orders SET customer_email = customer_email
+      WHERE id IN (SELECT id FROM orders WHERE customer_email IS NULL OR search_text IS NULL OR note IS NULL LIMIT 300)`);
+    total += r.rowCount;
+    if (r.rowCount) return setTimeout(() => rellenarTanda(total), 1500);
+    if (total) console.log(`[DB] Datos de cliente/búsqueda rellenados: ${total}`);
+  } catch (e) { console.warn("Backfill cliente:", e.message); }
+}, 30 * 1000);
 // Pedidos ya existentes: se rellenan en segundo plano, por tandas pequeñas y
 // con pausa, para no frenar el arranque ni el resto de la app.
 (async function rellenarRawCompact() {
