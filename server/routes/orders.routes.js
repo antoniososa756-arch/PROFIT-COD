@@ -91,11 +91,11 @@ router.get("/", auth, async (req, res) => {
     const fields = light
       ? `o.id, o.order_id, o.order_number, o.created_at, o.tracking_number,
          o.fulfillment_status, o.financial_status, o.customer_name,
-         o.total_price, o.currency, o.cancelled_at, o.mrw_estado_texto, o.carrier, o.estado_cambiado_at,
+         o.total_price, o.currency, o.cancelled_at, o.mrw_estado_texto, o.carrier, o.estado_cambiado_at, o.note,
          COALESCE(o.shop_domain, s.shop_domain) as shop_domain`
       : `o.id, o.order_id, o.order_number, o.created_at, o.tracking_number,
          o.fulfillment_status, o.financial_status, o.customer_name,
-         o.total_price, o.currency, o.cancelled_at, o.raw_json, o.mrw_estado_texto, o.carrier,
+         o.total_price, o.currency, o.cancelled_at, o.raw_json, o.mrw_estado_texto, o.carrier, o.note,
          COALESCE(o.shop_domain, s.shop_domain) as shop_domain`;
 
     const { where, params, nextIndex: i } = buildOrdersWhere(req, userId);

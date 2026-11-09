@@ -458,6 +458,34 @@ await pool.query(`
 `);
 await pool.query(`DROP TRIGGER IF EXISTS trg_orders_estado_cambiado ON orders`);
 await pool.query(`CREATE TRIGGER trg_orders_estado_cambiado BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_estado_cambiado()`);
+
+// Nota del pedido de Shopify (icono en la lista de Pedidos). Columna aparte
+// para no leer raw_json en la lista; '' = sin nota (ya revisado).
+await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS note TEXT`);
+await pool.query(`
+  CREATE OR REPLACE FUNCTION profit_note(t TEXT) RETURNS TEXT AS $fn$
+  BEGIN
+    IF t IS NULL OR t = '' THEN RETURN ''; END IF;
+    RETURN COALESCE(btrim(t::json->>'note'), '');
+  EXCEPTION WHEN others THEN RETURN '';
+  END $fn$ LANGUAGE plpgsql IMMUTABLE
+`);
+await pool.query(`
+  CREATE OR REPLACE FUNCTION orders_set_note() RETURNS trigger AS $fn$
+  BEGIN
+    IF TG_OP = 'INSERT' OR NEW.raw_json IS DISTINCT FROM OLD.raw_json OR NEW.note IS NULL THEN
+      NEW.note := profit_note(NEW.raw_json);
+    END IF;
+    RETURN NEW;
+  END $fn$ LANGUAGE plpgsql
+`);
+await pool.query(`DROP TRIGGER IF EXISTS trg_orders_note ON orders`);
+await pool.query(`CREATE TRIGGER trg_orders_note BEFORE INSERT OR UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_note()`);
+// Pedidos ya existentes: una sola vez (luego no quedan NULL). En segundo
+// plano para no retrasar el arranque.
+pool.query(`UPDATE orders SET note = profit_note(raw_json) WHERE note IS NULL`)
+  .then(r => { if (r.rowCount) console.log(`[DB] Notas de pedido rellenadas: ${r.rowCount}`); })
+  .catch(e => console.warn("Backfill note:", e.message));
 // Pedidos ya existentes: se rellenan en segundo plano, por tandas pequeñas y
 // con pausa, para no frenar el arranque ni el resto de la app.
 (async function rellenarRawCompact() {
