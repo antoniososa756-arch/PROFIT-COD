@@ -14885,20 +14885,70 @@ const _ED_PAISES = [
 const _ED_PROV_ES = {
   "01": "Álava", "02": "Albacete", "03": "Alicante", "04": "Almería", "05": "Ávila", "06": "Badajoz", "07": "Baleares",
   "08": "Barcelona", "09": "Burgos", "10": "Cáceres", "11": "Cádiz", "12": "Castellón", "13": "Ciudad Real", "14": "Córdoba",
-  "15": "La Coruña", "16": "Cuenca", "17": "Girona", "18": "Granada", "19": "Guadalajara", "20": "Guipúzcoa", "21": "Huelva",
+  "15": "A Coruña", "16": "Cuenca", "17": "Girona", "18": "Granada", "19": "Guadalajara", "20": "Guipúzcoa", "21": "Huelva",
   "22": "Huesca", "23": "Jaén", "24": "León", "25": "Lleida", "26": "La Rioja", "27": "Lugo", "28": "Madrid", "29": "Málaga",
   "30": "Murcia", "31": "Navarra", "32": "Ourense", "33": "Asturias", "34": "Palencia", "35": "Las Palmas", "36": "Pontevedra",
   "37": "Salamanca", "38": "Santa Cruz de Tenerife", "39": "Cantabria", "40": "Segovia", "41": "Sevilla", "42": "Soria",
   "43": "Tarragona", "44": "Teruel", "45": "Toledo", "46": "Valencia", "47": "Valladolid", "48": "Vizcaya", "49": "Zamora",
   "50": "Zaragoza", "51": "Ceuta", "52": "Melilla",
 };
-const _ED_INPUT = "width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--input);color:var(--text);font:inherit;font-size:13px;outline:none;";
+// Prefijos telefónicos (selector "España (+34)" junto al número, como Shopify)
+const _ED_PREFIJOS = [
+  ["ES", "España", "+34"], ["PT", "Portugal", "+351"], ["FR", "Francia", "+33"], ["IT", "Italia", "+39"],
+  ["DE", "Alemania", "+49"], ["AD", "Andorra", "+376"], ["BE", "Bélgica", "+32"], ["NL", "Países Bajos", "+31"],
+  ["GB", "Reino Unido", "+44"], ["CH", "Suiza", "+41"],
+];
 
+// Campos con el estilo de Shopify: fondo blanco y borde fino (ver .ed-input
+// en styles.css).
+function _edEtiqueta(label, control) {
+  return `<label style="display:block;min-width:0;"><span class="ed-label">${label}</span>${control}</label>`;
+}
 function _edCampo(id, label, valor, extra = "") {
-  return `<label style="display:block;min-width:0;">
-    <span style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">${label}</span>
-    <input id="${id}" value="${escapeAttr(valor || "")}" style="${_ED_INPUT}" onfocus="this.style.borderColor='#22c55e'" onblur="this.style.borderColor='var(--border)'" ${extra}>
-  </label>`;
+  return _edEtiqueta(label, `<input id="${id}" class="ed-input" value="${escapeAttr(valor || "")}" ${extra}>`);
+}
+function _edSelect(id, label, opciones, valor) {
+  return _edEtiqueta(label, `<select id="${id}" class="ed-input">${opciones.map(([v, t]) =>
+    `<option value="${escapeAttr(v)}" ${v === valor ? "selected" : ""}>${escapeHtml(t)}</option>`).join("")}</select>`);
+}
+// Fila de N columnas que pasa a una sola en pantallas estrechas
+const _edFila = (...campos) => `<div class="ed-fila" style="grid-template-columns:repeat(${campos.length},minmax(0,1fr));">${campos.join("")}</div>`;
+
+// Teléfono: selector de prefijo + número. Separa "+34611333150" en +34 / 611 33 31 50.
+function _edTelefono(id, label, valor, ccPorDefecto = "ES") {
+  let tel = String(valor || "").trim(), pref = (_ED_PREFIJOS.find(p => p[0] === ccPorDefecto) || _ED_PREFIJOS[0])[2];
+  const compacto = tel.replace(/[^\d+]/g, "").replace(/^00/, "+");
+  const hallado = [..._ED_PREFIJOS].sort((a, b) => b[2].length - a[2].length).find(p => compacto.startsWith(p[2]));
+  if (hallado) { pref = hallado[2]; tel = compacto.slice(hallado[2].length); }
+  const d = tel.replace(/\D/g, "");
+  if (pref === "+34" && d.length === 9) tel = `${d.slice(0, 3)} ${d.slice(3, 5)} ${d.slice(5, 7)} ${d.slice(7)}`;
+  return _edEtiqueta(label, `<div style="display:flex;gap:8px;">
+    <select id="${id}-pref" class="ed-input" style="width:auto;flex-shrink:0;">${_ED_PREFIJOS.map(([, n, p]) =>
+      `<option value="${p}" ${p === pref ? "selected" : ""}>${escapeHtml(n)} (${p})</option>`).join("")}</select>
+    <input id="${id}" class="ed-input" type="tel" value="${escapeAttr(tel)}" style="flex:1;">
+  </div>`);
+}
+// Teléfono listo para Shopify: +34611333150 (vacío si no hay número)
+function _edValTelefono(id) {
+  const num = _edVal(id).replace(/[^\d+]/g, "");
+  if (!num) return "";
+  if (num.startsWith("+")) return num;
+  return (document.getElementById(`${id}-pref`)?.value || "") + num.replace(/^0+/, "");
+}
+
+// Provincia: en España, desplegable con las 52 (si el pedido trae otro
+// nombre se añade como opción para no perderlo); fuera, texto libre.
+function _edProvincia(cc, valor) {
+  if (cc !== "ES") return _edCampo("ed-prov", "Provincia", valor);
+  const nombres = [...new Set(Object.values(_ED_PROV_ES))].sort((a, b) => a.localeCompare(b, "es"));
+  if (valor && !nombres.includes(valor)) nombres.unshift(valor);
+  return _edSelect("ed-prov", "Provincia", [["", "Selecciona..."], ...nombres.map(n => [n, n])], valor || "");
+}
+function _edPonProvincia(v) {
+  const el = document.getElementById("ed-prov");
+  if (!el || !v) return;
+  if (el.tagName === "SELECT" && ![...el.options].some(o => o.value === v)) el.add(new Option(v, v), 1);
+  el.value = v;
 }
 
 function _edModal(titulo, cuerpo, onGuardar) {
@@ -14967,10 +15017,10 @@ window.abrirEditarCliente = function() {
   _edModal("Editar cliente", `
     ${_edCampo("ed-nombre", "Nombre y apellidos", nombre)}
     ${_edCampo("ed-email", "Email", c.email || raw.email || "", 'type="email"')}
-    ${_edCampo("ed-tel", "Teléfono", raw.phone || s.phone || c.phone || "", 'type="tel" placeholder="+34 600 000 000"')}
+    ${_edTelefono("ed-tel", "Teléfono", raw.phone || s.phone || c.phone || "", (s.country_code || "ES").toUpperCase())}
     <div style="font-size:12px;color:var(--muted);line-height:1.5;">El teléfono de la dirección de envío se cambia en "Dirección de envío".</div>
   `, () => {
-    const p = { email: _edVal("ed-email"), phone: _edVal("ed-tel") };
+    const p = { email: _edVal("ed-email"), phone: _edValTelefono("ed-tel") };
     if (_edVal("ed-nombre") && _edVal("ed-nombre") !== nombre) p.customer_name = _edVal("ed-nombre");
     _edEnviar(p);
   });
@@ -14981,37 +15031,37 @@ window.abrirEditarDireccion = function() {
   const raw = ctx.raw || {}, s = raw.shipping_address || {};
   const cc = (s.country_code || "ES").toUpperCase();
   const paises = _ED_PAISES.some(([c]) => c === cc) ? _ED_PAISES : [[cc, s.country || cc], ..._ED_PAISES];
-  const dos = (a, b) => `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">${a}${b}</div>`;
+  // Mismo orden y bloques que Shopify: País / Nombre-Apellido / Empresa /
+  // Calle / Apartamento / CP-Ciudad-Provincia / Teléfono (fila propia)
   _edModal("Editar dirección de envío", `
-    <label style="display:block;">
-      <span style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">País o región</span>
-      <select id="ed-pais" style="${_ED_INPUT}">${paises.map(([c, n]) => `<option value="${c}" ${c === cc ? "selected" : ""}>${escapeHtml(n)}</option>`).join("")}</select>
-    </label>
-    ${dos(_edCampo("ed-nom", "Nombre", s.first_name), _edCampo("ed-ape", "Apellido", s.last_name))}
+    ${_edSelect("ed-pais", "País o región", paises, cc)}
+    ${_edFila(_edCampo("ed-nom", "Nombre", s.first_name), _edCampo("ed-ape", "Apellido", s.last_name))}
     ${_edCampo("ed-emp", "Empresa", s.company)}
     <div style="position:relative;">
-      <label style="display:block;">
-        <span style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">Calle y número de casa</span>
-        <span style="position:relative;display:block;">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="ed-dir1" value="${escapeAttr(s.address1 || "")}" autocomplete="off" style="${_ED_INPUT}padding-left:34px;"
-            oninput="_edBuscarDireccion(this.value)" onfocus="this.style.borderColor='#22c55e'" onblur="this.style.borderColor='var(--border)';setTimeout(()=>{const l=document.getElementById('ed-sug');if(l)l.style.display='none'},180)">
-        </span>
-      </label>
+      ${_edEtiqueta("Calle y número de casa", `<span style="position:relative;display:block;">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#6b7280;pointer-events:none;"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="ed-dir1" class="ed-input" value="${escapeAttr(s.address1 || "")}" autocomplete="off" style="padding-left:34px;"
+            oninput="_edBuscarDireccion(this.value)" onblur="setTimeout(()=>{const l=document.getElementById('ed-sug');if(l)l.style.display='none'},180)">
+        </span>`)}
       <div id="ed-sug" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:10;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;max-height:280px;overflow-y:auto;"></div>
     </div>
     ${_edCampo("ed-dir2", "Apartamento, local, etc.", s.address2)}
-    ${dos(_edCampo("ed-cp", "Código postal", s.zip), _edCampo("ed-ciudad", "Ciudad", s.city))}
-    ${dos(_edCampo("ed-prov", "Provincia", s.province), _edCampo("ed-tel2", "Teléfono", s.phone, 'type="tel"'))}
+    ${_edFila(_edCampo("ed-cp", "Código postal", s.zip), _edCampo("ed-ciudad", "Ciudad", s.city), `<div id="ed-prov-box">${_edProvincia(cc, s.province)}</div>`)}
+    ${_edTelefono("ed-tel2", "Teléfono", s.phone, cc)}
   `, () => {
     const sel = document.getElementById("ed-pais");
     _edEnviar({ shipping_address: {
       first_name: _edVal("ed-nom"), last_name: _edVal("ed-ape"), company: _edVal("ed-emp"),
       address1: _edVal("ed-dir1"), address2: _edVal("ed-dir2"), zip: _edVal("ed-cp"), city: _edVal("ed-ciudad"),
-      province: _edVal("ed-prov"), phone: _edVal("ed-tel2"),
+      province: _edVal("ed-prov"), phone: _edValTelefono("ed-tel2"),
       country_code: sel.value, country: sel.options[sel.selectedIndex].text,
     }});
   });
+  // Al cambiar de país: provincia como desplegable (España) o texto libre
+  document.getElementById("ed-pais").onchange = (e) => {
+    const box = document.getElementById("ed-prov-box");
+    if (box) box.innerHTML = _edProvincia(e.target.value, "");
+  };
 };
 
 // Sugerencias de dirección mientras se escribe (como Shopify). Con Google
@@ -15095,7 +15145,7 @@ window._edElegirDireccion = async function(i) {
       return;
     }
   }
-  pon("ed-dir1", r.dir1); pon("ed-cp", r.cp); pon("ed-ciudad", r.ciudad); pon("ed-prov", r.prov);
+  pon("ed-dir1", r.dir1); pon("ed-cp", r.cp); pon("ed-ciudad", r.ciudad); _edPonProvincia(r.prov);
   const l = document.getElementById("ed-sug"); if (l) l.style.display = "none";
   document.getElementById("ed-dir2")?.focus();
 };
