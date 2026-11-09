@@ -1533,15 +1533,25 @@ function geRenderConfirmar() {
   const activas = new Set((tiendas || []).map(t => t.domain));
   const todos = (data.pedidos || []).filter(p => !activas.size || activas.has(p.shop_domain));
   const sel = window.__geTienda || "";
+  // Color y nombre de cada tienda (su color de notificaciones, o el de la
+  // paleta de Métricas si no tiene)
+  const infoTienda = {};
+  (tiendas || []).forEach((t, i) => {
+    infoTienda[t.domain] = {
+      nombre: t.shop_name || t.domain.replace(".myshopify.com", ""),
+      color: t.notification_color || (STORE_PALETTE[i % STORE_PALETTE.length] || {}).light || "#a1a1a1",
+    };
+  });
+  const punto = c => `<span style="width:8px;height:8px;border-radius:50%;background:${c};display:inline-block;flex-shrink:0;"></span>`;
   if (caja) {
     const cuenta = d => todos.filter(p => p.shop_domain === d).length;
-    const boton = (dom, nombre, n) => `<button class="ge-tab${sel === dom ? " activo" : ""}" onclick="geElegirTienda('${escapeAttr(dom)}')">${escapeHtml(nombre)}${data.etiqueta ? ` <span style="opacity:.7;font-weight:500;">${n}</span>` : ""}</button>`;
+    const boton = (dom, nombre, n, color) => `<button class="ge-tab${sel === dom ? " activo" : ""}" onclick="geElegirTienda('${escapeAttr(dom)}')">${color ? punto(color) : ""}${escapeHtml(nombre)}${data.etiqueta ? ` <span style="opacity:.7;font-weight:500;">${n}</span>` : ""}</button>`;
     caja.innerHTML = boton("", "Todas las tiendas", todos.length)
-      + tiendas.map(t => boton(t.domain, t.shop_name || t.domain.replace(".myshopify.com", ""), cuenta(t.domain))).join("");
+      + (tiendas || []).map(t => boton(t.domain, infoTienda[t.domain].nombre, cuenta(t.domain), infoTienda[t.domain].color)).join("");
   }
   try {
     if (!data.etiqueta) {
-      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;" class="muted">Escribe arriba a la derecha la etiqueta de tu almacén y pulsa <b>Guardar</b> para ver los pedidos sin confirmar.</div>`;
+      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;" class="muted">Pulsa la pestaña verde de arriba a la derecha, escribe la etiqueta de tu almacén y pulsa <b>Guardar</b> para ver los pedidos sin confirmar.</div>`;
       return;
     }
     const pedidos = sel ? todos.filter(p => p.shop_domain === sel) : todos;
@@ -1552,24 +1562,52 @@ function geRenderConfirmar() {
     }
     const tel = t => t && t.length === 9 ? `+34 ${t.slice(0,3)} ${t.slice(3,5)} ${t.slice(5,7)} ${t.slice(7)}` : (t || "-");
     const fecha = d => d ? new Date(d).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "-";
+    // Semáforo de antigüedad: menos de 12 h verde, 12-24 h ámbar, más de 24 h rojo
+    const horas = d => d ? (Date.now() - new Date(d).getTime()) / 3600000 : 0;
+    const espera = d => {
+      const h = horas(d);
+      const txt = h < 1 ? `hace ${Math.max(1, Math.round(h * 60))} min` : h < 48 ? `hace ${Math.floor(h)} h` : `hace ${Math.floor(h / 24)} días`;
+      const [bg, col, bd] = h > 24 ? ["#fef2f2", "#b91c1c", "#fecaca"] : h > 12 ? ["#fffbeb", "#b45309", "#fde68a"] : ["#f0fdf4", "#15803d", "#bbf7d0"];
+      return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:${bg};color:${col};border:1px solid ${bd};white-space:nowrap;">${txt}</span>`;
+    };
+    // Etiquetas: las automáticas de Releasit en gris; las de tu equipo en verde suave
+    const chip = t => /^releasit/i.test(t)
+      ? `<span style="display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border-radius:999px;font-size:11.5px;background:#f3f3f3;color:#6b6b6b;border:1px solid #e3e3e3;">${escapeHtml(t)}</span>`
+      : `<span style="display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">${escapeHtml(t)}</span>`;
+    // Resumen de arriba
+    const viejos = pedidos.filter(p => horas(p.created_at) > 24).length;
+    const enJuego = pedidos.reduce((s, p) => s + Number(p.total_price || 0), 0);
+    const moneda = !pedidos[0]?.currency || pedidos[0].currency === "EUR" ? "€" : pedidos[0].currency;
+    const dato = (valor, texto, color) => `<div style="display:flex;align-items:baseline;gap:6px;"><span style="font-size:18px;font-weight:800;color:${color || "var(--text)"};">${valor}</span><span class="muted" style="font-size:12.5px;">${texto}</span></div>`;
+    const sep = `<span style="width:1px;height:22px;background:var(--border);"></span>`;
     const th = (t, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${t}</th>`;
+    const icoNota = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 21H6a2.5 2.5 0 0 1-2.5-2.5v-13A2.5 2.5 0 0 1 6 3h12a2.5 2.5 0 0 1 2.5 2.5V15Z"/><path d="M14.5 21v-4a2 2 0 0 1 2-2h4"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12.5" x2="13" y2="12.5"/></svg>`;
+    const td = (contenido, extra = "") => `<td style="padding:10px 12px;border-bottom:1px solid var(--border);${extra}">${contenido}</td>`;
     lista.innerHTML = `
-      <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${pedidos.length}${pedidos.length >= 300 ? "+" : ""}</b> pedido${pedidos.length === 1 ? "" : "s"} sin la etiqueta "${escapeHtml(data.etiqueta)}"</div>
+      <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:12px 16px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;">
+        ${dato(`${pedidos.length}${pedidos.length >= 300 ? "+" : ""}`, `por confirmar (sin "${escapeHtml(data.etiqueta)}")`)}
+        ${sep}
+        ${dato(viejos, "de más de 24 h", viejos ? "#b91c1c" : "var(--text)")}
+        ${sep}
+        ${dato(`${enJuego.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${escapeHtml(moneda)}`, "en juego")}
+      </div>
       <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead><tr>${th("Pedido")}${th("Fecha")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Etiquetas")}</tr></thead>
-          <tbody>${pedidos.map(p => `
+          <tbody>${pedidos.map(p => {
+            const ti = infoTienda[p.shop_domain] || { nombre: (p.shop_domain || "").replace(".myshopify.com", ""), color: "#a1a1a1" };
+            const etiquetas = (p.etiquetas || "").split(",").map(t => t.trim()).filter(Boolean);
+            return `
             <tr onclick="geAbrirPedido(${Number(p.id)})" style="cursor:pointer;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
-              <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;">
-                <span style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">${escapeHtml(p.order_number || "-")}${p.note ? `<span class="nota-pedido" data-nota="${escapeAttr(p.note)}" onclick="event.stopPropagation()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 21H6a2.5 2.5 0 0 1-2.5-2.5v-13A2.5 2.5 0 0 1 6 3h12a2.5 2.5 0 0 1 2.5 2.5V15Z"/><path d="M14.5 21v-4a2 2 0 0 1 2-2h4"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12.5" x2="13" y2="12.5"/></svg></span>` : ""}</span>
-              </td>
-              <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--muted);">${fecha(p.created_at)}</td>
-              <td style="padding:10px 12px;border-bottom:1px solid var(--border);">${escapeHtml(p.customer_name || "-")}</td>
-              <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;">${escapeHtml(tel(p.telefono))}</td>
-              <td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-weight:600;">${Number(p.total_price || 0).toFixed(2)} ${escapeHtml(p.currency || "")}</td>
-              <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--muted);">${escapeHtml((p.shop_domain || "").replace(".myshopify.com", ""))}</td>
-              <td style="padding:10px 12px;border-bottom:1px solid var(--border);">${(p.etiquetas || "").split(",").map(t => t.trim()).filter(Boolean).map(t => `<span style="display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border:1px solid var(--border);border-radius:999px;font-size:11.5px;">${escapeHtml(t)}</span>`).join("") || `<span class="muted">—</span>`}</td>
-            </tr>`).join("")}
+              ${td(`<span style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">${escapeHtml(p.order_number || "-")}${p.note ? `<span class="nota-pedido" data-nota="${escapeAttr(p.note)}" onclick="event.stopPropagation()">${icoNota}</span>` : ""}</span>`, "white-space:nowrap;")}
+              ${td(`<span style="color:var(--muted);margin-right:8px;">${fecha(p.created_at)}</span>${espera(p.created_at)}`, "white-space:nowrap;")}
+              ${td(escapeHtml(p.customer_name || "-"))}
+              ${td(escapeHtml(tel(p.telefono)), "white-space:nowrap;")}
+              ${td(`${Number(p.total_price || 0).toFixed(2)} ${escapeHtml(p.currency || "")}`, "text-align:right;white-space:nowrap;font-weight:600;")}
+              ${td(`<span style="display:inline-flex;align-items:center;gap:7px;">${punto(ti.color)}${escapeHtml(ti.nombre)}</span>`, "white-space:nowrap;")}
+              ${td(etiquetas.map(chip).join("") || `<span class="muted">—</span>`)}
+            </tr>`;
+          }).join("")}
           </tbody>
         </table>
       </div>`;
