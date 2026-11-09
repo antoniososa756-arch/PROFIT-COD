@@ -247,6 +247,15 @@ router.get("/incidencias/:id/mensajes", auth, soloAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// POST /api/gestion-ecom/incidencias/:id/responder { texto } -> correo a MRW
+router.post("/incidencias/:id/responder", auth, soloAdmin, async (req, res) => {
+  try {
+    res.json(await inc.responder(req.user.id, parseInt(req.params.id), req.body?.texto));
+  } catch (e) {
+    res.status(400).json({ error: e.message || "No se pudo enviar la respuesta" });
+  }
+});
+
 // POST /api/gestion-ecom/incidencias/:id/estado { estado: nueva|respondida|resuelta }
 router.post("/incidencias/:id/estado", auth, soloAdmin, async (req, res) => {
   const estado = String(req.body?.estado || "");

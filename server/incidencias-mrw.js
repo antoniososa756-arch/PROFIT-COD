@@ -125,8 +125,10 @@ function analizarCorreo(parsed) {
   // Escrito a mano: respuesta/reenvío (RE:, RV:...) o sin la ficha automática
   const esRespuesta = /^\s*(re|rv|fw|fwd)\s*:/i.test(asunto);
   const automatico = !esRespuesta && /no se ha podido entregar por/i.test(texto) && /N[ºo°]\s*env[ií]o/i.test(texto);
-  let tipo = (asunto.match(/ANOMAL[ÍI]A\s*\\\s*(.+)$/i) || [])[1] || campo(texto, "El env[ií]o no se ha podido entregar por");
-  tipo = String(tipo || "").trim();
+  // Tipo: del asunto ("ANOMALÍA \ Destinatario ausente o cerrado"); si no,
+  // del cuerpo (en las respuestas a mano, del correo original citado debajo).
+  let tipo = (asunto.match(/ANOMAL[ÍI]A\s*[\\\/|-]\s*(.+)$/i) || [])[1] || campo(texto, "El env[ií]o no se ha podido entregar por");
+  tipo = String(tipo || "").replace(/\s+/g, " ").trim();
   // Solo lo nuevo del correo manual (sin el correo original citado debajo)
   const soloNuevo = texto.split(/\n\s*(De|From)\s*:\s*.+\n/i)[0].trim();
   return {
@@ -187,7 +189,7 @@ async function guardarCorreo(userId, a) {
 
 // Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
 // desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
-const VERSION_LECTURA = 2;
+const VERSION_LECTURA = 3;
 
 // Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
 // días. Una sola lectura a la vez por usuario.
@@ -203,7 +205,10 @@ async function _sincronizarUsuario(userId) {
   await ensureTablas();
   let cfg = await db.get("SELECT * FROM incidencias_mrw_config WHERE user_id = $1", [userId]);
   if (!cfg) return { ok: false, error: "Sin configurar" };
+  // Al rehacer se conserva lo que el usuario ya gestionó (resuelta/respondida)
+  let estadosPrevios = [];
   if (Number(cfg.version_lectura || 1) < VERSION_LECTURA) {
+    estadosPrevios = await db.all("SELECT envio, estado FROM incidencias_mrw WHERE user_id = $1 AND estado <> 'nueva'", [userId]);
     await db.run("DELETE FROM incidencias_mrw WHERE user_id = $1", [userId]);
     await db.run("UPDATE incidencias_mrw_config SET ultimo_uid = 0, version_lectura = $1 WHERE user_id = $2", [VERSION_LECTURA, userId]);
     cfg = { ...cfg, ultimo_uid: 0, uid_validity: null };
@@ -236,6 +241,9 @@ async function _sincronizarUsuario(userId) {
       if (!uids.length) await db.run("UPDATE incidencias_mrw_config SET uid_validity = $1 WHERE user_id = $2", [validity, userId]);
     } finally { lock.release(); }
     await client.logout().catch(() => {});
+    for (const p of estadosPrevios) {
+      await db.run("UPDATE incidencias_mrw SET estado = $1, mrw_escribio = false WHERE user_id = $2 AND envio = $3", [p.estado, userId, p.envio]).catch(() => {});
+    }
     const res = { ok: true, leidos, guardados };
     await db.run("UPDATE incidencias_mrw_config SET last_sync = now()::text, last_result = $1 WHERE user_id = $2", [JSON.stringify(res), userId]);
     return res;
@@ -272,4 +280,48 @@ async function sincronizarTodas() {
   } finally { global.__incMrwRunning = false; }
 }
 
-module.exports = { ensureTablas, cifrar, descifrar, probarConexion, sincronizarUsuario, sincronizarTodas, analizarCorreo };
+// Responde a MRW desde el Gmail de incidencias, en el MISMO hilo (Re: del
+// asunto + In-Reply-To/References), así a la franquicia le llega como una
+// respuesta normal. Gmail guarda la copia en "Enviados". La incidencia pasa
+// a "respondida"; si MRW contesta, la lectura la vuelve a poner en "nueva".
+async function responder(userId, incidenciaId, texto) {
+  await ensureTablas();
+  const cuerpo = String(texto || "").trim();
+  if (!cuerpo) throw new Error("Escribe la respuesta");
+  const cfg = await db.get("SELECT * FROM incidencias_mrw_config WHERE user_id = $1", [userId]);
+  if (!cfg) throw new Error("Conecta primero el correo de incidencias");
+  const inc = await db.get("SELECT * FROM incidencias_mrw WHERE id = $1 AND user_id = $2", [incidenciaId, userId]);
+  if (!inc) throw new Error("Incidencia no encontrada");
+  const hilo = await db.all("SELECT message_id, de, asunto, saliente FROM incidencias_mrw_mensajes WHERE incidencia_id = $1 ORDER BY fecha ASC", [inc.id]);
+  const ultimoMrw = [...hilo].reverse().find(m => !m.saliente);
+  const para = ultimoMrw?.de || cfg.remitente;
+  const asuntoBase = ultimoMrw?.asunto || `${inc.envio} \\ ANOMALÍA \\ ${inc.tipo || ""}`;
+  const asunto = /^\s*re\s*:/i.test(asuntoBase) ? asuntoBase : `RE: ${asuntoBase}`;
+  const refs = hilo.map(m => m.message_id).filter(id => /^<.+>$/.test(id || ""));
+
+  const nodemailer = require("nodemailer");
+  const transporte = nodemailer.createTransport({
+    host: "smtp.gmail.com", port: 465, secure: true,
+    auth: { user: cfg.email, pass: descifrar(cfg.password_enc) },
+  });
+  let info;
+  try {
+    info = await transporte.sendMail({
+      from: cfg.email, to: para, subject: asunto, text: cuerpo,
+      ...(ultimoMrw && /^<.+>$/.test(ultimoMrw.message_id || "") ? { inReplyTo: ultimoMrw.message_id } : {}),
+      ...(refs.length ? { references: refs } : {}),
+    });
+  } catch (e) {
+    throw new Error(/auth|credentials|login|535/i.test(e.message) ? "Gmail rechazó el envío: revisa la contraseña de aplicación" : `No se pudo enviar: ${e.message}`);
+  }
+  const ahora = new Date().toISOString();
+  await db.run(
+    `INSERT INTO incidencias_mrw_mensajes (incidencia_id, message_id, de, asunto, texto, fecha, manual, saliente)
+     VALUES ($1,$2,$3,$4,$5,$6,false,true) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
+    [inc.id, info.messageId || `enviado-${Date.now()}`, cfg.email, asunto, cuerpo, ahora]
+  );
+  await db.run("UPDATE incidencias_mrw SET estado = 'respondida', mrw_escribio = false, ultimo_mensaje_at = $1 WHERE id = $2", [ahora, inc.id]);
+  return { ok: true, para };
+}
+
+module.exports = { ensureTablas, cifrar, descifrar, probarConexion, sincronizarUsuario, sincronizarTodas, analizarCorreo, responder };

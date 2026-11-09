@@ -1453,7 +1453,7 @@ function geIncPintar(lista, resueltas) {
         <tbody>${lista.map(i => `
           <tr style="cursor:pointer;${i.mrw_escribio ? "background:#fffbeb;" : ""}" onclick="geIncVerHilo(${Number(i.id)})" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='${i.mrw_escribio ? "#fffbeb" : ""}'">
             ${td(`<div style="font-weight:600;">${escapeHtml(i.envio)}</div><div class="muted" style="font-size:12px;">${escapeHtml(i.order_number || i.referencia || "pedido no encontrado")}</div>`, "white-space:nowrap;")}
-            ${td(`<span style="color:#b91c1c;font-weight:600;">${escapeHtml(i.tipo || "-")}</span>${i.mrw_escribio ? `<div style="font-size:11.5px;font-weight:700;color:#b45309;margin-top:2px;">✉️ MRW ha escrito</div>` : ""}`)}
+            ${td(`${i.tipo ? `<span style="color:#b91c1c;font-weight:600;">${escapeHtml(i.tipo)}</span>` : `<span style="color:#b45309;font-weight:600;">Respuesta de MRW</span>`}${i.mrw_escribio ? `<div style="font-size:11.5px;font-weight:700;color:#b45309;margin-top:2px;">✉️ MRW ha escrito</div>` : ""}`)}
             ${td(escapeHtml(i.customer_name || i.destinatario || "-"))}
             ${td(escapeHtml(tel(i.telefono)), "white-space:nowrap;")}
             ${td(`<span class="muted">${escapeHtml(i.fecha_anomalia || "-")}</span>`, "white-space:nowrap;")}
@@ -1490,8 +1490,44 @@ window.geIncVerHilo = async function(id) {
         </div>
         <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;line-height:1.5;max-height:320px;overflow:auto;">${escapeHtml((m.texto || "").trim())}</div>
       </div>`).join("") || `<div class="muted" style="padding:12px 0;">Sin correos.</div>`;
+    // Responder a MRW en el mismo hilo (desde el Gmail de incidencias)
+    celda.innerHTML += `
+      <div style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--card);">
+        <div style="font-size:12px;margin-bottom:6px;"><b>Responder a MRW</b> <span class="muted">· se envía desde ${escapeHtml(window.__geIncCfg?.email || "tu Gmail")} en el mismo hilo</span></div>
+        <textarea id="ge-inc-resp-${id}" class="ed-input" rows="4" placeholder="Escribe la respuesta para MRW..." style="height:auto;padding:10px 12px;resize:vertical;line-height:1.45;"
+          onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();geIncResponder(${id})}"></textarea>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:8px;">
+          <span class="muted" style="font-size:11.5px;">Ctrl + Enter para enviar</span>
+          <button id="ge-inc-enviar-${id}" class="ge-tab ge-tab-confirmar activo" onclick="geIncResponder(${id})">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            Enviar a MRW
+          </button>
+        </div>
+      </div>`;
   } catch (e) {
     celda.innerHTML = `<div style="color:#dc2626;padding:12px 0;">Error cargando los correos</div>`;
+  }
+};
+
+window.geIncResponder = async function(id) {
+  const ta = document.getElementById(`ge-inc-resp-${id}`);
+  const b = document.getElementById(`ge-inc-enviar-${id}`);
+  const texto = (ta?.value || "").trim();
+  if (!texto) { ta?.focus(); return; }
+  if (b) { b.disabled = true; b.lastChild.textContent = " Enviando..."; }
+  try {
+    const r = await fetch(`${API_BASE}/api/gestion-ecom/incidencias/${id}/responder`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ texto })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Error");
+    showToast("✉️ Respuesta enviada", `Enviada a ${d.para}. La incidencia pasa a "Respondida".`, "#22c55e");
+    await geIncidenciasCurso();
+    geIncVerHilo(id); // reabrir el hilo con la respuesta
+  } catch (e) {
+    if (b) { b.disabled = false; b.lastChild.textContent = " Enviar a MRW"; }
+    showToast("Error", e.message || "No se pudo enviar la respuesta.", "#dc2626");
   }
 };
 
