@@ -1535,10 +1535,12 @@ window.geConfirmarPedido = async function() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Error");
     showToast("✅ Pedido confirmado", `${data.order_number || ""} — etiqueta "${data.etiqueta}" añadida en Shopify.`, "#22c55e");
-    // Fuera de la lista de confirmaciones y siguiente pedido (o volver a la lista)
+    // Fuera de la lista de confirmaciones y al pedido ANTERIOR de la lista, es
+    // decir, el que entró justo después (se confirma del más antiguo al más
+    // nuevo, de abajo arriba). Si era el más nuevo, al que queda en su sitio.
     if (window.__geDatos?.data?.pedidos) window.__geDatos.data.pedidos = window.__geDatos.data.pedidos.filter(p => Number(p.id) !== Number(id));
     const ids = (window.__orderNavIds || []).filter(x => Number(x) !== Number(id));
-    const i = Math.min(Math.max(window.__orderNavIndex, 0), ids.length - 1);
+    const i = Math.min(Math.max(window.__orderNavIndex - 1, 0), ids.length - 1);
     window.__geIdsVisibles = ids;
     if (ids.length) abrirDetallePedido(ids[i], { navIds: ids, origen: "gestion-ecom" });
     else setSection("gestion-ecom");
