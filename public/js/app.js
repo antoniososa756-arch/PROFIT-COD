@@ -14864,8 +14864,7 @@ window.abrirDetallePedido = async function(orderId, opts = {}) {
   box.removeAttribute("style");
   box.innerHTML = `
     <button onclick="setSection('${origen}')"
-      style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;margin-bottom:16px;background:var(--input);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);transition:border-color .15s,color .15s;"
-      onmouseover="this.style.borderColor='#1a1a1a';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)';">
+      class="ge-tab" style="height:34px;margin-bottom:16px;">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
       ${origen === "gestion-ecom" ? "Volver a confirmaciones" : "Volver a pedidos"}
     </button>
@@ -15006,16 +15005,27 @@ function _dpPill(label, bg, color, border, icon) {
   return `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;background:${bg};color:${color};border:1px solid ${border};white-space:nowrap;">${icon ? `<span>${icon}</span>` : ""}${escapeHtml(label)}</span>`;
 }
 
-const _DP_ACCENTS = {
-  pedido:  { border: "#22c55e", bg: "rgba(34,197,94,.07)"  },
-  mrw:     { border: "#3b82f6", bg: "rgba(59,130,246,.07)" },
-  cliente: { border: "#8b5cf6", bg: "rgba(139,92,246,.07)" },
+// Iconos de línea (monocromos) para las cabeceras de las tarjetas del detalle
+const _DP_ICOS = {
+  caja: '<path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/>',
+  pago: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  camion: '<path d="M3 6h11v10H3z"/><path d="M14 9h4l3 3v4h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+  nota: '<path d="M14.5 21H6a2.5 2.5 0 0 1-2.5-2.5v-13A2.5 2.5 0 0 1 6 3h12a2.5 2.5 0 0 1 2.5 2.5V15Z"/><path d="M14.5 21v-4a2 2 0 0 1 2-2h4"/><path d="M8 8.5h8M8 12.5h5"/>',
+  cliente: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
+  bolsa: '<path d="M5 8h14l-1 12H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/>',
+  factura: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/>',
 };
+function _dpIco(nombre) {
+  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--text);">${_DP_ICOS[nombre] || ""}</svg>`;
+}
 
+// Tarjetas del detalle del pedido: blancas con texto negro, sin colores por
+// tipo (antes verde/azul/morado), como Shopify. accentKey se mantiene por
+// compatibilidad con las llamadas.
 function _dpCard(headerHtml, bodyHtml, accentKey) {
-  const a = _DP_ACCENTS[accentKey] || { border: "var(--border)", bg: "transparent" };
-  return `<div style="background:var(--card);border:1px solid var(--border);border-left:3px solid ${a.border};border-radius:14px;margin-bottom:16px;overflow:hidden;">
-    ${headerHtml ? `<div style="padding:14px 18px;border-bottom:1px solid var(--border);background:${a.bg};font-weight:700;font-size:13.5px;color:var(--text);display:flex;align-items:center;gap:8px;">${headerHtml}</div>` : ""}
+  return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+    ${headerHtml ? `<div style="padding:13px 18px;border-bottom:1px solid var(--border);background:var(--card);font-weight:700;font-size:13.5px;color:var(--text);display:flex;align-items:center;gap:8px;">${headerHtml}</div>` : ""}
     ${bodyHtml}
   </div>`;
 }
@@ -15448,7 +15458,7 @@ function _dpPedidosCliente(order) {
       <div onclick="const l=this.previousElementSibling;const ab=l.style.display==='none';l.style.display=ab?'block':'none';this.textContent=ab?'Ver menos ▴':'Ver todos (${n}) ▾';"
         style="padding:9px 18px;font-size:12.5px;font-weight:700;color:#2563eb;cursor:pointer;text-align:center;">Ver todos (${n}) ▾</div>` : ""}`;
   return _dpCard(
-    `🛍️ Pedidos del cliente <span style="margin-left:auto;color:var(--muted);font-weight:600;font-size:12.5px;">${n} pedido${n === 1 ? "" : "s"}${n >= 50 ? "+" : ""}</span>`,
+    `${_dpIco("bolsa")}Pedidos del cliente <span style="margin-left:auto;color:var(--muted);font-weight:600;font-size:12.5px;">${n} pedido${n === 1 ? "" : "s"}${n >= 50 ? "+" : ""}</span>`,
     cuerpo,
     "cliente"
   );
@@ -15531,23 +15541,23 @@ function renderDetallePedido(order) {
         ${!["entregado","cancelado","destruido","devuelto"].includes(order.fulfillment_status) ? `
         <div style="position:relative;">
           <button onclick="toggleEstadoMenu(event,'menu-estado-detalle')" title="Cambiar estado"
-            style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--input);border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit;">
+            class="ge-tab" style="height:34px;">
             Cambiar estado
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
-          <div id="menu-estado-detalle" style="display:none;position:absolute;left:0;top:calc(100% + 4px);background:#111827;border:1px solid #374151;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:150px;overflow:hidden;">
+          <div id="menu-estado-detalle" style="display:none;position:absolute;left:0;top:calc(100% + 4px);background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:999;min-width:150px;overflow:hidden;">
             <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','entregado')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#22c55e;cursor:pointer;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(34,197,94,.08)'" onmouseout="this.style.background=''">✓ Entregado</div>
-            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','devuelto')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#ea580c;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #374151;" onmouseover="this.style.background='rgba(234,88,12,.08)'" onmouseout="this.style.background=''">↩ Devuelto</div>
-            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','destruido')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#c4b5fd;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #374151;" onmouseover="this.style.background='rgba(124,58,237,.08)'" onmouseout="this.style.background=''">✕ Destruido</div>
-            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','cancelado')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid #374151;" onmouseover="this.style.background='rgba(220,38,38,.08)'" onmouseout="this.style.background=''">✕ Cancelado</div>
+            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','devuelto')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#ea580c;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid var(--border);" onmouseover="this.style.background='rgba(234,88,12,.08)'" onmouseout="this.style.background=''">↩ Devuelto</div>
+            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','destruido')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#7c3aed;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid var(--border);" onmouseover="this.style.background='rgba(124,58,237,.08)'" onmouseout="this.style.background=''">✕ Destruido</div>
+            <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','cancelado')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid var(--border);" onmouseover="this.style.background='rgba(220,38,38,.08)'" onmouseout="this.style.background=''">✕ Cancelado</div>
           </div>
         </div>` : ""}
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
         <button onclick="archivarPedido(${Number(order.id)}, ${raw.closed_at ? "false" : "true"})" id="dp-archivar" class="ge-tab" style="height:34px;" title="${raw.closed_at ? "Quitar de archivados en Shopify" : "Archivar el pedido en Shopify"}">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
           ${raw.closed_at ? "Desarchivar" : "Archivar"}
         </button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
         <span id="dp-nav-controls"></span>
         ${shopifyUrl ? `<a href="${shopifyUrl}" target="_blank"
           style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#22c55e;border:none;border-radius:8px;font-size:12.5px;font-weight:700;color:#fff;text-decoration:none;box-shadow:0 2px 10px rgba(34,197,94,.3);transition:background .15s,box-shadow .15s;"
@@ -15559,14 +15569,14 @@ function renderDetallePedido(order) {
     <div class="ui-cascada" style="display:grid;grid-template-columns:minmax(0,2fr) minmax(320px,1fr);gap:24px;align-items:start;width:100%;">
       <div style="min-width:0;">
         ${_dpCard(
-          `<span style="flex:1;">📦 Productos (${lineItems.length})</span><span style="font-size:12.5px;font-weight:600;color:var(--muted);">${order.tracking_number ? `Nº seg.: <a href="${trackingUrl(order)}" target="_blank" style="color:#22c55e;font-weight:700;">${escapeHtml(order.tracking_number)}</a>` : "Sin seguimiento"}</span>`,
+          `<span style="flex:1;display:inline-flex;align-items:center;gap:8px;">${_dpIco("caja")}Productos (${lineItems.length})</span><span style="font-size:12.5px;font-weight:600;color:var(--muted);">${order.tracking_number ? `Nº seg.: <a href="${trackingUrl(order)}" target="_blank" style="color:#22c55e;font-weight:700;">${escapeHtml(order.tracking_number)}</a>` : "Sin seguimiento"}</span>`,
           `${shippingLine ? `<div style="padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;">🚚 ${escapeHtml(shippingLine.title || "Envío")}</div>` : ""}
            <div>${itemsHtml}</div>`,
           "pedido"
         )}
 
         ${_dpCard(
-          `${fin.icon} Pago`,
+          `${_dpIco("pago")}Pago`,
           `${order.financial_status === "pending" && !cobradoEnReembolsos ? `<div style="margin:12px 18px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12.5px;color:var(--text);">⚠️ El pago contra reembolso (COD) todavía está pendiente de cobrar.</div>` : ""}
            <div>
              ${_dpRow("Subtotal", fmtMoney(raw.subtotal_price))}
@@ -15579,7 +15589,7 @@ function renderDetallePedido(order) {
         )}
 
         ${order.tracking_number ? _dpCard(
-          `🚚 Seguimiento ${agenciaSeguimiento(order)}`,
+          `${_dpIco("camion")}Seguimiento ${agenciaSeguimiento(order)}`,
           `<div id="dp-mrw-history">
             <div style="padding:16px 18px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;">
               <div style="width:14px;height:14px;border:2px solid #374151;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;"></div>
@@ -15590,15 +15600,15 @@ function renderDetallePedido(order) {
         ) : ""}
       </div>
 
-      <div style="min-width:0;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:14px;">
+      <div style="min-width:0;">
         ${_dpCard(
-          `<span style="flex:1;">📝 Notas</span><span onclick="editarNotaPedido(${Number(order.id)})" title="Editar nota" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          `<span style="flex:1;display:inline-flex;align-items:center;gap:8px;">${_dpIco("nota")}Notas</span><span onclick="editarNotaPedido(${Number(order.id)})" title="Editar nota" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
           `<div id="dp-nota" data-nota="${escapeAttr(raw.note || "")}">${_dpNotaVista(raw.note, order.id)}</div>`,
           "cliente"
         )}
 
         ${_dpCard(
-          `<span style="flex:1;">👤 Cliente</span><span onclick="abrirEditarCliente()" title="Editar cliente" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          `<span style="flex:1;display:inline-flex;align-items:center;gap:8px;">${_dpIco("cliente")}Cliente</span><span onclick="abrirEditarCliente()" title="Editar cliente" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
           `<div>
             ${_dpRow("Nombre", escapeHtml(nombreCliente))}
             ${_dpRow("Email", escapeHtml(customer.email || raw.email || "-"))}
@@ -15610,7 +15620,7 @@ function renderDetallePedido(order) {
         ${_dpPedidosCliente(order)}
 
         ${_dpCard(
-          `<span style="flex:1;">📍 Dirección de envío</span><span onclick="abrirEditarDireccion()" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          `<span style="flex:1;display:inline-flex;align-items:center;gap:8px;">${_dpIco("pin")}Dirección de envío</span><span onclick="abrirEditarDireccion()" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
           shipping.address1
             ? `<div style="padding:14px 18px;font-size:13px;color:var(--text);line-height:1.7;">
                 ${escapeHtml(nombreEnvio)}<br>
@@ -15626,7 +15636,7 @@ function renderDetallePedido(order) {
         )}
 
         ${_dpCard(
-          `<span style="flex:1;">🧾 Dirección de facturación</span><span onclick="showToast('No disponible','Shopify no permite cambiar la dirección de facturación de un pedido ya creado. Solo se puede editar la de envío.','#6b6b6b')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
+          `<span style="flex:1;display:inline-flex;align-items:center;gap:8px;">${_dpIco("factura")}Dirección de facturación</span><span onclick="showToast('No disponible','Shopify no permite cambiar la dirección de facturación de un pedido ya creado. Solo se puede editar la de envío.','#6b6b6b')" title="Editar dirección" style="cursor:pointer;color:var(--muted);display:flex;align-items:center;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>`,
           billing.address1
             ? `<div style="padding:14px 18px;font-size:13px;color:var(--text);line-height:1.7;">
                 ${escapeHtml(nombreFacturacion)}<br>
