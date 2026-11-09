@@ -1719,9 +1719,9 @@ window.geIncResponderDetalle = async function(incId, orderId) {
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Error");
-    showToast("✉️ Respuesta enviada", `Enviada a ${d.para}.`, "#22c55e");
+    showToast("✉️ Respuesta enviada", `Enviada a ${d.para}. Incidencia marcada como resuelta.`, "#22c55e");
     const it = (window.__geIncLista || []).find(x => Number(x.id) === Number(incId));
-    if (it) { it.estado = "respondida"; it.mrw_escribio = false; }
+    if (it) { it.estado = "resuelta"; it.mrw_escribio = false; }
     geIncColumnaCorreo(orderId);
   } catch (e) {
     if (b) { b.disabled = false; b.lastChild.textContent = " Enviar a MRW"; }
@@ -1794,7 +1794,7 @@ window.geIncResponder = async function(id) {
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Error");
-    showToast("✉️ Respuesta enviada", `Enviada a ${d.para}. La incidencia pasa a "Respondida".`, "#22c55e");
+    showToast("✉️ Respuesta enviada", `Enviada a ${d.para}. Incidencia marcada como resuelta.`, "#22c55e");
     await geIncidenciasCurso();
     geIncVerHilo(id); // reabrir el hilo con la respuesta
   } catch (e) {

@@ -157,11 +157,11 @@ async function guardarEnviado(userId, a) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,false,true) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
     [inc.id, a.message_id, a.de, a.asunto, a.texto, a.html, a.fecha]
   );
-  // Si nuestra respuesta es lo último del hilo, la incidencia está respondida
+  // Si nuestra respuesta es lo último del hilo, la incidencia está resuelta
   if (!inc.ultimo_mensaje_at || a.fecha >= inc.ultimo_mensaje_at) {
     await db.run(
       `UPDATE incidencias_mrw SET ultimo_mensaje_at = $1, mrw_escribio = false,
-         estado = CASE WHEN estado = 'nueva' THEN 'respondida' ELSE estado END
+         estado = 'resuelta'
        WHERE id = $2`, [a.fecha, inc.id]);
   }
   return true;
@@ -376,8 +376,8 @@ async function sincronizarTodas() {
 
 // Responde a MRW desde el Gmail de incidencias, en el MISMO hilo (Re: del
 // asunto + In-Reply-To/References), así a la franquicia le llega como una
-// respuesta normal. Gmail guarda la copia en "Enviados". La incidencia pasa
-// a "respondida"; si MRW contesta, la lectura la vuelve a poner en "nueva".
+// respuesta normal. Gmail guarda la copia en "Enviados". Al responder, la
+// incidencia queda RESUELTA; si MRW contesta, la lectura la reabre ("nueva").
 async function responder(userId, incidenciaId, texto) {
   await ensureTablas();
   const cuerpo = String(texto || "").trim();
@@ -414,7 +414,7 @@ async function responder(userId, incidenciaId, texto) {
      VALUES ($1,$2,$3,$4,$5,$6,false,true) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
     [inc.id, info.messageId || `enviado-${Date.now()}`, cfg.email, asunto, cuerpo, ahora]
   );
-  await db.run("UPDATE incidencias_mrw SET estado = 'respondida', mrw_escribio = false, ultimo_mensaje_at = $1 WHERE id = $2", [ahora, inc.id]);
+  await db.run("UPDATE incidencias_mrw SET estado = 'resuelta', mrw_escribio = false, ultimo_mensaje_at = $1 WHERE id = $2", [ahora, inc.id]);
   return { ok: true, para };
 }
 
