@@ -2142,3 +2142,46 @@ input:focus {
 }
 .clientes-plan-card-name { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .clientes-plan-card-num { font-size: 24px; font-weight: 800; color: var(--text); margin-top: 4px; }
+
+/* ═══ Animaciones de la interfaz ═══════════════════════════════════════
+   Entrada suave de secciones, desplegables, ventanas y tarjetas, y
+   respuesta al pulsar botones. Se desactivan si el sistema pide
+   "reducir movimiento". */
+@keyframes ui-fade-up   { from { opacity: 0; transform: translateY(8px); }  to { opacity: 1; transform: none; } }
+@keyframes ui-drop-in   { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes ui-fade-in   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ui-modal-in  { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes ui-modal-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(.98); } }
+
+/* Cambio de sección / apertura de un pedido */
+.ui-entrada { animation: ui-fade-up .28s cubic-bezier(.2,.7,.3,1) both; }
+/* Tarjetas del detalle del pedido, en cascada */
+.ui-cascada > * > * { animation: ui-fade-up .32s cubic-bezier(.2,.7,.3,1) both; }
+.ui-cascada > * > *:nth-child(2) { animation-delay: .04s; }
+.ui-cascada > * > *:nth-child(3) { animation-delay: .08s; }
+.ui-cascada > * > *:nth-child(4) { animation-delay: .12s; }
+.ui-cascada > * > *:nth-child(5) { animation-delay: .16s; }
+.ui-cascada > * > *:nth-child(n+6) { animation-delay: .2s; }
+
+/* Desplegables: idioma/usuario, notificaciones, buscador */
+.dropdown.open, .panel.open, .search-results.open {
+  animation: ui-drop-in .18s cubic-bezier(.2,.7,.3,1) both;
+  transform-origin: top right;
+}
+
+/* Ventanas (editar cliente/dirección...) */
+.ed-modal { animation: ui-fade-in .18s ease both; }
+.ed-modal > div { animation: ui-modal-in .24s cubic-bezier(.2,.8,.3,1) both; }
+.ed-modal.cerrando { animation: ui-fade-in .16s ease reverse both; }
+.ed-modal.cerrando > div { animation: ui-modal-out .16s ease both; }
+
+/* Respuesta al pulsar */
+button, .btn, .menu-item, .search-item, .drop-item, .pill {
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .1s ease, opacity .15s ease;
+}
+button:not(:disabled):active, .btn:active, .pill:active { transform: scale(.97); }
+.orders-row:not(.head) { transition: background .12s ease, box-shadow .12s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+}

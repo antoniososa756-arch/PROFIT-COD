@@ -1316,6 +1316,15 @@ window.startTrialAndReload = async function() {
   } catch(e) { alert("Error: " + e.message); }
 };
 
+// Animación de entrada (ver .ui-entrada en styles.css): se quita y se vuelve
+// a poner la clase para que se repita en cada cambio de sección.
+function uiEntrada(el) {
+  if (!el) return;
+  el.classList.remove("ui-entrada");
+  void el.offsetWidth;
+  el.classList.add("ui-entrada");
+}
+
 function setSection(id) {
   // Cuentas apoyo nunca pueden ver el plan de facturación
   if (currentUser?.role === "Apoyo" && id === "plan") {
@@ -1347,6 +1356,7 @@ function setSection(id) {
   const s = document.getElementById("subtitle");
   const c = document.getElementById("crumb");
   const box = document.getElementById("cardBox");
+  uiEntrada(box);
 
   // Título normal (por defecto)
   const title = d.labels[id] || id;
@@ -14895,6 +14905,7 @@ function _edModal(titulo, cuerpo, onGuardar) {
   _edCerrar();
   const ov = document.createElement("div");
   ov.id = "ed-modal";
+  ov.className = "ed-modal";
   ov.style.cssText = "position:fixed;inset:0;z-index:4000;background:rgba(15,23,42,.45);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow-y:auto;";
   ov.innerHTML = `
     <div style="width:100%;max-width:620px;background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.25);">
@@ -14915,8 +14926,14 @@ function _edModal(titulo, cuerpo, onGuardar) {
 }
 function _edEsc(e) { if (e.key === "Escape") _edCerrar(); }
 window._edCerrar = function() {
-  document.getElementById("ed-modal")?.remove();
+  const m = document.getElementById("ed-modal");
   document.removeEventListener("keydown", _edEsc);
+  if (!m) return;
+  // Sale con animación (ver .ed-modal.cerrando en styles.css)
+  m.id = "";
+  m.classList.add("cerrando");
+  m.style.pointerEvents = "none";
+  setTimeout(() => m.remove(), 170);
 };
 const _edVal = id => (document.getElementById(id)?.value || "").trim();
 
@@ -15192,7 +15209,7 @@ function renderDetallePedido(order) {
     </div>
     <div style="font-size:12.5px;color:var(--muted);margin-bottom:20px;">${fecha} · ${escapeHtml(order.shop_domain || "-")}</div>
 
-    <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(320px,1fr);gap:24px;align-items:start;width:100%;">
+    <div class="ui-cascada" style="display:grid;grid-template-columns:minmax(0,2fr) minmax(320px,1fr);gap:24px;align-items:start;width:100%;">
       <div style="min-width:0;">
         ${_dpCard(
           `<span style="flex:1;">📦 Productos (${lineItems.length})</span><span style="font-size:12.5px;font-weight:600;color:var(--muted);">${order.tracking_number ? `Nº seg.: <a href="${trackingUrl(order)}" target="_blank" style="color:#22c55e;font-weight:700;">${escapeHtml(order.tracking_number)}</a>` : "Sin seguimiento"}</span>`,
