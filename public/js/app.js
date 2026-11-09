@@ -1332,13 +1332,104 @@ window.geTab = function(tab) {
   document.querySelectorAll(".ge-tab").forEach(b => b.classList.toggle("activo", b.dataset.tab === tab));
   const cont = document.getElementById("ge-contenido");
   if (!cont) return;
-  const titulo = tab === "confirmar" ? "Confirmar pedidos" : "Incidencias";
+  if (tab === "confirmar") return geConfirmar(cont);
   cont.innerHTML = `
     <div class="ui-entrada" style="padding:44px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;">
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">${titulo}</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">Incidencias</div>
       <div class="muted">En construcción.</div>
     </div>`;
 };
+
+// "Confirmar pedidos": arriba a la izquierda la etiqueta con la que el
+// almacén prepara los pedidos; debajo, los pedidos que aún no la llevan (ni
+// "correcto"). Ver server/routes/gestion-ecom.routes.js.
+async function geConfirmar(cont) {
+  const H = { Authorization: "Bearer " + getActiveToken() };
+  cont.innerHTML = `
+    <div class="ui-entrada" style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+      <label style="display:block;width:min(340px,100%);">
+        <span class="ed-label">Etiqueta que usa tu almacén para preparar los pedidos</span>
+        <input id="ge-etiqueta" class="ed-input" placeholder="Ej. fulfio" autocomplete="off"
+          onkeydown="if(event.key==='Enter')geGuardarEtiqueta()">
+      </label>
+      <button id="ge-etiqueta-btn" onclick="geGuardarEtiqueta()" class="ge-tab activo" style="height:38px;">Guardar</button>
+    </div>
+    <div class="muted" style="font-size:12px;margin-bottom:16px;">
+      Aquí salen los pedidos de los últimos 30 días, sin enviar ni cancelar, que aún <b>no</b> tienen esta etiqueta ni la de <b>correcto</b>.
+    </div>
+    <div id="ge-lista"><div class="muted" style="padding:16px 0;">Cargando...</div></div>`;
+  try {
+    const cfg = await (await fetch(`${API_BASE}/api/gestion-ecom/config`, { headers: H })).json();
+    const inp = document.getElementById("ge-etiqueta");
+    if (inp) inp.value = cfg.etiqueta || "";
+  } catch (e) {}
+  geCargarConfirmar();
+}
+
+window.geGuardarEtiqueta = async function() {
+  const inp = document.getElementById("ge-etiqueta"), btn = document.getElementById("ge-etiqueta-btn");
+  if (!inp) return;
+  if (btn) { btn.disabled = true; btn.textContent = "Guardando..."; }
+  try {
+    const res = await fetch(`${API_BASE}/api/gestion-ecom/config`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ etiqueta: inp.value })
+    });
+    if (!res.ok) throw new Error((await res.json()).error || "Error");
+    showToast("✅ Etiqueta guardada", inp.value.trim() ? `Se filtran los pedidos sin "${inp.value.trim()}".` : "Etiqueta borrada.", "#22c55e");
+    geCargarConfirmar();
+  } catch (e) {
+    showToast("Error", e.message || "No se pudo guardar la etiqueta.", "#dc2626");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Guardar"; }
+  }
+};
+
+async function geCargarConfirmar() {
+  const lista = document.getElementById("ge-lista");
+  if (!lista) return;
+  lista.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:16px 0;color:var(--muted);font-size:13px;"><span style="width:14px;height:14px;border:2px solid rgba(156,163,175,.35);border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite;"></span>Cargando pedidos...</div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/gestion-ecom/confirmar`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+    if (!data.etiqueta) {
+      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;" class="muted">Escribe arriba la etiqueta de tu almacén y pulsa <b>Guardar</b> para ver los pedidos sin confirmar.</div>`;
+      return;
+    }
+    const pedidos = data.pedidos || [];
+    if (!pedidos.length) {
+      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;"><div style="font-weight:700;color:var(--text);margin-bottom:4px;">✓ Todo confirmado</div><div class="muted">No hay pedidos sin la etiqueta "${escapeHtml(data.etiqueta)}".</div></div>`;
+      return;
+    }
+    const tel = t => t && t.length === 9 ? `+34 ${t.slice(0,3)} ${t.slice(3,5)} ${t.slice(5,7)} ${t.slice(7)}` : (t || "-");
+    const fecha = d => d ? new Date(d).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "-";
+    const th = (t, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${t}</th>`;
+    lista.innerHTML = `
+      <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${pedidos.length}${pedidos.length >= 300 ? "+" : ""}</b> pedido${pedidos.length === 1 ? "" : "s"} sin la etiqueta "${escapeHtml(data.etiqueta)}"</div>
+      <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr>${th("Pedido")}${th("Fecha")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Etiquetas")}</tr></thead>
+          <tbody>${pedidos.map(p => `
+            <tr onclick="abrirDetallePedido(${Number(p.id)})" style="cursor:pointer;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+              <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;">
+                <span style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">${escapeHtml(p.order_number || "-")}${p.note ? `<span class="nota-pedido" data-nota="${escapeAttr(p.note)}" onclick="event.stopPropagation()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 21H6a2.5 2.5 0 0 1-2.5-2.5v-13A2.5 2.5 0 0 1 6 3h12a2.5 2.5 0 0 1 2.5 2.5V15Z"/><path d="M14.5 21v-4a2 2 0 0 1 2-2h4"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12.5" x2="13" y2="12.5"/></svg></span>` : ""}</span>
+              </td>
+              <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--muted);">${fecha(p.created_at)}</td>
+              <td style="padding:10px 12px;border-bottom:1px solid var(--border);">${escapeHtml(p.customer_name || "-")}</td>
+              <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;">${escapeHtml(tel(p.telefono))}</td>
+              <td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-weight:600;">${Number(p.total_price || 0).toFixed(2)} ${escapeHtml(p.currency || "")}</td>
+              <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--muted);">${escapeHtml((p.shop_domain || "").replace(".myshopify.com", ""))}</td>
+              <td style="padding:10px 12px;border-bottom:1px solid var(--border);">${(p.etiquetas || "").split(",").map(t => t.trim()).filter(Boolean).map(t => `<span style="display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border:1px solid var(--border);border-radius:999px;font-size:11.5px;">${escapeHtml(t)}</span>`).join("") || `<span class="muted">—</span>`}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    lista.innerHTML = `<div style="padding:16px 0;color:#dc2626;font-size:13px;">${escapeHtml(e.message || "Error cargando los pedidos")}</div>`;
+  }
+}
 
 // Animación de entrada (ver .ui-entrada en styles.css): se quita y se vuelve
 // a poner la clase para que se repita en cada cambio de sección.

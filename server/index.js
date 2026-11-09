@@ -104,6 +104,7 @@ app.use("/api/auth",    authRoutes);
 app.use("/api/billing", require("./routes/billing.routes").router);
 app.use("/api/chat",   require("./routes/chat.routes"));
 app.use("/api/direcciones", require("./routes/direcciones.routes"));
+app.use("/api/gestion-ecom", require("./routes/gestion-ecom.routes"));
 app.use("/api/admin",   adminRoutes);
 app.use("/api/users",   userRoutes);
 app.use("/api/health",  require("./routes/health.routes"));

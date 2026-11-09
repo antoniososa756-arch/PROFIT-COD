@@ -687,6 +687,19 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_overage_grace_
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_plan_at TEXT`);
 await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["metricas","rentabilidad","tiendas","productos","pedidos","reclamos","facturas","informes","exprod","pfactura","ayuda","reembolsos_widget"]'`);
+// Gestión Ecom: etiqueta que usa el almacén para preparar los pedidos (p.ej.
+// "fulfio"); los pedidos sin ella salen en "Confirmar pedidos".
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ge_etiqueta TEXT`);
+// Etiquetas de Shopify de un pedido (raw_json.tags "a, b") en minúsculas,
+// sin espacios. Si raw_json no es JSON válido devuelve lista vacía.
+await pool.query(`
+  CREATE OR REPLACE FUNCTION profit_tags(t TEXT) RETURNS TEXT[] AS $fn$
+  BEGIN
+    IF t IS NULL OR t = '' THEN RETURN ARRAY[]::TEXT[]; END IF;
+    RETURN COALESCE((SELECT array_agg(lower(btrim(x))) FROM unnest(string_to_array(t::json->>'tags', ',')) x WHERE btrim(x) <> ''), ARRAY[]::TEXT[]);
+  EXCEPTION WHEN others THEN RETURN ARRAY[]::TEXT[];
+  END $fn$ LANGUAGE plpgsql IMMUTABLE
+`);
 await pool.query(`
   CREATE TABLE IF NOT EXISTS billing_invoices (
     id SERIAL PRIMARY KEY,
