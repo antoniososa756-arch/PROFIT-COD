@@ -7,6 +7,25 @@ const { carrierCond } = require("../utils/carrier");
 // Migración: añadir columna fecha_pago si no existe
 db.run(`ALTER TABLE reembolsos_estado ADD COLUMN IF NOT EXISTS fecha_pago TEXT`).catch(() => {});
 
+// Búsqueda por cualquier dato del pedido (ver orders.search_text en db.js):
+// número, seguimiento, nombre, email, dirección y teléfono. Si lo buscado es
+// un teléfono ("+34 685 95 05", "0034685..."), se compara solo en dígitos y
+// sin el 34. Devuelve el SQL y los parámetros que añade a partir de $i.
+function busquedaPedido(q, i) {
+  const texto = String(q).trim();
+  const norm = texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const conds = [`o.search_text LIKE $${i}`, `o.order_number ILIKE $${i + 1}`, `o.tracking_number ILIKE $${i + 1}`, `o.customer_name ILIKE $${i + 1}`];
+  const params = [`%${norm}%`, `%${texto}%`];
+  let digitos = texto.replace(/\D/g, "");
+  if (/^[\d\s+().-]+$/.test(texto) && digitos.length >= 3) {
+    digitos = digitos.replace(/^00/, "");
+    if (digitos.length >= 11 && digitos.startsWith("34")) digitos = digitos.slice(2);
+    conds.push(`o.search_text LIKE $${i + 2}`);
+    params.push(`%${digitos}%`);
+  }
+  return { sql: `(${conds.join(" OR ")})`, params };
+}
+
 // Construye el WHERE + params de filtros de pedidos compartido entre el listado
 // paginado y /ids (navegación anterior/siguiente en el detalle del pedido) —
 // mismos filtros, mismo orden, para que ambos representen la misma lista.
@@ -38,8 +57,8 @@ function buildOrdersWhere(req, userId) {
   if (from)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
   if (to)     { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }
   if (q) {
-    conditions.push(`(o.order_number ILIKE $${i} OR o.customer_name ILIKE $${i} OR o.tracking_number ILIKE $${i})`);
-    params.push(`%${q}%`); i++;
+    const b = busquedaPedido(q, i);
+    conditions.push(b.sql); params.push(...b.params); i += b.params.length;
   }
   if (hasTracking) { conditions.push(`o.tracking_number IS NOT NULL AND o.tracking_number != ''`); }
   // Agencia (ctt|mrw): misma regla que Métricas, ver server/utils/carrier.js
@@ -242,7 +261,7 @@ router.get("/reembolsos", auth, async (req, res) => {
     const params = [userId];
     let i = 2;
 
-    if (q)    { conditions.push(`(o.order_number ILIKE $${i} OR o.tracking_number ILIKE $${i} OR o.customer_name ILIKE $${i})`); params.push(`%${q}%`); i++; }
+    if (q)    { const b = busquedaPedido(q, i); conditions.push(b.sql); params.push(...b.params); i += b.params.length; }
     if (shop) { conditions.push(`COALESCE(o.shop_domain, s.shop_domain) = $${i++}`); params.push(shop); }
     if (from) { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $${i++}::date`); params.push(from); }
     if (to)   { conditions.push(`(o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $${i++}::date`); params.push(to); }

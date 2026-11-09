@@ -513,9 +513,64 @@ await pool.query(`DROP TRIGGER IF EXISTS trg_orders_customer_keys ON orders`);
 await pool.query(`CREATE TRIGGER trg_orders_customer_keys BEFORE INSERT OR UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_customer_keys()`);
 await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_customer_email ON orders (customer_email) WHERE customer_email <> ''`);
 await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON orders (customer_phone) WHERE customer_phone <> ''`);
+// Texto de búsqueda del pedido (buscador de arriba y de Pedidos): número,
+// seguimiento, nombre, email, direcciones de envío/facturación y teléfonos
+// solo en dígitos (con y sin 34) -- en minúsculas y sin acentos, para que
+// "lopez", "685 95 05" o "@hotmail" encuentren el pedido. La misma
+// normalización se aplica a lo que se busca (orders.routes.js).
+await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS search_text TEXT`);
+await pool.query(`
+  CREATE OR REPLACE FUNCTION profit_norm(t TEXT) RETURNS TEXT AS $fn$
+    SELECT translate(lower(COALESCE(t, '')), 'áéíóúàèìòùäëïöüâêîôûñç', 'aeiouaeiouaeiouaeiounc')
+  $fn$ LANGUAGE sql IMMUTABLE
+`);
+await pool.query(`
+  CREATE OR REPLACE FUNCTION orders_set_search_text() RETURNS trigger AS $fn$
+  DECLARE j JSON; partes TEXT[] := ARRAY[]::TEXT[]; dir JSON; tel TEXT;
+  BEGIN
+    IF TG_OP = 'INSERT' OR NEW.search_text IS NULL
+       OR NEW.raw_json IS DISTINCT FROM OLD.raw_json
+       OR NEW.tracking_number IS DISTINCT FROM OLD.tracking_number
+       OR NEW.customer_name IS DISTINCT FROM OLD.customer_name THEN
+      partes := ARRAY[NEW.order_number, NEW.tracking_number, NEW.customer_name];
+      BEGIN
+        j := NULLIF(NEW.raw_json, '')::json;
+        IF j IS NOT NULL THEN
+          partes := partes || ARRAY[j->>'email', j->>'contact_email', j->'customer'->>'email',
+                                    j->'customer'->>'first_name', j->'customer'->>'last_name'];
+          FOREACH dir IN ARRAY ARRAY[j->'shipping_address', j->'billing_address'] LOOP
+            IF dir IS NOT NULL AND json_typeof(dir) = 'object' THEN
+              partes := partes || ARRAY[dir->>'name', dir->>'company', dir->>'address1', dir->>'address2',
+                                        dir->>'city', dir->>'province', dir->>'zip', dir->>'country'];
+            END IF;
+          END LOOP;
+          FOREACH tel IN ARRAY ARRAY[j->>'phone', j->'customer'->>'phone',
+                                     j->'shipping_address'->>'phone', j->'billing_address'->>'phone'] LOOP
+            tel := regexp_replace(COALESCE(tel, ''), '[^0-9]', '', 'g');
+            IF tel <> '' THEN
+              partes := partes || tel;
+              IF length(tel) > 9 THEN partes := partes || right(tel, 9); END IF;
+            END IF;
+          END LOOP;
+        END IF;
+      EXCEPTION WHEN others THEN NULL;
+      END;
+      NEW.search_text := profit_norm(array_to_string(partes, ' | '));
+    END IF;
+    RETURN NEW;
+  END $fn$ LANGUAGE plpgsql
+`);
+await pool.query(`DROP TRIGGER IF EXISTS trg_orders_search_text ON orders`);
+await pool.query(`CREATE TRIGGER trg_orders_search_text BEFORE INSERT OR UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION orders_set_search_text()`);
+try {
+  await pool.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_orders_search_trgm ON orders USING gin (search_text gin_trgm_ops)`);
+} catch (e) { console.warn("Índice de búsqueda (pg_trgm):", e.message); }
+
 // Existentes: el trigger los rellena al tocar la fila (customer_email IS NULL).
-pool.query(`UPDATE orders SET customer_email = NULL WHERE customer_email IS NULL`)
-  .then(r => { if (r.rowCount) console.log(`[DB] Email/teléfono de cliente rellenados: ${r.rowCount}`); })
+// search_text igual (NULL -> lo calcula el trigger); en la misma pasada.
+pool.query(`UPDATE orders SET customer_email = customer_email WHERE customer_email IS NULL OR search_text IS NULL`)
+  .then(r => { if (r.rowCount) console.log(`[DB] Datos de cliente/búsqueda rellenados: ${r.rowCount}`); })
   .catch(e => console.warn("Backfill cliente:", e.message));
 // Pedidos ya existentes: se rellenan en segundo plano, por tandas pequeñas y
 // con pausa, para no frenar el arranque ni el resto de la app.

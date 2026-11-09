@@ -654,7 +654,7 @@ const I18N = {
     ui: {
       panel: "Panel",
       sectionPrefix: "Sección: ",
-      searchPH: "Buscar pedidos, facturas, tiendas...",
+      searchPH: "Buscar pedido, cliente, teléfono, email, dirección...",
       night: "Modo nocturno",
       langTitle: "Idioma",
       notiTitle: "Notificaciones",
@@ -700,7 +700,7 @@ const I18N = {
     ui: {
       panel: "Dashboard",
       sectionPrefix: "Section: ",
-      searchPH: "Search orders, invoices, stores...",
+      searchPH: "Search order, customer, phone, email, address...",
       night: "Night mode",
       langTitle: "Language",
       notiTitle: "Notifications",
@@ -742,7 +742,7 @@ const I18N = {
     ui: {
       panel: "Painel",
       sectionPrefix: "Seção: ",
-      searchPH: "Buscar pedidos, faturas, lojas...",
+      searchPH: "Buscar pedido, cliente, telefone, email, morada...",
       night: "Modo noturno",
       langTitle: "Idioma",
       notiTitle: "Notificações",
@@ -783,7 +783,7 @@ const I18N = {
     ui: {
       panel: "Pannello",
       sectionPrefix: "Sezione: ",
-      searchPH: "Cerca ordini, fatture, negozi...",
+      searchPH: "Cerca ordine, cliente, telefono, email, indirizzo...",
       night: "Modalità notte",
       langTitle: "Lingua",
       notiTitle: "Notifiche",
