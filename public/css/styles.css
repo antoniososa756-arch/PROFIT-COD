@@ -2371,7 +2371,10 @@ body:not(.dark) .rejilla td.ads-sel { background: #e8edf5 !important; outline: 2
 /* Gestión Ecom > pedido abierto desde Incidencias: dos filas
    (Productos | Dirección | Notas) y (Seguimiento 25% | Correo con MRW 75%) */
 #ge-inc-layout { display: flex; flex-direction: column; gap: 16px; }
-.ge-inc-fila1 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.ge-inc-fila1 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+/* Los 3 cuadros con la misma altura; el total a pagar queda abajo del todo */
+.ge-inc-fila1 > div { display: flex; flex-direction: column; }
+.ge-inc-fila1 .ge-inc-total { margin-top: auto; }
 .ge-inc-fila2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); gap: 16px; align-items: start; }
 .ge-inc-fila2.sin-seguimiento { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 1100px) {

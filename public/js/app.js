@@ -1517,7 +1517,7 @@ function geIncReordenar() {
     const raw = window.__dpEdicion?.raw || {};
     const total = raw.total_outstanding != null && Number(raw.total_outstanding) > 0 ? raw.total_outstanding : raw.total_price;
     if (total != null) productos.insertAdjacentHTML("beforeend", `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-top:1px solid var(--border);background:#fafafa;">
+      <div class="ge-inc-total" style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-top:1px solid var(--border);background:#fafafa;">
         <span style="font-weight:700;font-size:13.5px;">Total a pagar</span>
         <span style="font-weight:800;font-size:16px;">${Number(total).toFixed(2)} ${escapeHtml(raw.currency || "EUR")}</span>
       </div>`);
