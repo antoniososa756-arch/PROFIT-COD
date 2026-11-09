@@ -2307,10 +2307,10 @@ body.dark .met-leyenda-fila { background: var(--card); border-color: var(--borde
    negro. Con !important porque las celdas traen colores en línea. */
 body:not(.dark) .rejilla th,
 body:not(.dark) .rejilla td {
-  background: #fff !important; color: #1a1a1a !important; border: 1px solid #000 !important;
+  background: #fff !important; color: #1a1a1a !important; border: 1px solid #a3a3a3 !important;
 }
 body:not(.dark) .rejilla thead th { font-weight: 700; }
 body:not(.dark) .rejilla tbody tr:hover td { background: #f7f7f7 !important; }
 body:not(.dark) .rejilla .fila-total td { font-weight: 700; }
-body:not(.dark) .rejilla .fila-balance td { background: #1a1a1a !important; color: #fff !important; }
+body:not(.dark) .rejilla .fila-balance td { background: #1a1a1a !important; color: #fff !important; border-color: #16a34a !important; }
 body:not(.dark) .rejilla td.ads-sel { background: #e8edf5 !important; outline: 2px solid #1a1a1a !important; }
