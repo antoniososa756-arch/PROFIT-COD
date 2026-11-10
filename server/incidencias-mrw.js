@@ -209,7 +209,10 @@ function analizarCorreo(parsed) {
   // También cuentan las RESPUESTAS de MRW con un nº de envío en el asunto
   // (conversaciones que empezamos nosotros: "RE: 04700F778981"). Otros avisos
   // automáticos sin "ANOMALÍA" ni "RE:" se ignoran.
-  if (!anomalia && !(esRespuesta && ENVIO_RE.test(asunto))) return null;
+  // También si el asunto es SOLO el nº de envío ("04700F778981"), como cuando
+  // la franquicia contesta a una consulta nuestra sin añadir "RE:".
+  const soloEnvio = /^\s*((re|rv|fw|fwd)\s*:\s*)*\d{5}[A-Z]\d{6}\s*$/i.test(asunto);
+  if (!anomalia && !soloEnvio && !(esRespuesta && ENVIO_RE.test(asunto))) return null;
   const texto = textoDe(parsed);
   const envio = (asunto.match(ENVIO_RE) || texto.match(ENVIO_RE) || [])[0] || null;
   if (!envio) return null;
@@ -294,7 +297,7 @@ async function guardarCorreo(userId, a, releyendo = false) {
 
 // Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
 // desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
-const VERSION_LECTURA = 6; // v4-5: formato HTML + Enviados; v6: conversaciones que empezamos nosotros
+const VERSION_LECTURA = 7; // v4-5: formato HTML + Enviados; v6-7: conversaciones que empezamos nosotros
 
 // Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
 // días. Una sola lectura a la vez por usuario.
@@ -317,7 +320,7 @@ async function _sincronizarUsuario(userId) {
   if (releyendo) cfg = { ...cfg, ultimo_uid: 0, uid_validity: null, ultimo_uid_enviados: 0, uid_validity_enviados: null };
   const estadosPrevios = [];
   const client = clienteImap(cfg.email, descifrar(cfg.password_enc));
-  let leidos = 0, guardados = 0, maxUid = Number(cfg.ultimo_uid || 0);
+  let leidos = 0, guardados = 0, enviados = 0, maxUid = Number(cfg.ultimo_uid || 0);
   try {
     await client.connect();
     const lock = await client.getMailboxLock("INBOX");
@@ -364,7 +367,7 @@ async function _sincronizarUsuario(userId) {
               try {
                 if (msg?.source) {
                   const a = analizarEnviado(await simpleParser(msg.source));
-                  if (a && await guardarEnviado(userId, a)) guardados++;
+                  if (a && await guardarEnviado(userId, a)) { guardados++; enviados++; }
                 }
               } catch (e) { console.warn(`[Incidencias MRW] enviado ${msg.uid} omitido:`, e.message); }
               if (msg.uid > maxE) maxE = msg.uid;
@@ -379,7 +382,7 @@ async function _sincronizarUsuario(userId) {
       await db.run("UPDATE incidencias_mrw SET estado = $1, mrw_escribio = false WHERE user_id = $2 AND envio = $3", [p.estado, userId, p.envio]).catch(() => {});
     }
     if (releyendo) await db.run("UPDATE incidencias_mrw_config SET version_lectura = $1 WHERE user_id = $2", [VERSION_LECTURA, userId]);
-    const res = { ok: true, leidos, guardados };
+    const res = { ok: true, leidos, guardados, enviados, releido: releyendo };
     await db.run("UPDATE incidencias_mrw_config SET last_sync = now()::text, last_result = $1 WHERE user_id = $2", [JSON.stringify(res), userId]);
     return res;
   } catch (e) {

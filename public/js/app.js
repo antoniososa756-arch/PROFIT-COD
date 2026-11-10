@@ -1962,7 +1962,7 @@ window.geIncLeerAhora = async function() {
     const r = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias/sincronizar`, { method: "POST", headers: { Authorization: "Bearer " + getActiveToken() } })).json();
     if (r.ok === false) throw new Error(r.error || "Error");
     if (r.enCurso) { showToast("📮 Leyendo correos", "Ya se está leyendo el correo, espera unos segundos.", "#1a1a1a"); return geIncidenciasCurso(); }
-    showToast("📮 Correo leído", r.guardados ? `${r.guardados} correo${r.guardados === 1 ? "" : "s"} de incidencia nuevo${r.guardados === 1 ? "" : "s"}.` : "No hay correos nuevos.", "#22c55e");
+    showToast("📮 Correo leído", r.guardados ? `${r.guardados} correo${r.guardados === 1 ? "" : "s"} nuevo${r.guardados === 1 ? "" : "s"}${r.enviados ? ` (${r.enviados} vuestro${r.enviados === 1 ? "" : "s"}, de Enviados)` : ""}.` : "No hay correos nuevos.", "#22c55e");
   } catch (e) { showToast("Error", e.message, "#dc2626"); }
   geIncidenciasCurso();
 };
