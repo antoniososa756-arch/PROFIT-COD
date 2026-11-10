@@ -218,9 +218,14 @@ function analizarCorreo(parsed) {
   // automáticos sin "ANOMALÍA" ni "RE:" se ignoran.
   // También si el asunto es SOLO el nº de envío ("04700F778981"), como cuando
   // la franquicia contesta a una consulta nuestra sin añadir "RE:".
-  const soloEnvio = /^\s*((re|rv|fw|fwd)\s*:\s*)*\d{5}[A-Z]\d{6}\s*$/i.test(asunto);
+  // ...o si el asunto EMPIEZA por el nº de envío ("04700F782627 cancelamos
+  // envío"): conversación que abre la franquicia sobre un envío.
+  const soloEnvio = /^\s*((re|rv|fw|fwd)\s*:\s*)*\d{5}[A-Z]\d{6}\b/i.test(asunto);
   if (!anomalia && !soloEnvio && !(esRespuesta && ENVIO_RE.test(asunto))) return null;
   const texto = textoDe(parsed);
+  // Avisos de Gmail de una reacción con emoji ("... reacted to your message")
+  // no son un mensaje de MRW: no se guardan ni reabren nada.
+  if (/reacted to your message|ha reaccionado a tu mensaje|reaccionó a tu mensaje/i.test(texto.slice(0, 500))) return null;
   const envio = (asunto.match(ENVIO_RE) || texto.match(ENVIO_RE) || [])[0] || null;
   if (!envio) return null;
   // Escrito a mano: respuesta/reenvío (RE:, RV:...) o sin la ficha automática
@@ -312,7 +317,7 @@ async function guardarCorreo(userId, a, releyendo = false) {
 
 // Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
 // desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
-const VERSION_LECTURA = 9; // v9: leer de "Todos" (etiquetas/archivados), 30 días // v4-5: formato HTML + Enviados; v6-7: conversaciones que empezamos nosotros
+const VERSION_LECTURA = 10; // v9-10: leer de "Todos" (etiquetas/archivados), 30 días, asuntos que empiezan por el envío // v4-5: formato HTML + Enviados; v6-7: conversaciones que empezamos nosotros
 
 // Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
 // días. Una sola lectura a la vez por usuario.
