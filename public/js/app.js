@@ -1437,7 +1437,14 @@ async function geIncidenciasCurso() {
 async function geIncPintar(lista, resueltas) {
   const t = document.getElementById("ge-inc-tabla");
   if (!t) return;
+  // Orden por el último mensaje de la conversación: "asc" = lo más atrasado
+  // primero, "desc" = lo más nuevo primero (se pulsa la cabecera; se recuerda)
+  let orden = "asc";
+  try { orden = localStorage.getItem("geIncOrden") || "asc"; } catch (e) {}
+  const clave = i => String(i.ultimo_mensaje_at || i.created_at || "");
+  lista = [...lista].sort((a, b) => orden === "asc" ? clave(a).localeCompare(clave(b)) : clave(b).localeCompare(clave(a)));
   window.__geIncLista = lista;
+  window.__geIncResueltasVista = resueltas;
   if (!lista.length) {
     t.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;"><div style="font-weight:700;color:var(--text);margin-bottom:4px;">${resueltas ? "Sin incidencias resueltas" : "✓ Sin incidencias abiertas"}</div><div class="muted">${resueltas ? "" : "Cuando MRW envíe un correo de incidencia aparecerá aquí."}</div></div>`;
     return;
@@ -1457,11 +1464,24 @@ async function geIncPintar(lista, resueltas) {
   const icoNota = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 21H6a2.5 2.5 0 0 1-2.5-2.5v-13A2.5 2.5 0 0 1 6 3h12a2.5 2.5 0 0 1 2.5 2.5V15Z"/><path d="M14.5 21v-4a2 2 0 0 1 2-2h4"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12.5" x2="13" y2="12.5"/></svg>`;
   const th = (x, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${x}</th>`;
   const td = (c, e = "") => `<td style="padding:10px 12px;border-bottom:1px solid var(--border);${e}">${c}</td>`;
+  const thOrden = `<th onclick="geIncCambiarOrden()" title="${orden === "asc" ? "Lo más atrasado primero · pulsa para ver lo más nuevo primero" : "Lo más nuevo primero · pulsa para ver lo más atrasado primero"}"
+      style="text-align:left;padding:10px 12px;font-size:12px;font-weight:700;color:var(--text);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;">
+      Último mensaje ${orden === "asc" ? "↑" : "↓"} <span class="muted" style="font-weight:500;">${orden === "asc" ? "más antiguo" : "más reciente"}</span></th>`;
+  // Fecha/hora del último correo + cuánto hace: <12 h verde, 12-24 h ámbar, >24 h rojo
+  const ultimoMsg = f => {
+    if (!f) return `<span class="muted">-</span>`;
+    const d = new Date(f);
+    if (isNaN(d)) return `<span class="muted">-</span>`;
+    const h = (Date.now() - d.getTime()) / 3600000;
+    const txt = h < 1 ? `hace ${Math.max(1, Math.round(h * 60))} min` : h < 48 ? `hace ${Math.floor(h)} h` : `hace ${Math.floor(h / 24)} días`;
+    const [bg, col, bd] = resueltas ? ["#f3f3f3", "#525252", "#e3e3e3"] : h > 24 ? ["#fef2f2", "#b91c1c", "#fecaca"] : h > 12 ? ["#fffbeb", "#b45309", "#fde68a"] : ["#f0fdf4", "#15803d", "#bbf7d0"];
+    return `<span style="color:var(--muted);margin-right:6px;">${d.toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:${bg};color:${col};border:1px solid ${bd};">${txt}</span>`;
+  };
   t.innerHTML = `
     <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${lista.length}</b> incidencia${lista.length === 1 ? "" : "s"} ${resueltas ? "resuelta" + (lista.length === 1 ? "" : "s") : "abierta" + (lista.length === 1 ? "" : "s")}</div>
     <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr>${th("Pedido")}${th("Incidencia")}${th("Fecha")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Estado")}${resueltas ? th("Estado pedido") : ""}</tr></thead>
+        <thead><tr>${th("Pedido")}${th("Incidencia")}${thOrden}${th("Fecha anomalía")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Estado")}${resueltas ? th("Estado pedido") : ""}</tr></thead>
         <tbody>${lista.map(i => {
           const ti = info[i.shop_domain] || { nombre: (i.shop_domain || "").replace(".myshopify.com", "") || "-", color: "#a1a1a1" };
           // En resueltas no se resalta ni se avisa de "MRW ha escrito": ya está cerrada
@@ -1471,6 +1491,7 @@ async function geIncPintar(lista, resueltas) {
           <tr style="cursor:pointer;${fondo ? `background:${fondo};` : ""}" onclick="geIncAbrir(${Number(i.id)})" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='${fondo}'">
             ${td(`<span style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">${escapeHtml(i.order_number || i.referencia || "Pedido no encontrado")}${i.note ? `<span class="nota-pedido" data-nota="${escapeAttr(i.note)}" onclick="event.stopPropagation()">${icoNota}</span>` : ""}</span><div class="muted" style="font-size:11.5px;">${escapeHtml(i.envio)}</div>`, "white-space:nowrap;")}
             ${td(`${i.tipo ? `<span style="color:#b91c1c;font-weight:600;">${escapeHtml(i.tipo)}</span>` : `<span style="color:#b45309;font-weight:600;">Respuesta de MRW</span>`}${aviso ? `<div style="font-size:11.5px;font-weight:700;color:#b45309;margin-top:2px;">✉️ MRW ha escrito</div>` : ""}`)}
+            ${td(ultimoMsg(i.ultimo_mensaje_at), "white-space:nowrap;")}
             ${td(`<span class="muted">${escapeHtml(i.fecha_anomalia || "-")}</span>`, "white-space:nowrap;")}
             ${td(escapeHtml(i.customer_name || i.destinatario || "-"))}
             ${td(escapeHtml(tel(i.telefono_pedido || i.telefono)), "white-space:nowrap;")}
@@ -1485,6 +1506,13 @@ async function geIncPintar(lista, resueltas) {
       </table>
     </div>`;
 }
+
+window.geIncCambiarOrden = function() {
+  let o = "asc";
+  try { o = localStorage.getItem("geIncOrden") || "asc"; } catch (e) {}
+  try { localStorage.setItem("geIncOrden", o === "asc" ? "desc" : "asc"); } catch (e) {}
+  geIncPintar(window.__geIncLista || [], !!window.__geIncResueltasVista);
+};
 
 // Abre el pedido de la incidencia (con la columna de correo) recorriendo con
 // las flechas los pedidos de esta lista; sin pedido, despliega el hilo aquí.
