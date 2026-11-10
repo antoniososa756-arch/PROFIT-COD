@@ -297,7 +297,7 @@ async function guardarCorreo(userId, a, releyendo = false) {
 
 // Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
 // desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
-const VERSION_LECTURA = 7; // v4-5: formato HTML + Enviados; v6-7: conversaciones que empezamos nosotros
+const VERSION_LECTURA = 8; // v4-5: formato HTML + Enviados; v6-7: conversaciones que empezamos nosotros
 
 // Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
 // días. Una sola lectura a la vez por usuario.
@@ -321,6 +321,7 @@ async function _sincronizarUsuario(userId) {
   const estadosPrevios = [];
   const client = clienteImap(cfg.email, descifrar(cfg.password_enc));
   let leidos = 0, guardados = 0, enviados = 0, maxUid = Number(cfg.ultimo_uid || 0);
+  const diagEnviados = { carpeta: null, encontrados: 0, error: null };
   try {
     await client.connect();
     const lock = await client.getMailboxLock("INBOX");
@@ -352,9 +353,10 @@ async function _sincronizarUsuario(userId) {
     // Nuestras respuestas a MRW (carpeta Enviados): así el hilo se ve
     // completo aunque se haya contestado desde Gmail.
     try {
-      const enviados = await carpetaEnviados(client);
-      if (enviados) {
-        const lockE = await client.getMailboxLock(enviados);
+      const carpetaE = await carpetaEnviados(client);
+      diagEnviados.carpeta = carpetaE || "(no encontrada)";
+      if (carpetaE) {
+        const lockE = await client.getMailboxLock(carpetaE);
         try {
           const valE = String(client.mailbox.uidValidity || "");
           let maxE = cfg.uid_validity_enviados && cfg.uid_validity_enviados !== valE ? 0 : Number(cfg.ultimo_uid_enviados || 0);
@@ -362,6 +364,7 @@ async function _sincronizarUsuario(userId) {
           if (maxE > 0) critE.uid = `${maxE + 1}:*`;
           else critE.since = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
           const uidsE = ((await client.search(critE, { uid: true })) || []).filter(u => u > maxE);
+          diagEnviados.encontrados = uidsE.length;
           for (let i = 0; i < uidsE.length; i += 50) {
             for await (const msg of client.fetch(uidsE.slice(i, i + 50).join(","), { uid: true, source: true }, { uid: true })) {
               try {
@@ -369,20 +372,20 @@ async function _sincronizarUsuario(userId) {
                   const a = analizarEnviado(await simpleParser(msg.source));
                   if (a && await guardarEnviado(userId, a)) { guardados++; enviados++; }
                 }
-              } catch (e) { console.warn(`[Incidencias MRW] enviado ${msg.uid} omitido:`, e.message); }
+              } catch (e) { diagEnviados.error = e.message; console.warn(`[Incidencias MRW] enviado ${msg.uid} omitido:`, e.message); }
               if (msg.uid > maxE) maxE = msg.uid;
             }
           }
           await db.run("UPDATE incidencias_mrw_config SET ultimo_uid_enviados = $1, uid_validity_enviados = $2 WHERE user_id = $3", [maxE, valE, userId]);
         } finally { lockE.release(); }
       }
-    } catch (e) { console.warn("[Incidencias MRW] Enviados:", e.message); }
+    } catch (e) { diagEnviados.error = e.message; console.warn("[Incidencias MRW] Enviados:", e.message); }
     await client.logout().catch(() => {});
     for (const p of estadosPrevios) {
       await db.run("UPDATE incidencias_mrw SET estado = $1, mrw_escribio = false WHERE user_id = $2 AND envio = $3", [p.estado, userId, p.envio]).catch(() => {});
     }
     if (releyendo) await db.run("UPDATE incidencias_mrw_config SET version_lectura = $1 WHERE user_id = $2", [VERSION_LECTURA, userId]);
-    const res = { ok: true, leidos, guardados, enviados, releido: releyendo };
+    const res = { ok: true, leidos, guardados, enviados, releido: releyendo, diagEnviados };
     await db.run("UPDATE incidencias_mrw_config SET last_sync = now()::text, last_result = $1 WHERE user_id = $2", [JSON.stringify(res), userId]);
     return res;
   } catch (e) {

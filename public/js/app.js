@@ -1963,6 +1963,10 @@ window.geIncLeerAhora = async function() {
     if (r.ok === false) throw new Error(r.error || "Error");
     if (r.enCurso) { showToast("📮 Leyendo correos", "Ya se está leyendo el correo, espera unos segundos.", "#1a1a1a"); return geIncidenciasCurso(); }
     showToast("📮 Correo leído", r.guardados ? `${r.guardados} correo${r.guardados === 1 ? "" : "s"} nuevo${r.guardados === 1 ? "" : "s"}${r.enviados ? ` (${r.enviados} vuestro${r.enviados === 1 ? "" : "s"}, de Enviados)` : ""}.` : "No hay correos nuevos.", "#22c55e");
+    // Diagnóstico de la carpeta Enviados (vuestras respuestas a MRW)
+    const de = r.diagEnviados;
+    if (de && (de.error || !de.carpeta || de.carpeta === "(no encontrada)")) showToast("⚠️ Enviados", de.error ? `Error leyendo Enviados: ${de.error}` : "No se encontró la carpeta Enviados de Gmail.", "#f59e0b");
+    else if (de) console.log("[Incidencias] Enviados:", de);
   } catch (e) { showToast("Error", e.message, "#dc2626"); }
   geIncidenciasCurso();
 };
