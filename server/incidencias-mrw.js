@@ -163,8 +163,20 @@ function analizarEnviado(parsed) {
 }
 
 async function guardarEnviado(userId, a) {
-  const inc = await db.get("SELECT id, ultimo_mensaje_at FROM incidencias_mrw WHERE user_id = $1 AND envio = $2", [userId, a.envio]);
-  if (!inc) return false;
+  let inc = await db.get("SELECT id, ultimo_mensaje_at FROM incidencias_mrw WHERE user_id = $1 AND envio = $2", [userId, a.envio]);
+  // Reclamamos nosotros primero (p.ej. asunto "04700F778981" a MRW sin aviso
+  // de anomalía previo): se abre la conversación como "Consulta a MRW". Como
+  // lo último es nuestro correo queda resuelta; la respuesta de MRW la reabre.
+  if (!inc) {
+    const orderId = await buscarPedido(userId, a.envio, "");
+    inc = await db.get(
+      `INSERT INTO incidencias_mrw (user_id, envio, order_id, tipo, estado, mrw_escribio, ultimo_mensaje_at)
+       VALUES ($1,$2,$3,'Consulta a MRW','resuelta',false,$4)
+       ON CONFLICT (user_id, envio) DO UPDATE SET envio = EXCLUDED.envio
+       RETURNING id, NULL::text AS ultimo_mensaje_at`,
+      [userId, a.envio, orderId, a.fecha]
+    );
+  }
   await db.run(
     `INSERT INTO incidencias_mrw_mensajes (incidencia_id, message_id, de, asunto, texto, html, fecha, manual, saliente)
      VALUES ($1,$2,$3,$4,$5,$6,$7,false,true) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
@@ -192,18 +204,23 @@ async function carpetaEnviados(client) {
 // remitente envía otros avisos (entregas, etc.) que no son incidencias.
 function analizarCorreo(parsed) {
   const asunto = parsed.subject || "";
-  if (!/ANOMAL[ÍI]A/i.test(asunto)) return null;
+  const esRespuesta = /^\s*(re|rv|fw|fwd)\s*:/i.test(asunto);
+  const anomalia = /ANOMAL[ÍI]A/i.test(asunto);
+  // También cuentan las RESPUESTAS de MRW con un nº de envío en el asunto
+  // (conversaciones que empezamos nosotros: "RE: 04700F778981"). Otros avisos
+  // automáticos sin "ANOMALÍA" ni "RE:" se ignoran.
+  if (!anomalia && !(esRespuesta && ENVIO_RE.test(asunto))) return null;
   const texto = textoDe(parsed);
   const envio = (asunto.match(ENVIO_RE) || texto.match(ENVIO_RE) || [])[0] || null;
   if (!envio) return null;
   // Escrito a mano: respuesta/reenvío (RE:, RV:...) o sin la ficha automática
-  const esRespuesta = /^\s*(re|rv|fw|fwd)\s*:/i.test(asunto);
   const automatico = !esRespuesta && /no se ha podido entregar por/i.test(texto) && /N[ºo°]\s*env[ií]o/i.test(texto);
   // Tipo: del asunto ("ANOMALÍA \ Destinatario ausente o cerrado"); si no,
   // del cuerpo (en las respuestas a mano, del correo original citado debajo).
   let tipo = (asunto.match(/ANOMAL[ÍI]A\s*[\\\/|-]\s*(.+)$/i) || [])[1] || campo(texto, "El env[ií]o no se ha podido entregar por");
   // (el texto a veces llega pegado: "...el envíoFecha de la Anomalía ...")
   tipo = String(tipo || "").split(/Fecha\s+de\b|Hora\s+de\b|Observaciones|Contestan\s+al|Falta\s+tel/i)[0].replace(/\s+/g, " ").trim();
+  if (!anomalia && !tipo) tipo = "Consulta a MRW";
   // Solo lo nuevo del correo manual (sin el correo original citado debajo)
   const soloNuevo = texto.split(/\n\s*(De|From)\s*:\s*.+\n/i)[0].trim();
   return {
@@ -250,7 +267,9 @@ async function guardarCorreo(userId, a, releyendo = false) {
      ON CONFLICT (user_id, envio) DO UPDATE SET
        order_id = COALESCE(incidencias_mrw.order_id, EXCLUDED.order_id),
        referencia = COALESCE(NULLIF(EXCLUDED.referencia,''), incidencias_mrw.referencia),
-       tipo = COALESCE(NULLIF(EXCLUDED.tipo,''), incidencias_mrw.tipo),
+       -- "Consulta a MRW" no pisa un tipo de anomalía ya conocido (al revés sí)
+       tipo = CASE WHEN EXCLUDED.tipo = 'Consulta a MRW' THEN COALESCE(NULLIF(incidencias_mrw.tipo,''), EXCLUDED.tipo)
+                   ELSE COALESCE(NULLIF(EXCLUDED.tipo,''), incidencias_mrw.tipo) END,
        destinatario = COALESCE(NULLIF(EXCLUDED.destinatario,''), incidencias_mrw.destinatario),
        telefono = COALESCE(NULLIF(EXCLUDED.telefono,''), incidencias_mrw.telefono),
        direccion = COALESCE(NULLIF(EXCLUDED.direccion,''), incidencias_mrw.direccion),
@@ -275,7 +294,7 @@ async function guardarCorreo(userId, a, releyendo = false) {
 
 // Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
 // desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
-const VERSION_LECTURA = 5; // v4-5: formato HTML + carpeta Enviados
+const VERSION_LECTURA = 6; // v4-5: formato HTML + Enviados; v6: conversaciones que empezamos nosotros
 
 // Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
 // días. Una sola lectura a la vez por usuario.
