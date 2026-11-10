@@ -256,6 +256,14 @@ async function buscarPedido(userId, envio, referencia) {
 }
 
 async function guardarCorreo(userId, a, releyendo = false) {
+  // Un correo YA guardado (relectura, o una lectura cortada que se repite) no
+  // cambia nada del estado: solo un correo nuevo de MRW reabre la incidencia.
+  const yaVisto = await db.get(
+    `SELECT 1 FROM incidencias_mrw_mensajes m JOIN incidencias_mrw i ON i.id = m.incidencia_id
+     WHERE i.user_id = $1 AND i.envio = $2 AND m.message_id = $3 LIMIT 1`,
+    [userId, a.envio, a.message_id]
+  );
+  if (yaVisto) releyendo = true;
   const orderId = await buscarPedido(userId, a.envio, a.referencia);
   // Pedido ya terminado (entregado/devuelto/destruido/cancelado): el correo se
   // guarda en el hilo pero la incidencia NO se reabre.
