@@ -1821,9 +1821,15 @@ function geIncCuerpoMensaje(m) {
       <div>El envío no se ha podido entregar por: <b style="color:#dc2626;font-style:italic;">${escapeHtml(motivo || "—")}</b></div>
       ${fecha || hora ? `<div class="muted" style="font-size:12px;margin-top:2px;">Fecha de la anomalía: ${escapeHtml([fecha, hora].filter(Boolean).join(" "))}</div>` : ""}`;
   }
-  // Correo escrito (MRW a mano o nuestro): cortar en la firma de MRW / texto citado
+  // Correo escrito (MRW a mano o nuestro): cortar en la firma de MRW o en el
+  // correo anterior citado (líneas con ">", "El lun, 9 nov ... escribió:" de
+  // Gmail, aunque venga partido en dos líneas, "On ... wrote:", "De:").
   const lineas = t.split("\n");
-  const fin = lineas.findIndex(l => /^\s*(\[cid:|<https?:\/\/www\.mrw|FRANQUICIA MRW|www\.mrw\.es|Antes de imprimir|Nota legal|De:\s|From:\s|-----)/i.test(l));
+  let fin = lineas.findIndex(l => /^\s*(>|\[cid:|<https?:\/\/www\.mrw|FRANQUICIA MRW|www\.mrw\.es|Antes de imprimir|Nota legal|De:\s|From:\s|-----)/i.test(l) || /(escribi[óo]|wrote)\s*:\s*$/i.test(l));
+  // "El lun, 9 nov 2026 a las 13:17, X <x@y> escribió:" puede empezar 1-2 líneas antes
+  if (fin > 0) for (let k = 1; k <= 2 && fin - k >= 0; k++) {
+    if (/^\s*(El|On)\s.+(\d{1,2}:\d{2}|,)/i.test(lineas[fin - k])) { fin = fin - k; break; }
+  }
   const limpio = (fin >= 0 ? lineas.slice(0, fin) : lineas).join("\n").replace(/\n{3,}/g, "\n\n").trim();
   return parrafo(limpio || "(sin texto)");
 }
