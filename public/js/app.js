@@ -1421,6 +1421,7 @@ async function geIncidenciasCurso() {
       </div>
     </div>
     ${error ? `<div style="padding:10px 14px;margin-bottom:12px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:10px;font-size:13px;">⚠️ No se pudo leer el correo: ${escapeHtml(error)}. Revisa la configuración (⚙).</div>` : ""}
+    ${geIncDiagnostico(cfg.last_result)}
     <div id="ge-inc-tabla"><div class="muted" style="padding:16px 0;">Cargando incidencias...</div></div>`;
   try {
     const d = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias${verResueltas ? "?estado=resueltas" : ""}`, { headers: H })).json();
@@ -1429,6 +1430,21 @@ async function geIncidenciasCurso() {
     const t = document.getElementById("ge-inc-tabla");
     if (t) t.innerHTML = `<div style="color:#dc2626;font-size:13px;">Error cargando las incidencias</div>`;
   }
+}
+
+// Aviso cuando la lectura no encuentra los avisos de MRW (remitente mal
+// puesto, o asuntos distintos a "ANOMALÍA"): así se ve qué corregir en ⚙.
+function geIncDiagnostico(r) {
+  const de = r?.diagEntrada;
+  if (!r || r.ok === false || !de) return "";
+  const caja = html => `<div style="padding:10px 14px;margin-bottom:12px;border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:10px;font-size:12.5px;line-height:1.5;">${html}</div>`;
+  if (!de.encontrados && !de.aceptados && r.releido) {
+    return caja(`⚠️ No hay correos de <b>${escapeHtml(r.remitente || "")}</b> en los últimos 30 días. Abre en Gmail un aviso de incidencia de MRW, mira <b>desde qué dirección llega</b> y ponla en ⚙ como "Correo que envía las incidencias".`);
+  }
+  if (de.encontrados && !de.aceptados && (de.ignorados || []).length) {
+    return caja(`⚠️ Se encontraron ${de.encontrados} correos de <b>${escapeHtml(r.remitente || "")}</b>, pero ninguno es un aviso de anomalía. Asuntos encontrados:<br>${de.ignorados.map(s => `· ${escapeHtml(s)}`).join("<br>")}<br>Si los avisos de incidencia llegan desde otra dirección, cámbiala en ⚙.`);
+  }
+  return "";
 }
 
 // Lista de incidencias con el mismo aspecto que Confirmar pedidos. Al pulsar

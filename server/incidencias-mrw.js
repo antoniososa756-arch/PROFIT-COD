@@ -192,6 +192,13 @@ async function guardarEnviado(userId, a) {
   return true;
 }
 
+// Carpeta "Todos" de Gmail (todo el correo, también lo archivado o con
+// etiqueta por filtros); marca especial \All. null si no existe.
+async function carpetaTodos(client) {
+  const lista = await client.list();
+  return lista.find(m => m.specialUse === "\\All")?.path || null;
+}
+
 // Carpeta "Enviados" de Gmail (su nombre cambia con el idioma: se busca por
 // su marca especial \Sent).
 async function carpetaEnviados(client) {
@@ -305,7 +312,7 @@ async function guardarCorreo(userId, a, releyendo = false) {
 
 // Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
 // desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
-const VERSION_LECTURA = 8; // v4-5: formato HTML + Enviados; v6-7: conversaciones que empezamos nosotros
+const VERSION_LECTURA = 9; // v9: leer de "Todos" (etiquetas/archivados), 30 días // v4-5: formato HTML + Enviados; v6-7: conversaciones que empezamos nosotros
 
 // Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
 // días. Una sola lectura a la vez por usuario.
@@ -330,16 +337,22 @@ async function _sincronizarUsuario(userId) {
   const client = clienteImap(cfg.email, descifrar(cfg.password_enc));
   let leidos = 0, guardados = 0, enviados = 0, maxUid = Number(cfg.ultimo_uid || 0);
   const diagEnviados = { carpeta: null, encontrados: 0, error: null };
+  const diagEntrada = { carpeta: null, encontrados: 0, aceptados: 0, ignorados: [] };
   try {
     await client.connect();
-    const lock = await client.getMailboxLock("INBOX");
+    // Correos de MRW de TODO el buzón ("Todos": incluye etiquetas y archivados
+    // por filtros de Gmail), no solo Recibidos. Si no existe, Recibidos.
+    const carpetaEntrada = (await carpetaTodos(client)) || "INBOX";
+    diagEntrada.carpeta = carpetaEntrada;
+    const lock = await client.getMailboxLock(carpetaEntrada);
     try {
       const validity = String(client.mailbox.uidValidity || "");
       if (cfg.uid_validity && cfg.uid_validity !== validity) maxUid = 0; // el buzón cambió: releer
       const criterio = { from: cfg.remitente };
       if (maxUid > 0) criterio.uid = `${maxUid + 1}:*`;
-      else criterio.since = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+      else criterio.since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const uids = ((await client.search(criterio, { uid: true })) || []).filter(u => u > maxUid);
+      diagEntrada.encontrados = uids.length;
       // De 50 en 50 (una petición por tanda en vez de una por correo)
       for (let i = 0; i < uids.length; i += 50) {
         const tanda = uids.slice(i, i + 50);
@@ -348,8 +361,10 @@ async function _sincronizarUsuario(userId) {
           // Un correo que falle no para la lectura de los demás
           try {
             if (msg?.source) {
-              const a = analizarCorreo(await simpleParser(msg.source));
-              if (a) { await guardarCorreo(userId, a, releyendo); guardados++; }
+              const parsed = await simpleParser(msg.source);
+              const a = analizarCorreo(parsed);
+              if (a) { await guardarCorreo(userId, a, releyendo); guardados++; diagEntrada.aceptados++; }
+              else if (diagEntrada.ignorados.length < 8) diagEntrada.ignorados.push(parsed.subject || "(sin asunto)");
             }
           } catch (e) { console.warn(`[Incidencias MRW] correo ${msg.uid} omitido:`, e.message); }
           if (msg.uid > maxUid) maxUid = msg.uid;
@@ -393,7 +408,7 @@ async function _sincronizarUsuario(userId) {
       await db.run("UPDATE incidencias_mrw SET estado = $1, mrw_escribio = false WHERE user_id = $2 AND envio = $3", [p.estado, userId, p.envio]).catch(() => {});
     }
     if (releyendo) await db.run("UPDATE incidencias_mrw_config SET version_lectura = $1 WHERE user_id = $2", [VERSION_LECTURA, userId]);
-    const res = { ok: true, leidos, guardados, enviados, releido: releyendo, diagEnviados };
+    const res = { ok: true, leidos, guardados, enviados, releido: releyendo, diagEnviados, diagEntrada, remitente: cfg.remitente };
     await db.run("UPDATE incidencias_mrw_config SET last_sync = now()::text, last_result = $1 WHERE user_id = $2", [JSON.stringify(res), userId]);
     return res;
   } catch (e) {
@@ -440,7 +455,7 @@ async function marcarLeidoGmail(userId, envio) {
     if (!cfg || !envio) return;
     const client = clienteImap(cfg.email, descifrar(cfg.password_enc));
     await client.connect();
-    const lock = await client.getMailboxLock("INBOX");
+    const lock = await client.getMailboxLock((await carpetaTodos(client)) || "INBOX");
     try {
       const uids = (await client.search({ from: cfg.remitente, subject: envio, seen: false }, { uid: true })) || [];
       if (uids.length) await client.messageFlagsAdd(uids.join(","), ["\\Seen"], { uid: true });
