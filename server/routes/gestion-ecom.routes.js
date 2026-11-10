@@ -277,6 +277,54 @@ router.get("/incidencias/:id/mensajes", auth, soloAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/gestion-ecom/sin-actualizar -> pedidos de MRW en tránsito/franquicia
+// (o enviados sin movimiento) de los últimos 2 meses y con fecha de hasta
+// hace 3 días hábiles (sin contar sábados ni domingos): los que MRW no mueve
+// ni avisa y hay que reclamar nosotros. Incluye el estado de su conversación.
+router.get("/sin-actualizar", auth, soloAdmin, async (req, res) => {
+  try {
+    await inc.ensureTablas();
+    const hoy = new Date(new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" }) + "T12:00:00Z");
+    let d = new Date(hoy), habiles = 0;
+    while (habiles < 3) { d.setUTCDate(d.getUTCDate() - 1); const dia = d.getUTCDay(); if (dia !== 0 && dia !== 6) habiles++; }
+    const hasta = d.toISOString().slice(0, 10);
+    const desde = new Date(hoy.getTime() - 61 * 24 * 60 * 60 * 1000).toISOString();
+    const rows = await db.all(
+      `SELECT o.id, o.order_number, o.created_at, o.customer_name, o.total_price, o.currency, o.note,
+              o.tracking_number, o.fulfillment_status, o.mrw_estado_texto,
+              COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
+              COALESCE(o.customer_phone, '') AS telefono,
+              i.estado AS inc_estado, i.mrw_escribio AS inc_mrw_escribio,
+              (SELECT COUNT(*) FROM incidencias_mrw_mensajes m WHERE m.incidencia_id = i.id AND m.saliente) AS inc_enviados
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       LEFT JOIN incidencias_mrw i ON i.user_id = $1 AND i.envio = btrim(o.tracking_number)
+       WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+         AND (o.carrier IS NULL OR o.carrier = 'mrw')
+         AND o.tracking_number IS NOT NULL AND btrim(o.tracking_number) <> ''
+         AND o.cancelled_at IS NULL
+         AND o.fulfillment_status IN ('enviado','en_transito','franquicia')
+         AND o.created_at >= $2
+         AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $3::date
+       ORDER BY o.created_at ASC
+       LIMIT 1000`,
+      [req.user.id, desde, hasta]
+    );
+    res.json({ hasta, pedidos: rows });
+  } catch (e) {
+    console.error("[GestionEcom] sin-actualizar:", e.message);
+    res.status(500).json({ error: "Error cargando los pedidos sin actualizar" });
+  }
+});
+
+// POST /api/gestion-ecom/incidencias/iniciar/:orderId { texto } -> primer
+// correo a MRW (asunto = nº de seguimiento)
+router.post("/incidencias/iniciar/:orderId", auth, soloAdmin, async (req, res) => {
+  try { res.json(await inc.iniciarConversacion(req.user.id, parseInt(req.params.orderId), req.body?.texto)); }
+  catch (e) { res.status(400).json({ error: e.message || "No se pudo enviar" }); }
+});
+
 // GET /api/gestion-ecom/incidencias/por-pedido/:orderId -> la incidencia de
 // ese pedido (la más reciente) con su hilo de correos, para la columna de
 // correo del detalle del pedido.
@@ -288,7 +336,13 @@ router.get("/incidencias/por-pedido/:orderId", auth, soloAdmin, async (req, res)
        WHERE user_id = $1 AND order_id = $2 ORDER BY ultimo_mensaje_at DESC LIMIT 1`,
       [req.user.id, parseInt(req.params.orderId)]
     );
-    if (!i) return res.json({ incidencia: null, mensajes: [], leyendo: !!global.__incMrwEnCurso?.[req.user.id] });
+    if (!i) {
+      // Sin conversación: datos para escribir el primer correo a MRW
+      const ped = await db.get("SELECT btrim(tracking_number) AS envio FROM orders WHERE id = $1", [parseInt(req.params.orderId)]);
+      const c = await db.get("SELECT remitente, email FROM incidencias_mrw_config WHERE user_id = $1", [req.user.id]);
+      return res.json({ incidencia: null, mensajes: [], leyendo: !!global.__incMrwEnCurso?.[req.user.id],
+        envio: ped?.envio || "", remitente: c?.remitente || "", email: c?.email || "" });
+    }
     const mensajes = await db.all(
       "SELECT id, de, asunto, texto, html, fecha, manual, saliente FROM incidencias_mrw_mensajes WHERE incidencia_id = $1 ORDER BY fecha ASC",
       [i.id]

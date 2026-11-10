@@ -443,6 +443,52 @@ async function marcarLeidoGmail(userId, envio) {
   }
 }
 
+// Primer correo NUESTRO a MRW sobre un pedido sin incidencia (p.ej. desde
+// "Sin actualizar"): va al remitente habitual de MRW con el nº de
+// seguimiento como asunto, igual que cuando reclamamos desde Gmail. Abre la
+// conversación como "Consulta a MRW"; queda resuelta hasta que MRW conteste.
+async function iniciarConversacion(userId, orderId, texto) {
+  await ensureTablas();
+  const cuerpo = String(texto || "").trim();
+  if (!cuerpo) throw new Error("Escribe el mensaje para MRW");
+  const cfg = await db.get("SELECT * FROM incidencias_mrw_config WHERE user_id = $1", [userId]);
+  if (!cfg) throw new Error("Conecta primero el correo de incidencias (Incidencias en curso → ⚙)");
+  const ped = await db.get(
+    `SELECT o.id, btrim(o.tracking_number) AS envio FROM orders o
+     WHERE o.id = $1 AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
+       OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+    [orderId, userId]
+  );
+  if (!ped) throw new Error("Pedido no encontrado");
+  if (!ped.envio) throw new Error("El pedido no tiene número de seguimiento");
+  const nodemailer = require("nodemailer");
+  const transporte = nodemailer.createTransport({
+    host: "smtp.gmail.com", port: 465, secure: true,
+    auth: { user: cfg.email, pass: descifrar(cfg.password_enc) },
+  });
+  let info;
+  try {
+    info = await transporte.sendMail({ from: cfg.email, to: cfg.remitente, subject: ped.envio, text: cuerpo });
+  } catch (e) {
+    throw new Error(/auth|credentials|login|535/i.test(e.message) ? "Gmail rechazó el envío: revisa la contraseña de aplicación" : `No se pudo enviar: ${e.message}`);
+  }
+  const ahora = new Date().toISOString();
+  const inc = await db.get(
+    `INSERT INTO incidencias_mrw (user_id, envio, order_id, tipo, estado, mrw_escribio, ultimo_mensaje_at)
+     VALUES ($1,$2,$3,'Consulta a MRW','resuelta',false,$4)
+     ON CONFLICT (user_id, envio) DO UPDATE SET estado = 'resuelta', mrw_escribio = false,
+       order_id = COALESCE(incidencias_mrw.order_id, EXCLUDED.order_id), ultimo_mensaje_at = EXCLUDED.ultimo_mensaje_at
+     RETURNING id`,
+    [userId, ped.envio, ped.id, ahora]
+  );
+  await db.run(
+    `INSERT INTO incidencias_mrw_mensajes (incidencia_id, message_id, de, asunto, texto, fecha, manual, saliente)
+     VALUES ($1,$2,$3,$4,$5,$6,false,true) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
+    [inc.id, info.messageId || `enviado-${Date.now()}`, cfg.email, ped.envio, cuerpo, ahora]
+  );
+  return { ok: true, para: cfg.remitente, asunto: ped.envio };
+}
+
 // Responde a MRW desde el Gmail de incidencias, en el MISMO hilo (Re: del
 // asunto + In-Reply-To/References), así a la franquicia le llega como una
 // respuesta normal. Gmail guarda la copia en "Enviados". Al responder, la
@@ -493,4 +539,4 @@ async function responder(userId, incidenciaId, texto) {
   return { ok: true, para };
 }
 
-module.exports = { ensureTablas, cifrar, descifrar, probarConexion, sincronizarUsuario, sincronizarTodas, analizarCorreo, responder, marcarLeidoGmail };
+module.exports = { ensureTablas, cifrar, descifrar, probarConexion, sincronizarUsuario, sincronizarTodas, analizarCorreo, responder, marcarLeidoGmail, iniciarConversacion };

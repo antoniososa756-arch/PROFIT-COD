@@ -1364,7 +1364,7 @@ function geUrl() {
 function geLeerUrl(parts) {
   if (parts[0] !== "gestion-ecom") return;
   if (["confirmar", "incidencias"].includes(parts[1])) window.__geTab = parts[1];
-  if (["curso", "franquicia"].includes(parts[2])) window.__geSubInc = parts[2];
+  if (["curso", "franquicia", "sinact"].includes(parts[2])) window.__geSubInc = parts[2];
 }
 // La pestaña elegida sobrevive a recargar (F5)
 try { window.__geTab = sessionStorage.getItem("geTab") || window.__geTab; } catch (e) {}
@@ -1378,9 +1378,11 @@ function geIncidencias(cont) {
     <div class="ui-entrada" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
       <button class="ge-tab${sub === "curso" ? " activo" : ""}" onclick="geSubIncidencias('curso')">Incidencias en curso</button>
       <button class="ge-tab${sub === "franquicia" ? " activo" : ""}" onclick="geSubIncidencias('franquicia')">Franquicia <span id="ge-franq-n" style="opacity:.7;font-weight:500;"></span></button>
+      <button class="ge-tab${sub === "sinact" ? " activo" : ""}" onclick="geSubIncidencias('sinact')">Sin actualizar <span id="ge-sinact-n" style="opacity:.7;font-weight:500;"></span></button>
     </div>
     <div id="ge-inc-lista"></div>`;
   if (sub === "franquicia") return geCargarFranquicia();
+  if (sub === "sinact") return geCargarSinActualizar();
   geContarFranquicia();
   geIncidenciasCurso();
 }
@@ -1623,7 +1625,24 @@ async function geIncColumnaCorreo(orderId) {
     if (!d.incidencia) {
       col.innerHTML = _dpCard(`${_dpIco("nota")}Correo con MRW`, d.leyendo
         ? `<div style="display:flex;align-items:center;gap:8px;padding:14px 18px;font-size:13px;color:var(--muted);"><span style="width:13px;height:13px;border:2px solid rgba(156,163,175,.35);border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite;"></span>Leyendo los correos de MRW... un momento.</div>`
-        : `<div class="muted" style="padding:14px 18px;font-size:13px;">Este pedido no tiene correos de incidencia.</div>`, "cliente");
+        : !d.remitente
+          ? `<div class="muted" style="padding:14px 18px;font-size:13px;">Este pedido no tiene correos con MRW. Para escribirles, conecta el correo en Incidencias en curso → ⚙.</div>`
+          : `<div class="muted" style="padding:14px 18px 6px;font-size:13px;">Aún no hay conversación con MRW sobre este pedido. Escríbeles para reclamarlo:</div>
+             <div style="padding:6px 18px 16px;">
+               <div style="font-size:12px;line-height:1.7;margin-bottom:8px;">
+                 <div><span class="muted">Para:</span> <b>${escapeHtml(d.remitente)}</b></div>
+                 <div><span class="muted">Asunto:</span> <b>${escapeHtml(d.envio || "(sin nº de seguimiento)")}</b></div>
+               </div>
+               <textarea id="dp-correo-nuevo" class="ed-input" rows="4" placeholder="Ej. Buenas tardes, el envío lleva varios días sin movimiento, ¿pueden revisarlo por favor?" style="height:auto;padding:10px 12px;resize:vertical;line-height:1.45;"
+                 onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();geIncIniciar(${Number(orderId)})}"></textarea>
+               <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;">
+                 <span class="muted" style="font-size:11.5px;">Desde ${escapeHtml(d.email || "tu Gmail")} · Ctrl + Enter</span>
+                 <button id="dp-correo-nuevo-btn" class="ge-tab ge-tab-confirmar activo" onclick="geIncIniciar(${Number(orderId)})" ${d.envio ? "" : "disabled"}>
+                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                   Enviar a MRW
+                 </button>
+               </div>
+             </div>`, "cliente");
       // Mientras se leen los correos, volver a intentarlo solo
       if (d.leyendo) setTimeout(() => { if (Number(window.__currentRoute?.id) === Number(orderId)) geIncColumnaCorreo(orderId); }, 8000);
       return;
@@ -1841,6 +1860,28 @@ window.geIncVerCitas = function(a) {
   geIncAjustarCorreo(ifr);
 };
 
+// Primer correo a MRW de un pedido sin conversación (asunto = nº seguimiento)
+window.geIncIniciar = async function(orderId) {
+  const ta = document.getElementById("dp-correo-nuevo");
+  const b = document.getElementById("dp-correo-nuevo-btn");
+  const texto = (ta?.value || "").trim();
+  if (!texto) { ta?.focus(); return; }
+  if (b) { b.disabled = true; b.lastChild.textContent = " Enviando..."; }
+  try {
+    const r = await fetch(`${API_BASE}/api/gestion-ecom/incidencias/iniciar/${orderId}`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + getActiveToken() },
+      body: JSON.stringify({ texto })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Error");
+    showToast("✉️ Correo enviado a MRW", `A ${d.para} · asunto ${d.asunto}. Cuando contesten aparecerá en Incidencias en curso.`, "#22c55e");
+    geIncColumnaCorreo(orderId);
+  } catch (e) {
+    if (b) { b.disabled = false; b.lastChild.textContent = " Enviar a MRW"; }
+    showToast("Error", e.message || "No se pudo enviar el correo.", "#dc2626");
+  }
+};
+
 window.geIncResponderDetalle = async function(incId, orderId) {
   const ta = document.getElementById("dp-correo-resp");
   const b = document.getElementById("dp-correo-enviar");
@@ -2030,6 +2071,74 @@ window.geSubIncidencias = function(sub) {
   if (cont) geIncidencias(cont);
 };
 try { window.__geSubInc = sessionStorage.getItem("geSubInc") || window.__geSubInc; } catch (e) {}
+
+// "Sin actualizar": pedidos de MRW en tránsito/franquicia de los últimos 2
+// meses con fecha de hasta hace 3 días hábiles (GET /api/gestion-ecom/
+// sin-actualizar). Se abren con la vista de incidencias, y desde su chat se
+// puede escribir el primer correo a MRW (asunto = nº de seguimiento).
+async function geCargarSinActualizar() {
+  const lista = document.getElementById("ge-inc-lista");
+  if (!lista) return;
+  lista.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:16px 0;color:var(--muted);font-size:13px;"><span style="width:14px;height:14px;border:2px solid rgba(156,163,175,.35);border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite;"></span>Cargando pedidos sin actualizar...</div>`;
+  try {
+    const H = { Authorization: "Bearer " + getActiveToken() };
+    const [res, tiendas] = await Promise.all([
+      fetch(`${API_BASE}/api/gestion-ecom/sin-actualizar`, { headers: H }),
+      cachedFetch(`${API_BASE}/api/shopify/stores?all=true`, { headers: H }).catch(() => []),
+    ]);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error");
+    const pedidos = data.pedidos || [];
+    const n = document.getElementById("ge-sinact-n");
+    if (n) n.textContent = pedidos.length;
+    window.__geIdsVisibles = pedidos.map(p => Number(p.id));
+    const hastaTxt = data.hasta ? new Date(data.hasta + "T12:00:00Z").toLocaleDateString("es-ES", { timeZone: "UTC", day: "2-digit", month: "2-digit" }) : "";
+    if (!pedidos.length) {
+      lista.innerHTML = `<div style="padding:36px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;"><div style="font-weight:700;color:var(--text);margin-bottom:4px;">✓ Nada sin actualizar</div><div class="muted">No hay pedidos de MRW en tránsito o franquicia hasta el ${escapeHtml(hastaTxt)}.</div></div>`;
+      return;
+    }
+    const info = {};
+    (Array.isArray(tiendas) ? tiendas : []).forEach((s, i) => { info[s.domain] = { nombre: s.shop_name || s.domain.replace(".myshopify.com", ""), color: s.notification_color || (STORE_PALETTE[i % STORE_PALETTE.length] || {}).light || "#a1a1a1" }; });
+    const tel = t => t && t.length === 9 ? `+34 ${t.slice(0,3)} ${t.slice(3,5)} ${t.slice(5,7)} ${t.slice(7)}` : (t || "-");
+    const hoy = Date.parse(new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" }));
+    const dias = f => { const d = Date.parse(new Date(f).toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" })); return isNaN(d) ? null : Math.round((hoy - d) / 86400000) + 1; };
+    const pill = (txt, bg, col, bd) => `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:${bg};color:${col};border:1px solid ${bd};white-space:nowrap;">${txt}</span>`;
+    // Estado de nuestra conversación con MRW sobre ese envío
+    const correo = p => p.inc_mrw_escribio || p.inc_estado === "nueva"
+      ? pill("MRW ha respondido", "#fffbeb", "#b45309", "#fde68a")
+      : Number(p.inc_enviados) > 0 ? pill("Reclamado", "#f0fdf4", "#15803d", "#bbf7d0")
+      : p.inc_estado ? pill("Con incidencia", "#f3f3f3", "#525252", "#e3e3e3")
+      : pill("Sin reclamar", "#fef2f2", "#b91c1c", "#fecaca");
+    const th = (t, a = "left") => `<th style="text-align:${a};padding:10px 12px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;">${t}</th>`;
+    const td = (c, e = "") => `<td style="padding:10px 12px;border-bottom:1px solid var(--border);${e}">${c}</td>`;
+    lista.innerHTML = `
+      <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${pedidos.length}</b> pedido${pedidos.length === 1 ? "" : "s"} sin actualizar <span class="muted" style="font-size:12px;">· en tránsito o franquicia, de los últimos 2 meses y hasta el ${escapeHtml(hastaTxt)} (3 días hábiles)</span></div>
+      <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr>${th("Pedido")}${th("Días")}${th("Cliente")}${th("Teléfono")}${th("Seguimiento")}${th("Último estado")}${th("Correo con MRW")}${th("Total", "right")}${th("Tienda")}</tr></thead>
+          <tbody>${pedidos.map(p => {
+            const ti = info[p.shop_domain] || { nombre: (p.shop_domain || "").replace(".myshopify.com", ""), color: "#a1a1a1" };
+            const dd = dias(p.created_at);
+            return `
+            <tr onclick="geAbrirPedido(${Number(p.id)})" style="cursor:pointer;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+              ${td(`<span style="font-weight:600;">${escapeHtml(p.order_number || "-")}</span>`, "white-space:nowrap;")}
+              ${td(dd ? pill(`${dd} día${dd > 1 ? "s" : ""}`, dd >= 11 ? "#fef2f2" : dd >= 6 ? "#fffbeb" : "#f0fdf4", dd >= 11 ? "#b91c1c" : dd >= 6 ? "#b45309" : "#15803d", dd >= 11 ? "#fecaca" : dd >= 6 ? "#fde68a" : "#bbf7d0") : "-", "white-space:nowrap;")}
+              ${td(escapeHtml(p.customer_name || "-"))}
+              ${td(escapeHtml(tel(p.telefono)), "white-space:nowrap;")}
+              ${td(escapeHtml(p.tracking_number || "-"), "white-space:nowrap;")}
+              ${td(`<span class="muted">${escapeHtml(p.mrw_estado_texto || statusLabel(p.fulfillment_status))}</span>`)}
+              ${td(correo(p), "white-space:nowrap;")}
+              ${td(`${Number(p.total_price || 0).toFixed(2)} ${escapeHtml(p.currency || "")}`, "text-align:right;white-space:nowrap;font-weight:600;")}
+              ${td(`<span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:8px;height:8px;border-radius:50%;background:${ti.color};display:inline-block;"></span>${escapeHtml(ti.nombre)}</span>`, "white-space:nowrap;")}
+            </tr>`;
+          }).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    lista.innerHTML = `<div style="padding:16px 0;color:#dc2626;font-size:13px;">${escapeHtml(e.message || "Error cargando los pedidos")}</div>`;
+  }
+}
 
 async function geContarFranquicia() {
   try {
