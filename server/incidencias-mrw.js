@@ -454,7 +454,12 @@ async function responder(userId, incidenciaId, texto) {
   const para = ultimoMrw?.de || cfg.remitente;
   const asuntoBase = ultimoMrw?.asunto || `${inc.envio} \\ ANOMALÍA \\ ${inc.tipo || ""}`;
   const asunto = /^\s*re\s*:/i.test(asuntoBase) ? asuntoBase : `RE: ${asuntoBase}`;
-  const refs = hilo.map(m => m.message_id).filter(id => /^<.+>$/.test(id || ""));
+  // Referencias solo de ESA conversación (mismo asunto sin "RE:/RV:"): si el
+  // envío tiene dos hilos (una consulta nuestra y luego un aviso de anomalía)
+  // la respuesta va al del último correo de MRW y no los mezcla.
+  const base = s => String(s || "").replace(/^\s*((re|rv|fw|fwd)\s*:\s*)+/i, "").replace(/\s+/g, " ").trim().toLowerCase();
+  const asuntoHilo = base(asuntoBase);
+  const refs = hilo.filter(m => base(m.asunto) === asuntoHilo).map(m => m.message_id).filter(id => /^<.+>$/.test(id || ""));
 
   const nodemailer = require("nodemailer");
   const transporte = nodemailer.createTransport({
