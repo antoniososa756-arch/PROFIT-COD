@@ -92,6 +92,8 @@ router.get("/franquicia", auth, soloAdmin, async (req, res) => {
        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
               OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
          AND o.fulfillment_status = 'franquicia'
+         -- Solo MRW (las incidencias se gestionan con MRW)
+         AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND btrim(o.tracking_number) ~ '^[0-9]{5}[A-Za-z][0-9]{6}$'))
          AND o.cancelled_at IS NULL
        LIMIT 500`,
       [req.user.id]
@@ -301,7 +303,8 @@ router.get("/sin-actualizar", auth, soloAdmin, async (req, res) => {
        LEFT JOIN incidencias_mrw i ON i.user_id = $1 AND i.envio = btrim(o.tracking_number)
        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
               OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
-         AND (o.carrier IS NULL OR o.carrier = 'mrw')
+         -- Solo MRW: agencia MRW o, sin agencia guardada, nº con formato MRW (04700F778981)
+         AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND btrim(o.tracking_number) ~ '^[0-9]{5}[A-Za-z][0-9]{6}$'))
          AND o.tracking_number IS NOT NULL AND btrim(o.tracking_number) <> ''
          AND o.cancelled_at IS NULL
          AND o.fulfillment_status IN ('enviado','en_transito','franquicia')
