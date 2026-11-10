@@ -1661,7 +1661,8 @@ async function geIncColumnaCorreo(orderId) {
           <div style="max-width:92%;padding:10px 12px;border-radius:12px;${mio ? "border-top-right-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;" : `border-top-left-radius:4px;background:#f3f3f3;border:1px solid #e3e3e3;`}font-size:13px;line-height:1.5;color:var(--text);word-break:break-word;">${cuerpo}</div>
         </div>`;
     };
-    const estadoBtn = inc.estado === "resuelta"
+    // En "Sin actualizar" no se marca resuelta/reabre: allí solo se reclama a MRW
+    const estadoBtn = (window.__geSubInc === "sinact") ? "" : inc.estado === "resuelta"
       ? `<button class="ge-tab" style="height:30px;font-size:12px;" onclick="geIncEstadoDetalle(${Number(inc.id)},'nueva',${Number(orderId)})">Reabrir</button>`
       : `<button class="ge-tab activo" style="height:30px;font-size:12px;" onclick="geIncEstadoDetalle(${Number(inc.id)},'resuelta',${Number(orderId)})">✓ Marcar resuelta</button>`;
     const estadoPill = inc.estado === "resuelta" ? ["Resuelta", "#f3f3f3", "#525252", "#e3e3e3"] : inc.estado === "respondida" ? ["Respondida", "#eff6ff", "#1d4ed8", "#bfdbfe"] : ["Nueva", "#fef2f2", "#b91c1c", "#fecaca"];
