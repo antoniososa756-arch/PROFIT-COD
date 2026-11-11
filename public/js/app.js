@@ -2476,6 +2476,44 @@ document.addEventListener("keydown", (e) => {
   geConfirmarPedido();
 });
 
+// Cerrar el desplegable Archivar/Cancelar al hacer clic fuera
+document.addEventListener("click", (e) => {
+  const m = document.getElementById("dp-acciones-menu");
+  if (m && m.style.display === "block" && !e.target.closest("#dp-archivar")) m.style.display = "none";
+});
+
+// Cancelar el pedido en Shopify (desplegable del detalle), con confirmación
+window.cancelarPedidoShopify = function(id, numero) {
+  _edModal("Cancelar pedido", `
+    <div style="font-size:14px;line-height:1.6;color:var(--text);">
+      ¿Seguro que quieres cancelar el pedido <b>${escapeHtml(numero || "")}</b>?
+    </div>
+    <div style="font-size:12.5px;line-height:1.6;color:var(--muted);">
+      Se cancelará <b>también en Shopify</b> y se repondrá el stock. No se envía aviso al cliente ni se hace reembolso.
+      Esta acción no se puede deshacer.
+    </div>`, async () => {
+    const b = document.getElementById("ed-guardar");
+    if (b) { b.disabled = true; b.textContent = "Cancelando..."; }
+    try {
+      const r = await fetch(`${API_BASE}/api/orders/${id}/cancelar`, { method: "POST", headers: { Authorization: "Bearer " + getActiveToken() } });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Error");
+      _edCerrar();
+      showToast("Pedido cancelado", `${d.order_number || ""} cancelado también en Shopify.`, "#dc2626");
+      // Fuera de Confirmar pedidos (ya no hay que confirmarlo)
+      if (window.__geDatos?.data?.pedidos) window.__geDatos.data.pedidos = window.__geDatos.data.pedidos.filter(p => Number(p.id) !== Number(id));
+      abrirDetallePedido(id, { keepNavContext: true });
+    } catch (e) {
+      if (b) { b.disabled = false; b.textContent = "Sí, cancelar pedido"; }
+      showToast("Error", e.message || "No se pudo cancelar el pedido.", "#dc2626");
+    }
+  });
+  const b = document.getElementById("ed-guardar");
+  if (b) { b.textContent = "Sí, cancelar pedido"; b.style.background = "#dc2626"; }
+  const cancelar = b?.previousElementSibling;
+  if (cancelar) cancelar.textContent = "No, volver";
+};
+
 // Archivar / desarchivar el pedido en Shopify (botón del detalle del pedido)
 window.archivarPedido = async function(id, archivar) {
   const btn = document.getElementById("dp-archivar");
@@ -16634,10 +16672,24 @@ function renderDetallePedido(order) {
             <div onclick="cambiarEstadoPedidoDetalle(${order.id},'${escapeAttr(order.order_number||"")}','cancelado')" style="padding:9px 14px;font-size:12.5px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:7px;border-top:1px solid var(--border);" onmouseover="this.style.background='rgba(220,38,38,.08)'" onmouseout="this.style.background=''">✕ Cancelado</div>
           </div>
         </div>` : ""}
-        <button onclick="archivarPedido(${Number(order.id)}, ${raw.closed_at ? "false" : "true"})" id="dp-archivar" class="ge-tab" style="height:34px;" title="${raw.closed_at ? "Quitar de archivados en Shopify" : "Archivar el pedido en Shopify"}">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
-          ${raw.closed_at ? "Desarchivar" : "Archivar"}
-        </button>
+        <div id="dp-archivar" style="position:relative;">
+          <button class="ge-tab" style="height:34px;" onclick="event.stopPropagation();const m=document.getElementById('dp-acciones-menu');m.style.display=m.style.display==='block'?'none':'block';" title="Archivar o cancelar el pedido">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+            ${raw.closed_at ? "Desarchivar" : "Archivar"}
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="dp-acciones-menu" style="display:none;position:absolute;left:0;top:calc(100% + 4px);z-index:999;min-width:190px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden;">
+            <div onclick="document.getElementById('dp-acciones-menu').style.display='none';archivarPedido(${Number(order.id)}, ${raw.closed_at ? "false" : "true"})"
+              style="padding:10px 14px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+              ${raw.closed_at ? "Desarchivar en Shopify" : "Archivar en Shopify"}
+            </div>
+            ${order.cancelled_at || order.fulfillment_status === "cancelado" ? "" : `
+            <div onclick="document.getElementById('dp-acciones-menu').style.display='none';cancelarPedidoShopify(${Number(order.id)}, '${escapeAttr(order.order_number || "")}')"
+              style="padding:10px 14px;font-size:13px;font-weight:600;color:#dc2626;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);" onmouseover="this.style.background='rgba(220,38,38,.06)'" onmouseout="this.style.background=''">
+              Cancelar pedido
+            </div>`}
+          </div>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         <span id="dp-nav-controls"></span>

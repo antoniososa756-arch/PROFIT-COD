@@ -570,6 +570,54 @@ router.patch("/:id/datos", auth, async (req, res) => {
   }
 });
 
+// POST /api/orders/:id/cancelar — cancela el pedido en Shopify (sin
+// reembolso ni aviso al cliente; se repone el stock) y lo marca cancelado en
+// ProfitCOD. Shopify no deja cancelar un pedido ya preparado/enviado
+// (con fulfillment): se devuelve su motivo.
+router.post("/:id/cancelar", auth, async (req, res) => {
+  const userId = req.user.id;
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: "id inválido" });
+  try {
+    const row = await db.get(
+      `SELECT o.order_id, o.order_number, COALESCE(o.shop_domain, s.shop_domain) as shop_domain
+       FROM orders o
+       LEFT JOIN shops s ON s.id = o.shop_id
+       WHERE o.id = $1
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+      [id, userId]
+    );
+    if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
+    const shopRow = await db.get(`SELECT access_token FROM shops WHERE shop_domain = $1 AND user_id = $2`, [row.shop_domain, userId]);
+    if (!shopRow) return res.status(404).json({ error: "Tienda no encontrada" });
+
+    const r = await fetch(`https://${row.shop_domain}/admin/api/2024-10/orders/${row.order_id}/cancel.json`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": shopRow.access_token },
+      body: JSON.stringify({ reason: "customer", email: false, restock: true }),
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      console.error("Shopify cancelar error:", r.status, txt);
+      let motivo = "";
+      try { const j = JSON.parse(txt); motivo = typeof j.errors === "string" ? j.errors : (j.error || Object.values(j.errors || {}).flat().join(", ")); } catch (_) {}
+      if (/fulfilled|fulfillment/i.test(motivo)) motivo = "el pedido ya está preparado o enviado; Shopify no deja cancelarlo así";
+      return res.status(502).json({ error: `Shopify no dejó cancelar el pedido${motivo ? `: ${motivo}` : ""}` });
+    }
+    const data = await r.json();
+    const order = data.order || null;
+    await db.run(
+      `UPDATE orders SET fulfillment_status = 'cancelado', cancelled_at = COALESCE($1, now()::text),
+         raw_json = COALESCE($2, raw_json), updated_at = now()::text WHERE id = $3`,
+      [order?.cancelled_at || null, order ? JSON.stringify(order) : null, id]
+    );
+    res.json({ ok: true, order_number: row.order_number });
+  } catch (e) {
+    console.error("cancelar error:", e);
+    res.status(500).json({ error: "Error cancelando el pedido" });
+  }
+});
+
 // POST /api/orders/:id/archivar { archivar: true|false } — archiva (close) o
 // desarchiva (open) el pedido en Shopify y guarda el pedido devuelto.
 router.post("/:id/archivar", auth, async (req, res) => {
