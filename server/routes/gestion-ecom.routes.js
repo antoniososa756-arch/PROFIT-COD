@@ -371,9 +371,15 @@ router.get("/incidencias/por-pedido/:orderId", auth, soloAdmin, async (req, res)
         envio: ped?.envio || "", remitente: c?.remitente || "", email: c?.email || "" });
     }
     const mensajes = await db.all(
-      "SELECT id, de, asunto, texto, html, fecha, manual, saliente FROM incidencias_mrw_mensajes WHERE incidencia_id = $1 ORDER BY fecha ASC",
+      "SELECT id, message_id, de, asunto, texto, fecha, manual, saliente FROM incidencias_mrw_mensajes WHERE incidencia_id = $1 ORDER BY fecha ASC",
       [i.id]
     );
+    // Adjuntos de cada correo (solo datos, el archivo se baja aparte)
+    const adj = mensajes.length ? await db.all(
+      "SELECT id, message_id, nombre, tipo, tamano FROM incidencias_mrw_adjuntos WHERE user_id = $1 AND message_id = ANY($2::text[]) ORDER BY id",
+      [req.user.id, mensajes.map(m => m.message_id)]
+    ).catch(() => []) : [];
+    for (const m of mensajes) { m.adjuntos = adj.filter(a => a.message_id === m.message_id); delete m.message_id; }
     const cfg = await db.get("SELECT email FROM incidencias_mrw_config WHERE user_id = $1", [req.user.id]);
     res.json({ incidencia: i, mensajes, email: cfg?.email || "" });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -411,6 +417,18 @@ router.delete("/llamadas/:orderId/:id", auth, soloAdmin, async (req, res) => {
   try {
     await db.run("DELETE FROM incidencias_llamadas WHERE id = $1 AND user_id = $2 AND order_id = $3", [parseInt(req.params.id), req.user.id, parseInt(req.params.orderId)]);
     res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/gestion-ecom/adjunto/:id -> archivo adjunto de un correo de MRW
+router.get("/adjunto/:id", auth, soloAdmin, async (req, res) => {
+  try {
+    const a = await db.get("SELECT nombre, tipo, contenido FROM incidencias_mrw_adjuntos WHERE id = $1 AND user_id = $2", [parseInt(req.params.id), req.user.id]);
+    if (!a) return res.status(404).json({ error: "Adjunto no encontrado" });
+    res.setHeader("Content-Type", a.tipo || "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(a.nombre || "adjunto")}"`);
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.send(a.contenido);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

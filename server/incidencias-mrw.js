@@ -90,6 +90,19 @@ async function ensureTablas() {
       created_at TEXT DEFAULT now()::text
     )`);
   await db.run(`CREATE INDEX IF NOT EXISTS idx_inc_llamadas_pedido ON incidencias_llamadas (user_id, order_id)`);
+  // Adjuntos de los correos (imágenes, PDF...) para abrirlos desde el chat.
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS incidencias_mrw_adjuntos (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      message_id TEXT NOT NULL,
+      nombre TEXT,
+      tipo TEXT,
+      tamano INTEGER,
+      contenido BYTEA,
+      UNIQUE (user_id, message_id, nombre, tamano)
+    )`);
+  await db.run(`CREATE INDEX IF NOT EXISTS idx_inc_adjuntos_msg ON incidencias_mrw_adjuntos (user_id, message_id)`);
   await db.run(`ALTER TABLE incidencias_mrw_config ADD COLUMN IF NOT EXISTS version_lectura INTEGER DEFAULT 1`);
   // HTML del correo (para verlo con su formato) y lectura de la carpeta Enviados
   await db.run(`ALTER TABLE incidencias_mrw_mensajes ADD COLUMN IF NOT EXISTS html TEXT`);
@@ -147,6 +160,29 @@ function htmlLimpio(parsed) {
   return h.replace(/\u0000/g, "").slice(0, 300000); // Postgres no admite el carácter nulo
 }
 
+// Adjuntos útiles de un correo (capturas, PDF...). Se descartan las imágenes
+// pequeñas (logo de MRW, iconos de redes de la firma) y lo de más de 5 MB.
+function adjuntosDe(parsed) {
+  return (parsed.attachments || [])
+    .filter(a => a && a.content && a.size <= 5 * 1024 * 1024)
+    .filter(a => !(/^image\//i.test(a.contentType || "") && (a.size || 0) < 12 * 1024))
+    .map((a, i) => ({
+      nombre: a.filename || `${/pdf/i.test(a.contentType || "") ? "documento" : "imagen"}-${i + 1}.${(a.contentType || "").split("/")[1] || "bin"}`,
+      tipo: a.contentType || "application/octet-stream",
+      tamano: a.size || a.content.length,
+      contenido: a.content,
+    }));
+}
+async function guardarAdjuntos(userId, messageId, adjuntos) {
+  for (const a of adjuntos || []) {
+    await db.run(
+      `INSERT INTO incidencias_mrw_adjuntos (user_id, message_id, nombre, tipo, tamano, contenido)
+       VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (user_id, message_id, nombre, tamano) DO NOTHING`,
+      [userId, messageId, a.nombre, a.tipo, a.tamano, a.contenido]
+    ).catch(e => console.warn("[Incidencias MRW] adjunto:", e.message));
+  }
+}
+
 // Correo NUESTRO de la carpeta Enviados dirigido a MRW (respondido desde
 // Gmail o desde ProfitCOD): se asocia a la incidencia por el envío del asunto.
 function analizarEnviado(parsed) {
@@ -161,6 +197,7 @@ function analizarEnviado(parsed) {
     de: parsed.from?.value?.[0]?.address || "",
     fecha: (parsed.date || new Date()).toISOString(),
     message_id: parsed.messageId || `${envio}-${(parsed.date || new Date()).getTime()}`,
+    adjuntos: adjuntosDe(parsed),
   };
 }
 
@@ -184,6 +221,7 @@ async function guardarEnviado(userId, a) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,false,true) ON CONFLICT (incidencia_id, message_id) DO NOTHING`,
     [inc.id, a.message_id, a.de, a.asunto, a.texto, a.html, a.fecha]
   );
+  await guardarAdjuntos(userId, a.message_id, a.adjuntos);
   // Si nuestra respuesta es lo último del hilo, la incidencia está resuelta
   if (!inc.ultimo_mensaje_at || a.fecha >= inc.ultimo_mensaje_at) {
     await db.run(
@@ -243,6 +281,7 @@ function analizarCorreo(parsed) {
   return {
     envio,
     tipo,
+    adjuntos: adjuntosDe(parsed),
     manual: !automatico,
     // "#LOJACOMFY32453Observaciones:" (pegado): letras + cifras y se corta ahí
     referencia: automatico ? (campo(texto, "Referencia del Cliente").match(/#?[A-Za-z]*\d+/) || [""])[0] : "",
@@ -319,11 +358,12 @@ async function guardarCorreo(userId, a, releyendo = false) {
      ON CONFLICT (incidencia_id, message_id) DO UPDATE SET html = EXCLUDED.html, texto = EXCLUDED.texto`,
     [inc.id, a.message_id, a.de, a.asunto, a.texto, a.html, a.fecha, a.manual]
   );
+  await guardarAdjuntos(userId, a.message_id, a.adjuntos);
 }
 
 // Versión de las reglas de lectura. Al subirla, las incidencias se rehacen
 // desde el correo (p.ej. la v1 tomaba también avisos que no eran anomalías).
-const VERSION_LECTURA = 10; // v9-10: leer de "Todos" (etiquetas/archivados), 30 días, asuntos que empiezan por el envío // v4-5: formato HTML + Enviados; v6-7: conversaciones que empezamos nosotros
+const VERSION_LECTURA = 11; // v11: adjuntos; // v9-10: leer de "Todos" (etiquetas/archivados), 30 días, asuntos que empiezan por el envío // v4-5: formato HTML + Enviados; v6-7: conversaciones que empezamos nosotros
 
 // Lee los correos nuevos del remitente configurado. Primera vez: últimos 15
 // días. Una sola lectura a la vez por usuario.

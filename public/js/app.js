@@ -1696,7 +1696,7 @@ async function geIncColumnaCorreo(orderId) {
     const fmt = f => f ? new Date(f).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
     const burbuja = m => {
       const mio = !!m.saliente;
-      const cuerpo = geIncCuerpoMensaje(m);
+      const cuerpo = geIncCuerpoMensaje(m) + geIncAdjuntosHtml(m.adjuntos);
       return `
         <div style="display:flex;flex-direction:column;align-items:${mio ? "flex-end" : "flex-start"};margin-bottom:14px;">
           <div style="font-size:11.5px;margin-bottom:4px;color:var(--muted);">
@@ -1868,13 +1868,17 @@ function geIncCuerpoMensaje(m) {
   // Correo escrito (MRW a mano o nuestro): cortar en la firma de MRW o en el
   // correo anterior citado (líneas con ">", "El lun, 9 nov ... escribió:" de
   // Gmail, aunque venga partido en dos líneas, "On ... wrote:", "De:").
+  // Una imagen incrustada ("[cid:...]") NO corta el texto (antes se perdía lo
+  // escrito después); solo el logo de la firma, que va con el enlace a mrw.es.
   const lineas = t.split("\n");
-  let fin = lineas.findIndex(l => /^\s*(>|\[cid:|<https?:\/\/www\.mrw|FRANQUICIA MRW|www\.mrw\.es|Antes de imprimir|Nota legal|De:\s|From:\s|-----)/i.test(l) || /(escribi[óo]|wrote)\s*:\s*$/i.test(l));
+  let fin = lineas.findIndex(l => /^\s*(>|\[cid:[^\]]*\]\s*<https?:\/\/www\.mrw|<https?:\/\/www\.mrw|FRANQUICIA MRW|www\.mrw\.es|Antes de imprimir|Nota legal|De:\s|From:\s|-----)/i.test(l) || /(escribi[óo]|wrote)\s*:\s*$/i.test(l));
   // "El lun, 9 nov 2026 a las 13:17, X <x@y> escribió:" puede empezar 1-2 líneas antes
   if (fin > 0) for (let k = 1; k <= 2 && fin - k >= 0; k++) {
     if (/^\s*(El|On)\s.+(\d{1,2}:\d{2}|,)/i.test(lineas[fin - k])) { fin = fin - k; break; }
   }
-  const limpio = (fin >= 0 ? lineas.slice(0, fin) : lineas).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  const limpio = (fin >= 0 ? lineas.slice(0, fin) : lineas).join("\n")
+    .replace(/\[cid:[^\]]*\]/gi, "🖼️ imagen")  // sitio de cada imagen incrustada
+    .replace(/\n{3,}/g, "\n\n").trim();
   return parrafo(limpio || "(sin texto)");
 }
 
@@ -1909,6 +1913,36 @@ window.geIncVerCitas = function(a) {
   b.classList.toggle("citas", ver);
   a.textContent = ver ? "Ocultar correo anterior" : "Mostrar correo anterior";
   geIncAjustarCorreo(ifr);
+};
+
+// Adjuntos de un correo (capturas, PDF...): botones que abren el archivo en
+// una pestaña nueva (se descarga con el token y se abre como blob).
+function geIncAdjuntosHtml(adjuntos) {
+  if (!Array.isArray(adjuntos) || !adjuntos.length) return "";
+  const kb = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${adjuntos.map(a => {
+    const icono = /^image\//i.test(a.tipo || "") ? "🖼️" : /pdf/i.test(a.tipo || "") ? "📄" : "📎";
+    return `<button type="button" onclick="geIncAbrirAdjunto(${Number(a.id)})" title="Abrir en una pestaña nueva"
+      style="display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-size:12px;cursor:pointer;">
+      <span>${icono}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${escapeHtml(a.nombre || "adjunto")}</span>
+      <span class="muted" style="font-size:11px;">${kb(Number(a.tamano) || 0)}</span>
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
+    </button>`;
+  }).join("")}</div>`;
+}
+window.geIncAbrirAdjunto = async function(id) {
+  // La pestaña se abre ya (si se abre tras esperar, el navegador la bloquea)
+  const w = window.open("", "_blank");
+  if (w) w.document.write(`<p style="font-family:sans-serif;color:#666;padding:20px;">Abriendo adjunto...</p>`);
+  try {
+    const r = await fetch(`${API_BASE}/api/gestion-ecom/adjunto/${id}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    if (!r.ok) throw new Error("No se pudo abrir el adjunto");
+    const url = URL.createObjectURL(await r.blob());
+    if (w) w.location.href = url; else window.open(url, "_blank");
+  } catch (e) {
+    if (w) w.close();
+    showToast("Error", e.message, "#dc2626");
+  }
 };
 
 // Primer correo a MRW de un pedido sin conversación (asunto = nº seguimiento)
