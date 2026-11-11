@@ -1876,11 +1876,36 @@ function geIncCuerpoMensaje(m) {
   if (fin > 0) for (let k = 1; k <= 2 && fin - k >= 0; k++) {
     if (/^\s*(El|On)\s.+(\d{1,2}:\d{2}|,)/i.test(lineas[fin - k])) { fin = fin - k; break; }
   }
+  const MARCA = "\u0007";
   const limpio = (fin >= 0 ? lineas.slice(0, fin) : lineas).join("\n")
-    .replace(/\[cid:[^\]]*\]/gi, "🖼️ imagen")  // sitio de cada imagen incrustada
+    .replace(/\[cid:[^\]]*\]/gi, MARCA)  // sitio de cada imagen incrustada
     .replace(/\n{3,}/g, "\n\n").trim();
-  return parrafo(limpio || "(sin texto)");
+  // Cada "🖼️ imagen" se puede pulsar: abre esa imagen (la n-ésima del correo)
+  let n = 0;
+  const html = escapeHtml(limpio || "(sin texto)").replace(new RegExp(MARCA, "g"), () =>
+    `<a href="#" onclick="event.preventDefault();geIncAbrirImagen(${Number(m.id)},${n++})" title="Abrir la imagen en una pestaña nueva" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:#2563eb;text-decoration:none;font-size:12.5px;">🖼️ Ver imagen ↗</a>`);
+  return `<div style="white-space:pre-wrap;">${html}</div>`;
 }
+
+// Abre la imagen nº "pos" de un correo (si aún no está guardada, el servidor
+// la trae de Gmail en ese momento).
+window.geIncAbrirImagen = async function(mensajeId, pos) {
+  const w = window.open("", "_blank");
+  if (w) w.document.write(`<p style="font-family:sans-serif;color:#666;padding:20px;">Cargando imagen...</p>`);
+  try {
+    const d = await (await fetch(`${API_BASE}/api/gestion-ecom/incidencias/mensaje/${mensajeId}/adjuntos`, { headers: { Authorization: "Bearer " + getActiveToken() } })).json();
+    const imagenes = (d.adjuntos || []).filter(a => /^image\//i.test(a.tipo || ""));
+    const a = imagenes[pos] || imagenes[0] || (d.adjuntos || [])[0];
+    if (!a) throw new Error("No se encontró la imagen en el correo de Gmail");
+    const r = await fetch(`${API_BASE}/api/gestion-ecom/adjunto/${a.id}`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+    if (!r.ok) throw new Error("No se pudo abrir la imagen");
+    const url = URL.createObjectURL(await r.blob());
+    if (w) w.location.href = url; else window.open(url, "_blank");
+  } catch (e) {
+    if (w) w.close();
+    showToast("Imagen", e.message, "#dc2626");
+  }
+};
 
 // Alto del iframe de un correo: hasta 320 px; si es más largo, enlaces para
 // verlo entero y para mostrar el correo anterior citado.

@@ -495,6 +495,38 @@ async function sincronizarTodas() {
   } finally { global.__incMrwRunning = false; }
 }
 
+// Adjuntos de UN correo del hilo. Si no están guardados (correo leído antes
+// de guardar adjuntos), se buscan en Gmail por su Message-ID y se guardan.
+async function adjuntosDeMensaje(userId, mensajeId) {
+  await ensureTablas();
+  const m = await db.get(
+    `SELECT m.message_id FROM incidencias_mrw_mensajes m JOIN incidencias_mrw i ON i.id = m.incidencia_id
+     WHERE m.id = $1 AND i.user_id = $2`, [mensajeId, userId]);
+  if (!m) throw new Error("Correo no encontrado");
+  const listar = () => db.all("SELECT id, nombre, tipo, tamano FROM incidencias_mrw_adjuntos WHERE user_id = $1 AND message_id = $2 ORDER BY id", [userId, m.message_id]);
+  let lista = await listar();
+  if (lista.length || !/^<.+>$/.test(m.message_id || "")) return lista;
+  const cfg = await db.get("SELECT email, password_enc FROM incidencias_mrw_config WHERE user_id = $1", [userId]);
+  if (!cfg) return lista;
+  const client = clienteImap(cfg.email, descifrar(cfg.password_enc));
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock((await carpetaTodos(client)) || "INBOX");
+    try {
+      const uids = (await client.search({ header: { "message-id": m.message_id } }, { uid: true })) || [];
+      if (uids.length) {
+        const msg = await client.fetchOne(String(uids[0]), { source: true }, { uid: true });
+        if (msg?.source) await guardarAdjuntos(userId, m.message_id, adjuntosDe(await simpleParser(msg.source)));
+      }
+    } finally { lock.release(); }
+    await client.logout().catch(() => {});
+  } catch (e) {
+    try { await client.logout(); } catch (_) {}
+    console.warn("[Incidencias MRW] adjuntos bajo demanda:", e.message);
+  }
+  return listar();
+}
+
 // Marca como LEÍDOS en Gmail los correos de MRW de un envío (al responder
 // desde ProfitCOD o al marcar la incidencia resuelta), para que la bandeja
 // refleje lo ya gestionado. Se buscan por remitente + número de envío en el
@@ -613,4 +645,4 @@ async function responder(userId, incidenciaId, texto) {
   return { ok: true, para };
 }
 
-module.exports = { ensureTablas, cifrar, descifrar, probarConexion, sincronizarUsuario, sincronizarTodas, analizarCorreo, responder, marcarLeidoGmail, iniciarConversacion };
+module.exports = { ensureTablas, cifrar, descifrar, probarConexion, sincronizarUsuario, sincronizarTodas, analizarCorreo, responder, marcarLeidoGmail, iniciarConversacion, adjuntosDeMensaje };

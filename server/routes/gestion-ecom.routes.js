@@ -420,6 +420,13 @@ router.delete("/llamadas/:orderId/:id", auth, soloAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/gestion-ecom/incidencias/mensaje/:id/adjuntos -> adjuntos de un
+// correo (si no estaban guardados se traen de Gmail en ese momento)
+router.get("/incidencias/mensaje/:id/adjuntos", auth, soloAdmin, async (req, res) => {
+  try { res.json({ adjuntos: await inc.adjuntosDeMensaje(req.user.id, parseInt(req.params.id)) }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
 // GET /api/gestion-ecom/adjunto/:id -> archivo adjunto de un correo de MRW
 router.get("/adjunto/:id", auth, soloAdmin, async (req, res) => {
   try {
