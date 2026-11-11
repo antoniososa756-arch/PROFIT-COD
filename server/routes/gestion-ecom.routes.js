@@ -254,6 +254,18 @@ router.get("/incidencias", auth, soloAdmin, async (req, res) => {
               OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`,
       [req.user.id]
     ).catch(() => {});
+    // ...y si no, por la referencia del cliente del correo (#LOJACOMFY32453),
+    // limpiando la que se leyó pegada ("#LOJACOMFY32453Observaciones")
+    await db.run(
+      `UPDATE incidencias_mrw i SET order_id = o.id,
+         referencia = '#' || substring(i.referencia from '#?([A-Za-z]*[0-9]+)')
+       FROM orders o
+       WHERE i.user_id = $1 AND i.order_id IS NULL AND i.referencia IS NOT NULL AND i.referencia <> ''
+         AND o.order_number = '#' || substring(i.referencia from '#?([A-Za-z]*[0-9]+)')
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`,
+      [req.user.id]
+    ).catch(() => {});
     const rows = await db.all(
       `SELECT i.id, i.envio, i.order_id, i.referencia, i.tipo, i.destinatario, i.telefono, i.direccion,
               i.fecha_anomalia, i.estado, i.mrw_escribio, i.ultimo_mensaje_at, i.created_at,

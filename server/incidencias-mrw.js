@@ -113,7 +113,9 @@ async function probarConexion(email, password) {
 }
 
 // ── Lectura del correo de MRW ───────────────────────────────────────────────
-const ENVIO_RE = /\b\d{5}[A-Z]\d{6}\b/;
+// Nº de envío MRW (04700F781897). Sin \b al final: en el texto del correo a
+// veces va pegado a la siguiente etiqueta ("04700F781897Nº bultos").
+const ENVIO_RE = /(?<![0-9A-Za-z])\d{5}[A-Z]\d{6}(?!\d)/;
 // Valor tras "Etiqueta:". En el correo de MRW (HTML pasado a texto) a veces
 // el valor cae en la línea siguiente: si la línea está vacía, se toma la
 // siguiente que no sea otra etiqueta.
@@ -242,7 +244,8 @@ function analizarCorreo(parsed) {
     envio,
     tipo,
     manual: !automatico,
-    referencia: automatico ? (campo(texto, "Referencia del Cliente").match(/#?[A-Z0-9-]+/i) || [""])[0] : "",
+    // "#LOJACOMFY32453Observaciones:" (pegado): letras + cifras y se corta ahí
+    referencia: automatico ? (campo(texto, "Referencia del Cliente").match(/#?[A-Za-z]*\d+/) || [""])[0] : "",
     destinatario: automatico ? campo(texto, "Destinatario").replace(/\s*Tel[ée]fono:.*$/i, "") : "",
     telefono: automatico ? (campo(texto, "Tel[ée]fono").match(/\+?\d[\d\s]{7,}/) || [""])[0].replace(/\s/g, "") : "",
     direccion: automatico ? [campo(texto, "Direcci[óo]n"), campo(texto, "Poblaci[óo]n")].filter(Boolean).join(" · ") : "",
