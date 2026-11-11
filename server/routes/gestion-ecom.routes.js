@@ -249,7 +249,9 @@ router.get("/incidencias", auth, soloAdmin, async (req, res) => {
     await db.run(
       `UPDATE incidencias_mrw i SET order_id = o.id
        FROM orders o
-       WHERE i.user_id = $1 AND i.order_id IS NULL AND btrim(o.tracking_number) = i.envio
+       WHERE i.user_id = $1 AND i.order_id IS NULL
+         -- el nº dentro del seguimiento (puede traer prefijo u otros números)
+         AND o.tracking_number ILIKE '%' || i.envio || '%'
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
               OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`,
       [req.user.id]
@@ -322,7 +324,7 @@ router.get("/sin-actualizar", auth, soloAdmin, async (req, res) => {
               (SELECT COUNT(*) FROM incidencias_mrw_mensajes m WHERE m.incidencia_id = i.id AND m.saliente) AS inc_enviados
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       LEFT JOIN incidencias_mrw i ON i.user_id = $1 AND i.envio = btrim(o.tracking_number)
+       LEFT JOIN incidencias_mrw i ON i.user_id = $1 AND o.tracking_number ILIKE '%' || i.envio || '%'
        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
               OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
          -- Solo MRW: agencia MRW o, sin agencia guardada, nº con formato MRW (04700F778981)
@@ -363,7 +365,7 @@ router.get("/incidencias/por-pedido/:orderId", auth, soloAdmin, async (req, res)
     );
     if (!i) {
       // Sin conversación: datos para escribir el primer correo a MRW
-      const ped = await db.get("SELECT btrim(tracking_number) AS envio FROM orders WHERE id = $1", [parseInt(req.params.orderId)]);
+      const ped = await db.get("SELECT COALESCE(substring(tracking_number from '[0-9]{5}[A-Za-z][0-9]{6}'), btrim(tracking_number)) AS envio FROM orders WHERE id = $1", [parseInt(req.params.orderId)]);
       const c = await db.get("SELECT remitente, email FROM incidencias_mrw_config WHERE user_id = $1", [req.user.id]);
       return res.json({ incidencia: null, mensajes: [], leyendo: !!global.__incMrwEnCurso?.[req.user.id],
         envio: ped?.envio || "", remitente: c?.remitente || "", email: c?.email || "" });

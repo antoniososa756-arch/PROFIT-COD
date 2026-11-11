@@ -263,6 +263,9 @@ async function buscarPedido(userId, envio, referencia) {
   const tiendas = `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
                     OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`;
   let r = await db.get(`SELECT o.id FROM orders o WHERE ${tiendas} AND btrim(o.tracking_number) = $2 ORDER BY o.id DESC LIMIT 1`, [userId, envio]);
+  // El campo de seguimiento a veces trae algo más que el número (prefijo,
+  // varios números...): buscarlo dentro, como el buscador de arriba.
+  if (!r) r = await db.get(`SELECT o.id FROM orders o WHERE ${tiendas} AND o.tracking_number ILIKE $2 ORDER BY o.id DESC LIMIT 1`, [userId, `%${envio}%`]);
   if (!r && referencia) {
     const ref = referencia.startsWith("#") ? referencia : `#${referencia}`;
     r = await db.get(`SELECT o.id FROM orders o WHERE ${tiendas} AND o.order_number = $2 ORDER BY o.id DESC LIMIT 1`, [userId, ref]);
@@ -485,7 +488,7 @@ async function iniciarConversacion(userId, orderId, texto) {
   const cfg = await db.get("SELECT * FROM incidencias_mrw_config WHERE user_id = $1", [userId]);
   if (!cfg) throw new Error("Conecta primero el correo de incidencias (Incidencias en curso → ⚙)");
   const ped = await db.get(
-    `SELECT o.id, btrim(o.tracking_number) AS envio FROM orders o
+    `SELECT o.id, COALESCE(substring(o.tracking_number from '[0-9]{5}[A-Za-z][0-9]{6}'), btrim(o.tracking_number)) AS envio FROM orders o
      WHERE o.id = $1 AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
        OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
     [orderId, userId]
