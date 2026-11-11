@@ -1494,7 +1494,7 @@ async function geIncPintar(lista, resueltas) {
     return `<span style="color:var(--muted);margin-right:6px;">${d.toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:${bg};color:${col};border:1px solid ${bd};">${txt}</span>`;
   };
   t.innerHTML = `
-    <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${lista.length}</b> incidencia${lista.length === 1 ? "" : "s"} ${resueltas ? "resuelta" + (lista.length === 1 ? "" : "s") : "abierta" + (lista.length === 1 ? "" : "s")}</div>
+    <div style="font-size:13px;color:var(--text);margin-bottom:8px;"><b>${lista.length}</b> incidencia${lista.length === 1 ? "" : "s"} ${resueltas ? "resuelta" + (lista.length === 1 ? "" : "s") : "abierta" + (lista.length === 1 ? "" : "s")}${(() => { const sin = lista.filter(i => !i.order_id).length; return sin ? ` <span class="muted" style="font-size:12px;">· ${sin} sin pedido en ProfitCOD (no se pueden abrir; al abrir un pedido las flechas recorren ${lista.length - sin})</span>` : ""; })()}</div>
     <div style="border:1px solid var(--border);border-radius:12px;overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead><tr>${th("Pedido")}${th("Incidencia")}${thOrden}${th("Fecha anomalía")}${th("Cliente")}${th("Teléfono")}${th("Total", "right")}${th("Tienda")}${th("Estado")}${resueltas ? th("Estado pedido") : ""}</tr></thead>
