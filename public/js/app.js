@@ -1304,9 +1304,13 @@ function updateOrderLimitBanner() {
   } else if (up.is_blocked) {
     banner.style.cssText = "display:flex;background:#dc2626;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
     const textEl = document.getElementById("order-limit-banner-text");
+    // Desde cuándo se cuentan los pedidos, para poder comprobarlo
+    const desdeTxt = up.orders_desde
+      ? `pedidos desde el ${new Date(up.orders_desde).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric" })}`
+      : "todos los pedidos de la cuenta";
     if (textEl) textEl.textContent = up.is_lifetime_limit
-      ? `⛔ Límite gratuito alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos). La app está bloqueada. Actualiza a un plan de pago para continuar.`
-      : `⛔ Límite de pedidos alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")}). La app está bloqueada. El bloqueo no se levanta solo al renovar el mes — cambia a un plan superior para continuar.`;
+      ? `⛔ Límite gratuito alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos · ${desdeTxt}). La app está bloqueada. Actualiza a un plan de pago para continuar.`
+      : `⛔ Límite de pedidos alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} · ${desdeTxt}). La app está bloqueada. El bloqueo no se levanta solo al renovar el mes — cambia a un plan superior para continuar.`;
   } else if (limit && used >= limit * 0.85) {
     banner.style.cssText = "display:flex;background:#f59e0b;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
     const textEl = document.getElementById("order-limit-banner-text");

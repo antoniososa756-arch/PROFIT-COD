@@ -144,6 +144,9 @@ router.get("/plan", auth, async (req, res) => {
     const planInfo = PLANS[planKey] || null;
 
     let monthlyOrders = 0;
+    const ordersDesde = (planKey === "starter" && user?.plan_status === "trial")
+      ? (user?.trial_started_at || null)
+      : getEffectiveCycleStart(user?.billing_cycle_start).toISOString();
     if (planInfo && req.user.role !== "admin") {
       monthlyOrders = await getMonthlyOrders(req.user.id, user?.billing_cycle_start, planKey, user?.trial_started_at, user?.plan_status);
     }
@@ -207,6 +210,9 @@ router.get("/plan", auth, async (req, res) => {
       trial_ends_at:    trialEndsAt,
       had_trial:        !!trialStarted,
       monthly_orders:   monthlyOrders,
+      // Desde cuándo se cuentan esos pedidos (null = todos los pedidos de la
+      // cuenta, sin fecha de inicio de prueba): se muestra en el aviso.
+      orders_desde:     ordersDesde,
       order_limit:      orderLimit,
       is_blocked:       isBlocked,
       is_lifetime_limit: isLifetimeLimit,
