@@ -144,6 +144,17 @@ router.get("/plan", auth, async (req, res) => {
     const planInfo = PLANS[planKey] || null;
 
     let monthlyOrders = 0;
+    // Pedidos del MES EN CURSO (desde el día 1, hora de España): es lo que
+    // sirve para elegir plan, aparte del contador del límite.
+    let ordersMesActual = 0;
+    try {
+      const r = await db.get(`
+        SELECT COUNT(*) AS cnt FROM orders o
+        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+          AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid') >= date_trunc('month', now() AT TIME ZONE 'Europe/Madrid')`,
+        [req.user.id]);
+      ordersMesActual = parseInt(r?.cnt || 0);
+    } catch (e) {}
     const ordersDesde = (planKey === "starter" && user?.plan_status === "trial")
       ? (user?.trial_started_at || null)
       : getEffectiveCycleStart(user?.billing_cycle_start).toISOString();
@@ -213,6 +224,7 @@ router.get("/plan", auth, async (req, res) => {
       // Desde cuándo se cuentan esos pedidos (null = todos los pedidos de la
       // cuenta, sin fecha de inicio de prueba): se muestra en el aviso.
       orders_desde:     ordersDesde,
+      orders_mes_actual: ordersMesActual,
       order_limit:      orderLimit,
       is_blocked:       isBlocked,
       is_lifetime_limit: isLifetimeLimit,

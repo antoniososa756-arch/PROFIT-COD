@@ -1308,8 +1308,9 @@ function updateOrderLimitBanner() {
     const desdeTxt = up.orders_desde
       ? `pedidos desde el ${new Date(up.orders_desde).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric" })}`
       : "todos los pedidos de la cuenta";
+    const mesTxt = up.orders_mes_actual != null ? ` Este mes llevas ${Number(up.orders_mes_actual).toLocaleString("es-ES")} pedidos: elige el plan según esa cifra.` : "";
     if (textEl) textEl.textContent = up.is_lifetime_limit
-      ? `⛔ Límite gratuito alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos · ${desdeTxt}). La app está bloqueada. Actualiza a un plan de pago para continuar.`
+      ? `⛔ Límite gratuito alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} pedidos · ${desdeTxt}). La app está bloqueada.${mesTxt || " Actualiza a un plan de pago para continuar."}`
       : `⛔ Límite de pedidos alcanzado (${used.toLocaleString("es-ES")} de ${limit.toLocaleString("es-ES")} · ${desdeTxt}). La app está bloqueada. El bloqueo no se levanta solo al renovar el mes — cambia a un plan superior para continuar.`;
   } else if (limit && used >= limit * 0.85) {
     banner.style.cssText = "display:flex;background:#f59e0b;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;";
@@ -6463,6 +6464,24 @@ if (id === "plan") {
         ${d.pending_plan ? `<span style="font-size:12px;color:#f59e0b;font-weight:600;margin-left:4px;">· Cambia a ${planNames[d.pending_plan] || d.pending_plan} el ${d.pending_plan_at ? new Date(d.pending_plan_at).toLocaleDateString("es-ES") : "la próxima renovación"}</span>` : ""}
         ${d.monthly_orders > 0 ? `<span style="font-size:12px;color:#6b6b6b;margin-left:auto;">${d.monthly_orders}${d.order_limit ? "/" + d.order_limit : ""} pedidos este mes</span>` : ""}
       </div>`;
+    }
+
+    // Pedidos del MES EN CURSO y plan que corresponde por ellos (lo que sirve
+    // para elegir plan; el aviso de límite puede contar otro periodo)
+    if (d.orders_mes_actual != null && !isAdmin) {
+      const n = Number(d.orders_mes_actual) || 0;
+      const recomendado = ["starter", "growth", "pro", "business"].find(p => n <= PLAN_ORDER_LIMIT[p]) || "business";
+      const mes = new Date().toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", month: "long" });
+      const aviso = document.createElement("div");
+      aviso.style.cssText = "display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 18px;margin-bottom:16px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:10px;font-size:13px;color:#14532d;";
+      aviso.innerHTML = `📊 Este mes (desde el 1 de ${mes}) llevas <b style="font-size:15px;">${n.toLocaleString("es-ES")}</b> pedido${n === 1 ? "" : "s"}.
+        El plan que te corresponde es <b style="color:${planColors[recomendado]};">${planNames[recomendado]}</b> (hasta ${PLAN_DEFS[recomendado].limit} pedidos/mes).`;
+      banner?.insertAdjacentElement("afterend", aviso);
+      const card = document.getElementById(`plan-card-${recomendado}`);
+      if (card && !card.querySelector(".plan-recomendado")) {
+        card.style.borderColor = planColors[recomendado];
+        card.insertAdjacentHTML("afterbegin", `<span class="plan-recomendado" style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);padding:2px 10px;border-radius:999px;background:${planColors[recomendado]};color:#fff;font-size:10.5px;font-weight:700;white-space:nowrap;">Recomendado por tus pedidos</span>`);
+      }
     }
 
     // Banner de cancelación programada
