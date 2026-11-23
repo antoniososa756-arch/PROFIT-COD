@@ -449,7 +449,7 @@ router.get("/leads-dashboard", auth, leadsAccess, async (req, res) => {
     // CREACIÓN del pedido, y el descuento de cancelados por día en que se
     // CANCELÓ (puede ser un pedido creado otro día y cancelado hoy).
     const shopFilter = `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-      OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`;
+      OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))`;
     const ingresosRows = await db.all(
       `SELECT COALESCE(o.shop_domain, s.shop_domain) AS shop_domain,
               COALESCE(SUM(o.total_price), 0) AS ingresos_hoy,

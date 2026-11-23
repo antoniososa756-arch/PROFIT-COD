@@ -12,7 +12,7 @@ const ESTADOS_LABEL = {
 
 function buildReclamosWhere(req, startIndex) {
   const conditions = [
-    `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`
+    `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))`
   ];
   const params = [req.user.id];
   let i = startIndex;
@@ -126,7 +126,7 @@ router.post("/", auth, async (req, res) => {
     const owns = await db.get(
       `SELECT o.id FROM orders o
        WHERE o.order_id = $1
-         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [order_id, req.user.id]
     );
     if (!owns) return res.status(404).json({ error: "Pedido no encontrado" });

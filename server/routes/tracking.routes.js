@@ -200,7 +200,7 @@ router.post("/mrw-credentials", auth, async (req, res) => {
 
   const sample = await req.db.get(
     `SELECT tracking_number FROM orders o
-     WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+     WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
        AND tracking_number IS NOT NULL AND tracking_number != ''
      LIMIT 1`,
     [req.user.id]
@@ -381,7 +381,7 @@ router.get("/ctt-history/:orderId", auth, async (req, res) => {
        FROM orders o
        WHERE o.id = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [req.params.orderId, req.user.id]
     );
     if (!order?.tracking_number) return res.status(404).json({ error: "Pedido no encontrado o sin tracking" });
@@ -460,7 +460,7 @@ router.post("/mrw-sync-one", auth, async (req, res) => {
        FROM orders o
        WHERE o.id = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [orderId, req.user.id]
     );
     if (!order?.tracking_number) return res.status(404).json({ error: "Pedido no encontrado o sin tracking" });
@@ -546,7 +546,7 @@ router.get("/mrw-history/:orderId", auth, async (req, res) => {
        FROM orders o
        WHERE o.id = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [req.params.orderId, req.user.id]
     );
     if (!order?.tracking_number) return res.status(404).json({ error: "Pedido no encontrado o sin tracking" });
@@ -641,7 +641,7 @@ router.post("/mrw-sync", auth, async (req, res) => {
       SELECT o.id, o.order_number, o.tracking_number, o.fulfillment_status
       FROM orders o
       LEFT JOIN shops s ON s.id = o.shop_id
-      WHERE (s.user_id = $1 OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+      WHERE (s.user_id = $1 OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
         AND o.tracking_number IS NOT NULL
         AND o.tracking_number != ''
         AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
@@ -791,7 +791,7 @@ router.post("/sync-excel", auth, upload.single("file"), async (req, res) => {
       else if (estadoRaw.includes("pendiente de recoger")) status = "pendiente";
 
       const result = await req.db.run(
-        `UPDATE orders SET fulfillment_status = $1 WHERE tracking_number = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3)`,
+        `UPDATE orders SET fulfillment_status = $1 WHERE tracking_number = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status <> 'deleted')`,
         [status, tracking, req.user.id]
       );
       if (result.rowCount > 0) updated++;
@@ -834,7 +834,7 @@ router.post("/filter-excel", auth, upload.single("file"), async (req, res) => {
     const matches = await req.db.all(
       `SELECT DISTINCT o.tracking_number FROM orders o
        WHERE o.tracking_number = ANY(?::text[])
-         AND (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ?)`,
+         AND (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ? AND status <> 'deleted')`,
       [trackingNumbers, req.user.id]
     );
     const matchedSet = new Set(matches.map(m => m.tracking_number));

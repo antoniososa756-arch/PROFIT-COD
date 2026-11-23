@@ -18275,7 +18275,11 @@ async function checkNotificaciones() {
     // Estados que guardamos para detectar cambios
     const estadosGuardados = JSON.parse(localStorage.getItem("orders_estados_" + (currentUser?.id || "anon")) || "{}");
     const nuevosEstados = {};
-    const notisActuales = JSON.parse(localStorage.getItem("notifications_" + (currentUser?.id || "anon")) || "[]");
+    // Los avisos de "días sin resolver" de pedidos que ya no son de esta cuenta
+    // (p. ej. de una tienda que se tuvo conectada y se borró) se quitan.
+    const idsCuenta = new Set(orders.map(o => String(o.id || o.order_id)));
+    const notisActuales = JSON.parse(localStorage.getItem("notifications_" + (currentUser?.id || "anon")) || "[]")
+      .filter(n => !String(n.id || "").startsWith("7dias__") || idsCuenta.has(String(n.id).slice(7)));
     const notisIds = new Set(notisActuales.map(n => n.id));
     const nuevasNotis = [...notisActuales];
 

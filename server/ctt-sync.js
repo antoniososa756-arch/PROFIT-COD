@@ -271,7 +271,7 @@ async function syncCTTForUser(db, creds) {
     `SELECT o.id, o.order_number, o.created_at, o.tracking_number, o.fulfillment_status
      FROM orders o
      WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-       OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+       OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
        AND (o.fulfillment_status IS NULL OR o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado'))
        AND o.created_at >= $2
        -- Solo pedidos de CTT o aún sin agencia conocida: los que ya reclamó

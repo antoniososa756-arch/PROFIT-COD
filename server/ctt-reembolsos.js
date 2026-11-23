@@ -47,7 +47,7 @@ async function marcarCobradosCTT(db, userId, albaranes, fecha) {
       `SELECT o.id FROM orders o
        WHERE btrim(o.tracking_number) = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [albaran, userId]
     );
     if (!order) continue;
@@ -86,7 +86,7 @@ async function procesarJustificanteCTT(db, userId, texto, fecha) {
       `SELECT o.id FROM orders o
        WHERE btrim(o.tracking_number) = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [albaran, userId]
     );
     if (order) { marcados.add(order.id); porAlbaran.push(albaran); await marcarCobradoId(db, userId, order.id, albaran, fecha); }
@@ -97,7 +97,7 @@ async function procesarJustificanteCTT(db, userId, texto, fecha) {
       `SELECT o.id, o.tracking_number FROM orders o
        WHERE upper(btrim(o.order_number)) = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+           OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [ref, userId]
     );
     if (order && !marcados.has(order.id)) {

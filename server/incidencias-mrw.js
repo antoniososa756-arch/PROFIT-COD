@@ -300,7 +300,7 @@ function analizarCorreo(parsed) {
 
 async function buscarPedido(userId, envio, referencia) {
   const tiendas = `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-                    OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`;
+                    OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))`;
   let r = await db.get(`SELECT o.id FROM orders o WHERE ${tiendas} AND btrim(o.tracking_number) = $2 ORDER BY o.id DESC LIMIT 1`, [userId, envio]);
   // El campo de seguimiento a veces trae algo más que el número (prefijo,
   // varios números...): buscarlo dentro, como el buscador de arriba.
@@ -562,7 +562,7 @@ async function iniciarConversacion(userId, orderId, texto) {
   const ped = await db.get(
     `SELECT o.id, COALESCE(substring(o.tracking_number from '[0-9]{5}[A-Za-z][0-9]{6}'), btrim(o.tracking_number)) AS envio FROM orders o
      WHERE o.id = $1 AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-       OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+       OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
     [orderId, userId]
   );
   if (!ped) throw new Error("Pedido no encontrado");

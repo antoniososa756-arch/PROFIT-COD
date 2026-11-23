@@ -114,7 +114,7 @@ async function getMonthlyOrders(userId, billingCycleStart, plan, trialStartedAt,
     : getEffectiveCycleStart(billingCycleStart);
   const countRow = await db.get(`
     SELECT COUNT(*) as cnt FROM orders o
-    WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+    WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
       ${cycleStart ? "AND o.created_at >= $2" : ""}
   `, cycleStart ? [userId, cycleStart.toISOString()] : [userId]);
   return parseInt(countRow?.cnt || 0);
@@ -150,7 +150,7 @@ router.get("/plan", auth, async (req, res) => {
     try {
       const r = await db.get(`
         SELECT COUNT(*) AS cnt FROM orders o
-        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
           AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid') >= date_trunc('month', now() AT TIME ZONE 'Europe/Madrid')`,
         [req.user.id]);
       ordersMesActual = parseInt(r?.cnt || 0);

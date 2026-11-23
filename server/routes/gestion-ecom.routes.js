@@ -57,7 +57,7 @@ router.get("/confirmar", auth, soloAdmin, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
          AND o.created_at >= $2
          AND o.cancelled_at IS NULL
          AND COALESCE(o.fulfillment_status, '') NOT IN ('cancelado','entregado','devuelto','destruido')
@@ -90,7 +90,7 @@ router.get("/franquicia", auth, soloAdmin, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
          AND o.fulfillment_status = 'franquicia'
          -- Solo MRW (las incidencias se gestionan con MRW)
          AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND btrim(o.tracking_number) ~ '^[0-9]{5}[A-Za-z][0-9]{6}$'))
@@ -136,7 +136,7 @@ router.post("/confirmar/:id", auth, soloAdmin, async (req, res) => {
        FROM orders o LEFT JOIN shops s ON s.id = o.shop_id
        WHERE o.id = $1
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2)
-              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [id, req.user.id]
     );
     if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
@@ -253,7 +253,7 @@ router.get("/incidencias", auth, soloAdmin, async (req, res) => {
          -- el nº dentro del seguimiento (puede traer prefijo u otros números)
          AND o.tracking_number ILIKE '%' || i.envio || '%'
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`,
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))`,
       [req.user.id]
     ).catch(() => {});
     // ...y si no, por la referencia del cliente del correo (#LOJACOMFY32453),
@@ -265,7 +265,7 @@ router.get("/incidencias", auth, soloAdmin, async (req, res) => {
        WHERE i.user_id = $1 AND i.order_id IS NULL AND i.referencia IS NOT NULL AND i.referencia <> ''
          AND o.order_number = '#' || substring(i.referencia from '#?([A-Za-z]*[0-9]+)')
          AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`,
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))`,
       [req.user.id]
     ).catch(() => {});
     const rows = await db.all(
@@ -326,7 +326,7 @@ router.get("/sin-actualizar", auth, soloAdmin, async (req, res) => {
        LEFT JOIN shops s ON s.id = o.shop_id
        LEFT JOIN incidencias_mrw i ON i.user_id = $1 AND o.tracking_number ILIKE '%' || i.envio || '%'
        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+              OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
          -- Solo MRW: agencia MRW o, sin agencia guardada, nº con formato MRW (04700F778981)
          AND (o.carrier = 'mrw' OR (o.carrier IS NULL AND btrim(o.tracking_number) ~ '^[0-9]{5}[A-Za-z][0-9]{6}$'))
          AND o.tracking_number IS NOT NULL AND btrim(o.tracking_number) <> ''

@@ -75,7 +75,7 @@ router.get("/stats", auth, async (req, res) => {
         COALESCE(SUM(o.total_price), 0) AS ingresos_brutos
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+       WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
          ${dateCondFrom} ${dateCondTo} ${shopCond} ${paymentCond} ${carrierFilter}`,
       params
     );
@@ -98,7 +98,7 @@ router.get("/stats", auth, async (req, res) => {
       `SELECT COALESCE(SUM(o.total_price), 0) AS descuento_cancelados
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+       WHERE (o.shop_id IN (${shopSubquery}) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
          AND o.fulfillment_status = 'cancelado'
          AND o.cancelled_at IS NOT NULL
          ${cancelDateFrom} ${cancelDateTo} ${cancelShopCond} ${paymentCond} ${carrierFilter}`,
@@ -147,7 +147,7 @@ router.get("/en-reparto", auth, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-         OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+         OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
          AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
          AND o.mrw_estado_texto ILIKE '%reparto%'
          ${shopCond} ${carrierCond(req.query.carrier)}`,
@@ -186,7 +186,7 @@ router.get("/ads-table", auth, async (req, res) => {
          COUNT(*) FILTER (WHERE o.fulfillment_status != 'cancelado') AS pedidos
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)
+       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted')
          AND COALESCE(o.shop_domain, s.shop_domain) = $2
          AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date >= $3::date
          AND (o.created_at::timestamptz AT TIME ZONE 'Europe/Madrid')::date <= $4::date
@@ -202,7 +202,7 @@ router.get("/ads-table", auth, async (req, res) => {
          COALESCE(SUM(o.total_price), 0) AS descuento
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
-       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)
+       WHERE (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted')
          AND COALESCE(o.shop_domain, s.shop_domain) = $2
          AND o.fulfillment_status = 'cancelado'
          AND o.cancelled_at IS NOT NULL
@@ -349,7 +349,7 @@ router.get("/top-products", async (req, res) => {
       const recentOrders = await db.all(
         `SELECT raw_json FROM orders o
          WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-            OR o.shop_domain IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+            OR o.shop_domain IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
            AND o.raw_json IS NOT NULL AND length(o.raw_json) > 10
          ORDER BY o.created_at DESC LIMIT 200`,
         [userId]

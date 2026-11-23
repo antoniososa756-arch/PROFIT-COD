@@ -182,7 +182,7 @@ router.post("/sync-pdf", async (req, res) => {
             const order = await db.get(
               `SELECT o.id FROM orders o
                WHERE o.tracking_number = ?
-                 AND (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ?)`,
+                 AND (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ? AND status <> 'deleted')`,
               [nEnvio, userId]
             );
             if (!order) continue;

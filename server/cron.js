@@ -193,7 +193,7 @@ async function syncAllMRW() {
         const FILTRO = `
            FROM orders o
            WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1)
-             OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+             OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
              AND o.tracking_number IS NOT NULL
              AND o.tracking_number != ''
              AND o.fulfillment_status NOT IN ('entregado','devuelto','destruido','cancelado')
@@ -459,7 +459,7 @@ async function syncAllGmailPDF() {
                   `SELECT o.id FROM orders o
                    WHERE o.tracking_number = ?
                      AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = ?)
-                       OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ?))`,
+                       OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = ? AND status <> 'deleted'))`,
                   [nEnvio, user_id, user_id]
                 );
                 if (!order) continue;
@@ -557,7 +557,7 @@ function startCrons() {
           if (!planInfo) continue;
           const countRow = await db.get(
             `SELECT COUNT(*) as cnt FROM orders o
-             WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+             WHERE (o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
                AND o.created_at LIKE $2`,
             [user.id, period + "%"]
           );

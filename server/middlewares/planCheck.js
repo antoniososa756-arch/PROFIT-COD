@@ -88,7 +88,7 @@ module.exports = async (req, res, next) => {
         SELECT COUNT(*) as cnt
         FROM orders o
         LEFT JOIN shops s ON s.id = o.shop_id
-        WHERE (s.user_id = $1 OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))
+        WHERE (s.user_id = $1 OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))
           ${cycleStart ? "AND o.created_at >= $2" : ""}
       `, cycleStart ? [user.id, cycleStart.toISOString()] : [user.id]);
       const ordersCount = parseInt(countRow?.cnt || 0);

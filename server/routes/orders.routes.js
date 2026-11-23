@@ -43,7 +43,7 @@ function buildOrdersWhere(req, userId) {
   const mrwRejected = req.query.mrwRejected === "1";
 
   const conditions = [
-    `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1))`
+    `(o.shop_id IN (SELECT id FROM shops WHERE user_id = $1) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted'))`
   ];
   const params = [userId];
   let i = 2;
@@ -258,7 +258,7 @@ router.get("/reembolsos", auth, async (req, res) => {
 
   try {
     const conditions = [
-      `(SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1)`,
+      `(SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $1 AND status <> 'deleted')`,
       `o.fulfillment_status = 'entregado'`,
       `o.financial_status IN ('pending','cod','pendiente')`
     ];
@@ -325,11 +325,11 @@ router.post("/marcar-entregado", auth, async (req, res) => {
       order_id
         ? `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
            WHERE order_id = $1
-             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2)
+             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted')
              AND fulfillment_status NOT IN ('entregado', 'cancelado')`
         : `UPDATE orders SET fulfillment_status = 'entregado', updated_at = now()::text
            WHERE id = $1
-             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2)
+             AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted')
              AND fulfillment_status NOT IN ('entregado', 'cancelado')`,
       [order_id || id, req.user.id]
     );
@@ -350,9 +350,9 @@ router.post("/marcar-estado", auth, async (req, res) => {
     const result = await db.run(
       order_id
         ? `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text, mrw_rejected = false
-           WHERE order_id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3)`
+           WHERE order_id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status <> 'deleted')`
         : `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text, mrw_rejected = false
-           WHERE id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3)`,
+           WHERE id = $2 AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status <> 'deleted')`,
       [estado, order_id || id, req.user.id]
     );
     if (!result.changes) return res.status(404).json({ error: "Pedido no encontrado" });
@@ -368,7 +368,7 @@ router.post("/marcar-estado-bulk", auth, async (req, res) => {
   try {
     const result = await db.run(
       `UPDATE orders SET fulfillment_status = $1, updated_at = now()::text, mrw_rejected = false
-       WHERE id = ANY($2::int[]) AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3)`,
+       WHERE id = ANY($2::int[]) AND (SELECT shop_domain FROM shops WHERE id = shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status <> 'deleted')`,
       [estado, ids, req.user.id]
     );
     res.json({ ok: true, updated: result.changes || 0 });
@@ -389,7 +389,7 @@ router.patch("/:id/tags", auth, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE o.id = $1
-         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [id, userId]
     );
     if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
@@ -438,7 +438,7 @@ router.patch("/:id/note", auth, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE o.id = $1
-         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [id, userId]
     );
     if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
@@ -506,7 +506,7 @@ router.patch("/:id/datos", auth, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE o.id = $1
-         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [id, userId]
     );
     if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
@@ -584,7 +584,7 @@ router.post("/:id/cancelar", auth, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE o.id = $1
-         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [id, userId]
     );
     if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
@@ -631,7 +631,7 @@ router.post("/:id/archivar", auth, async (req, res) => {
        FROM orders o
        LEFT JOIN shops s ON s.id = o.shop_id
        WHERE o.id = $1
-         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [id, userId]
     );
     if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
@@ -673,7 +673,7 @@ router.get("/:id", auth, async (req, res) => {
        LEFT JOIN shops s ON s.id = o.shop_id
        LEFT JOIN reembolsos_estado re ON re.order_id = o.id::text AND re.user_id = $2
        WHERE o.id = $1
-         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2))`,
+         AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $2) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $2 AND status <> 'deleted'))`,
       [id, userId]
     );
     if (!row) return res.status(404).json({ error: "Pedido no encontrado" });
@@ -689,7 +689,7 @@ router.get("/:id", auth, async (req, res) => {
           `SELECT o.id, o.order_number, o.created_at, o.fulfillment_status, o.cancelled_at, o.total_price, o.currency, o.note
            FROM orders o
            WHERE ((o.customer_email = $1 AND $1 <> '') OR (o.customer_phone = $2 AND $2 <> ''))
-             AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $3) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3))
+             AND (o.shop_id IN (SELECT id FROM shops WHERE user_id = $3) OR (SELECT shop_domain FROM shops WHERE id = o.shop_id) IN (SELECT shop_domain FROM shops WHERE user_id = $3 AND status <> 'deleted'))
            ORDER BY o.created_at DESC LIMIT 50`,
           [email, phone, userId]
         );
