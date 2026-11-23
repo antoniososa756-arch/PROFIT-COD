@@ -18285,8 +18285,33 @@ async function checkNotificaciones() {
     const nuevosEstados = {};
     // Los avisos de "días sin resolver" de pedidos que ya no son de esta cuenta
     // (p. ej. de una tienda que se tuvo conectada y se borró) se quitan.
+    // Igual con los de entregado/franquicia, leídos o no: los que se colaron de
+    // otra cuenta (visor de clientes) se quitan. Los pedidos que no están en
+    // esta lista (más de 60 días) se confirman con el servidor antes de borrar.
     const idsCuenta = new Set(orders.map(o => String(o.id || o.order_id)));
-    const notisActuales = JSON.parse(localStorage.getItem("notifications_" + (currentUser?.id || "anon")) || "[]")
+    const readKey = "notifications_read_" + (currentUser?.id || "anon");
+    const idPedidoNoti = n => { const m = String(n?.id || "").match(/^(?:entregado_|franquicia_|7dias__)(\d+)$/); return m ? m[1] : null; };
+    let notisGuardadas = [], leidasGuardadas = [];
+    try { notisGuardadas = JSON.parse(localStorage.getItem("notifications_" + (currentUser?.id || "anon")) || "[]"); } catch {}
+    try { leidasGuardadas = JSON.parse(localStorage.getItem(readKey) || "[]"); } catch {}
+    if (!Array.isArray(notisGuardadas)) notisGuardadas = [];
+    if (!Array.isArray(leidasGuardadas)) leidasGuardadas = [];
+    const dudosos = [...new Set([...notisGuardadas, ...leidasGuardadas].map(idPedidoNoti).filter(x => x && !idsCuenta.has(x)))];
+    if (dudosos.length) {
+      try {
+        const rc = await fetch(`${API_BASE}/api/orders?ids=${dudosos.slice(0, 500).join(",")}&light=1&page=1&limit=1000`, { headers: { Authorization: "Bearer " + getActiveToken() } });
+        if (rc.ok) {
+          const jc = await rc.json();
+          const propios = Array.isArray(jc) ? jc : (jc?.orders || []);
+          propios.forEach(o => idsCuenta.add(String(o.id)));
+          const vale = n => { const x = idPedidoNoti(n); return !x || idsCuenta.has(x) || !dudosos.slice(0, 500).includes(x); };
+          const leidasOk = leidasGuardadas.filter(vale);
+          if (leidasOk.length !== leidasGuardadas.length) localStorage.setItem(readKey, JSON.stringify(leidasOk));
+          notisGuardadas = notisGuardadas.filter(vale);
+        }
+      } catch {}
+    }
+    const notisActuales = notisGuardadas
       .filter(n => !String(n.id || "").startsWith("7dias__") || idsCuenta.has(String(n.id).slice(7)));
     const notisIds = new Set(notisActuales.map(n => n.id));
     const nuevasNotis = [...notisActuales];
