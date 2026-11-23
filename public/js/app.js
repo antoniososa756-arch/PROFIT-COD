@@ -53,12 +53,23 @@ function shopLabel(s) {
   return s.status && s.status !== 'active' ? name + ' (inactiva)' : name;
 }
 
-function getActiveToken() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("impersonated") === "1"
-    ? localStorage.getItem("impersonated_token")
-    : localStorage.getItem("token");
+// Cuenta de la pestaña: se fija UNA vez al cargarla y no cambia aunque la
+// dirección pierda o recupere ?impersonated=1 (botón Atrás, redirecciones) ni
+// aunque se abra el visor de otro cliente en otra pestaña. Antes se decidía en
+// cada petición mirando la URL y una pestaña podía pedir los datos de otra
+// cuenta y guardarlos como propios (notificaciones de clientes en el admin).
+const __TAB_IMPERSONADA = new URLSearchParams(window.location.search).get("impersonated") === "1";
+let __tabImpToken = null;
+if (__TAB_IMPERSONADA) {
+  try { __tabImpToken = sessionStorage.getItem("imp_token_tab"); } catch {}
+  if (!__tabImpToken) __tabImpToken = localStorage.getItem("impersonated_token");
+  try { if (__tabImpToken) sessionStorage.setItem("imp_token_tab", __tabImpToken); } catch {}
 }
+function getActiveToken() {
+  return __TAB_IMPERSONADA ? __tabImpToken : localStorage.getItem("token");
+}
+// Dirección "/" conservando el modo visor de la pestaña
+function rutaRaiz() { return __TAB_IMPERSONADA ? "/?impersonated=1" : "/"; }
 
 console.log("🟢 app.js cargado");
 
@@ -315,10 +326,7 @@ if (location.pathname.includes("login")) {
   // 🔐 TOKEN GLOBAL (ADMIN / IMPERSONACIÓN)
   const params = new URLSearchParams(window.location.search);
 
-  const token =
-    params.get("impersonated") === "1"
-      ? localStorage.getItem("impersonated_token")
-      : localStorage.getItem("token");
+  const token = getActiveToken();
 
   if (!token) {
     window.location.href = "/login.html";
@@ -466,7 +474,7 @@ if (location.pathname.includes("login")) {
             }
           }
         }, 800);
-        history.replaceState(null, "", "/");
+        history.replaceState(null, "", rutaRaiz());
       } else {
         __skipPush = true;
         const _pathParts = window.location.pathname.split("/").filter(Boolean);
@@ -899,7 +907,7 @@ function _syncUrlForRoute(path) {
   // Si estamos impersonando a un cliente, ese estado vive en ?impersonated=1
   // en la URL (getActiveToken lo lee ahí) — no se puede perder al navegar,
   // o la app empieza a usar el token del admin en vez del del cliente.
-  const isImpersonated = new URLSearchParams(window.location.search).get("impersonated") === "1";
+  const isImpersonated = __TAB_IMPERSONADA;
   const fullPath = isImpersonated ? `${path}?impersonated=1` : path;
   if (window.location.pathname === path && window.location.search === (isImpersonated ? "?impersonated=1" : "")) return;
   if (__skipPush) history.replaceState(null, "", fullPath);
@@ -937,11 +945,11 @@ function loadApp(section) {
   // Manejar retorno de OAuth Shopify
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("shopify") === "connected") {
-    history.replaceState({}, "", "/");
+    history.replaceState({}, "", rutaRaiz());
     showToast("✅ Tienda conectada", "La tienda Shopify se conectó correctamente", "#22c55e");
     section = "tiendas";
   } else if (urlParams.get("shopify") === "error") {
-    history.replaceState({}, "", "/");
+    history.replaceState({}, "", rutaRaiz());
     showToast("❌ Error", "No se pudo conectar la tienda Shopify", "#dc2626");
   }
 
@@ -1362,7 +1370,7 @@ function geUrl() {
   if (window.__currentRoute?.id !== "gestion-ecom") return;
   const tab = window.__geTab || "confirmar";
   const path = `/gestion-ecom/${tab}${tab === "incidencias" ? `/${window.__geSubInc || "franquicia"}` : ""}`;
-  const imp = new URLSearchParams(window.location.search).get("impersonated") === "1";
+  const imp = __TAB_IMPERSONADA;
   if (window.location.pathname !== path) history.replaceState(null, "", imp ? `${path}?impersonated=1` : path);
 }
 // Lee la pestaña de la dirección (/gestion-ecom/<pestaña>/<apartado>)
@@ -6737,10 +6745,10 @@ if (id === "plan") {
   // Manejar retorno de Stripe
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("payment") === "success") {
-    history.replaceState({}, "", "/");
+    history.replaceState({}, "", rutaRaiz());
     showToast("✅ Pago completado", "Tu plan ha sido activado. Puede tardar unos segundos en reflejarse.", "#22c55e");
   } else if (urlParams.get("payment") === "cancelled") {
-    history.replaceState({}, "", "/");
+    history.replaceState({}, "", rutaRaiz());
     showToast("ℹ️ Pago cancelado", "No se realizó ningún cargo.", "#6b6b6b");
   }
 
